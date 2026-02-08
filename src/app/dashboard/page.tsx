@@ -5,7 +5,12 @@ import { useRouter } from "next/navigation";
 import ProfileCard from "./components/ProfileCard";
 import Stats from "./components/Stats";
 import UpcomingMatches from "./components/UpcomingMatches";
+import AttendanceChart from "./components/AttendanceChart";
+import InventoryPanel from "./components/InventoryPanel";
+import CoachesPanel from "./components/CoachesPanel";
+import ExtrasPanel from '@/components/ExtrasPanel';
 import EditProfileModal from "./components/EditProfileModal";
+import Button from '@/components/Button';
 
 export default function DashboardPage() {
   const [dashboard, setDashboard] = useState<any>(null);
@@ -96,18 +101,45 @@ export default function DashboardPage() {
   const { player, rank, badges, upcomingMatches } = dashboard;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-100 to-sky-100 py-8 flex flex-col items-center">
-      <div className="w-full max-w-5xl px-4">
-        <div className="flex justify-end mb-6">
-          <button onClick={() => router.push('/matches')} className="bg-green-500 text-white font-bold px-6 py-2 rounded-md">Go to Match Making</button>
+    <div className="min-h-screen bg-gradient-to-br from-green-100 to-sky-100 py-8 flex flex-col items-stretch w-full">
+      <div className="w-full px-4 max-w-full flex-1">
+        <div className="flex justify-between items-center mb-4">
+          <h1 className="text-3xl font-extrabold text-green-800">Player Dashboard</h1>
+          <div className="flex items-center gap-3">
+            <Button onClick={() => router.push('/matches')}>Match Making</Button>
+            <Button variant="outline" onClick={() => router.push('/leaderboard')}>Leaderboard</Button>
+          </div>
         </div>
-        <h1 className="text-3xl font-extrabold text-green-800 text-center mb-6">Player Dashboard</h1>
-        <ProfileCard player={player} rank={rank} badges={badges} onEdit={openEditModal} toast={toast} />
-        <Stats player={player} />
-        <UpcomingMatches upcomingMatches={upcomingMatches} />
+
+        <nav className="flex gap-3 overflow-x-auto mb-6">
+          <Button className="px-4 py-2 rounded-full bg-green-600 text-white font-semibold">Overview</Button>
+          <Button onClick={() => router.push('/matches')} className="px-4 py-2 rounded-full bg-white text-green-700 border border-green-200">Matches</Button>
+          <Button className="px-4 py-2 rounded-full bg-white text-green-700 border border-green-200">Stats</Button>
+          <Button onClick={openEditModal} className="px-4 py-2 rounded-full bg-white text-green-700 border border-green-200">Edit Profile</Button>
+        </nav>
+
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          <div className="lg:col-span-1">
+            <ProfileCard player={player} rank={rank} badges={badges} onEdit={openEditModal} toast={toast} />
+            <div className="mt-6">
+              <InventoryPanel inventory={dashboard.inventory || []} />
+            </div>
+            <div className="mt-6">
+              <ExtrasPanel />
+            </div>
+          </div>
+          <div className="lg:col-span-2 flex flex-col gap-6">
+            <Stats player={player} />
+            <AttendanceChart attendance={dashboard.attendance || []} />
+            <UpcomingMatches upcomingMatches={upcomingMatches} />
+          </div>
+          <div className="lg:col-span-1">
+            <CoachesPanel coaches={dashboard.coaches || []} />
+          </div>
+        </div>
       </div>
       <EditProfileModal show={showModal} editForm={editForm} onChange={handleEditChange} onClose={() => setShowModal(false)} onSubmit={handleEditSubmit} saving={saving} />
-      <footer className="mt-8 text-gray-500 text-sm">&copy; {new Date().getFullYear()} Pwani University Tennis Club</footer>
+      <footer className="mt-8 text-gray-500 text-sm text-center">&copy; {new Date().getFullYear()} Pwani University Tennis Club</footer>
     </div>
   );
 }

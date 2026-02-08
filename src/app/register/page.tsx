@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Button from '@/components/Button';
 import { registerPlayer } from "@/actions/auth";
 
 export default function RegisterPage() {
@@ -56,8 +57,8 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-100 to-sky-100 flex flex-col items-center justify-center py-8">
-      <div className="bg-white/95 rounded-2xl shadow-lg p-8 w-full max-w-3xl">
+    <div className="min-h-screen app-bg flex flex-col items-center justify-center py-8 w-full">
+      <div className="bg-white/95 rounded-2xl shadow-lg p-8 w-full max-w-full">
         <div className="flex flex-col items-center mb-6">
           <img
             src="/tennis.jpeg"
@@ -118,7 +119,7 @@ export default function RegisterPage() {
             <label className="block text-slate-700 font-medium mb-2">Bio</label>
             <textarea name="bio" value={form.bio} onChange={handleChange} rows={2} className="w-full border border-emerald-200 rounded-md px-3 py-2 mb-2 resize-y" />
           </div>
-          <button type="submit" disabled={loading} className="w-full bg-emerald-500 text-white font-bold px-4 py-3 rounded-md mb-2 disabled:opacity-60">{loading ? 'Registering...' : 'Register'}</button>
+          <Button type="submit" disabled={loading} className="w-full mb-2">{loading ? 'Registering...' : 'Register'}</Button>
           {success && <div className="text-emerald-700 text-center font-semibold mt-2">Registration successful! 🎾</div>}
           {error && <div className="text-red-600 text-center font-semibold mt-2">{error}</div>}
         </form>

@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Button from '@/components/Button';
 import { loginPlayer } from "@/actions/auth";
 
 export default function LoginPage() {
@@ -31,8 +32,8 @@ export default function LoginPage() {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-green-100 to-sky-100 flex flex-col items-center justify-center py-8">
-            <div className="bg-white/95 rounded-2xl shadow-lg p-8 w-full max-w-md">
+        <div className="min-h-screen app-bg flex flex-col items-center justify-center py-8">
+            <div className="bg-white/95 rounded-2xl shadow-lg p-8 w-full max-w-full md:max-w-md lg:max-w-lg">
                 <div className="flex flex-col items-center mb-6">
                     <img
                         src="/tennis.jpeg"
@@ -67,14 +68,7 @@ export default function LoginPage() {
                             autoComplete="current-password"
                         />
                     </div>
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="w-full bg-emerald-500 text-white font-bold px-4 py-3 rounded-md mb-2 flex items-center justify-center gap-2 disabled:opacity-60"
-                    >
-                        {loading && <span className="w-5 h-5 border-2 border-white border-t-emerald-300 rounded-full animate-spin inline-block" />}
-                        {loading ? 'Logging in...' : 'Login'}
-                    </button>
+                    <Button type="submit" disabled={loading} className="w-full mb-2">{loading ? 'Logging in...' : 'Login'}</Button>
                 </form>
                 {toast && (
                     <div className={`mt-4 rounded-md px-4 py-3 font-semibold text-center ${toast.type === 'success' ? 'text-emerald-800 bg-emerald-100 border border-emerald-300' : 'text-red-700 bg-red-100 border border-red-300'}`}>

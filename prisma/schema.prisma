@@ -38,8 +38,35 @@ model Player {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
   Match Match[]
+  inventoryItems InventoryItem[]
+  staffMembers Staff[]
+  attendance Attendance[]
+  performancePoints PerformancePoint[]
+  isClub      Boolean   @default(false)
+}
+
+model InventoryItem {
+  id        String   @id @default(uuid())
+  name      String
+  count     Int      @default(0)
+  condition String?
+  club      Player?  @relation(fields: [clubId], references: [id])
+  clubId    String?
+  updatedAt DateTime @updatedAt
+}
+
+model Staff {
+  id          String   @id @default(uuid())
+  name        String
+  role        String
+  expertise   String?
+  contact     String?
+  photo       String?
+  employedBy  Player?  @relation(fields: [employedById], references: [id])
+  employedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model Match {
@@ -83,4 +110,24 @@ model PlayerBadge {
   badge    Badge    @relation(fields: [badgeId], references: [id])
   badgeId  String
   earnedAt DateTime @default(now())
+}
+
+// Analytics models: attendance records and per-player performance points
+model Attendance {
+  id       String   @id @default(uuid())
+  player   Player   @relation(fields: [playerId], references: [id])
+  playerId String
+  date     DateTime
+  present  Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model PerformancePoint {
+  id       String   @id @default(uuid())
+  player   Player   @relation(fields: [playerId], references: [id])
+  playerId String
+  date     DateTime
+  rating   Float
+  points   Int
+  createdAt DateTime @default(now())
 }

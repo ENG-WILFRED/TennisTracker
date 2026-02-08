@@ -2,6 +2,8 @@
 import { useEffect, useState } from "react";
 import { getAllPlayers, getCurrentPoolsAndMatches, savePoolWinner, createGroupStage } from "@/actions/matches";
 import { useRouter } from "next/navigation";
+import Button from '@/components/Button';
+import ExtrasPanel from '@/components/ExtrasPanel';
 
 const SCORE_STEPS = [15, 30, 40];
 
@@ -105,12 +107,12 @@ export default function MatchesPage() {
       : 'mb-6 px-6 py-3 rounded-lg font-bold text-center min-w-[220px] shadow bg-indigo-100 border border-indigo-400 text-indigo-800';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-100 to-sky-100 py-8 flex flex-col items-center">
+    <div className="min-h-screen app-bg py-8 flex flex-col items-center">
       {/* Navigation */}
       <div className="flex gap-4 mb-6">
-        <button onClick={() => router.push('/dashboard')} className="bg-green-500 text-white font-bold px-4 py-2 rounded-md">Dashboard</button>
-        <button onClick={() => router.push('/leaderboard')} className="bg-green-500 text-white font-bold px-4 py-2 rounded-md">Leaderboard</button>
-        <button onClick={() => router.push('/knockout')} className="bg-green-500 text-white font-bold px-4 py-2 rounded-md">Knockout</button>
+        <Button onClick={() => router.push('/dashboard')}>Dashboard</Button>
+        <Button onClick={() => router.push('/leaderboard')}>Leaderboard</Button>
+        <Button onClick={() => router.push('/knockout')}>Knockout</Button>
       </div>
       <h1 className="text-3xl font-extrabold text-green-800 mb-6 text-center">Pool Matches</h1>
       {toast && <div className={toastClass(toast)}>{toast.message}</div>}
@@ -120,13 +122,13 @@ export default function MatchesPage() {
         </div>
       )}
       {!loading && (
-        <div className="w-full max-w-4xl bg-white rounded-2xl shadow p-8 mb-8">
+        <div className="w-full max-w-full bg-white rounded-2xl shadow p-8 mb-8">
           <h2 style={{ fontSize: "1.3rem", fontWeight: 700, color: "#166534", marginBottom: "1.5rem" }}>
             Pool Matches & Scoring
           </h2>
           {!groupsCreated && (
-            <div className="text-center my-8">
-              <button onClick={handleCreateGroups} className="bg-sky-500 text-white font-bold rounded-md px-6 py-3 shadow">Shuffle & Create Groups</button>
+              <div className="text-center my-8">
+              <Button onClick={handleCreateGroups} className="px-6 py-3">Shuffle & Create Groups</Button>
             </div>
           )}
           {groupsCreated && (
@@ -231,23 +233,11 @@ export default function MatchesPage() {
                       <td className="p-3 text-center align-middle">
                         {!winner && !isTiebreak && (
                           ((score.a === 45 && score.b < 40) || (score.b === 45 && score.a < 40)) && (
-                            <button
-                              onClick={() => handleConfirmWinner(m.id, score.a === 45 ? "a" : "b")}
-                              disabled={confirming === m.id}
-                              className="bg-green-500 text-white font-bold px-3 py-1 rounded-md disabled:opacity-60"
-                            >
-                              {confirming === m.id ? "Saving..." : "Confirm Winner"}
-                            </button>
+                            <Button onClick={() => handleConfirmWinner(m.id, score.a === 45 ? "a" : "b")} className="bg-green-500 text-white font-bold px-3 py-1 rounded-md">Confirm Winner</Button>
                           )
                         )}
                         {!winner && isTiebreak && canConfirmTiebreak && (
-                          <button
-                            onClick={() => handleConfirmWinner(m.id, tiebreakA === 2 ? "a" : "b")}
-                            disabled={confirming === m.id}
-                            className="bg-green-500 text-white font-bold px-3 py-1 rounded-md disabled:opacity-60"
-                          >
-                            {confirming === m.id ? "Saving..." : "Confirm Winner"}
-                          </button>
+                          <Button onClick={() => handleConfirmWinner(m.id, tiebreakA === 2 ? "a" : "b")} className="bg-green-500 text-white font-bold px-3 py-1 rounded-md">Confirm Winner</Button>
                         )}
                         {winner && (
                           <span className="text-green-600 font-bold">Winner: {winner === "a" ? m.playerA.firstName : m.playerB.firstName}</span>
@@ -261,11 +251,14 @@ export default function MatchesPage() {
           )}
           {allMatchesHaveWinner && (
             <div className="text-center mt-8">
-              <button onClick={() => router.push('/knockout')} className="bg-orange-400 text-white font-bold rounded-md px-6 py-3 shadow">Proceed to Knockouts</button>
+              <Button onClick={() => router.push('/knockout')} className="bg-orange-400 text-white font-bold rounded-md px-6 py-3 shadow">Proceed to Knockouts</Button>
             </div>
           )}
         </div>
       )}
+      <div className="w-full max-w-6xl px-4 mt-8">
+        <ExtrasPanel />
+      </div>
       <footer className="mt-8 text-gray-500 text-sm">
         &copy; {new Date().getFullYear()} Pwani University Tennis Club
       </footer>

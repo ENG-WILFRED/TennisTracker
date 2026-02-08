@@ -1,3 +1,11 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@layer components {
+	.btn { @apply bg-green-500 text-white font-bold px-4 py-2 rounded-md; }
+	.btn-outline { @apply bg-white border border-green-200 text-green-700 px-4 py-2 rounded-md; }
+	.app-bg { @apply bg-gradient-to-br from-green-100 to-sky-100; }
+}
+
+@layer utilities {
+	.text-brand { @apply text-green-800; }
+}

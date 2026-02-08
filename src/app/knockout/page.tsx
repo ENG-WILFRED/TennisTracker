@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Button from '@/components/Button';
 import {
   getAllPlayers,
   getGroupStandings,
@@ -228,10 +229,10 @@ export default function KnockoutPage() {
                 </td>
                 <td className="p-3 text-center align-middle">
                   {!winner && !isTiebreak && ((score.a === 45 && score.b < 40) || (score.b === 45 && score.a < 40)) && (
-                    <button onClick={() => handleConfirmWinner(m.id, score.a === 45 ? 'a' : 'b', m.playerA.id, m.playerB.id)} className="bg-emerald-500 text-white font-bold px-3 py-1 rounded-md">Confirm Winner</button>
+                    <Button onClick={() => handleConfirmWinner(m.id, score.a === 45 ? 'a' : 'b', m.playerA.id, m.playerB.id)} className="bg-emerald-500 text-white font-bold px-3 py-1 rounded-md">Confirm Winner</Button>
                   )}
                   {!winner && isTiebreak && canConfirmTiebreak && (
-                    <button onClick={() => handleConfirmWinner(m.id, tiebreakA === 2 ? 'a' : 'b', m.playerA.id, m.playerB.id)} className="bg-emerald-500 text-white font-bold px-3 py-1 rounded-md">Confirm Winner</button>
+                    <Button onClick={() => handleConfirmWinner(m.id, tiebreakA === 2 ? 'a' : 'b', m.playerA.id, m.playerB.id)} className="bg-emerald-500 text-white font-bold px-3 py-1 rounded-md">Confirm Winner</Button>
                   )}
                   {winner && <span className="text-emerald-600 font-bold">Winner: {winner === 'a' ? m.playerA.firstName : m.playerB.firstName}</span>}
                 </td>
@@ -245,12 +246,12 @@ export default function KnockoutPage() {
 
   // Always show standings and matches, even if all are completed
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-sky-100 py-8 flex flex-col items-center">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-sky-100 py-8 flex flex-col items-center w-full">
       {/* Navigation */}
       <div className="flex gap-4 mb-6">
-        <button onClick={() => router.push('/dashboard')} className="bg-emerald-500 text-white font-bold px-4 py-2 rounded-md">Dashboard</button>
-        <button onClick={() => router.push('/matches')} className="bg-emerald-500 text-white font-bold px-4 py-2 rounded-md">Back to Pools</button>
-        <button onClick={() => router.push('/leaderboard')} className="bg-emerald-500 text-white font-bold px-4 py-2 rounded-md">Leaderboard</button>
+        <Button onClick={() => router.push('/dashboard')}>Dashboard</Button>
+        <Button onClick={() => router.push('/matches')}>Back to Pools</Button>
+        <Button onClick={() => router.push('/leaderboard')}>Leaderboard</Button>
       </div>
       <h1 className="text-3xl font-extrabold text-sky-700 mb-6 text-center">World Cup Style Tournament</h1>
       {toast && <div className="mb-6 px-6 py-3 rounded-lg font-bold text-center min-w-[220px] shadow bg-indigo-100 border border-indigo-400 text-indigo-800">{toast.message}</div>}
@@ -264,13 +265,13 @@ export default function KnockoutPage() {
           {renderStandings()}
           {renderMatches()}
           {stage === 'group' && allGroupMatchesHaveWinner && (
-            <div className="text-center mt-8">
-              <button onClick={handleProceedToSemis} className="bg-orange-400 text-white font-bold rounded-md px-6 py-3 shadow">Proceed to Semifinals</button>
+              <div className="text-center mt-8">
+              <Button onClick={handleProceedToSemis} className="px-6 py-3">Proceed to Semifinals</Button>
             </div>
           )}
           {stage === 'semis' && matches.length === 2 && matches.every(m => m.winnerId) && (
             <div className="text-center mt-8">
-              <button onClick={handleProceedToFinals} className="bg-orange-400 text-white font-bold rounded-md px-6 py-3 shadow">Proceed to Final</button>
+              <Button onClick={handleProceedToFinals} className="px-6 py-3">Proceed to Final</Button>
             </div>
           )}
           {stage === 'finals' && matches.length === 2 && matches.every(m => m.winnerId) && (

@@ -1,4 +1,5 @@
 import React from 'react';
+import Button from '@/components/Button';
 
 export default function EditProfileModal({
   show,
@@ -12,7 +13,7 @@ export default function EditProfileModal({
   return (
     <div className="fixed inset-0 bg-black/25 flex items-center justify-center z-40">
       <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl relative">
-        <button onClick={onClose} aria-label="Close" className="absolute top-4 right-4 text-gray-500 text-2xl">&times;</button>
+        <Button onClick={onClose} aria-label="Close" variant="outline" className="absolute top-4 right-4 text-gray-500 text-2xl p-0 w-8 h-8">&times;</Button>
         <h2 className="text-xl font-bold text-green-800 mb-4">Edit Profile</h2>
         <form onSubmit={onSubmit} className="space-y-3">
           <div className="flex gap-3 flex-wrap">
@@ -35,9 +36,7 @@ export default function EditProfileModal({
           <input name="nationality" value={editForm.nationality} onChange={onChange} className="w-full border border-green-200 rounded px-3 py-2" placeholder="Nationality" />
           <textarea name="bio" value={editForm.bio} onChange={onChange} rows={2} className="w-full border border-green-200 rounded px-3 py-2" placeholder="Bio" />
           <input name="photo" value={editForm.photo} onChange={onChange} className="w-full border border-green-200 rounded px-3 py-2" placeholder="Photo URL" />
-          <button type="submit" disabled={saving} className="w-full bg-green-500 text-white font-bold py-2 rounded">
-            {saving ? 'Saving...' : 'Save Changes'}
-          </button>
+          <Button type="submit" disabled={saving} className="w-full">{saving ? 'Saving...' : 'Save Changes'}</Button>
         </form>
       </div>
     </div>
