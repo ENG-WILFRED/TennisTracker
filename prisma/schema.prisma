@@ -57,17 +57,158 @@ model InventoryItem {
 }
 
 model Staff {
-  id          String   @id @default(uuid())
-  name        String
-  role        String
-  expertise   String?
-  contact     String?
-  photo       String?
-  employedBy  Player?  @relation(fields: [employedById], references: [id])
-  employedById String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                    String                    @id @default(uuid())
+  name                  String
+  email                 String?   @unique
+  phone                 String?
+  contact               String? // Contact information (email or phone preferred for display)
+  photo                 String? // profile picture URL
+  gender                String? // Male/Female/Other
+  nationality           String? // country/region
+  
+  // Core coaching info
+  role                  String // Head Coach, Assistant Coach, Fitness Coach, Junior Coach
+  yearsOfExperience     Int? @default(0)
+  expertise             String? // primary specialization
+  
+  // Qualifications & Credibility
+  coachingLevel         String? // Beginner, Intermediate, Advanced, Professional
+  formerPlayerBackground String? // bio about playing career
+  certifications        Certification[]
+  specializations       Specialization[]
+  
+  // Capabilities
+  playerAgeGroups       String[] @default([]) // Kids, Teens, Adults
+  skillLevelsTrained    String[] @default([]) // Beginner, Intermediate, Advanced, Professional
+  trainingTypes         String[] @default([]) // Private sessions, Group sessions, Clinics, Online coaching
+  languagesSpoken       String[] @default([])
+  
+  // Availability & Scheduling
+  availability          Availability[]
+  sessionDurations      Int[] @default([30, 60, 90]) // in minutes
+  maxStudentsPerSession Int? @default(1)
+  courtLocations        String[] @default([])
+  
+  // Pricing & Monetization
+  pricing               CoachPricing?
+  
+  // Bio & Content
+  bio                   String? // short bio
+  coachingPhilosophy    String? // coaching philosophy
+  achievements          String? // notable achievements
+  introVideoUrl         String? // optional intro video
+  
+  // Reputation & Social Proof
+  reviews               CoachReview[]
+  studentCount          Int @default(0) // denormalized count
+  
+  // Admin/System
+  isVerified            Boolean @default(false)
+  isActive              Boolean @default(true)
+  isDeleted             Boolean @default(false)
+  ownerId               String? // User/Player who owns this coach profile
+  auditLogs             AuditLog[]
+  
+  // Relations
+  employedBy            Player?  @relation(fields: [employedById], references: [id])
+  employedById          String?
+  
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 }
+
+// Certifications
+model Certification {
+  id        String   @id @default(uuid())
+  staffId   String
+  staff     Staff    @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  name      String   // ITF, ATP, WTA, National federation, etc.
+  issuer    String? // Organization that issued it
+  issuedAt  DateTime?
+  expiresAt DateTime?
+  createdAt DateTime @default(now())
+  
+  @@unique([staffId, name])
+}
+
+// Specializations
+model Specialization {
+  id        String   @id @default(uuid())
+  staffId   String
+  staff     Staff    @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  name      String   // Singles, Doubles, Juniors, High-performance, Fitness, Injury recovery
+  level     String? // Beginner, Intermediate, Advanced
+  yearsOfFocus Int? // years focused on this specialization
+  createdAt DateTime @default(now())
+  
+  @@unique([staffId, name])
+}
+
+// Weekly Availability
+model Availability {
+  id        String   @id @default(uuid())
+  staffId   String
+  staff     Staff    @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  dayOfWeek Int      // 0=Monday, 1=Tuesday, ..., 6=Sunday
+  startTime String   // HH:MM format (24-hour)
+  endTime   String   // HH:MM format (24-hour)
+  createdAt DateTime @default(now())
+  
+  @@unique([staffId, dayOfWeek, startTime])
+}
+
+// Pricing
+model CoachPricing {
+  id                 String   @id @default(uuid())
+  staffId            String   @unique
+  staff              Staff    @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  pricePerSession    Float    // base price
+  currency           String   @default("USD")
+  
+  // Package pricing
+  package3Sessions   Float?   // 3-session package price
+  package10Sessions  Float?   // 10-session package price
+  
+  // Discounts
+  juniorDiscount     Float? @default(0) // percentage discount
+  groupSessionDiscount Float? @default(0) // percentage discount
+  
+  // Commission (if marketplace)
+  commissionRate     Float? @default(0) // percentage
+  
+  paymentMethods     String[] @default(["credit_card", "bank_transfer"]) // supported payment methods
+  
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+// Reviews & Ratings
+model CoachReview {
+  id           String   @id @default(uuid())
+  staffId      String
+  staff        Staff    @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  playerId     String   // student who reviewed
+  rating       Float    // 1-5 rating
+  reviewText   String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  @@unique([staffId, playerId])
+}
+
+// Audit Logs for admin/system changes
+model AuditLog {
+  id        String   @id @default(uuid())
+  staffId   String
+  staff     Staff    @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  action    String   // Created, Updated, Verified, Deleted, etc.
+  field     String?  // which field was changed
+  oldValue  String?  // previous value
+  newValue  String?  // new value
+  performedBy String? // User who performed action
+  createdAt DateTime @default(now())
+}
+
 
 model Match {
   id        String          @id @default(uuid())
@@ -131,3 +272,14 @@ model PerformancePoint {
   points   Int
   createdAt DateTime @default(now())
 }
+
+model TennisRule {
+  id        String   @id @default(uuid())
+  category  String   // Scoring, Basic Rules, Court & Equipment, Key Violations
+  label     String   // display label
+  value     String?  // description or value
+  createdAt DateTime @default(now())
+
+  @@unique([category, label])
+}
+

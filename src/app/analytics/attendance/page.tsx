@@ -16,9 +16,6 @@ export default async function AttendanceAnalyticsPage() {
           <div className="lg:col-span-2">
             <AttendanceChartRecharts data={clubAttendance} />
           </div>
-          <aside className="lg:col-span-1">
-            <ExtrasPanel />
-          </aside>
         </div>
       </div>
     </div>

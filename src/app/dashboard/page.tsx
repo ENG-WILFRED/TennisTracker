@@ -8,8 +8,8 @@ import UpcomingMatches from "./components/UpcomingMatches";
 import AttendanceChart from "./components/AttendanceChart";
 import InventoryPanel from "./components/InventoryPanel";
 import CoachesPanel from "./components/CoachesPanel";
-import ExtrasPanel from '@/components/ExtrasPanel';
 import EditProfileModal from "./components/EditProfileModal";
+import PageHeader from '@/components/PageHeader';
 import Button from '@/components/Button';
 
 export default function DashboardPage() {
@@ -19,20 +19,40 @@ export default function DashboardPage() {
   const [editForm, setEditForm] = useState<any>(null);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [playerId, setPlayerId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const playerId = typeof window !== "undefined" ? localStorage.getItem("playerId") : null;
   const router = useRouter();
 
   useEffect(() => {
-    if (!playerId) return;
+    const id = localStorage.getItem("playerId");
+    setPlayerId(id);
+  }, []);
+
+  useEffect(() => {
+    if (!playerId) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
+    setError(null);
     getPlayerDashboard(playerId)
       .then((data) => {
         setDashboard(data);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
-  }, [playerId]);
+      .catch((err) => {
+        console.error(err);
+        setError("Player not found. Please log in again.");
+        setLoading(false);
+        // Clear invalid playerId from localStorage
+        localStorage.removeItem("playerId");
+        // Redirect to login after a short delay
+        setTimeout(() => {
+          router.push("/login");
+        }, 2000);
+      });
+  }, [playerId, router]);
 
   function openEditModal() {
     if (!dashboard) return;
@@ -86,6 +106,20 @@ export default function DashboardPage() {
     );
   }
 
+  if (error) {
+    return (
+      <div className="p-8 text-center">
+        <div className="inline-flex flex-col items-center gap-4">
+          <svg className="w-16 h-16 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <div className="text-red-600 font-semibold text-lg">{error}</div>
+          <p className="text-gray-500 text-sm">Redirecting to login...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="p-8 text-center">
@@ -103,29 +137,21 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-100 to-sky-100 py-8 flex flex-col items-stretch w-full">
       <div className="w-full px-4 max-w-full flex-1">
-        <div className="flex justify-between items-center mb-4">
-          <h1 className="text-3xl font-extrabold text-green-800">Player Dashboard</h1>
-          <div className="flex items-center gap-3">
-            <Button onClick={() => router.push('/matches')}>Match Making</Button>
-            <Button variant="outline" onClick={() => router.push('/leaderboard')}>Leaderboard</Button>
-          </div>
-        </div>
+        <PageHeader
+          title="Player Dashboard"
+          navItems={[
+            { label: 'Overview', active: true },
+            { label: 'players', onClick: () => router.push('/players') },
+            { label: 'Matches', onClick: () => router.push('/matches') },
+            { label: 'Edit Profile', onClick: openEditModal },
+          ]}
+        />
 
-        <nav className="flex gap-3 overflow-x-auto mb-6">
-          <Button className="px-4 py-2 rounded-full bg-green-600 text-white font-semibold">Overview</Button>
-          <Button onClick={() => router.push('/matches')} className="px-4 py-2 rounded-full bg-white text-green-700 border border-green-200">Matches</Button>
-          <Button className="px-4 py-2 rounded-full bg-white text-green-700 border border-green-200">Stats</Button>
-          <Button onClick={openEditModal} className="px-4 py-2 rounded-full bg-white text-green-700 border border-green-200">Edit Profile</Button>
-        </nav>
-
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          <div className="lg:col-span-1">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 auto-rows-max lg:auto-rows-fr">
+          <div className="lg:col-span-1 flex flex-col gap-6">
             <ProfileCard player={player} rank={rank} badges={badges} onEdit={openEditModal} toast={toast} />
-            <div className="mt-6">
+            <div className="flex-1">
               <InventoryPanel inventory={dashboard.inventory || []} />
-            </div>
-            <div className="mt-6">
-              <ExtrasPanel />
             </div>
           </div>
           <div className="lg:col-span-2 flex flex-col gap-6">
