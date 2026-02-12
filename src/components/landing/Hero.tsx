@@ -55,8 +55,8 @@ export default function Hero() {
             <div className="absolute inset-0 bg-gradient-to-r from-green-400 to-emerald-500 rounded-3xl blur-2xl opacity-20 animate-pulse"></div>
             <div className="relative rounded-3xl overflow-hidden shadow-2xl transform hover:scale-105 transition-transform duration-500">
               <img 
-                src="https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=800&q=80" 
-                alt="Tennis player in action"
+                src="https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=800&q=80" 
+                alt="Professional tennis player serving"
                 className="w-full h-[500px] object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>

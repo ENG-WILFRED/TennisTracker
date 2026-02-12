@@ -4,6 +4,7 @@ import Features from './landing/Features';
 import About from './landing/About';
 import PlayersSection from './landing/PlayersSection';
 import CoachesSection from './landing/CoachesSection';
+import RefereeSection from './landing/RefereeSection';
 import RulesSection from './landing/RulesSection';
 import CTASection from './landing/CTASection';
 import Footer from './landing/Footer';
@@ -17,6 +18,7 @@ export default function LandingPage() {
       <div className="w-full"><About /></div>
       <div className="w-full"><PlayersSection /></div>
       <div className="w-full"><CoachesSection /></div>
+      <div className="w-full"><RefereeSection /></div>
       <div className="w-full"><RulesSection /></div>
       <div className="w-full"><CTASection /></div>
       <div className="w-full"><Footer /></div>

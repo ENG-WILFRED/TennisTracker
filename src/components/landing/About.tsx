@@ -10,8 +10,8 @@ export default function About() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mb-16">
           <div className="relative rounded-3xl overflow-hidden shadow-2xl transform hover:scale-105 transition-transform duration-500">
             <img 
-              src="https://images.unsplash.com/photo-1622279457486-62dcc4a431d6?w=800&q=80" 
-              alt="Tennis court aerial view"
+              src="https://images.unsplash.com/photo-1571902943202-507ec2618e8f?w=800&q=80" 
+              alt="Tennis court at sunset"
               className="w-full h-[400px] object-cover"
             />
           </div>

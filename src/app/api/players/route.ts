@@ -13,6 +13,7 @@ export async function GET() {
         id: true,
         username: true,
         firstName: true,
+        nationality: true,
         lastName: true,
         photo: true,
         matchesWon: true,
@@ -24,6 +25,7 @@ export async function GET() {
 
     const data = players.map((p) => ({
       id: p.id,
+      nationality: p.nationality,
       name: `${p.firstName} ${p.lastName}`,
       username: p.username,
       wins: p.matchesWon,
