@@ -3,10 +3,11 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Button from '@/components/Button';
-import { loginPlayer } from "@/actions/auth";
+import { useAuth } from "@/context/AuthContext";
 
 export default function LoginPage() {
     const router = useRouter();
+    const { login } = useAuth();
     const [form, setForm] = useState({ usernameOrEmail: "", password: "" });
     const [loading, setLoading] = useState(false);
     const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
@@ -21,13 +22,32 @@ export default function LoginPage() {
         setLoading(true);
         setToast(null);
         try {
-            const user = await loginPlayer(form);
-            setToast({ type: "success", message: "Login successful! 🎾" });
-            // Save playerId and redirect to dashboard
-            if (user && user.id) {
-                localStorage.setItem("playerId", user.id);
-                window.location.href = "/dashboard";
+            const response = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(form),
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Login failed');
             }
+
+            const data = await response.json();
+            
+            // Use the auth context to login
+            login(
+                {
+                    accessToken: data.accessToken,
+                    refreshToken: data.refreshToken,
+                },
+                data.user
+            );
+
+            setToast({ type: "success", message: "Login successful! 🎾" });
+            setTimeout(() => {
+                router.push("/dashboard");
+            }, 500);
         } catch (err: any) {
             setToast({ type: "error", message: err.message || "Login failed." });
         }
