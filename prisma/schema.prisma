@@ -35,6 +35,8 @@ model Player {
   matchesB        Match[]         @relation("PlayerB")
   refereedMatches Match[]         @relation("Referee")
   ballCrewMatches MatchBallCrew[]
+  chatMessages    ChatMessage[]
+  chatRooms       ChatParticipant[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -281,5 +283,41 @@ model TennisRule {
   createdAt DateTime @default(now())
 
   @@unique([category, label])
+}
+
+// Chat Models
+model ChatRoom {
+  id           String   @id @default(uuid())
+  name         String
+  description  String?
+  isPrivate    Boolean  @default(false)
+  createdBy    String   // Player ID who created the room
+  messages     ChatMessage[]
+  participants ChatParticipant[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model ChatMessage {
+  id        String   @id @default(uuid())
+  roomId    String
+  room      ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  playerId  String   // Player who sent the message
+  player    Player   @relation(fields: [playerId], references: [id])
+  content   String
+  createdAt DateTime @default(now())
+}
+
+model ChatParticipant {
+  id        String   @id @default(uuid())
+  roomId    String
+  room      ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  playerId  String
+  player    Player   @relation(fields: [playerId], references: [id])
+  isOnline  Boolean  @default(false)
+  lastSeen  DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  @@unique([roomId, playerId])
 }
 

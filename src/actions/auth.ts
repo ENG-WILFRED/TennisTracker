@@ -109,5 +109,6 @@ export async function loginPlayer({
     email: user.email,
     firstName: user.firstName,
     lastName: user.lastName,
+    photo: user.photo || null,
   };
 }
