@@ -1,10 +1,11 @@
 import { PrismaClient } from '@/generated/prisma';
+import { NextRequest } from 'next/server';
 
 const prisma = new PrismaClient();
 
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
+export async function GET(_req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = params;
+    const { id } = await context.params;
     const referee = await prisma.referee.findUnique({
       where: { id },
       select: {
