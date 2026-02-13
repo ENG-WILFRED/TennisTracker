@@ -5,10 +5,27 @@ const globalForPrisma = global as unknown as { prisma: PrismaClient };
 const prisma = globalForPrisma.prisma || new PrismaClient();
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    const url = new URL(req.url);
+    const q = url.searchParams.get('query') || url.searchParams.get('q') || '';
+
+    // Use startsWith matching so typing 'w' returns players whose
+    // first name, last name, or username begins with that letter(s).
+    // Prisma `mode: 'insensitive'` handles case normalization.
+    // Only match on firstName and lastName (startsWith, case-insensitive)
+    const whereClause = q
+      ? {
+          isClub: false,
+          OR: [
+            { firstName: { startsWith: q, mode: 'insensitive' } },
+            { lastName: { startsWith: q, mode: 'insensitive' } },
+          ],
+        }
+      : { isClub: false };
+
     const players = await prisma.player.findMany({
-      where: { isClub: false },
+      where: whereClause,
       select: {
         id: true,
         username: true,
@@ -20,7 +37,7 @@ export async function GET() {
         matchesPlayed: true,
       },
       orderBy: { matchesWon: 'desc' },
-      take: 4,
+      take: q ? 20 : 8,
     });
 
     const data = players.map((p) => ({

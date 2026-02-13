@@ -136,8 +136,6 @@ export async function getPlayerDashboard(playerId: string) {
       matchesPlayed: player.matchesPlayed,
       matchesWon: player.matchesWon,
       matchesLost: player.matchesLost,
-      matchesRefereed: player.matchesRefereed,
-      matchesBallCrew: player.matchesBallCrew,
       isClub: player.isClub,
       createdAt: player.createdAt.toISOString(),
       updatedAt: player.updatedAt.toISOString(),
