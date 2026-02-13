@@ -161,6 +161,29 @@ async function main() {
     }
     await prisma.inventoryItem.createMany({ data: inventorySeed, skipDuplicates: true });
     console.log('Seeded inventory items.');
+    // Create an organization for the club and link peter, inventory and staff later
+    const org = await prisma.organization.upsert({
+      where: { name: 'Pwani University Tennis Club' },
+      create: {
+        name: 'Pwani University Tennis Club',
+        slug: 'pwani-university',
+        description: 'Official tennis club for Pwani University',
+        city: 'Mombasa',
+        country: 'Kenya',
+        phone: '+254700000006',
+        email: 'info@pwani.ac.ke',
+        logo: null,
+        primaryColor: '#0ea5e9',
+        createdBy: peter.id,
+      },
+      update: {},
+    });
+
+    // Attach the club player to the organization
+    await prisma.player.update({ where: { id: peter.id }, data: { organizationId: org.id } });
+
+    // Attach existing inventory items to the organization
+    await prisma.inventoryItem.updateMany({ where: { clubId: peter.id }, data: { organizationId: org.id } });
   }
 
   // Seed referees and ball crew
@@ -402,6 +425,11 @@ async function main() {
     try {
       await prisma.staff.createMany({ data: staffSeed, skipDuplicates: true });
       console.log('Seeded comprehensive coach/staff data.');
+      // Attach staff employed by the club to the organization if it exists
+      const org = await prisma.organization.findUnique({ where: { name: 'Pwani University Tennis Club' } });
+      if (org) {
+        await prisma.staff.updateMany({ where: { employedById: peter.id }, data: { organizationId: org.id } });
+      }
     } catch (error) {
       console.error('Error creating staff:', error);
       throw error;
