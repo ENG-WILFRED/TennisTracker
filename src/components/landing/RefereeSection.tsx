@@ -1,5 +1,6 @@
-'use client';
+"use client";
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Users, Award, Star, ArrowRight, Loader, Gavel } from 'lucide-react';
 
 interface Referee {
@@ -19,6 +20,7 @@ export default function RefereeSection() {
   const [referees, setReferees] = useState<Referee[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingRefereeId, setLoadingRefereeId] = useState<string | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
     async function fetchReferees() {
@@ -173,9 +175,12 @@ export default function RefereeSection() {
                   </div>
 
                   {/* Action Button */}
-                  <a 
-                    href={`/referees/${referee.id}`}
-                    onClick={() => setLoadingRefereeId(referee.id)}
+                  <button
+                    onClick={async () => {
+                      setLoadingRefereeId(referee.id);
+                      // client-side navigation so spinner remains visible
+                      await router.push(`/referees/${referee.id}`);
+                    }}
                     className="block w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold py-2.5 rounded-lg transition-all duration-200 flex items-center justify-center gap-2 shadow-md hover:shadow-lg"
                   >
                     {loadingRefereeId === referee.id ? (
@@ -189,7 +194,7 @@ export default function RefereeSection() {
                         <ArrowRight className="w-4 h-4" />
                       </>
                     )}
-                  </a>
+                  </button>
                 </div>
 
                 {/* Achievement Badges */}

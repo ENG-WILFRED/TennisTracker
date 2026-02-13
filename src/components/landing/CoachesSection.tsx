@@ -39,7 +39,7 @@ export default function CoachesSection() {
   }, []);
 
   return (
-    <section id="coaches" className="w-full py-20 px-4 bg-gradient-to-br from-slate-50 via-white to-slate-100">
+    <section id="coaches" className="w-full py-20 px-4 bg-gradient-to-br from-green-100 to-sky-100">
       <div className="w-full">
         {/* Header */}
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-12 gap-6">
