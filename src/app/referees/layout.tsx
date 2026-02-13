@@ -1,4 +1,5 @@
 import Layout from '@/components/Layout';
+import RefereeHeader from '@/components/referee/RefereeHeader';
 
 export const metadata = {
   title: 'Referees & Ball Crew - Tennis Tracker',
@@ -10,5 +11,10 @@ export default function RefereesLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <>{children}</>;
+  return (
+    <>
+      <RefereeHeader />
+      <>{children}</>
+    </>
+  );
 }

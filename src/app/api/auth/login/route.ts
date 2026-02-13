@@ -1,5 +1,10 @@
+import { NextResponse } from 'next/server';
 import { loginPlayer } from '@/actions/auth';
 import { generateAccessToken, generateRefreshToken } from '@/lib/jwt';
+import { PrismaClient } from '@/generated/prisma';
+import bcrypt from 'bcryptjs';
+
+const prisma = new PrismaClient();
 
 export async function POST(request: Request) {
   try {
@@ -7,55 +12,53 @@ export async function POST(request: Request) {
     const { usernameOrEmail, password } = body;
 
     if (!usernameOrEmail || !password) {
-      return new Response(
-        JSON.stringify({ error: 'Username/email and password are required' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
+      return NextResponse.json({ error: 'Username/email and password are required' }, { status: 400 });
     }
 
-    // Call the existing login action
-    const user = await loginPlayer({ usernameOrEmail, password });
+    // First try existing player login action
+    try {
+      const user = await loginPlayer({ usernameOrEmail, password });
 
-    if (!user) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid credentials' }),
-        { status: 401, headers: { 'Content-Type': 'application/json' } }
-      );
+      const accessToken = generateAccessToken({ playerId: user.id, email: user.email, username: user.username });
+      const refreshToken = generateRefreshToken({ playerId: user.id, email: user.email, username: user.username });
+
+      return NextResponse.json({ accessToken, refreshToken, user: { ...user, role: 'player' } });
+    } catch (err) {
+      // Not a player or failed login - try referee
     }
 
-    // Generate tokens
-    const accessToken = generateAccessToken({
-      playerId: user.id,
-      email: user.email,
-      username: user.username,
+    // Try referee login
+    const referee = await prisma.referee.findFirst({
+      where: {
+        OR: [{ username: usernameOrEmail }, { email: usernameOrEmail }],
+      },
     });
 
-    const refreshToken = generateRefreshToken({
-      playerId: user.id,
-      email: user.email,
-      username: user.username,
-    });
+    if (!referee) {
+      return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
+    }
 
-    return new Response(
-      JSON.stringify({
-        accessToken,
-        refreshToken,
-        user: {
-          id: user.id,
-          username: user.username,
-          email: user.email,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          photo: (user as any).photo || null,
-        },
-      }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } }
-    );
+    const valid = await bcrypt.compare(password, referee.passwordHash);
+    if (!valid) {
+      return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
+    }
+
+    const accessToken = generateAccessToken({ playerId: referee.id, email: referee.email, username: referee.username });
+    const refreshToken = generateRefreshToken({ playerId: referee.id, email: referee.email, username: referee.username });
+
+    const clientUser = {
+      id: referee.id,
+      username: referee.username,
+      email: referee.email,
+      firstName: referee.firstName,
+      lastName: referee.lastName,
+      photo: referee.photo || null,
+      role: 'referee',
+    };
+
+    return NextResponse.json({ accessToken, refreshToken, user: clientUser });
   } catch (error: any) {
     console.error('Login error:', error);
-    return new Response(
-      JSON.stringify({ error: error.message || 'Login failed' }),
-      { status: 401, headers: { 'Content-Type': 'application/json' } }
-    );
+    return NextResponse.json({ error: error.message || 'Login failed' }, { status: 500 });
   }
 }
