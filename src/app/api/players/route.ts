@@ -18,8 +18,8 @@ export async function GET(req: Request) {
       ? {
           isClub: false,
           OR: [
-            { firstName: { startsWith: q, mode: 'insensitive' } },
-            { lastName: { startsWith: q, mode: 'insensitive' } },
+            { firstName: { startsWith: q, mode: 'insensitive' as const } },
+            { lastName: { startsWith: q, mode: 'insensitive' as const } },
           ],
         }
       : { isClub: false };

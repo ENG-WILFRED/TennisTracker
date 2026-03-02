@@ -6,9 +6,62 @@ export async function GET() {
     const orgs = await prisma.organization.findMany({
       orderBy: { createdAt: 'desc' },
       take: 50,
+      include: {
+        players: {
+          select: {
+            id: true,
+            username: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            photo: true,
+          },
+          take: 10,
+        },
+        staff: {
+          select: {
+            id: true,
+            name: true,
+            role: true,
+            email: true,
+            phone: true,
+            photo: true,
+          },
+          take: 10,
+        },
+        inventory: {
+          select: {
+            id: true,
+            name: true,
+            count: true,
+            condition: true,
+          },
+          take: 10,
+        },
+      },
     });
 
-    return new Response(JSON.stringify(orgs), {
+    // Enrich with counts
+    const enrichedOrgs = await Promise.all(
+      orgs.map(async (org) => {
+        const [members, courts, events] = await Promise.all([
+          prisma.clubMember.count({ where: { organizationId: org.id } }),
+          prisma.court.count({ where: { organizationId: org.id } }),
+          prisma.clubEvent.count({ where: { organizationId: org.id } }),
+        ]);
+
+        return {
+          ...org,
+          _count: {
+            members,
+            courts,
+            events,
+          },
+        };
+      })
+    );
+
+    return new Response(JSON.stringify(enrichedOrgs), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
@@ -32,6 +85,7 @@ export async function POST(request: Request) {
       return new Response(JSON.stringify({ error: 'Name is required' }), { status: 400 });
     }
 
+    // Create organization
     const org = await prisma.organization.create({
       data: {
         name,
@@ -44,6 +98,12 @@ export async function POST(request: Request) {
         logo,
         createdBy: auth.playerId,
       },
+    });
+
+    // Link the creator to the organization as a player member
+    await prisma.player.update({
+      where: { id: auth.playerId },
+      data: { organizationId: org.id },
     });
 
     return new Response(JSON.stringify(org), {

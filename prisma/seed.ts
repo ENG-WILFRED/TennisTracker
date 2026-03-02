@@ -184,6 +184,35 @@ async function main() {
 
     // Attach existing inventory items to the organization
     await prisma.inventoryItem.updateMany({ where: { clubId: peter.id }, data: { organizationId: org.id } });
+
+    // Create an org admin user and attach to the organization (password: 123456)
+    try {
+      const orgAdminPassword = await bcrypt.hash('123456', 10);
+      const orgAdmin = await prisma.player.upsert({
+        where: { username: 'org_admin' },
+        update: { email: 'orgadmin@pwani.ac.ke', organizationId: org.id, passwordHash: orgAdminPassword },
+        create: {
+          username: 'org_admin',
+          email: 'orgadmin@pwani.ac.ke',
+          phone: '+254700000010',
+          passwordHash: orgAdminPassword,
+          firstName: 'Org',
+          lastName: 'Admin',
+          photo: null,
+          gender: 'Other',
+          dateOfBirth: new Date('1990-01-01'),
+          nationality: 'Kenya',
+          bio: 'Organization administrator',
+          organizationId: org.id,
+        },
+      });
+
+      // Make this admin the organization creator for permission checks
+      await prisma.organization.update({ where: { id: org.id }, data: { createdBy: orgAdmin.id } });
+      console.log('Seeded org admin and linked to organization (username: org_admin, password: 123456)');
+    } catch (e) {
+      console.error('Failed to create org admin', e);
+    }
   }
 
   // Seed referees and ball crew
@@ -679,6 +708,255 @@ async function main() {
     console.log('Seeded tennis rules.');
   } catch (error) {
     console.error('Error seeding rules:', error);
+  }
+
+  // ==================== SEED CLUB MANAGEMENT SYSTEM ====================
+  console.log('\n🌱 Seeding club management system...\n');
+
+  try {
+    // Fetch created players
+    const playersData = await prisma.player.findMany({
+      where: { username: { in: ['julius', 'joe', 'leah'] } },
+      take: 3,
+    });
+
+    if (playersData.length === 0) {
+      console.log('⚠️  No players found to create organizations');
+      return;
+    }
+
+    // Create Organizations
+    const org1 = await prisma.organization.upsert({
+      where: { name: 'Nairobi Tennis Club' },
+      update: {},
+      create: {
+        name: 'Nairobi Tennis Club',
+        slug: 'nairobi-tc',
+        description: 'Premier tennis facility in Nairobi with world-class amenities',
+        address: '123 Ngong Road',
+        city: 'Nairobi',
+        country: 'Kenya',
+        phone: '+254-20-2720000',
+        email: 'info@nairobitennis.com',
+        primaryColor: '#0ea5e9',
+        createdBy: playersData[0].id,
+        rating: 4.7,
+        ratingCount: 156,
+        verifiedBadge: true,
+        activityScore: 92,
+        playerDevScore: 85,
+        tournamentEngScore: 88,
+      },
+    });
+
+    const org2 = await prisma.organization.upsert({
+      where: { name: 'Westlands Tennis Academy' },
+      update: {},
+      create: {
+        name: 'Westlands Tennis Academy',
+        slug: 'westlands-academy',
+        description: 'Modern tennis academy focusing on youth development',
+        address: '456 Limuru Road',
+        city: 'Nairobi',
+        country: 'Kenya',
+        phone: '+254-20-7000000',
+        email: 'academy@westlandstennis.com',
+        primaryColor: '#06b6d4',
+        createdBy: playersData[1].id,
+        rating: 4.5,
+        ratingCount: 98,
+        verifiedBadge: true,
+        activityScore: 88,
+        playerDevScore: 92,
+        tournamentEngScore: 82,
+      },
+    });
+
+    console.log(`✅ Created ${org1.name} and ${org2.name}`);
+
+    // Create Membership Tiers
+    const tierGold = await prisma.membershipTier.create({
+      data: {
+        organizationId: org1.id,
+        name: 'Gold',
+        description: 'Premium membership with unlimited court access',
+        monthlyPrice: 5000,
+        benefitsJson: JSON.stringify(['Unlimited court access', '50% coaching discount', 'Priority tournament registration']),
+        courtHoursPerMonth: 999,
+        maxConcurrentBookings: 10,
+        discountPercentage: 50,
+      },
+    });
+
+    const tierSilver = await prisma.membershipTier.create({
+      data: {
+        organizationId: org1.id,
+        name: 'Silver',
+        description: 'Standard membership with limited court access',
+        monthlyPrice: 2500,
+        benefitsJson: JSON.stringify(['40 hours court access', '25% coaching discount']),
+        courtHoursPerMonth: 40,
+        maxConcurrentBookings: 5,
+        discountPercentage: 25,
+      },
+    });
+
+    console.log('✅ Created membership tiers');
+
+    // Create Courts
+    const court1 = await prisma.court.create({
+      data: {
+        organizationId: org1.id,
+        name: 'Court 1',
+        courtNumber: 1,
+        surface: 'Hard',
+        indoorOutdoor: 'outdoor',
+        lights: true,
+        status: 'available',
+      },
+    });
+
+    const court2 = await prisma.court.create({
+      data: {
+        organizationId: org1.id,
+        name: 'Court 2',
+        courtNumber: 2,
+        surface: 'Clay',
+        indoorOutdoor: 'outdoor',
+        lights: true,
+        status: 'available',
+      },
+    });
+
+    console.log('✅ Created courts');
+
+    // Create Club Members
+    const clubMember1 = await prisma.clubMember.upsert({
+      where: { organizationId_playerId: { organizationId: org1.id, playerId: playersData[0].id } },
+      update: {},
+      create: {
+        organizationId: org1.id,
+        playerId: playersData[0].id,
+        tierId: tierGold.id,
+        role: 'admin',
+        joinDate: new Date('2023-01-15'),
+        autoRenew: true,
+        paymentStatus: 'active',
+        attendanceCount: 156,
+      },
+    });
+
+    const clubMember2 = await prisma.clubMember.upsert({
+      where: { organizationId_playerId: { organizationId: org1.id, playerId: playersData[1].id } },
+      update: {},
+      create: {
+        organizationId: org1.id,
+        playerId: playersData[1].id,
+        tierId: tierGold.id,
+        role: 'coach',
+        joinDate: new Date('2023-02-10'),
+        autoRenew: true,
+        paymentStatus: 'active',
+        attendanceCount: 142,
+      },
+    });
+
+    console.log('✅ Created club members');
+
+    // Create Organization Roles
+    const roleAdmin = await prisma.organizationRole.create({
+      data: {
+        organizationId: org1.id,
+        name: 'Admin',
+        description: 'Full access to all features',
+        permissions: {
+          create: [
+            { organizationId: org1.id, permissionName: 'manage_members' },
+            { organizationId: org1.id, permissionName: 'manage_courts' },
+            { organizationId: org1.id, permissionName: 'view_revenue' },
+          ],
+        },
+      },
+    });
+
+    console.log('✅ Created organization roles');
+
+    // Create Club Announcements
+    await prisma.clubAnnouncement.create({
+      data: {
+        organizationId: org1.id,
+        title: 'Welcome to Nairobi Tennis Club',
+        message: 'We are excited to have you as a member. Start booking courts today!',
+        announcementType: 'general',
+        targetRoles: ['member', 'admin', 'coach'],
+        createdBy: playersData[0].id,
+        isActive: true,
+      },
+    });
+
+    console.log('✅ Created announcements');
+
+    // Create Club Event
+    const now = new Date();
+    const event = await prisma.clubEvent.create({
+      data: {
+        organizationId: org1.id,
+        name: 'February 2026 Tournament',
+        description: 'Monthly tournament for all members',
+        eventType: 'tournament',
+        startDate: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000),
+        registrationCap: 32,
+        registrationDeadline: new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000),
+        location: 'Nairobi Tennis Club',
+        prizePool: 50000,
+        entryFee: 2000,
+      },
+    });
+
+    await prisma.eventRegistration.create({
+      data: {
+        eventId: event.id,
+        memberId: clubMember1.id,
+        status: 'registered',
+        signupOrder: 1,
+      },
+    });
+
+    console.log('✅ Created club events');
+
+    // Create Club Finance
+    await prisma.clubFinance.create({
+      data: {
+        organizationId: org1.id,
+        month: now.getMonth() + 1,
+        year: now.getFullYear(),
+        membershipRevenue: 45000,
+        courtBookingRevenue: 28500,
+        coachCommissions: 12000,
+        eventRevenue: 36000,
+        totalRevenue: 121500,
+        totalExpenses: 55000,
+        netProfit: 66500,
+      },
+    });
+
+    console.log('✅ Created club finances');
+
+    // Create Organization Badges
+    await prisma.organizationBadge.create({
+      data: {
+        organizationId: org1.id,
+        badgeName: 'Verified Club',
+        badgeType: 'verified',
+        achievementDate: new Date('2023-06-01'),
+      },
+    });
+
+    console.log('✅ Created organization badges');
+
+    console.log('\n✅ Club management system seeded successfully!\n');
+  } catch (error) {
+    console.error('Error seeding club management:', error);
   }
 }
 

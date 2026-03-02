@@ -19,10 +19,17 @@ export async function POST(request: Request) {
     try {
       const user = await loginPlayer({ usernameOrEmail, password });
 
+      // Determine if this player is an organization owner
+      const org = await prisma.organization.findFirst({ where: { createdBy: user.id } });
+
       const accessToken = generateAccessToken({ playerId: user.id, email: user.email, username: user.username });
       const refreshToken = generateRefreshToken({ playerId: user.id, email: user.email, username: user.username });
 
-      return NextResponse.json({ accessToken, refreshToken, user: { ...user, role: 'player' } });
+      const role = org ? 'org' : 'player';
+      const clientUser: any = { ...user, role };
+      if (org) clientUser.organizationId = org.id;
+
+      return NextResponse.json({ accessToken, refreshToken, user: clientUser });
     } catch (err) {
       // Not a player or failed login - try referee
     }

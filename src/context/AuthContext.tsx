@@ -132,7 +132,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     if (typeof window !== 'undefined') {
-      window.location.href = '/login';
+      // Do not force navigation on logout — keep the current page.
+      // This allows pages (like organization) to remain visible after logout.
+      // Consumers can navigate as needed.
     }
   }, [inactivityCheckInterval]);
 

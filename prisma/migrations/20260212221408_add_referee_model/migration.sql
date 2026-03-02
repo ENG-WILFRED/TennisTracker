@@ -6,22 +6,13 @@
   - You are about to drop the column `matchesRefereed` on the `Player` table. All the data in the column will be lost.
 
 */
--- DropForeignKey
-ALTER TABLE "public"."Match" DROP CONSTRAINT "Match_refereeId_fkey";
+ALTER TABLE "public"."Match" DROP CONSTRAINT IF EXISTS "Match_refereeId_fkey";
 
--- AlterTable
-ALTER TABLE "public"."AuditLog" DROP COLUMN "details",
-ADD COLUMN     "field" TEXT,
-ADD COLUMN     "newValue" TEXT,
-ADD COLUMN     "oldValue" TEXT,
-ADD COLUMN     "performedBy" TEXT;
-
--- AlterTable
 ALTER TABLE "public"."MatchBallCrew" ADD COLUMN     "refereeId" TEXT;
 
 -- AlterTable
-ALTER TABLE "public"."Player" DROP COLUMN "matchesBallCrew",
-DROP COLUMN "matchesRefereed";
+ALTER TABLE "public"."Player" DROP COLUMN IF EXISTS "matchesBallCrew",
+DROP COLUMN IF EXISTS "matchesRefereed";
 
 -- CreateTable
 CREATE TABLE "public"."Referee" (

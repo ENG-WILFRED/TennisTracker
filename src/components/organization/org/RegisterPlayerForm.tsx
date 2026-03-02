@@ -10,10 +10,14 @@ export default function RegisterPlayerForm({ orgId, onRegistered, readOnly = fal
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState('');
   const [options, setOptions] = useState<PlayerOption[]>([]);
+  const [registeredPlayers, setRegisteredPlayers] = useState<PlayerOption[]>([]);
   const [registeredIds, setRegisteredIds] = useState<Set<string>>(new Set());
   const [searching, setSearching] = useState(false);
   const debounceRef = useRef<number | null>(null);
   const wrapperRef = useRef<HTMLDivElement | null>(null);
+
+  const PAGE_SIZE = 5;
+  const [currentPage, setCurrentPage] = useState(1);
 
   const handleRegister = async () => {
     if (!playerId) return;
@@ -41,10 +45,13 @@ export default function RegisterPlayerForm({ orgId, onRegistered, readOnly = fal
   async function fetchRegistered() {
     if (!orgId) return;
     try {
-      const res = await authenticatedFetch(`/api/organization/${orgId}/players`);
+      const res = await authenticatedFetch(`/api/organization/${orgId}/players`, { requireAuth: false });
       if (res.ok) {
         const data = await res.json();
-        setRegisteredIds(new Set(data.map((p: any) => p.id)));
+        const mapped = data.map((p: any) => ({ id: p.id, name: p.name, username: p.username, img: p.img }));
+        setRegisteredPlayers(mapped);
+        setRegisteredIds(new Set(mapped.map((p: { id: any; }) => p.id)));
+        setCurrentPage(1);
       }
     } catch (err) {
       console.error('Failed to load registered players', err);
@@ -64,7 +71,6 @@ export default function RegisterPlayerForm({ orgId, onRegistered, readOnly = fal
     if (debounceRef.current) window.clearTimeout(debounceRef.current);
     debounceRef.current = window.setTimeout(async () => {
       try {
-        // normalize to lower-case when sending, server does case-insensitive
         const q = query.trim();
         const res = await fetch(`/api/players?query=${encodeURIComponent(q)}`);
         if (res.ok) {
@@ -73,10 +79,10 @@ export default function RegisterPlayerForm({ orgId, onRegistered, readOnly = fal
         } else {
           setOptions([]);
         }
-        } catch (e) {
+      } catch (e) {
         console.error('Player search error', e);
         setOptions([]);
-        } finally {
+      } finally {
         setSearching(false);
       }
     }, 300);
@@ -89,13 +95,18 @@ export default function RegisterPlayerForm({ orgId, onRegistered, readOnly = fal
     setOptions((prev) => prev.map((o) => ({ ...o, registered: registeredIds.has(o.id) })));
   }, [registeredIds]);
 
-
   function handleSelectOption(opt: PlayerOption) {
     setPlayerId(opt.id);
     setQuery(opt.name + ` (@${opt.username})`);
   }
 
   const selectedIsRegistered = !!options.find((o) => o.id === playerId && o.registered);
+
+  // pagination for registered players
+  const totalPlayers = registeredPlayers.length;
+  const totalPages = Math.max(1, Math.ceil(totalPlayers / PAGE_SIZE));
+  const startIndex = (currentPage - 1) * PAGE_SIZE;
+  const paginated = registeredPlayers.slice(startIndex, startIndex + PAGE_SIZE);
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -115,7 +126,7 @@ export default function RegisterPlayerForm({ orgId, onRegistered, readOnly = fal
 
       <div className="p-6">
         {readOnly ? (
-          <div className="flex items-center gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+          <div className="flex items-center gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg mb-4">
             <svg className="w-5 h-5 text-amber-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
             </svg>
@@ -123,7 +134,7 @@ export default function RegisterPlayerForm({ orgId, onRegistered, readOnly = fal
           </div>
         ) : (
           <>
-            <div className="relative" ref={wrapperRef}>
+            <div className="relative">
               <input
                 value={query}
                 onChange={(e) => { setQuery(e.target.value); setPlayerId(''); }}
@@ -170,14 +181,11 @@ export default function RegisterPlayerForm({ orgId, onRegistered, readOnly = fal
                 ))}
               </div>
             )}
-          </>
-        )}
-
 
             <button 
               onClick={handleRegister} 
               disabled={!playerId || loading || selectedIsRegistered} 
-              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium py-3 px-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm hover:shadow-md flex items-center justify-center gap-2"
+              className="w-full mt-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium py-3 px-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm hover:shadow-md flex items-center justify-center gap-2"
             >
               {loading ? (
                 <>
@@ -196,8 +204,55 @@ export default function RegisterPlayerForm({ orgId, onRegistered, readOnly = fal
                 </>
               )}
             </button>
-          </div>
-        )
+          </>
+        )}
+
+        {/* Registered players list with pagination (always visible) */}
+        <div className="mt-6">
+          {totalPlayers === 0 ? (
+            <div className="text-center text-sm text-gray-500">No players are registered to this organization.</div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 gap-3">
+                {paginated.map((p) => (
+                  <div key={p.id} className="bg-white rounded-xl border-2 border-blue-100 p-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <img src={p.img || '/default-avatar.png'} className="w-10 h-10 rounded-full object-cover border-2 border-gray-200" />
+                      <div>
+                        <div className="font-medium text-gray-900">{p.name}</div>
+                        <div className="text-xs text-gray-500">@{p.username}</div>
+                      </div>
+                    </div>
+                    <div className="text-sm text-green-700 font-medium">Registered</div>
+                  </div>
+                ))}
+              </div>
+
+              {totalPages > 1 && (
+                <div className="mt-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-4 border-2 border-blue-200 flex items-center justify-between">
+                  <div className="text-sm text-blue-900 font-medium">
+                    Showing <span className="font-bold text-blue-700">{startIndex + 1}</span> to <span className="font-bold text-blue-700">{Math.min(startIndex + PAGE_SIZE, totalPlayers)}</span> of <span className="font-bold text-blue-700">{totalPlayers}</span> players
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <button onClick={() => setCurrentPage(1)} disabled={currentPage === 1} className="px-3 py-1 rounded bg-white border border-blue-200 text-blue-700 disabled:opacity-40">First</button>
+                    <button onClick={() => setCurrentPage(p => Math.max(1, p-1))} disabled={currentPage === 1} className="px-3 py-1 rounded bg-white border border-blue-200 text-blue-700 disabled:opacity-40">Prev</button>
+                    <div className="flex items-center space-x-1">
+                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                        const page = Math.max(1, Math.min(totalPages, currentPage - 2 + i));
+                        return (
+                          <button key={page} onClick={() => setCurrentPage(page)} className={`px-3 py-1 rounded ${page === currentPage ? 'bg-blue-600 text-white' : 'bg-white border border-blue-200 text-blue-700'}`}>{page}</button>
+                        );
+                      })}
+                    </div>
+                    <button onClick={() => setCurrentPage(p => Math.min(totalPages, p+1))} disabled={currentPage === totalPages} className="px-3 py-1 rounded bg-white border border-blue-200 text-blue-700 disabled:opacity-40">Next</button>
+                    <button onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages} className="px-3 py-1 rounded bg-white border border-blue-200 text-blue-700 disabled:opacity-40">Last</button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
       </div>
+    </div>
   );
 }

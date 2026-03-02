@@ -12,10 +12,22 @@ export async function POST(request: Request, { params }: { params: Promise<{ org
 
     if (!playerId) return new Response(JSON.stringify({ error: 'playerId required' }), { status: 400 });
 
-    // Attach player to organization
+    // Ensure organization exists
+    const org = await prisma.organization.findUnique({ where: { id: orgId } });
+    if (!org) {
+      return new Response(JSON.stringify({ error: 'Organization not found' }), { status: 404 });
+    }
+
+    // Ensure player exists
+    const existing = await prisma.player.findUnique({ where: { id: playerId } });
+    if (!existing) {
+      return new Response(JSON.stringify({ error: 'Player not found' }), { status: 404 });
+    }
+
+    // Attach player to organization (use connect to be explicit)
     const player = await prisma.player.update({
       where: { id: playerId },
-      data: { organizationId: orgId },
+      data: { organization: { connect: { id: orgId } } },
     });
 
     return new Response(JSON.stringify(player), { status: 200, headers: { 'Content-Type': 'application/json' } });
