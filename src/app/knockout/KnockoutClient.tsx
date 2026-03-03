@@ -236,7 +236,7 @@ export default function KnockoutClient(props: Props) {
           )}
         </>
       )}
-      <footer className="mt-8 text-gray-500 text-sm">&copy; {new Date().getFullYear()} Pwani University Tennis Club</footer>
+      <footer className="mt-8 text-gray-500 text-sm">&copy; {new Date().getFullYear()} Vico</footer>
     </div>
   );
 }

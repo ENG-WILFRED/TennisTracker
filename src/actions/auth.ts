@@ -36,7 +36,7 @@ export async function registerPlayer({
   }
 
   // Check for existing user
-  const exists = await prisma.player.findFirst({
+  const exists = await prisma.user.findFirst({
     where: {
       OR: [
         { username },
@@ -52,8 +52,8 @@ export async function registerPlayer({
   // Hash password
   const passwordHash = await bcrypt.hash(password, 10);
 
-  // Create player
-  await prisma.player.create({
+  // Create user and associated player profile
+  await prisma.user.create({
     data: {
       username,
       email,
@@ -66,6 +66,9 @@ export async function registerPlayer({
       dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
       nationality: nationality || null,
       bio: bio || null,
+      player: {
+        create: {}
+      }
     },
   });
 }
@@ -82,11 +85,12 @@ export async function loginPlayer({
   }
 
   // Find user by username or email
-  const user = await prisma.player.findFirst({
+  const user = await prisma.user.findFirst({
     where: {
       OR: [
         { username: usernameOrEmail },
         { email: usernameOrEmail },
+        ...(usernameOrEmail.match(/^[0-9+]+$/) ? [{ phone: usernameOrEmail }] : []),
       ],
     },
   });

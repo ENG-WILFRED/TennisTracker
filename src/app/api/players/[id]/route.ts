@@ -9,11 +9,16 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   try {
     const { id } = await params;
     const p = await prisma.player.findUnique({
-      where: { id },
-      select: { id: true, email: true, firstName: true, lastName: true },
+      where: { userId: id },
+      include: { user: true },
     });
     if (!p) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-    return NextResponse.json(p);
+    return NextResponse.json({
+      id: p.userId,
+      email: p.user.email,
+      firstName: p.user.firstName,
+      lastName: p.user.lastName,
+    });
   } catch (err) {
     console.error('GET /api/players/[id] error', err);
     return NextResponse.json({ error: 'Server error' }, { status: 500 });

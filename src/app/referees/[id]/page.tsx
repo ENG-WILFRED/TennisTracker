@@ -33,14 +33,10 @@ interface Props {
 export default async function RefereeProfilePage({ params }: Props) {
   const prisma = new PrismaClient();
   const referee = await prisma.referee.findUnique({
-    where: { id: params.id },
+    where: { userId: params.id },
     select: {
-      id: true,
-      firstName: true,
-      lastName: true,
-      photo: true,
-      nationality: true,
-      bio: true,
+      userId: true,
+      user: true,
       matchesRefereed: true,
       ballCrewMatches: true,
       experience: true,
@@ -109,7 +105,7 @@ export default async function RefereeProfilePage({ params }: Props) {
         <div className="w-full mx-auto">
           {/* Edit button is in the header for logged-in referees; remove back button from page */}
           <Link
-            href={`/referees/${referee.id}/edit`}
+            href={`/referees/${referee.userId || referee.user.id}/edit`}
             className="ml-4 inline-flex items-center gap-2 text-white bg-pink-600 hover:bg-pink-700 font-bold px-4 py-2 rounded-full shadow-md"
           >
             Edit Profile
@@ -120,9 +116,9 @@ export default async function RefereeProfilePage({ params }: Props) {
             <div className="relative h-80 bg-gradient-to-br from-pink-500 via-fuchsia-500 to-pink-600 overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-br from-pink-400/30 to-fuchsia-600/30 mix-blend-overlay"></div>
               <img 
-                src={referee.photo ?? 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=1200&q=80'} 
-                alt={`${referee.firstName} ${referee.lastName}`} 
-                className="w-full h-full object-cover opacity-90" 
+                src={referee.user.photo ?? 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=1200&q=80'} 
+                alt={`${referee.user.firstName} ${referee.user.lastName}`} 
+                className="w/full h-full object-cover opacity-90" 
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
               
@@ -137,11 +133,11 @@ export default async function RefereeProfilePage({ params }: Props) {
                   </div>
                 </div>
                 <h1 className="text-5xl md:text-6xl font-black mb-4 drop-shadow-lg">
-                  {referee.firstName} {referee.lastName}
+                  {referee.user.firstName} {referee.user.lastName}
                 </h1>
                 <div className="flex items-center gap-3 flex-wrap">
                   <div className="inline-flex items-center gap-2 bg-white/20 px-4 py-2 rounded-full text-sm font-bold backdrop-blur border border-white/30"> 
-                    <Globe className="w-5 h-5" /> {referee.nationality || 'Unknown'}
+                    <Globe className="w-5 h-5" /> {referee.user.nationality || 'Unknown'}
                   </div>
                   <div className="inline-flex items-center gap-2 bg-white/20 px-4 py-2 rounded-full text-sm font-bold backdrop-blur border border-white/30">
                     <Gavel className="w-5 h-5" /> Professional Referee
@@ -190,7 +186,7 @@ export default async function RefereeProfilePage({ params }: Props) {
                   <h2 className="text-3xl font-black text-slate-900">About</h2>
                 </div>
                 <p className="text-slate-700 text-lg leading-relaxed">
-                  {referee.bio || 'A dedicated and experienced referee committed to maintaining the highest standards of fairness, integrity, and professionalism in every match. Known for exceptional decision-making, clear communication, and unwavering commitment to player safety and fair play.'}
+                  {referee.user.bio || 'A dedicated and experienced referee committed to maintaining the highest standards of fairness, integrity, and professionalism in every match. Known for exceptional decision-making, clear communication, and unwavering commitment to player safety and fair play.'}
                 </p>
               </div>
 

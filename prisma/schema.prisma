@@ -8,19 +8,35 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Player {
-  id           String    @id @default(uuid())
-  username     String    @unique
-  email        String    @unique
-  phone        String?   @unique
-  passwordHash String // for authentication
+// base table for all user types with shared attributes
+model User {
+  id           String   @id @default(uuid())
+  username     String   @unique
+  email        String   @unique
+  phone        String?  @unique
+  passwordHash String
   firstName    String
   lastName     String
   photo        String? // profile picture URL
-  gender       String? // optional (Male/Female/Other)
-  dateOfBirth  DateTime? // useful for age categories
-  nationality  String? // country/region
-  bio          String? // short profile description
+  gender       String? // Male/Female/Other
+  dateOfBirth  DateTime?
+  nationality  String?
+  bio          String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // relations to various specialized profiles
+  player   Player?
+  referee  Referee?
+  staff    Staff?
+  spectator Spectator?
+}
+
+model Player {
+  // one-to-one with User for common fields
+  userId         String   @id
+  user           User     @relation(fields: [userId], references: [id])
 
   // Statistics
   matchesPlayed   Int @default(0)
@@ -54,7 +70,7 @@ model InventoryItem {
   name      String
   count     Int      @default(0)
   condition String?
-  club      Player?  @relation(fields: [clubId], references: [id])
+  club      Player?  @relation(fields: [clubId], references: [userId])
   clubId    String?
   // Optional organization ownership
   organization   Organization? @relation(fields: [organizationId], references: [id])
@@ -63,18 +79,8 @@ model InventoryItem {
 }
 
 model Referee {
-  id           String    @id @default(uuid())
-  username     String    @unique
-  email        String    @unique
-  phone        String?   @unique
-  passwordHash String // for authentication
-  firstName    String
-  lastName     String
-  photo        String? // profile picture URL
-  gender       String? // optional (Male/Female/Other)
-  dateOfBirth  DateTime? // useful for age categories
-  nationality  String? // country/region
-  bio          String? // short profile description
+  userId        String   @id
+  user          User     @relation(fields: [userId], references: [id])
 
   // Statistics
   matchesRefereed Int @default(0)
@@ -91,15 +97,12 @@ model Referee {
 }
 
 model Staff {
-  id                    String                    @id @default(uuid())
-  name                  String
-  email                 String?   @unique
-  phone                 String?
+  userId                String   @id
+  user                  User     @relation(fields: [userId], references: [id])
+
+  // core contact info beyond User
   contact               String? // Contact information (email or phone preferred for display)
-  photo                 String? // profile picture URL
-  gender                String? // Male/Female/Other
-  nationality           String? // country/region
-  
+
   // Core coaching info
   role                  String // Head Coach, Assistant Coach, Fitness Coach, Junior Coach
   yearsOfExperience     Int? @default(0)
@@ -144,7 +147,7 @@ model Staff {
   auditLogs             AuditLog[]
   
   // Relations
-  employedBy            Player?  @relation(fields: [employedById], references: [id])
+  employedBy            Player?  @relation(fields: [employedById], references: [userId])
   employedById          String?
   // Organization employment
   organization   Organization? @relation(fields: [organizationId], references: [id])
@@ -154,8 +157,18 @@ model Staff {
   updatedAt             DateTime @updatedAt
 }
 
+// Spectators represent users who attend matches/events but do not participate
+model Spectator {
+  userId String @id
+  user   User   @relation(fields: [userId], references: [id])
+  // additional spectator-specific fields could go here
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 // Organization model for clubs/teams
 model Organization {
+  // optionally link to a user account representing the organization
   id          String       @id @default(uuid())
   name        String       @unique
   slug        String?      @unique
@@ -205,7 +218,7 @@ model Organization {
 model Certification {
   id        String   @id @default(uuid())
   staffId   String
-  staff     Staff    @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  staff     Staff    @relation(fields: [staffId], references: [userId], onDelete: Cascade)
   name      String   // ITF, ATP, WTA, National federation, etc.
   issuer    String? // Organization that issued it
   issuedAt  DateTime?
@@ -219,7 +232,7 @@ model Certification {
 model Specialization {
   id        String   @id @default(uuid())
   staffId   String
-  staff     Staff    @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  staff     Staff    @relation(fields: [staffId], references: [userId], onDelete: Cascade)
   name      String   // Singles, Doubles, Juniors, High-performance, Fitness, Injury recovery
   level     String? // Beginner, Intermediate, Advanced
   yearsOfFocus Int? // years focused on this specialization
@@ -232,7 +245,7 @@ model Specialization {
 model Availability {
   id        String   @id @default(uuid())
   staffId   String
-  staff     Staff    @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  staff     Staff    @relation(fields: [staffId], references: [userId], onDelete: Cascade)
   dayOfWeek Int      // 0=Monday, 1=Tuesday, ..., 6=Sunday
   startTime String   // HH:MM format (24-hour)
   endTime   String   // HH:MM format (24-hour)
@@ -245,7 +258,7 @@ model Availability {
 model CoachPricing {
   id                 String   @id @default(uuid())
   staffId            String   @unique
-  staff              Staff    @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  staff              Staff    @relation(fields: [staffId], references: [userId], onDelete: Cascade)
   pricePerSession    Float    // base price
   currency           String   @default("USD")
   
@@ -270,7 +283,7 @@ model CoachPricing {
 model CoachReview {
   id           String   @id @default(uuid())
   staffId      String
-  staff        Staff    @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  staff        Staff    @relation(fields: [staffId], references: [userId], onDelete: Cascade)
   playerId     String   // student who reviewed
   rating       Float    // 1-5 rating
   reviewText   String?
@@ -284,7 +297,7 @@ model CoachReview {
 model AuditLog {
   id        String   @id @default(uuid())
   staffId   String
-  staff     Staff    @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  staff     Staff    @relation(fields: [staffId], references: [userId], onDelete: Cascade)
   action    String   // Created, Updated, Verified, Deleted, etc.
   field     String?  // which field was changed
   oldValue  String?  // previous value
@@ -297,14 +310,14 @@ model AuditLog {
 model Match {
   id        String          @id @default(uuid())
   round     Int
-  playerA   Player          @relation("PlayerA", fields: [playerAId], references: [id])
+  playerA   Player          @relation("PlayerA", fields: [playerAId], references: [userId])
   playerAId String
-  playerB   Player          @relation("PlayerB", fields: [playerBId], references: [id])
+  playerB   Player          @relation("PlayerB", fields: [playerBId], references: [userId])
   playerBId String
-  referee   Referee?        @relation("Referee", fields: [refereeId], references: [id])
+  referee   Referee?        @relation("Referee", fields: [refereeId], references: [userId])
   refereeId String?
   ballCrew  MatchBallCrew[]
-  winner    Player?         @relation(fields: [winnerId], references: [id])
+  winner    Player?         @relation(fields: [winnerId], references: [userId])
   winnerId  String?
   group     String?
   score     String?
@@ -315,9 +328,9 @@ model MatchBallCrew {
   id       String  @id @default(uuid())
   match    Match   @relation(fields: [matchId], references: [id])
   matchId  String
-  player   Player  @relation(fields: [playerId], references: [id])
+  player   Player  @relation(fields: [playerId], references: [userId])
   playerId String
-  ballCrewReferee Referee? @relation("BallCrewReferee", fields: [refereeId], references: [id])
+  ballCrewReferee Referee? @relation("BallCrewReferee", fields: [refereeId], references: [userId])
   refereeId String?
 }
 
@@ -332,7 +345,7 @@ model Badge {
 
 model PlayerBadge {
   id       String   @id @default(uuid())
-  player   Player   @relation(fields: [playerId], references: [id])
+  player   Player   @relation(fields: [playerId], references: [userId])
   playerId String
   badge    Badge    @relation(fields: [badgeId], references: [id])
   badgeId  String
@@ -342,7 +355,7 @@ model PlayerBadge {
 // Analytics models: attendance records and per-player performance points
 model Attendance {
   id       String   @id @default(uuid())
-  player   Player   @relation(fields: [playerId], references: [id])
+  player   Player   @relation(fields: [playerId], references: [userId])
   playerId String
   date     DateTime
   present  Boolean  @default(true)
@@ -351,7 +364,7 @@ model Attendance {
 
 model PerformancePoint {
   id       String   @id @default(uuid())
-  player   Player   @relation(fields: [playerId], references: [id])
+  player   Player   @relation(fields: [playerId], references: [userId])
   playerId String
   date     DateTime
   rating   Float
@@ -387,7 +400,7 @@ model ChatMessage {
   roomId    String
   room      ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
   playerId  String   // Player who sent the message
-  player    Player   @relation(fields: [playerId], references: [id])
+  player    Player   @relation(fields: [playerId], references: [userId])
   content   String
   createdAt DateTime @default(now())
 }
@@ -397,7 +410,7 @@ model ChatParticipant {
   roomId    String
   room      ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
   playerId  String
-  player    Player   @relation(fields: [playerId], references: [id])
+  player    Player   @relation(fields: [playerId], references: [userId])
   isOnline  Boolean  @default(false)
   lastSeen  DateTime @default(now())
   createdAt DateTime @default(now())
@@ -481,10 +494,11 @@ model MembershipTier {
 }
 
 model ClubMember {
+  // future spectator or additional user types could reference here
   id              String   @id @default(uuid())
   organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   organizationId  String
-  player          Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  player          Player   @relation(fields: [playerId], references: [userId], onDelete: Cascade)
   playerId        String
   
   membershipTier  MembershipTier? @relation("membershipTier", fields: [tierId], references: [id])

@@ -143,7 +143,7 @@ async function main() {
     // mark 'peter' as club account
     const peter = await prisma.player.findUnique({ where: { username: 'peter' } });
     if (peter) {
-        await prisma.player.update({ where: { id: peter.id }, data: { isClub: true } });
+        await prisma.player.update({ where: { userId: peter.id }, data: { isClub: true } });
         // create a larger inventory attached to club
         const inventorySeed = [];
         const sampleItems = [
@@ -176,7 +176,7 @@ async function main() {
             update: {},
         });
         // Attach the club player to the organization
-        await prisma.player.update({ where: { id: peter.id }, data: { organizationId: org.id } });
+        await prisma.player.update({ where: { userId: peter.id }, data: { organizationId: org.id } });
         // Attach existing inventory items to the organization
         await prisma.inventoryItem.updateMany({ where: { clubId: peter.id }, data: { organizationId: org.id } });
         // Create an org admin user and attach to the organization (password: 123456)

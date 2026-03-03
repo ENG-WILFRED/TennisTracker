@@ -10,8 +10,9 @@ const prisma = new PrismaClient();
 export async function getPlayerDashboard(playerId: string) {
   // Get player info and badges
   const player = await prisma.player.findUnique({
-    where: { id: playerId },
+    where: { userId: playerId },
     include: {
+      user: true,
       playerBadges: {
         include: { badge: true },
       },
@@ -22,22 +23,22 @@ export async function getPlayerDashboard(playerId: string) {
   // Calculate rank (by matchesWon, descending)
   const allPlayers = await prisma.player.findMany({
     orderBy: { matchesWon: "desc" },
-    select: { id: true, matchesWon: true },
+    select: { userId: true, matchesWon: true },
   });
   const rank =
-    allPlayers.findIndex((p) => p.id === playerId) + 1;
+    allPlayers.findIndex((p) => p.userId === playerId) + 1;
 
   // Get upcoming matches (where player is A or B and winner is null)
   const matchesA = await prisma.match.findMany({
     where: { playerAId: playerId, winnerId: null },
     include: {
-      playerB: true,
+      playerB: { include: { user: { select: { firstName: true, lastName: true } } } },
     },
   });
   const matchesB = await prisma.match.findMany({
     where: { playerBId: playerId, winnerId: null },
     include: {
-      playerA: true,
+      playerA: { include: { user: { select: { firstName: true, lastName: true } } } },
     },
   });
   // Optionally, add referee/ball crew roles here
@@ -46,14 +47,14 @@ export async function getPlayerDashboard(playerId: string) {
   const upcomingMatches = [
     ...matchesA.map((m) => ({
       id: m.id,
-      opponent: m.playerB.firstName + ' ' + m.playerB.lastName,
+      opponent: m.playerB.user.firstName + ' ' + m.playerB.user.lastName,
       role: "Player A",
       round: m.round,
       date: m.createdAt.toISOString(),
     })),
     ...matchesB.map((m) => ({
       id: m.id,
-      opponent: m.playerA.firstName + ' ' + m.playerA.lastName,
+      opponent: m.playerA.user.firstName + ' ' + m.playerA.user.lastName,
       role: "Player B",
       round: m.round,
       date: m.createdAt.toISOString(),
@@ -75,13 +76,16 @@ export async function getPlayerDashboard(playerId: string) {
         contains: "Coach",
       },
     },
-    orderBy: { name: "asc" },
+    include: {
+      user: { select: { firstName: true, lastName: true } }
+    },
+    orderBy: { user: { firstName: 'asc' } },
   });
 
   const coaches = coachesRaw.map((c) => ({
-    id: c.id,
-    firstName: c.name.split(" ")[0],
-    lastName: c.name.split(" ").slice(1).join(" ") || "",
+    id: c.userId,
+    firstName: c.user.firstName || '',
+    lastName: c.user.lastName || '',
     role: c.role,
   }));
 
@@ -122,17 +126,17 @@ export async function getPlayerDashboard(playerId: string) {
 
   return {
     player: {
-      id: player.id,
-      username: player.username,
-      email: player.email,
-      phone: player.phone,
-      firstName: player.firstName,
-      lastName: player.lastName,
-      photo: player.photo,
-      gender: player.gender,
-      dateOfBirth: player.dateOfBirth,
-      nationality: player.nationality,
-      bio: player.bio,
+      id: player.userId,
+      username: player.user.username,
+      email: player.user.email,
+      phone: player.user.phone,
+      firstName: player.user.firstName,
+      lastName: player.user.lastName,
+      photo: player.user.photo,
+      gender: player.user.gender,
+      dateOfBirth: player.user.dateOfBirth?.toISOString(),
+      nationality: player.user.nationality,
+      bio: player.user.bio,
       matchesPlayed: player.matchesPlayed,
       matchesWon: player.matchesWon,
       matchesLost: player.matchesLost,
@@ -165,7 +169,7 @@ export async function updatePlayerProfile(
   }
 ) {
   // Only allow updating these fields
-  await prisma.player.update({
+  await prisma.user.update({
     where: { id: playerId },
     data: {
       firstName: data.firstName,
@@ -183,15 +187,10 @@ export async function updatePlayerProfile(
 
 export async function getAllPlayers() {
   return await prisma.player.findMany({
-    select: {
-      id: true,
-      username: true,
-      firstName: true,
-      lastName: true,
-      matchesWon: true,
-      matchesPlayed: true,
+    include: {
+      user: true,
     },
-    orderBy: { firstName: "asc" },
+    orderBy: { user: { firstName: "asc" } },
   });
 }
 
@@ -213,17 +212,17 @@ export async function savePoolMatches(poolPairs: any[], round: number = 1) {
     // Find a referee who is not playerA or playerB
     const referee = await prisma.player.findFirst({
       where: {
-        id: { notIn: [playerA.id, playerB.id] }
+        userId: { notIn: [playerA.userId, playerB.userId] }
       }
     });
     if (!referee) throw new Error("No available referee found");
 
     await prisma.match.create({
       data: {
-        playerA: { connect: { id: playerA.id } },
-        playerB: { connect: { id: playerB.id } },
+        playerA: { connect: { userId: playerA.userId } },
+        playerB: { connect: { userId: playerB.userId } },
         round,
-        referee: { connect: { id: referee.id } },
+        referee: { connect: { userId: referee.userId } },
       },
     });
   }
@@ -284,14 +283,14 @@ export async function savePoolWinner(matchId: string, winnerId: string) {
   // Update player stats
   if (match.playerAId === winnerId) {
     await prisma.player.update({
-      where: { id: match.playerAId },
+      where: { userId: match.playerAId },
       data: {
         matchesWon: { increment: 1 },
         matchesPlayed: { increment: 1 },
       },
     });
     await prisma.player.update({
-      where: { id: match.playerBId },
+      where: { userId: match.playerBId },
       data: {
         matchesLost: { increment: 1 },
         matchesPlayed: { increment: 1 },
@@ -299,14 +298,14 @@ export async function savePoolWinner(matchId: string, winnerId: string) {
     });
   } else if (match.playerBId === winnerId) {
     await prisma.player.update({
-      where: { id: match.playerBId },
+      where: { userId: match.playerBId },
       data: {
         matchesWon: { increment: 1 },
         matchesPlayed: { increment: 1 },
       },
     });
     await prisma.player.update({
-      where: { id: match.playerAId },
+      where: { userId: match.playerAId },
       data: {
         matchesLost: { increment: 1 },
         matchesPlayed: { increment: 1 },
@@ -324,11 +323,8 @@ export async function getKnockoutPlayers() {
   return await prisma.player.findMany({
     orderBy: { matchesWon: "desc" },
     take: 8,
-    select: {
-      id: true,
-      username: true,
-      firstName: true,
-      lastName: true,
+    include: {
+      user: { select: { username: true, firstName: true, lastName: true } },
     },
   });
 }
@@ -371,12 +367,12 @@ export async function saveKnockoutScore(matchId: string, who: "a" | "b") {
 
   // Optionally update player stats
   await prisma.player.update({
-    where: { id: winnerId },
+    where: { userId: winnerId },
     data: { matchesWon: { increment: 1 }, matchesPlayed: { increment: 1 } },
   });
   const loserId = who === "a" ? match.playerBId : match.playerAId;
   await prisma.player.update({
-    where: { id: loserId },
+    where: { userId: loserId },
     data: { matchesLost: { increment: 1 }, matchesPlayed: { increment: 1 } },
   });
 }
@@ -399,8 +395,8 @@ export async function createKnockoutMatches(players: any[]) {
     if (playerA && playerB) {
       await prisma.match.create({
         data: {
-          playerAId: playerA.id,
-          playerBId: playerB.id,
+          playerAId: playerA.userId,
+          playerBId: playerB.userId,
           round: 2,
         },
       });
@@ -457,8 +453,10 @@ export async function createNextKnockoutRound(round: number) {
 export async function createSwissNextRound(round: number) {
   // Get all players still in the tournament
   const players = await prisma.player.findMany({
-    orderBy: { firstName: "asc" },
-    select: { id: true, firstName: true, lastName: true },
+    orderBy: { user: { firstName: "asc" } },
+    include: {
+      user: { select: { firstName: true, lastName: true } },
+    },
   });
 
   // Get all matches so far
@@ -474,17 +472,17 @@ export async function createSwissNextRound(round: number) {
   });
 
   // Pair players who haven't played each other yet
-  const unpaired = new Set(players.map(p => p.id));
+  const unpaired = new Set(players.map(p => p.userId));
   const pairs: [string, string][] = [];
   for (let i = 0; i < players.length; i++) {
-    if (!unpaired.has(players[i].id)) continue;
+    if (!unpaired.has(players[i].userId)) continue;
     for (let j = i + 1; j < players.length; j++) {
-      if (!unpaired.has(players[j].id)) continue;
-      const key = [players[i].id, players[j].id].sort().join("-");
+      if (!unpaired.has(players[j].userId)) continue;
+      const key = [players[i].userId, players[j].userId].sort().join("-");
       if (!played.has(key)) {
-        pairs.push([players[i].id, players[j].id]);
-        unpaired.delete(players[i].id);
-        unpaired.delete(players[j].id);
+        pairs.push([players[i].userId, players[j].userId]);
+        unpaired.delete(players[i].userId);
+        unpaired.delete(players[j].userId);
         break;
       }
     }
@@ -519,8 +517,8 @@ export async function createGroupStage(players: any[]) {
       for (let j = i + 1; j < group.length; j++) {
          prisma.match.create({
           data: {
-            playerAId: group[i].id,
-            playerBId: group[j].id,
+            playerAId: group[i].userId,
+            playerBId: group[j].userId,
             round: 1,
             group: groupName,
           },
@@ -548,8 +546,8 @@ export async function getGroupStandings() {
     const group = match.group ?? "UNGROUPED";
     if (!standings[group]) standings[group] = {};
     [match.playerA, match.playerB].forEach((p) => {
-      if (!standings[group][p.id]) {
-        standings[group][p.id] = {
+      if (!standings[group][p.userId]) {
+        standings[group][p.userId] = {
           player: p,
           wins: 0,
           losses: 0,
@@ -587,16 +585,16 @@ export async function createSemifinalsFromGroups() {
   // 1st A vs 2nd B, 1st B vs 2nd A
   await prisma.match.create({
     data: {
-      playerAId: groupA[0].player.id,
-      playerBId: groupB[1].player.id,
+      playerAId: groupA[0].player.userId,
+      playerBId: groupB[1].player.userId,
       round: 2,
       group: "SF",
     },
   });
   await prisma.match.create({
     data: {
-      playerAId: groupB[0].player.id,
-      playerBId: groupA[1].player.id,
+      playerAId: groupB[0].player.userId,
+      playerBId: groupA[1].player.userId,
       round: 2,
       group: "SF",
     },
@@ -649,13 +647,8 @@ export async function createFinalsFromSemis() {
 export async function getLeaderboard() {
   // Get all players and their stats
   const players = await prisma.player.findMany({
-    select: {
-      id: true,
-      username: true,
-      firstName: true,
-      lastName: true,
-      matchesWon: true,
-      matchesPlayed: true,
+    include: {
+      user: { select: { username: true, firstName: true, lastName: true } },
     },
   });
 
@@ -681,8 +674,11 @@ export async function getLeaderboard() {
 
   // Attach totalScore to each player
   const leaderboard = players.map((p) => ({
-    ...p,
-    totalScore: playerScores[p.id] || 0,
+    userId: p.userId,
+    user: p.user,
+    matchesWon: p.matchesWon,
+    matchesPlayed: p.matchesPlayed,
+    totalScore: playerScores[p.userId] || 0,
   }));
 
 
@@ -703,7 +699,11 @@ export async function getLeaderboard() {
 export async function getMatchDetails(matchId: string) {
   const m = await prisma.match.findUnique({
     where: { id: matchId },
-    include: { playerA: true, playerB: true, referee: true },
+    include: { 
+      playerA: { include: { user: true } }, 
+      playerB: { include: { user: true } }, 
+      referee: { include: { user: true } } 
+    },
   });
   if (!m) return null;
 
@@ -725,14 +725,18 @@ export async function getMatchDetails(matchId: string) {
     },
   });
 
-  const playerAStats = await prisma.player.findUnique({
-    where: { id: m.playerAId },
-    select: { matchesWon: true, matchesPlayed: true, firstName: true, lastName: true },
-  });
-  const playerBStats = await prisma.player.findUnique({
-    where: { id: m.playerBId },
-    select: { matchesWon: true, matchesPlayed: true, firstName: true, lastName: true },
-  });
+  const playerAStats = {
+    matchesWon: m.playerA.matchesWon,
+    matchesPlayed: m.playerA.matchesPlayed,
+    firstName: m.playerA.user.firstName,
+    lastName: m.playerA.user.lastName,
+  };
+  const playerBStats = {
+    matchesWon: m.playerB.matchesWon,
+    matchesPlayed: m.playerB.matchesPlayed,
+    firstName: m.playerB.user.firstName,
+    lastName: m.playerB.user.lastName,
+  };
 
   const winRate = (p: any) => {
     if (!p || !p.matchesPlayed) return null;
@@ -757,19 +761,19 @@ export async function getMatchDetails(matchId: string) {
     createdAt: m.createdAt.toISOString(),
     group: m.group || null,
     playerA: {
-      id: m.playerA.id,
-      firstName: m.playerA.firstName,
-      lastName: m.playerA.lastName,
+      id: m.playerA.userId,
+      firstName: m.playerA.user.firstName,
+      lastName: m.playerA.user.lastName,
     },
     playerB: {
-      id: m.playerB.id,
-      firstName: m.playerB.firstName,
-      lastName: m.playerB.lastName,
+      id: m.playerB.userId,
+      firstName: m.playerB.user.firstName,
+      lastName: m.playerB.user.lastName,
     },
-    referee: m.referee ? { id: m.referee.id, firstName: m.referee.firstName, lastName: m.referee.lastName } : null,
+    referee: m.referee ? { id: m.referee.userId, firstName: m.referee.user.firstName, lastName: m.referee.user.lastName } : null,
     headToHead: { aWinsAgainstB, bWinsAgainstA },
-    playerAStats,
-    playerBStats,
+    playerAStats: { matchesWon: playerAStats.matchesWon, matchesPlayed: playerAStats.matchesPlayed },
+    playerBStats: { matchesWon: playerBStats.matchesWon, matchesPlayed: playerBStats.matchesPlayed },
     expected,
   };
 }

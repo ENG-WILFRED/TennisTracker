@@ -267,7 +267,7 @@ export default function OrganizationsReport({ isOpen, orgs, onClose }: Organizat
 
             {/* Footer */}
             <div className="border-t-2 border-gray-200 pt-6 text-center text-sm text-gray-500">
-              <p>© 2026 Tennis Tracker - Confidential Report</p>
+              <p>© 2026 Vico - Confidential Report</p>
               <p>Report generated on {new Date().toLocaleString()}</p>
             </div>
           </div>

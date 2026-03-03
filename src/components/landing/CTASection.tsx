@@ -11,14 +11,14 @@ export default function CTASection() {
       
       <div className="relative max-w-4xl mx-auto text-center">
         <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6">
-          Ready to Transform Your Tennis Journey?
+          Ready to Join Vico?
         </h2>
         <p className="text-xl md:text-2xl text-green-50 mb-10 max-w-2xl mx-auto">
-          Join thousands of players and coaches. Start tracking, improving, and achieving your tennis goals today.
+          Thousands of players, coaches, and organizations already compete on Vico. Your next level awaits.
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link href="/register" className="group px-10 py-5 bg-white text-green-600 rounded-xl hover:bg-gray-100 transition-all font-bold text-lg shadow-2xl transform hover:scale-105 flex items-center justify-center gap-2">
-            Create Free Account
+            Join Vico Free
             <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
             </svg>

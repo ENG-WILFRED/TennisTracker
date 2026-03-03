@@ -39,8 +39,8 @@ async function ContactContent({
     {
       icon: MapPin,
       title: "Location",
-      content: "Pwani University Tennis Courts",
-      description: "Main Campus, Kilifi County"
+      content: "Vico Global Platform",
+      description: "Serving players worldwide"
     },
     {
       icon: Clock,

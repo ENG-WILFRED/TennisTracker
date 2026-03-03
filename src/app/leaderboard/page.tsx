@@ -265,7 +265,7 @@ export default function LeaderboardPage() {
       )}
 
       <footer className="mt-10 text-gray-500 text-sm text-center">
-        <p>&copy; {new Date().getFullYear()} Pwani University Tennis Club</p>
+        <p>&copy; {new Date().getFullYear()} Vico</p>
         <p className="text-xs mt-1">Rankings updated in real-time</p>
       </footer>
     </div>

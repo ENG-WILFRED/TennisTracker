@@ -19,14 +19,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ org
     }
 
     // Ensure player exists
-    const existing = await prisma.player.findUnique({ where: { id: playerId } });
+    const existing = await prisma.player.findUnique({ where: { userId: playerId } });
     if (!existing) {
       return new Response(JSON.stringify({ error: 'Player not found' }), { status: 404 });
     }
 
     // Attach player to organization (use connect to be explicit)
     const player = await prisma.player.update({
-      where: { id: playerId },
+      where: { userId: playerId },
       data: { organization: { connect: { id: orgId } } },
     });
 

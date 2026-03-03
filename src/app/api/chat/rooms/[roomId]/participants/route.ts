@@ -18,21 +18,16 @@ export async function GET(
       where: { roomId },
       include: {
         player: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            photo: true,
-          },
+          include: { user: true },
         },
       },
     });
 
     const formattedParticipants = participants.map((p: any) => ({
       id: p.id,
-      playerId: p.player.id,
-      playerName: `${p.player.firstName} ${p.player.lastName}`,
-      playerPhoto: p.player.photo,
+      playerId: p.player.userId,
+      playerName: `${p.player.user.firstName} ${p.player.user.lastName}`,
+      playerPhoto: p.player.user.photo,
       isOnline: p.isOnline,
     }));
 

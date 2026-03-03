@@ -65,7 +65,7 @@ export default function LoginPage() {
                         onMouseEnter={() => setIsHovered(true)}
                         onMouseLeave={() => setIsHovered(false)}
                     />
-                    <h1 className="text-2xl font-extrabold text-green-800 mt-3 text-center">Pwani University Tennis Login</h1>
+                    <h1 className="text-2xl font-extrabold text-green-800 mt-3 text-center">Sign In to Vico</h1>
                 </div>
                 <form onSubmit={handleSubmit}>
                     <div className="mb-4">
@@ -129,7 +129,7 @@ export default function LoginPage() {
                     </div>
                 )}
             </div>
-            <footer className="mt-8 text-gray-500 text-sm">&copy; {new Date().getFullYear()} Pwani University Tennis Club</footer>
+            <footer className="mt-8 text-gray-500 text-sm">&copy; {new Date().getFullYear()} Vico</footer>
         </div>
     );
 }

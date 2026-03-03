@@ -165,7 +165,7 @@ export default function DashboardPage() {
         </div>
       </div>
       <EditProfileModal show={showModal} editForm={editForm} onChange={handleEditChange} onClose={() => setShowModal(false)} onSubmit={handleEditSubmit} saving={saving} />
-      <footer className="mt-8 text-gray-500 text-sm text-center">&copy; {new Date().getFullYear()} Pwani University Tennis Club</footer>
+      <footer className="mt-8 text-gray-500 text-sm text-center">&copy; {new Date().getFullYear()} Vico</footer>
     </div>
   );
 }

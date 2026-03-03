@@ -148,7 +148,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
                     <MapPin className="w-4 h-4 text-emerald-600" />
                     Venue
                   </div>
-                  <div className="font-semibold text-slate-900">Pwani University Courts</div>
+                  <div className="font-semibold text-slate-900">Vico Court</div>
                 </div>
                 <div className="p-4 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-lg border border-blue-100">
                   <div className="flex items-center gap-2 text-sm text-slate-600 mb-2">

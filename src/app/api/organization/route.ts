@@ -8,25 +8,11 @@ export async function GET() {
       take: 50,
       include: {
         players: {
-          select: {
-            id: true,
-            username: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-            photo: true,
-          },
+          include: { user: true },
           take: 10,
         },
         staff: {
-          select: {
-            id: true,
-            name: true,
-            role: true,
-            email: true,
-            phone: true,
-            photo: true,
-          },
+          include: { user: true },
           take: 10,
         },
         inventory: {
@@ -101,8 +87,8 @@ export async function POST(request: Request) {
     });
 
     // Link the creator to the organization as a player member
-    await prisma.player.update({
-      where: { id: auth.playerId },
+    await prisma.player.updateMany({
+      where: { userId: auth.playerId },
       data: { organizationId: org.id },
     });
 

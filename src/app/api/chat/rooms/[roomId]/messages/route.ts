@@ -18,12 +18,7 @@ export async function GET(
       where: { roomId },
       include: {
         player: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            photo: true,
-          },
+          include: { user: true },
         },
       },
       orderBy: { createdAt: 'asc' },
@@ -33,9 +28,9 @@ export async function GET(
     const formattedMessages = messages.map((msg: any) => ({
       id: msg.id,
       content: msg.content,
-      playerId: msg.player.id,
-      playerName: `${msg.player.firstName} ${msg.player.lastName}`,
-      playerPhoto: msg.player.photo,
+      playerId: msg.player.userId,
+      playerName: `${msg.player.user.firstName} ${msg.player.user.lastName}`,
+      playerPhoto: msg.player.user.photo,
       createdAt: msg.createdAt,
     }));
 
@@ -60,11 +55,11 @@ export async function POST(
     }
 
     const user = await prisma.player.findUnique({
-      where: { id: auth.playerId },
-      select: { id: true, firstName: true, lastName: true, photo: true },
+      where: { userId: auth.playerId },
+      include: { user: true },
     });
 
-    if (!user) {
+    if (!user || !user.user) {
       return new Response(JSON.stringify({ error: 'User not found' }), { status: 404 });
     }
 
@@ -80,7 +75,7 @@ export async function POST(
     const message = await prisma.chatMessage.create({
       data: {
         roomId: roomId,
-        playerId: user.id,
+        playerId: user.userId,
         content,
       },
     });
@@ -89,9 +84,9 @@ export async function POST(
       JSON.stringify({
         id: message.id,
         content: message.content,
-        playerId: user.id,
-        playerName: `${user.firstName} ${user.lastName}`,
-        playerPhoto: user.photo,
+        playerId: user.userId,
+        playerName: `${user.user.firstName} ${user.user.lastName}`,
+        playerPhoto: user.user.photo,
         createdAt: message.createdAt,
       }),
       { status: 201, headers: { 'Content-Type': 'application/json' } }

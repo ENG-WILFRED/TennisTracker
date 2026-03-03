@@ -10,110 +10,111 @@ async function main() {
 
   // ==================== CREATE PLAYERS ====================
   console.log('📝 Creating players...');
-  const players = await Promise.all([
-    prisma.player.upsert({
-      where: { email: 'julius@pwani.ac.ke' },
-      update: {},
-      create: {
-        username: 'julius',
-        email: 'julius@pwani.ac.ke',
-        phone: '0700000001',
-        passwordHash: password,
-        firstName: 'Julius',
-        lastName: 'Nyerere',
-        gender: 'Male',
-        bio: 'Club founder and lead coach',
-        matchesPlayed: 45,
-        matchesWon: 35,
-        matchesLost: 10,
-      },
-    }),
-    prisma.player.upsert({
-      where: { email: 'juma@pwani.ac.ke' },
-      update: {},
-      create: {
-        username: 'juma',
-        email: 'juma@pwani.ac.ke',
-        phone: '0700000002',
-        passwordHash: password,
-        firstName: 'Juma',
-        lastName: 'Hassan',
-        gender: 'Male',
-        bio: 'Professional player',
-        matchesPlayed: 120,
-        matchesWon: 85,
-        matchesLost: 35,
-      },
-    }),
-    prisma.player.upsert({
-      where: { email: 'fatima@pwani.ac.ke' },
-      update: {},
-      create: {
-        username: 'fatima',
-        email: 'fatima@pwani.ac.ke',
-        phone: '0700000003',
-        passwordHash: password,
-        firstName: 'Fatima',
-        lastName: 'Mahmoud',
-        gender: 'Female',
-        bio: 'Rising star in womens tennis',
-        matchesPlayed: 78,
-        matchesWon: 52,
-        matchesLost: 26,
-      },
-    }),
-    prisma.player.upsert({
-      where: { email: 'ali@pwani.ac.ke' },
-      update: {},
-      create: {
-        username: 'ali',
-        email: 'ali@pwani.ac.ke',
-        phone: '0700000004',
-        passwordHash: password,
-        firstName: 'Ali',
-        lastName: 'Mwangi',
-        gender: 'Male',
-        bio: 'Junior tennis enthusiast',
-        matchesPlayed: 34,
-        matchesWon: 18,
-        matchesLost: 16,
-      },
-    }),
-    prisma.player.upsert({
-      where: { email: 'amina@pwani.ac.ke' },
-      update: {},
-      create: {
-        username: 'amina',
-        email: 'amina@pwani.ac.ke',
-        phone: '0700000005',
-        passwordHash: password,
-        firstName: 'Amina',
-        lastName: 'Kariuki',
-        gender: 'Female',
-        bio: 'Weekend player',
-        matchesPlayed: 28,
-        matchesWon: 16,
-        matchesLost: 12,
-      },
-    }),
-    prisma.player.upsert({
-      where: { email: 'kofi@pwani.ac.ke' },
-      update: {},
-      create: {
-        username: 'kofi',
-        email: 'kofi@pwani.ac.ke',
-        phone: '0700000006',
-        passwordHash: password,
-        firstName: 'Kofi',
-        lastName: 'Adeyemi',
-        gender: 'Male',
-        bio: 'Competitive senior player',
-        matchesPlayed: 92,
-        matchesWon: 64,
-        matchesLost: 28,
-      },
-    }),
-  ]);
+
+  const playerInfos = [
+    {
+      username: 'julius',
+      email: 'julius@pwani.ac.ke',
+      phone: '0700000001',
+      firstName: 'Julius',
+      lastName: 'Nyerere',
+      gender: 'Male',
+      bio: 'Club founder and lead coach',
+      matchesPlayed: 45,
+      matchesWon: 35,
+      matchesLost: 10,
+    },
+    {
+      username: 'juma',
+      email: 'juma@pwani.ac.ke',
+      phone: '0700000002',
+      firstName: 'Juma',
+      lastName: 'Hassan',
+      gender: 'Male',
+      bio: 'Professional player',
+      matchesPlayed: 120,
+      matchesWon: 85,
+      matchesLost: 35,
+    },
+    {
+      username: 'fatima',
+      email: 'fatima@pwani.ac.ke',
+      phone: '0700000003',
+      firstName: 'Fatima',
+      lastName: 'Mahmoud',
+      gender: 'Female',
+      bio: 'Rising star in womens tennis',
+      matchesPlayed: 78,
+      matchesWon: 52,
+      matchesLost: 26,
+    },
+    {
+      username: 'ali',
+      email: 'ali@pwani.ac.ke',
+      phone: '0700000004',
+      firstName: 'Ali',
+      lastName: 'Mwangi',
+      gender: 'Male',
+      bio: 'Junior tennis enthusiast',
+      matchesPlayed: 34,
+      matchesWon: 18,
+      matchesLost: 16,
+    },
+    {
+      username: 'amina',
+      email: 'amina@pwani.ac.ke',
+      phone: '0700000005',
+      firstName: 'Amina',
+      lastName: 'Kariuki',
+      gender: 'Female',
+      bio: 'Weekend player',
+      matchesPlayed: 28,
+      matchesWon: 16,
+      matchesLost: 12,
+    },
+    {
+      username: 'kofi',
+      email: 'kofi@pwani.ac.ke',
+      phone: '0700000006',
+      firstName: 'Kofi',
+      lastName: 'Adeyemi',
+      gender: 'Male',
+      bio: 'Competitive senior player',
+      matchesPlayed: 92,
+      matchesWon: 64,
+      matchesLost: 28,
+    },
+  ];
+
+  const players = await Promise.all(
+    playerInfos.map(async (info) => {
+      const user = await prisma.user.upsert({
+        where: { email: info.email },
+        update: {},
+        create: {
+          username: info.username,
+          email: info.email,
+          phone: info.phone,
+          passwordHash: password,
+          firstName: info.firstName,
+          lastName: info.lastName,
+          gender: info.gender,
+          bio: info.bio,
+        },
+      });
+
+      return prisma.player.upsert({
+        where: { userId: user.id },
+        update: {},
+        create: {
+          userId: user.id,
+          matchesPlayed: info.matchesPlayed,
+          matchesWon: info.matchesWon,
+          matchesLost: info.matchesLost,
+        },
+      });
+    })
+  );
 
   // ==================== CREATE ORGANIZATIONS ====================
   console.log('🏛️  Creating organizations...');
@@ -132,7 +133,7 @@ async function main() {
         email: 'info@nairobitennis.com',
         logo: 'https://images.unsplash.com/photo-1554224311-beee415c15e7?w=500&q=80',
         primaryColor: '#0ea5e9',
-        createdBy: players[0].id,
+        createdBy: players[0].userId,
         rating: 4.7,
         ratingCount: 156,
         verifiedBadge: true,
@@ -155,7 +156,7 @@ async function main() {
         email: 'academy@westlandstennis.com',
         logo: 'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=500&q=80',
         primaryColor: '#06b6d4',
-        createdBy: players[1].id,
+        createdBy: players[1].userId,
         rating: 4.5,
         ratingCount: 98,
         verifiedBadge: true,
@@ -285,7 +286,7 @@ async function main() {
     prisma.clubMember.create({
       data: {
         organizationId: orgs[0].id,
-        playerId: players[0].id,
+        playerId: players[0].userId,
         tierId: tiers[0].id,
         role: 'admin',
         joinDate: new Date('2023-01-15'),
@@ -298,7 +299,7 @@ async function main() {
     prisma.clubMember.create({
       data: {
         organizationId: orgs[0].id,
-        playerId: players[1].id,
+        playerId: players[1].userId,
         tierId: tiers[0].id,
         role: 'coach',
         joinDate: new Date('2023-02-10'),
@@ -311,7 +312,7 @@ async function main() {
     prisma.clubMember.create({
       data: {
         organizationId: orgs[0].id,
-        playerId: players[2].id,
+        playerId: players[2].userId,
         tierId: tiers[1].id,
         role: 'member',
         joinDate: new Date('2023-06-20'),
@@ -324,7 +325,7 @@ async function main() {
     prisma.clubMember.create({
       data: {
         organizationId: orgs[0].id,
-        playerId: players[3].id,
+        playerId: players[3].userId,
         tierId: tiers[2].id,
         role: 'member',
         joinDate: new Date('2024-01-05'),
@@ -337,7 +338,7 @@ async function main() {
     prisma.clubMember.create({
       data: {
         organizationId: orgs[0].id,
-        playerId: players[4].id,
+        playerId: players[4].userId,
         tierId: tiers[1].id,
         role: 'member',
         joinDate: new Date('2023-08-12'),
@@ -350,7 +351,7 @@ async function main() {
     prisma.clubMember.create({
       data: {
         organizationId: orgs[1].id,
-        playerId: players[5].id,
+        playerId: players[5].userId,
         tierId: tiers[3].id,
         role: 'admin',
         joinDate: new Date('2023-03-01'),
@@ -551,7 +552,7 @@ async function main() {
         message: 'Court 3 will be under maintenance on February 20-22. Alternative courts available.',
         announcementType: 'maintenance',
         targetRoles: ['member', 'admin', 'coach'],
-        createdBy: players[0].id,
+        createdBy: players[0].userId,
         isActive: true,
         expiresAt: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000),
       },
@@ -563,7 +564,7 @@ async function main() {
         message: 'Registration for February tournament is now open. Register before Feb 21!',
         announcementType: 'alert',
         targetRoles: ['member', 'coach'],
-        createdBy: players[0].id,
+        createdBy: players[0].userId,
         isActive: true,
         expiresAt: new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000),
       },
@@ -575,7 +576,7 @@ async function main() {
         message: 'Peak hours (4pm-8pm) now have dynamic pricing. Members receive 25% discount.',
         announcementType: 'policy',
         targetRoles: ['member', 'admin'],
-        createdBy: players[0].id,
+        createdBy: players[0].userId,
         isActive: true,
       },
     }),
@@ -737,7 +738,7 @@ async function main() {
     prisma.clubRating.create({
       data: {
         organizationId: orgs[0].id,
-        ratedBy: players[1].id,
+        ratedBy: players[1].userId,
         rating: 5,
         category: 'facilities',
         comment: 'Excellent court conditions and maintenance',
@@ -746,7 +747,7 @@ async function main() {
     prisma.clubRating.create({
       data: {
         organizationId: orgs[0].id,
-        ratedBy: players[2].id,
+        ratedBy: players[2].userId,
         rating: 4,
         category: 'coaching',
         comment: 'Great coaches, very professional',
@@ -755,7 +756,7 @@ async function main() {
     prisma.clubRating.create({
       data: {
         organizationId: orgs[0].id,
-        ratedBy: players[3].id,
+        ratedBy: players[3].userId,
         rating: 5,
         category: 'community',
         comment: 'Amazing community, very welcoming',
@@ -764,7 +765,7 @@ async function main() {
     prisma.clubRating.create({
       data: {
         organizationId: orgs[1].id,
-        ratedBy: players[5].id,
+        ratedBy: players[5].userId,
         rating: 5,
         category: 'overall',
         comment: 'Best academy in the city',

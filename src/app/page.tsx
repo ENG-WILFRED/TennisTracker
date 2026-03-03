@@ -40,7 +40,7 @@ export default function Home() {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-100 to-sky-100">
         <div className="text-center">
           <div className="text-6xl mb-4">🎾</div>
-          <p className="text-2xl font-bold text-gray-900">Tennis Tracker</p>
+          <p className="text-2xl font-bold text-gray-900">Vico</p>
           <p className="text-gray-600 mt-2">Loading...</p>
         </div>
       </div>

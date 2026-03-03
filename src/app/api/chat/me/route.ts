@@ -10,8 +10,8 @@ export async function GET(request: Request) {
 
     // Get current user
     const user = await prisma.player.findUnique({
-      where: { id: auth.playerId },
-      select: { id: true, firstName: true, lastName: true, photo: true },
+      where: { userId: auth.playerId },
+      include: { user: true },
     });
 
     if (!user) {
@@ -20,9 +20,9 @@ export async function GET(request: Request) {
 
     return new Response(
       JSON.stringify({
-        id: user.id,
-        name: `${user.firstName} ${user.lastName}`,
-        photo: user.photo,
+        id: user.user.id,
+        name: `${user.user.firstName} ${user.user.lastName}`,
+        photo: user.user.photo,
       }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );

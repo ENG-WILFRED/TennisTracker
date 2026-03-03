@@ -1,13 +1,14 @@
 import prisma from '@/lib/prisma';
+import type { NextRequest } from 'next/server';
 
 export async function GET(
-  request: Request,
-  { params }: { params: { orgId: string } }
+  request: NextRequest,
+  { params }: { params: Promise<{ orgId: string }> }
 ) {
   try {
     const { orgId } = await params;
 
-    let org = await prisma.organization.findUnique({
+    let org: any = await prisma.organization.findUnique({
       where: { id: orgId },
       include: {
         members: {
@@ -19,14 +20,7 @@ export async function GET(
             paymentStatus: true,
             attendanceCount: true,
             player: {
-              select: {
-                id: true,
-                username: true,
-                firstName: true,
-                lastName: true,
-                email: true,
-                photo: true,
-              },
+              include: { user: true },
             },
           },
           take: 10,
@@ -62,12 +56,7 @@ export async function GET(
             member: {
               select: {
                 player: {
-                  select: {
-                    username: true,
-                    firstName: true,
-                    lastName: true,
-                    photo: true,
-                  },
+                  include: { user: true },
                 },
               },
             },
@@ -128,14 +117,7 @@ export async function GET(
               paymentStatus: true,
               attendanceCount: true,
               player: {
-                select: {
-                  id: true,
-                  username: true,
-                  firstName: true,
-                  lastName: true,
-                  email: true,
-                  photo: true,
-                },
+                include: { user: true },
               },
             },
             take: 10,
@@ -171,12 +153,7 @@ export async function GET(
               member: {
                 select: {
                   player: {
-                    select: {
-                      username: true,
-                      firstName: true,
-                      lastName: true,
-                      photo: true,
-                    },
+                    include: { user: true },
                   },
                 },
               },

@@ -147,7 +147,7 @@ export default function CreateOrgForm({ isOpen, onClose, onSuccess }: CreateOrgF
                   onChange={handleChange}
                   required
                   className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-                  placeholder="e.g., Pwani Tennis Club"
+                  placeholder="e.g., Elite Tennis Club"
                 />
               </div>
 

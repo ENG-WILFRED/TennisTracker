@@ -10,10 +10,10 @@ export default function Footer() {
               <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-lg">
                 <span className="text-2xl">🎾</span>
               </div>
-              <span className="text-2xl font-bold text-white">Tennis Tracker</span>
+              <span className="text-2xl font-bold text-white">Vico</span>
             </div>
             <p className="text-gray-400 mb-6 max-w-md leading-relaxed">
-              Your complete platform for tennis management, player development, and community connection. Track your journey to tennis excellence.
+              Your complete sports ecosystem. Connect, compete, and achieve greatness on Vico.
             </p>
             <div className="flex gap-4">
               <a href="#" className="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-green-600 transition-colors">
@@ -59,13 +59,13 @@ export default function Footer() {
             </ul>
             <div className="mt-6">
               <h4 className="text-white font-bold text-lg mb-3">Contact</h4>
-              <p className="text-gray-400 text-sm mb-1">info@tennistracker.com</p>
+              <p className="text-gray-400 text-sm mb-1">hello@vico.com</p>
               <p className="text-gray-400 text-sm">+254 700 000 000</p>
             </div>
           </div>
         </div>
         <div className="border-t border-gray-800 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-gray-400 text-sm">&copy; 2026 Tennis Tracker. All rights reserved.</p>
+          <p className="text-gray-400 text-sm">&copy; 2026 Vico. All rights reserved.</p>
           <div className="flex gap-6 text-sm text-gray-400">
             <a href="#" className="hover:text-green-400 transition-colors">Privacy Policy</a>
             <a href="#" className="hover:text-green-400 transition-colors">Terms of Service</a>

@@ -5,22 +5,23 @@ const prisma = new PrismaClient();
 export async function GET() {
   try {
     const referees = await prisma.referee.findMany({
-      select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-        photo: true,
-        nationality: true,
-        bio: true,
-        matchesRefereed: true,
-        ballCrewMatches: true,
-        experience: true,
-        certifications: true,
-      },
+      include: { user: true },
       take: 50,
     });
 
-    return Response.json(referees);
+    const data = referees.map(r => ({
+      id: r.userId,
+      firstName: r.user.firstName,
+      lastName: r.user.lastName,
+      photo: r.user.photo,
+      nationality: r.user.nationality,
+      matchesRefereed: r.matchesRefereed,
+      ballCrewMatches: r.ballCrewMatches,
+      experience: r.experience,
+      certifications: r.certifications,
+    }));
+
+    return Response.json(data);
   } catch (error) {
     console.error('Error fetching referees:', error);
     return Response.json(

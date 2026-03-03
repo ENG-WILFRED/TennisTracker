@@ -7,145 +7,184 @@ async function main() {
   // Password for all demo users (hashed)
   const password = await bcrypt.hash("tennis123", 10);
 
-  await prisma.player.createMany({
-    data: [
-      {
-        username: 'julius',
-        email: 'federer@pwani.ac.ke',
-        phone: '0700000001',
-        passwordHash: password,
-        firstName: 'julius',
-        lastName: 'nyerere',
-        photo: 'https://images.unsplash.com/photo-1505228395891-9a51e7e86e81?w=500&q=80',
-        gender: 'Male',
-        dateOfBirth: new Date('1981-08-08'),
-        nationality: 'Switzerland',
-        bio: '20-time Grand Slam champion.',
-        matchesPlayed: 0,
-        matchesWon: 0,
-        matchesLost: 0,
-      },
-      {
-        username: 'joe',
-        email: 'nadal@pwani.ac.ke',
-        phone: '0700000002',
-        passwordHash: password,
-        firstName: 'joe',
-        lastName: 'kazungu',
-        photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&q=80',
-        gender: 'Male',
-        dateOfBirth: new Date('1986-06-03'),
-        nationality: 'Spain',
-        bio: 'King of Clay.',
-        matchesPlayed: 0,
-        matchesWon: 0,
-        matchesLost: 0,
-      },
-      {
-        username: 'leah',
-        email: 'djokovic@pwani.ac.ke',
-        phone: '0700000003',
-        passwordHash: password,
-        firstName: 'leah',
-        lastName: 'crush',
-        photo: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=500&q=80',
-        gender: 'female',
-        dateOfBirth: new Date('1987-05-22'),
-        nationality: 'Serbia',
-        bio: 'Serbian tennis legend.',
-        matchesPlayed: 0,
-        matchesWon: 0,
-        matchesLost: 0,
-      },
-      {
-        username: 'winnie',
-        email: 'serena@pwani.ac.ke',
-        phone: '0700000004',
-        passwordHash: password,
-        firstName: 'winnie',
-        lastName: 'mueni',
-        photo: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=500&q=80',
-        gender: 'Female',
-        dateOfBirth: new Date('1981-09-26'),
-        nationality: 'USA',
-        bio: 'Greatest women\'s player.',
-        matchesPlayed: 0,
-        matchesWon: 0,
-        matchesLost: 0,
-      },
-      {
-        username: 'wilfred',
-        email: 'sharapova@pwani.ac.ke',
-        phone: '0700000005',
-        passwordHash: password,
-        firstName: 'wilfred',
-        lastName: 'kimani',
-        photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&q=80',
-        gender: 'male',
-        dateOfBirth: new Date('1987-04-19'),
-        nationality: 'Russia',
-        bio: 'Siberian Siren.',
-        matchesPlayed: 0,
-        matchesWon: 0,
-        matchesLost: 0,
-      },
-      {
-        username: 'peter',
-        email: 'murray@pwani.ac.ke',
-        phone: '0700000006',
-        passwordHash: password,
-        firstName: 'peter',
-        lastName: 'mwangi',
-        photo: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=500&q=80',
-        gender: 'Male',
-        dateOfBirth: new Date('1987-05-15'),
-        nationality: 'UK',
-        bio: 'Scottish tennis star.',
-        matchesPlayed: 0,
-        matchesWon: 0,
-        matchesLost: 0,
-      },
-      {
-        username: 'morris',
-        email: 'murray1@pwani.ac.ke',
-        phone: '0700000006',
-        passwordHash: password,
-        firstName: 'morris',
-        lastName: 'morris',
-        photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&q=80',
-        gender: 'Male',
-        dateOfBirth: new Date('1987-05-15'),
-        nationality: 'UK',
-        bio: 'Scottish tennis star.',
-        matchesPlayed: 0,
-        matchesWon: 0,
-        matchesLost: 0,
-      },
-      {
-        username: 'jojo',
-        email: 'murray2@pwani.ac.ke',
-        phone: '0700000006',
-        passwordHash: password,
-        firstName: 'jojo',
-        lastName: 'jbouy',
-        photo: 'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=500&q=80',
-        gender: 'Male',
-        dateOfBirth: new Date('1987-05-15'),
-        nationality: 'UK',
-        bio: 'Scottish tennis star.',
-        matchesPlayed: 0,
-        matchesWon: 0,
-        matchesLost: 0,
-      },
-    ],
-    skipDuplicates: true,
-  });
+  // ==================== CREATE PLAYERS ====================
+  console.log('📝 Creating players...');
 
-  console.log('Seeded 8 players with full details!');
+  const playerInfos = [
+    {
+      username: 'julius',
+      email: 'federer@pwani.ac.ke',
+      phone: '0700000001',
+      passwordHash: password,
+      firstName: 'julius',
+      lastName: 'nyerere',
+      photo: 'https://images.unsplash.com/photo-1505228395891-9a51e7e86e81?w=500&q=80',
+      gender: 'Male',
+      dateOfBirth: new Date('1981-08-08'),
+      nationality: 'Switzerland',
+      bio: '20-time Grand Slam champion.',
+      matchesPlayed: 0,
+      matchesWon: 0,
+      matchesLost: 0,
+    },
+    {
+      username: 'joe',
+      email: 'nadal@pwani.ac.ke',
+      phone: '0700000002',
+      passwordHash: password,
+      firstName: 'joe',
+      lastName: 'kazungu',
+      photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&q=80',
+      gender: 'Male',
+      dateOfBirth: new Date('1986-06-03'),
+      nationality: 'Spain',
+      bio: 'King of Clay.',
+      matchesPlayed: 0,
+      matchesWon: 0,
+      matchesLost: 0,
+    },
+    {
+      username: 'leah',
+      email: 'djokovic@pwani.ac.ke',
+      phone: '0700000003',
+      passwordHash: password,
+      firstName: 'leah',
+      lastName: 'crush',
+      photo: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=500&q=80',
+      gender: 'female',
+      dateOfBirth: new Date('1987-05-22'),
+      nationality: 'Serbia',
+      bio: 'Serbian tennis legend.',
+      matchesPlayed: 0,
+      matchesWon: 0,
+      matchesLost: 0,
+    },
+    {
+      username: 'winnie',
+      email: 'serena@pwani.ac.ke',
+      phone: '0700000004',
+      passwordHash: password,
+      firstName: 'winnie',
+      lastName: 'mueni',
+      photo: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=500&q=80',
+      gender: 'Female',
+      dateOfBirth: new Date('1981-09-26'),
+      nationality: 'USA',
+      bio: 'Greatest women\'s player.',
+      matchesPlayed: 0,
+      matchesWon: 0,
+      matchesLost: 0,
+    },
+    {
+      username: 'wilfred',
+      email: 'sharapova@pwani.ac.ke',
+      phone: '0700000005',
+      passwordHash: password,
+      firstName: 'wilfred',
+      lastName: 'kimani',
+      photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&q=80',
+      gender: 'male',
+      dateOfBirth: new Date('1987-04-19'),
+      nationality: 'Russia',
+      bio: 'Siberian Siren.',
+      matchesPlayed: 0,
+      matchesWon: 0,
+      matchesLost: 0,
+    },
+    {
+      username: 'peter',
+      email: 'murray@pwani.ac.ke',
+      phone: '0700000006',
+      passwordHash: password,
+      firstName: 'peter',
+      lastName: 'mwangi',
+      photo: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=500&q=80',
+      gender: 'Male',
+      dateOfBirth: new Date('1987-05-15'),
+      nationality: 'UK',
+      bio: 'Scottish tennis star.',
+      matchesPlayed: 0,
+      matchesWon: 0,
+      matchesLost: 0,
+    },
+    {
+      username: 'morris',
+      email: 'murray1@pwani.ac.ke',
+      phone: '0700000006',
+      passwordHash: password,
+      firstName: 'morris',
+      lastName: 'morris',
+      photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&q=80',
+      gender: 'Male',
+      dateOfBirth: new Date('1987-05-15'),
+      nationality: 'UK',
+      bio: 'Scottish tennis star.',
+      matchesPlayed: 0,
+      matchesWon: 0,
+      matchesLost: 0,
+    },
+    {
+      username: 'jojo',
+      email: 'murray2@pwani.ac.ke',
+      phone: '0700000006',
+      passwordHash: password,
+      firstName: 'jojo',
+      lastName: 'jbouy',
+      photo: 'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=500&q=80',
+      gender: 'Male',
+      dateOfBirth: new Date('1987-05-15'),
+      nationality: 'UK',
+      bio: 'Scottish tennis star.',
+      matchesPlayed: 0,
+      matchesWon: 0,
+      matchesLost: 0,
+    },
+  ];
+
+  const players = await Promise.all(
+    playerInfos.map(async (info) => {
+      const user = await prisma.user.upsert({
+        where: { email: info.email },
+        update: {},
+        create: {
+          username: info.username,
+          email: info.email,
+          phone: info.phone,
+          passwordHash: info.passwordHash,
+          firstName: info.firstName,
+          lastName: info.lastName,
+          photo: info.photo,
+          gender: info.gender,
+          dateOfBirth: info.dateOfBirth,
+          nationality: info.nationality,
+          bio: info.bio,
+        },
+      });
+
+      const player = await prisma.player.upsert({
+        where: { userId: user.id },
+        update: {},
+        create: {
+          userId: user.id,
+          matchesPlayed: info.matchesPlayed,
+          matchesWon: info.matchesWon,
+          matchesLost: info.matchesLost,
+        },
+      });
+
+      return { user, player };
+    })
+  );
+
+  console.log('Seeded players with full details!');
+
+  console.log('Seeded players with full details!');
   // mark 'peter' as club account
-  const peter = await prisma.player.findUnique({ where: { username: 'peter' } });
-  if (peter) {
-    await prisma.player.update({ where: { id: peter.id }, data: { isClub: true } });
+  let peterPlayer: typeof players[number]['player'] | undefined;
+  const peterEntry = players.find(p => p.user.username === 'peter');
+  if (peterEntry) {
+    peterPlayer = peterEntry.player;
+    await prisma.player.update({ where: { userId: peterPlayer.userId }, data: { isClub: true } });
 
     // create a larger inventory attached to club
     const inventorySeed = [];
@@ -157,7 +196,7 @@ async function main() {
     ];
     for (let i = 0; i < 60; i++) {
       const name = sampleItems[i % sampleItems.length] + (i > 20 ? ` #${i}` : '');
-      inventorySeed.push({ name, count: Math.floor(Math.random() * 20), condition: ['Good','Fair','New'][i % 3], clubId: peter.id });
+      inventorySeed.push({ name, count: Math.floor(Math.random() * 20), condition: ['Good','Fair','New'][i % 3], clubId: peterPlayer.userId });
     }
     await prisma.inventoryItem.createMany({ data: inventorySeed, skipDuplicates: true });
     console.log('Seeded inventory items.');
@@ -174,23 +213,24 @@ async function main() {
         email: 'info@pwani.ac.ke',
         logo: null,
         primaryColor: '#0ea5e9',
-        createdBy: peter.id,
+        createdBy: peterPlayer.userId,
       },
       update: {},
     });
 
     // Attach the club player to the organization
-    await prisma.player.update({ where: { id: peter.id }, data: { organizationId: org.id } });
+    await prisma.player.update({ where: { userId: peterPlayer.userId }, data: { organizationId: org.id } });
 
     // Attach existing inventory items to the organization
-    await prisma.inventoryItem.updateMany({ where: { clubId: peter.id }, data: { organizationId: org.id } });
+    await prisma.inventoryItem.updateMany({ where: { clubId: peterPlayer.userId }, data: { organizationId: org.id } });
 
     // Create an org admin user and attach to the organization (password: 123456)
     try {
       const orgAdminPassword = await bcrypt.hash('123456', 10);
-      const orgAdmin = await prisma.player.upsert({
+      // create/upsert user first
+      const orgAdminUser = await prisma.user.upsert({
         where: { username: 'org_admin' },
-        update: { email: 'orgadmin@pwani.ac.ke', organizationId: org.id, passwordHash: orgAdminPassword },
+        update: { email: 'orgadmin@pwani.ac.ke' },
         create: {
           username: 'org_admin',
           email: 'orgadmin@pwani.ac.ke',
@@ -203,12 +243,17 @@ async function main() {
           dateOfBirth: new Date('1990-01-01'),
           nationality: 'Kenya',
           bio: 'Organization administrator',
-          organizationId: org.id,
         },
+      });
+      // then ensure a player profile exists for that user
+      const orgAdmin = await prisma.player.upsert({
+        where: { userId: orgAdminUser.id },
+        update: { organizationId: org.id },
+        create: { userId: orgAdminUser.id, organizationId: org.id },
       });
 
       // Make this admin the organization creator for permission checks
-      await prisma.organization.update({ where: { id: org.id }, data: { createdBy: orgAdmin.id } });
+      await prisma.organization.update({ where: { id: org.id }, data: { createdBy: orgAdminUser.id } });
       console.log('Seeded org admin and linked to organization (username: org_admin, password: 123456)');
     } catch (e) {
       console.error('Failed to create org admin', e);
@@ -216,13 +261,13 @@ async function main() {
   }
 
   // Seed referees and ball crew
-  await prisma.referee.createMany({
-    data: [
+  {
+    const refereeSeedData = [
       {
         username: 'ref_smith',
         email: 'smith@referee.com',
         phone: '+254722222001',
-        passwordHash: await bcrypt.hash("tennis123", 10),
+        password: 'tennis123',
         firstName: 'John',
         lastName: 'Smith',
         photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&q=80',
@@ -239,7 +284,7 @@ async function main() {
         username: 'ref_johnson',
         email: 'johnson@referee.com',
         phone: '+254722222002',
-        passwordHash: await bcrypt.hash("tennis123", 10),
+        password: 'tennis123',
         firstName: 'Sarah',
         lastName: 'Johnson',
         photo: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=500&q=80',
@@ -256,7 +301,7 @@ async function main() {
         username: 'ref_mueller',
         email: 'mueller@referee.com',
         phone: '+254722222003',
-        passwordHash: await bcrypt.hash("tennis123", 10),
+        password: 'tennis123',
         firstName: 'Klaus',
         lastName: 'Mueller',
         photo: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=500&q=80',
@@ -273,7 +318,7 @@ async function main() {
         username: 'ref_patel',
         email: 'patel@referee.com',
         phone: '+254722222004',
-        passwordHash: await bcrypt.hash("tennis123", 10),
+        password: 'tennis123',
         firstName: 'Priya',
         lastName: 'Patel',
         photo: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=500&q=80',
@@ -290,7 +335,7 @@ async function main() {
         username: 'ref_costa',
         email: 'costa@referee.com',
         phone: '+254722222005',
-        passwordHash: await bcrypt.hash("tennis123", 10),
+        password: 'tennis123',
         firstName: 'Marco',
         lastName: 'Costa',
         photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&q=80',
@@ -303,17 +348,54 @@ async function main() {
         experience: '8+ years',
         certifications: ['ATP Certified', 'ITF Level 2', 'Junior Development'],
       },
-    ],
-    skipDuplicates: true,
-  });
+    ];
 
-  console.log('Seeded 5 referees!');
+    for (const r of refereeSeedData) {
+      const passwordHash = await bcrypt.hash(r.password, 10);
+      const user = await prisma.user.upsert({
+        where: { username: r.username },
+        update: { email: r.email, phone: r.phone },
+        create: {
+          username: r.username,
+          email: r.email,
+          phone: r.phone,
+          passwordHash,
+          firstName: r.firstName,
+          lastName: r.lastName,
+          photo: r.photo,
+          gender: r.gender as any,
+          dateOfBirth: r.dateOfBirth,
+          nationality: r.nationality,
+          bio: r.bio,
+        },
+      });
+      await prisma.referee.upsert({
+        where: { userId: user.id },
+        update: {
+          matchesRefereed: r.matchesRefereed,
+          ballCrewMatches: r.ballCrewMatches,
+          experience: r.experience,
+          certifications: r.certifications,
+        },
+        create: {
+          userId: user.id,
+          matchesRefereed: r.matchesRefereed,
+          ballCrewMatches: r.ballCrewMatches,
+          experience: r.experience,
+          certifications: r.certifications,
+        },
+      });
+    }
+
+    console.log('Seeded referees and ball crew.');
+  }
 
   // Fetch all players early for use in coach seeding
   const allPlayers = await prisma.player.findMany();
 
-  // Seed staff and coaches attached to the club (peter)
-  if (peter) {
+  // Seed staff and coaches attached to the club (peterPlayer)
+  if (peterPlayer) {
+    const employedById = peterPlayer.userId;
     const staffSeed = [
       {
         name: 'James Mwangi',
@@ -340,7 +422,7 @@ async function main() {
         isVerified: true,
         isActive: true,
         contact: 'james@club.com',
-        employedById: peter.id,
+        employedById,
       },
       {
         name: 'Amara Okoro',
@@ -367,7 +449,7 @@ async function main() {
         isVerified: true,
         isActive: true,
         contact: 'amara@club.com',
-        employedById: peter.id,
+        employedById,
       },
       {
         name: 'Carlos Mendes',
@@ -394,7 +476,7 @@ async function main() {
         isVerified: true,
         isActive: true,
         contact: 'carlos@club.com',
-        employedById: peter.id,
+        employedById,
       },
       {
         name: 'Lina Gomez',
@@ -421,7 +503,7 @@ async function main() {
         isVerified: true,
         isActive: true,
         contact: 'lina@club.com',
-        employedById: peter.id,
+        employedById,
       },
       {
         name: 'Mohamed Hassan',
@@ -448,16 +530,42 @@ async function main() {
         isVerified: true,
         isActive: true,
         contact: 'mohamed@club.com',
-        employedById: peter.id,
+        employedById,
       },
     ];
+
     try {
-      await prisma.staff.createMany({ data: staffSeed, skipDuplicates: true });
+      // create users and staff profiles individually
+      for (const s of staffSeed) {
+        const username = s.email.split('@')[0];
+        const [firstName, ...rest] = s.name.split(' ');
+        const lastName = rest.join(' ');
+        const passwordHash = await bcrypt.hash('tennis123', 10);
+        const user = await prisma.user.upsert({
+          where: { username },
+          update: { email: s.email, phone: s.phone },
+          create: {
+            username,
+            email: s.email,
+            phone: s.phone,
+            passwordHash,
+            firstName,
+            lastName,
+          },
+        });
+        const { name, email, phone, ...staffFields } = s;
+        // staffFields still contains employedById, role etc
+        await prisma.staff.upsert({
+          where: { userId: user.id },
+          update: { ...staffFields },
+          create: { userId: user.id, ...staffFields },
+        });
+      }
       console.log('Seeded comprehensive coach/staff data.');
       // Attach staff employed by the club to the organization if it exists
       const org = await prisma.organization.findUnique({ where: { name: 'Pwani University Tennis Club' } });
       if (org) {
-        await prisma.staff.updateMany({ where: { employedById: peter.id }, data: { organizationId: org.id } });
+        await prisma.staff.updateMany({ where: { employedById }, data: { organizationId: org.id } });
       }
     } catch (error) {
       console.error('Error creating staff:', error);
@@ -477,7 +585,7 @@ async function main() {
       
       for (const cert of certifications.slice(0, Math.floor(Math.random() * 3) + 1)) {
         await prisma.certification.create({
-          data: { staffId: coach.id, ...cert }
+          data: { staffId: coach.userId, ...cert }
         }).catch(() => {}); // ignore duplicates
       }
 
@@ -491,7 +599,7 @@ async function main() {
       
       for (const spec of specs.slice(0, Math.floor(Math.random() * 3) + 2)) {
         await prisma.specialization.create({
-          data: { staffId: coach.id, ...spec }
+          data: { staffId: coach.userId, ...spec }
         }).catch(() => {}); // ignore duplicates
       }
 
@@ -510,7 +618,7 @@ async function main() {
       
       for (const slot of availability) {
         await prisma.availability.create({
-          data: { staffId: coach.id, ...slot }
+          data: { staffId: coach.userId, ...slot }
         }).catch(() => {}); // ignore duplicates
       }
 
@@ -518,7 +626,7 @@ async function main() {
       const basePrice = 50 + Math.random() * 100; // $50-150 per session
       await prisma.coachPricing.create({
         data: {
-          staffId: coach.id,
+          staffId: coach.userId,
           pricePerSession: parseFloat(basePrice.toFixed(2)),
           currency: 'USD',
           package3Sessions: parseFloat((basePrice * 2.8).toFixed(2)),
@@ -535,8 +643,8 @@ async function main() {
       for (const player of players) {
         await prisma.coachReview.create({
           data: {
-            staffId: coach.id,
-            playerId: player.id,
+            staffId: coach.userId,
+            playerId: player.userId,
             rating: Math.round((3 + Math.random() * 2) * 2) / 2, // 3-5 stars
             reviewText: ['Great coach!', 'Very professional', 'Learned a lot', 'Highly recommended'][
               Math.floor(Math.random() * 4)
@@ -566,11 +674,11 @@ async function main() {
     for (let i = 0; i < allPlayers.length; i++) {
       if (i % 2 === 0) {
         const badge = allBadges.find(b => b.name === 'Participation') || allBadges[0];
-        pbData.push({ playerId: allPlayers[i].id, badgeId: badge.id });
+        pbData.push({ playerId: allPlayers[i].userId, badgeId: badge.id });
       }
       if (i === 0) {
         const badge = allBadges.find(b => b.name === 'First Victory') || allBadges[0];
-        pbData.push({ playerId: allPlayers[i].id, badgeId: badge.id });
+        pbData.push({ playerId: allPlayers[i].userId, badgeId: badge.id });
       }
     }
     if (pbData.length > 0) await prisma.playerBadge.createMany({ data: pbData, skipDuplicates: true });
@@ -593,9 +701,9 @@ async function main() {
       await prisma.match.create({
         data: {
           round: 1,
-          playerA: { connect: { id: playerA.id } },
-          playerB: { connect: { id: playerB.id } },
-          winner: { connect: { id: winner.id } },
+          playerA: { connect: { userId: playerA.userId } },
+          playerB: { connect: { userId: playerB.userId } },
+          winner: { connect: { userId: winner.userId } },
           score: Math.random() > 0.5 ? '6-4' : '7-5',
           group: `Pool ${Math.floor(i / 3) + 1}`,
         }
@@ -619,8 +727,8 @@ async function main() {
       await prisma.match.create({
         data: {
           round: 2,
-          playerA: { connect: { id: playerA.id } },
-          playerB: { connect: { id: playerB.id } },
+          playerA: { connect: { userId: playerA.userId } },
+          playerB: { connect: { userId: playerB.userId } },
           group: `Pool ${Math.floor(i / 2) + 1}`,
         }
       });
@@ -640,7 +748,7 @@ async function main() {
       // randomly pick attendees (30-70% of players)
       const attendees = allPlayers.filter(() => Math.random() < 0.5 + Math.random() * 0.2);
       attendees.forEach((p) => {
-        attendanceSeed.push({ playerId: p.id, date, present: true });
+        attendanceSeed.push({ playerId: p.userId, date, present: true });
       });
     }
 
@@ -651,7 +759,7 @@ async function main() {
         date.setDate(today.getDate() - w * 7);
         const rating = 50 + Math.round(Math.random() * 50) + (Math.random() - 0.5) * 10; // 40-110-ish
         const points = Math.max(0, Math.round(Math.random() * 1000));
-        performanceSeed.push({ playerId: p.id, date, rating: Math.round(rating * 10) / 10, points });
+        performanceSeed.push({ playerId: p.userId, date, rating: Math.round(rating * 10) / 10, points });
       }
     }
 
@@ -716,7 +824,7 @@ async function main() {
   try {
     // Fetch created players
     const playersData = await prisma.player.findMany({
-      where: { username: { in: ['julius', 'joe', 'leah'] } },
+      where: { user: { username: { in: ['julius', 'joe', 'leah'] } } },
       take: 3,
     });
 
@@ -739,7 +847,7 @@ async function main() {
         phone: '+254-20-2720000',
         email: 'info@nairobitennis.com',
         primaryColor: '#0ea5e9',
-        createdBy: playersData[0].id,
+        createdBy: playersData[0].userId,
         rating: 4.7,
         ratingCount: 156,
         verifiedBadge: true,
@@ -762,7 +870,7 @@ async function main() {
         phone: '+254-20-7000000',
         email: 'academy@westlandstennis.com',
         primaryColor: '#06b6d4',
-        createdBy: playersData[1].id,
+        createdBy: playersData[1].userId,
         rating: 4.5,
         ratingCount: 98,
         verifiedBadge: true,
@@ -832,11 +940,11 @@ async function main() {
 
     // Create Club Members
     const clubMember1 = await prisma.clubMember.upsert({
-      where: { organizationId_playerId: { organizationId: org1.id, playerId: playersData[0].id } },
+      where: { organizationId_playerId: { organizationId: org1.id, playerId: playersData[0].userId } },
       update: {},
       create: {
         organizationId: org1.id,
-        playerId: playersData[0].id,
+        playerId: playersData[0].userId,
         tierId: tierGold.id,
         role: 'admin',
         joinDate: new Date('2023-01-15'),
@@ -847,11 +955,11 @@ async function main() {
     });
 
     const clubMember2 = await prisma.clubMember.upsert({
-      where: { organizationId_playerId: { organizationId: org1.id, playerId: playersData[1].id } },
+      where: { organizationId_playerId: { organizationId: org1.id, playerId: playersData[1].userId } },
       update: {},
       create: {
         organizationId: org1.id,
-        playerId: playersData[1].id,
+        playerId: playersData[1].userId,
         tierId: tierGold.id,
         role: 'coach',
         joinDate: new Date('2023-02-10'),
@@ -889,7 +997,7 @@ async function main() {
         message: 'We are excited to have you as a member. Start booking courts today!',
         announcementType: 'general',
         targetRoles: ['member', 'admin', 'coach'],
-        createdBy: playersData[0].id,
+        createdBy: playersData[0].userId,
         isActive: true,
       },
     });

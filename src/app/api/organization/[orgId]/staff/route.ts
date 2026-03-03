@@ -19,17 +19,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ org
 
     const { orgId } = await params;
     const body = await request.json();
-    const { name, email, phone, role, photo } = body;
+    const { userId, role, contact, expertise } = body;
 
-    if (!name || !role) return new Response(JSON.stringify({ error: 'name and role required' }), { status: 400 });
+    if (!userId || !role) return new Response(JSON.stringify({ error: 'userId and role required' }), { status: 400 });
 
     const staff = await prisma.staff.create({
       data: {
-        name,
-        email,
-        phone,
+        userId,
         role,
-        photo,
+        contact: contact || null,
+        expertise: expertise || null,
         organizationId: orgId,
       },
     });

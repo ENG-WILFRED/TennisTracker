@@ -37,29 +37,33 @@ export async function POST(request: Request) {
     // Try referee login
     const referee = await prisma.referee.findFirst({
       where: {
-        OR: [{ username: usernameOrEmail }, { email: usernameOrEmail }],
+        OR: [
+          { user: { username: usernameOrEmail } },
+          { user: { email: usernameOrEmail } },
+        ],
       },
+      include: { user: true },
     });
 
-    if (!referee) {
+    if (!referee || !referee.user) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
 
-    const valid = await bcrypt.compare(password, referee.passwordHash);
+    const valid = await bcrypt.compare(password, referee.user.passwordHash);
     if (!valid) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
 
-    const accessToken = generateAccessToken({ playerId: referee.id, email: referee.email, username: referee.username });
-    const refreshToken = generateRefreshToken({ playerId: referee.id, email: referee.email, username: referee.username });
+    const accessToken = generateAccessToken({ playerId: referee.user.id, email: referee.user.email, username: referee.user.username });
+    const refreshToken = generateRefreshToken({ playerId: referee.user.id, email: referee.user.email, username: referee.user.username });
 
     const clientUser = {
-      id: referee.id,
-      username: referee.username,
-      email: referee.email,
-      firstName: referee.firstName,
-      lastName: referee.lastName,
-      photo: referee.photo || null,
+      id: referee.user.id,
+      username: referee.user.username,
+      email: referee.user.email,
+      firstName: referee.user.firstName,
+      lastName: referee.user.lastName,
+      photo: referee.user.photo || null,
       role: 'referee',
     };
 

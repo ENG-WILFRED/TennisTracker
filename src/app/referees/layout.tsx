@@ -2,8 +2,8 @@ import Layout from '@/components/Layout';
 import RefereeHeader from '@/components/referee/RefereeHeader';
 
 export const metadata = {
-  title: 'Referees & Ball Crew - Tennis Tracker',
-  description: 'Browse our certified referees and ball crew members',
+  title: 'Referees & Officials - Vico',
+  description: 'Browse our certified referees and officials on Vico',
 };
 
 export default function RefereesLayout({

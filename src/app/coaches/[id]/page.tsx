@@ -28,6 +28,9 @@ export default async function CoachProfilePage({ params }: { params: Promise<{ i
   }
 
   const { coach, club, students, studentsStats, performanceData, overallRating } = data;
+  const coachName =
+    [coach.user.firstName, coach.user.lastName].filter(Boolean).join(" ") ||
+    coach.user.username;
 
   return (
     <main className="min-h-screen py-8 bg-gradient-to-br from-green-50 to-sky-50 w-full px-4">
@@ -45,8 +48,8 @@ export default async function CoachProfilePage({ params }: { params: Promise<{ i
               <div className="relative flex-shrink-0">
                 <div className="w-40 h-40 rounded-full bg-gradient-to-br from-green-400 to-emerald-600 p-1 shadow-xl border-4 border-white overflow-hidden">
                   <img
-                    src={coach.photo ?? '/images/coach-placeholder.jpg'}
-                    alt={coach.name}
+                    src={coach.user.photo ?? '/images/coach-placeholder.jpg'}
+                    alt={`${coach.user.firstName} ${coach.user.lastName}`}
                     className="w-full h-full rounded-full object-cover"
                   />
                 </div>
@@ -58,7 +61,7 @@ export default async function CoachProfilePage({ params }: { params: Promise<{ i
               {/* Coach Info */}
               <div className="flex-1">
                 <div className="mb-4">
-                  <h1 className="text-3xl font-bold text-gray-900 mb-3">{coach.name}</h1>
+                  <h1 className="text-3xl font-bold text-gray-900 mb-3">{coachName}</h1>
                   <div className="flex flex-wrap items-center gap-3">
                     {coach.role && (
                       <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-100 text-emerald-700 rounded-full">
@@ -95,7 +98,7 @@ export default async function CoachProfilePage({ params }: { params: Promise<{ i
                   )}
                   {coach.contact && (
                     <Link
-                      href={`/contact?to=${encodeURIComponent(coach.contact)}&title=${encodeURIComponent('Contact ' + coach.name)}`}
+                      href={`/contact?to=${encodeURIComponent(coach.contact)}&title=${encodeURIComponent('Contact ' + coachName)}`}
                       className="flex items-center gap-2 text-green-600 hover:text-green-700 transition-colors"
                     >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -117,15 +120,15 @@ export default async function CoachProfilePage({ params }: { params: Promise<{ i
                   </svg>
                   <h3 className="font-semibold text-gray-900">Associated Club</h3>
                 </div>
-                <Link href={`/players/${club.id}`}>
+                <Link href={`/players/${club.userId || club.user.id}`}>
                   <div className="p-4 border-2 rounded-lg bg-gradient-to-r from-green-50 to-emerald-50 border-green-200 hover:border-green-400 hover:shadow-md transition-all cursor-pointer">
                     <div className="flex items-center gap-3">
                       <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-emerald-600 rounded-full flex items-center justify-center text-white font-bold">
-                        {club.firstName?.[0]}
+                        {club.user.firstName?.[0]}
                       </div>
                       <div>
-                        <div className="font-bold text-green-900">{club.firstName} {club.lastName}</div>
-                        {club.email && <div className="text-sm text-green-700">{club.email}</div>}
+                        <div className="font-bold text-green-900">{club.user.firstName} {club.user.lastName}</div>
+                        {club.user.email && <div className="text-sm text-green-700">{club.user.email}</div>}
                       </div>
                     </div>
                   </div>

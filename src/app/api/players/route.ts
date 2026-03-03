@@ -18,37 +18,28 @@ export async function GET(req: Request) {
       ? {
           isClub: false,
           OR: [
-            { firstName: { startsWith: q, mode: 'insensitive' as const } },
-            { lastName: { startsWith: q, mode: 'insensitive' as const } },
+            { user: { firstName: { startsWith: q, mode: 'insensitive' as const } } },
+            { user: { lastName: { startsWith: q, mode: 'insensitive' as const } } },
           ],
         }
       : { isClub: false };
 
     const players = await prisma.player.findMany({
       where: whereClause,
-      select: {
-        id: true,
-        username: true,
-        firstName: true,
-        nationality: true,
-        lastName: true,
-        photo: true,
-        matchesWon: true,
-        matchesPlayed: true,
-      },
+      include: { user: true },
       orderBy: { matchesWon: 'desc' },
       take: q ? 20 : 8,
     });
 
     const data = players.map((p) => ({
-      id: p.id,
-      nationality: p.nationality,
-      name: `${p.firstName} ${p.lastName}`,
-      username: p.username,
+      id: p.userId,
+      nationality: p.user.nationality,
+      name: `${p.user.firstName} ${p.user.lastName}`,
+      username: p.user.username,
       wins: p.matchesWon,
       matchesPlayed: p.matchesPlayed,
       level: p.matchesWon > 20 ? 'Advanced' : p.matchesWon > 10 ? 'Intermediate' : 'Beginner',
-      img: p.photo || 'https://images.unsplash.com/photo-1560272564-c83b66b1ad12?w=400&q=80',
+      img: p.user.photo || 'https://images.unsplash.com/photo-1560272564-c83b66b1ad12?w=400&q=80',
     }));
 
     return NextResponse.json(data);

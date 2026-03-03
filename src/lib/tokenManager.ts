@@ -1,6 +1,6 @@
 // Token configuration
 export const TOKEN_CONFIG = {
-  ACCESS_TOKEN_EXPIRY: 15 * 60 * 1000, // 15 minutes in ms
+  ACCESS_TOKEN_EXPIRY: 30 * 60 * 1000, // 15 minutes in ms
   REFRESH_TOKEN_EXPIRY: 7 * 24 * 60 * 60 * 1000, // 7 days in ms
   INACTIVITY_TIMEOUT: 10 * 60 * 1000, // 10 minutes in ms
 };

@@ -6,7 +6,8 @@ const prisma = new PrismaClient();
 export async function getCoachDashboard(coachId: string) {
   // Get coach staff record
   const coach = await prisma.staff.findUnique({
-    where: { id: coachId },
+    where: { userId: coachId },
+    include: { user: true },
   });
 
   if (!coach) {
@@ -17,13 +18,9 @@ export async function getCoachDashboard(coachId: string) {
   let club = null;
   if (coach.employedById) {
     club = await prisma.player.findUnique({
-      where: { id: coach.employedById },
-      select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-        email: true,
-        phone: true,
+      where: { userId: coach.employedById },
+      include: {
+        user: true,
       },
     });
   }
@@ -35,18 +32,12 @@ export async function getCoachDashboard(coachId: string) {
         where: {
           staffMembers: {
             some: {
-              id: coachId,
+              userId: coachId,
             },
           },
         },
-        select: {
-          id: true,
-          firstName: true,
-          lastName: true,
-          email: true,
-          matchesWon: true,
-          matchesLost: true,
-          matchesPlayed: true,
+        include: {
+          user: true,
         },
       })
     : [];
@@ -66,8 +57,8 @@ export async function getCoachDashboard(coachId: string) {
     ? await prisma.match.findMany({
         where: {
           OR: [
-            { playerA: { staffMembers: { some: { id: coachId } } } },
-            { playerB: { staffMembers: { some: { id: coachId } } } },
+            { playerA: { staffMembers: { some: { userId: coachId } } } },
+            { playerB: { staffMembers: { some: { userId: coachId } } } },
           ],
         },
         include: {
@@ -83,17 +74,15 @@ export async function getCoachDashboard(coachId: string) {
       player: {
         staffMembers: {
           some: {
-            id: coachId,
+            userId: coachId,
           },
         },
       },
     },
     include: {
       player: {
-        select: {
-          id: true,
-          firstName: true,
-          lastName: true,
+        include: {
+          user: true,
         },
       },
     },

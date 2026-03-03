@@ -13,14 +13,14 @@ export default function Hero() {
           <div className="space-y-8 animate-fade-in">
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-100 text-green-700 rounded-full text-sm font-semibold">
               <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-              Join 10,000+ Tennis Players
+              Join Thousands on Vico
             </div>
             <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-gray-900 leading-tight">
-              Elevate Your
-              <span className="block mt-2 bg-gradient-to-r from-green-600 via-emerald-600 to-sky-600 bg-clip-text text-transparent">Tennis Game</span>
+              Play. Track. Win.
+              <span className="block mt-2 bg-gradient-to-r from-green-600 via-emerald-600 to-sky-600 bg-clip-text text-transparent">On Vico.</span>
             </h1>
             <p className="text-xl text-gray-600 leading-relaxed max-w-xl">
-              Track matches, connect with coaches, analyze performance, and join a thriving tennis community. Your complete platform for tennis excellence.
+              Connect with players and coaches. Track your matches, analyze your performance, and join a thriving community. Your sports ecosystem awaits.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
               <Link href="/register" className="group px-8 py-4 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl hover:from-green-700 hover:to-emerald-700 transition-all font-semibold text-lg shadow-xl hover:shadow-2xl transform hover:scale-105 flex items-center justify-center gap-2">

@@ -42,8 +42,8 @@ export default function Features() {
     <section className="w-full py-5 px-4 bg-gradient-to-br from-green-100 to-sky-100">
       <div className="w-full">
         <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">Why Choose Tennis Tracker?</h2>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">Everything you need to excel in tennis, all in one platform</p>
+          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">Why Choose Vico?</h2>
+          <p className="text-xl text-gray-600 max-w-2xl mx-auto">Your complete sports ecosystem for managing matches, teams, and competition</p>
         </div>
         
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">

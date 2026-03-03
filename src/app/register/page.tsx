@@ -110,10 +110,10 @@ export default function RegisterPage() {
             {/* Title Section */}
             <div className="flex-1 text-center md:text-left">
               <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent mb-2">
-                Join Pwani University Tennis
+                Join Vico
               </h1>
               <p className="text-slate-600 text-lg">
-                Create your account and start tracking your matches
+                Create your account and start competing today
               </p>
               <div className="flex items-center justify-center md:justify-start gap-4 mt-3">
                 <div className="flex items-center gap-1.5 text-sm text-slate-500">
@@ -263,7 +263,7 @@ export default function RegisterPage() {
                     </div>
                     <div>
                       <p className="text-emerald-800 font-semibold">Registration successful! 🎾</p>
-                      <p className="text-emerald-600 text-sm">Welcome to the Pwani University Tennis community</p>
+                      <p className="text-emerald-600 text-sm">Welcome to Vico</p>
                     </div>
                   </div>
                 </div>
@@ -291,7 +291,7 @@ export default function RegisterPage() {
         {/* Footer */}
         <footer className="mt-8 text-center">
           <p className="text-slate-500 text-sm">
-            &copy; {new Date().getFullYear()} Pwani University Tennis Club. All rights reserved.
+            &copy; {new Date().getFullYear()} Vico. All rights reserved.
           </p>
         </footer>
       </div>

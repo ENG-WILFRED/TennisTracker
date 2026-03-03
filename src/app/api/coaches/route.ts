@@ -9,15 +9,16 @@ export async function GET() {
   try {
     const coaches = await prisma.staff.findMany({
       where: { role: { contains: 'Coach' } },
-      orderBy: { name: 'asc' },
+      include: { user: true },
+      orderBy: { user: { firstName: 'asc' } },
     });
 
     const data = coaches.map((c) => ({
-      id: c.id,
-      name: c.name,
+      id: c.userId,
+      name: `${c.user.firstName} ${c.user.lastName}`,
       role: c.role,
       expertise: c.expertise || 'General Coaching',
-      photo: c.photo || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&q=80',
+      photo: c.user.photo || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&q=80',
       studentCount: c.studentCount || 0,
     }));
 
