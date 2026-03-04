@@ -224,7 +224,10 @@ export async function GET(
       }),
       {
         status: 200,
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'public, max-age=5, s-maxage=5, stale-while-revalidate=10',
+        },
       }
     );
   } catch (error) {

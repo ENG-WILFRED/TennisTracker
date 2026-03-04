@@ -22,7 +22,11 @@ export async function GET() {
       studentCount: c.studentCount || 0,
     }));
 
-    return NextResponse.json(data);
+    return NextResponse.json(data, {
+      headers: {
+        'Cache-Control': 'public, max-age=5, s-maxage=5, stale-while-revalidate=10',
+      },
+    });
   } catch (err) {
     console.error('API /api/coaches error:', err);
     return NextResponse.json([], { status: 200 });

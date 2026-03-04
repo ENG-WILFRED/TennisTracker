@@ -42,7 +42,11 @@ export async function GET(req: Request) {
       img: p.user.photo || 'https://images.unsplash.com/photo-1560272564-c83b66b1ad12?w=400&q=80',
     }));
 
-    return NextResponse.json(data);
+    return NextResponse.json(data, {
+      headers: {
+        'Cache-Control': 'public, max-age=5, s-maxage=5, stale-while-revalidate=10',
+      },
+    });
   } catch (err) {
     console.error('API /api/players error:', err);
     return NextResponse.json([], { status: 200 });

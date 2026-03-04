@@ -21,7 +21,11 @@ export async function GET() {
       certifications: r.certifications,
     }));
 
-    return Response.json(data);
+    return Response.json(data, {
+      headers: {
+        'Cache-Control': 'public, max-age=5, s-maxage=5, stale-while-revalidate=10',
+      },
+    });
   } catch (error) {
     console.error('Error fetching referees:', error);
     return Response.json(
