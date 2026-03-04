@@ -109,8 +109,17 @@ export async function refreshAccessToken(): Promise<boolean> {
     }
 
     const data = await response.json();
-    storeTokens(data);
-    return true;
+    // Ensure the response conforms to our AuthTokens interface
+    if (typeof data === 'object' && data !== null &&
+        typeof (data as any).accessToken === 'string' &&
+        typeof (data as any).refreshToken === 'string') {
+      storeTokens(data as AuthTokens);
+      return true;
+    } else {
+      console.error('Invalid tokens received from refresh endpoint:', data);
+      clearTokens();
+      return false;
+    }
   } catch (error) {
     console.error('Token refresh failed:', error);
     clearTokens();

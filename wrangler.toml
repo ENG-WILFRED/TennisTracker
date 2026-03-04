@@ -1,0 +1,37 @@
+# Wrangler configuration for deploying TennisTracker to Cloudflare Workers/Pages
+# Used by `wrangler` CLI or GitHub Actions.
+
+name = "tennis-tracker"
+# Type is javascript for Next.js output
+main = "worker.js"
+compatibility_date = "2026-01-01"  # update to current date when deploying
+# Leave workers_dev false when deploying from Pages
+workers_dev = false
+
+# Bindings for environment variables and R2 bucket
+# set these in the dashboard / secrets accordingly
+
+# Example R2 bucket binding for media uploads
+[[r2_buckets]]
+binding = "MEDIA_BUCKET"
+bucket_name = "my-tennis-media-bucket"
+
+# Durable Objects namespace for chat rooms
+[durable_objects]
+# define the CHAT_ROOMS namespace and point to the ChatRoom class
+bindings = [
+  { name = "CHAT_ROOMS", class_name = "ChatRoom" },
+]
+
+[[durable_objects.namespaces]]
+name = "CHAT_ROOMS"
+binding = "CHAT_ROOMS"
+
+# KV namespace example (optional caching or rate-limiter storage)
+# [[kv_namespaces]]
+# binding = "RATE_LIMIT_STORE"
+# id = "your-kv-namespace-id"
+
+# Environment variables will be provided via the dashboard or action
+```
+This file should be placed at the repo root. Use `wrangler publish` or Pages integration to deploy.

@@ -8,7 +8,7 @@ if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { to, title, message, fromId } = body;
+    const { to, title, message, fromId } = body as any;
 
     // For now, persist a contact message record if you have a table, otherwise log
     console.log('Contact message:', { to, title, fromId });

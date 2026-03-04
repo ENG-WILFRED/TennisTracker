@@ -34,7 +34,7 @@ export default function ChatRoomList({ selectedRoomId, onSelectRoom }: ChatRoomL
     try {
       const response = await authenticatedFetch('/api/chat/rooms');
       if (response.ok) {
-        const data = await response.json();
+        const data = (await response.json()) as any;
         setRooms(data);
       }
     } catch (error) {
@@ -55,7 +55,7 @@ export default function ChatRoomList({ selectedRoomId, onSelectRoom }: ChatRoomL
       });
 
       if (response.ok) {
-        const newRoom = await response.json();
+        const newRoom = (await response.json()) as any;
         setRooms([...rooms, newRoom]);
         setNewRoomName('');
         setShowCreateModal(false);

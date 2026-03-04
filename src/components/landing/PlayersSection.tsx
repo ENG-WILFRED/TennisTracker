@@ -29,7 +29,7 @@ export default function PlayersSection() {
           setPlayers([]);
           return;
         }
-        const data = await res.json();
+        const data = (await res.json()) as any;
         setPlayers(data || []);
       } catch (err) {
         console.error('Failed to fetch players:', err);

@@ -25,7 +25,7 @@ export default function LoginModal({ isOpen, onClose, title = 'Login' }: any) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       });
-      const data = await res.json();
+      const data = (await res.json()) as any;
 
       if (!res.ok) {
         setError(data.error || 'Login failed');

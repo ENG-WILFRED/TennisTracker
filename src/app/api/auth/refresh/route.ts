@@ -3,7 +3,7 @@ import { verifyToken, generateAccessToken, TokenPayload } from '@/lib/jwt';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { refreshToken } = body;
+    const { refreshToken } = body as any;
 
     if (!refreshToken) {
       return new Response(

@@ -81,7 +81,7 @@ export async function POST(
 
     const { roomId } = await params;
     const body = await request.json();
-    const { content } = body;
+    const { content } = body as any;
 
     if (!content) {
       return new Response(JSON.stringify({ error: 'Content is required' }), { status: 400 });

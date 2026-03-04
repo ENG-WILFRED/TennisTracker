@@ -16,6 +16,9 @@
     "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.169.0",
+    "@grpc/grpc-js": "^1.6.11",
+    "@grpc/proto-loader": "^0.7.6",
     "@hookform/resolvers": "^5.2.2",
     "@prisma/client": "^6.16.1",
     "@types/jsonwebtoken": "^9.0.10",
@@ -32,12 +35,10 @@
     "react-is": "^19.2.4",
     "recharts": "^3.2.1",
     "socket.io": "^4.8.3",
-    "socket.io-client": "^4.8.3",
-    "@grpc/grpc-js": "^1.6.11",
-    "@grpc/proto-loader": "^0.7.6",
-    "@aws-sdk/client-s3": "^3.169.0"
+    "socket.io-client": "^4.8.3"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260301.1",
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4.1.17",
     "@types/node": "^20",

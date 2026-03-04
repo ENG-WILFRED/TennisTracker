@@ -80,17 +80,17 @@ export default function ChatWindow({ roomId }: ChatWindowProps) {
       ]);
 
       if (messagesRes.ok) {
-        const msgs = await messagesRes.json();
+        const msgs = (await messagesRes.json()) as any;
         setMessages(msgs);
       }
 
       if (participantsRes.ok) {
-        const parts = await participantsRes.json();
+        const parts = (await participantsRes.json()) as any;
         setParticipants(parts);
       }
 
       if (userRes.ok) {
-        const user = await userRes.json();
+        const user = (await userRes.json()) as any;
         setCurrentUserId(user.id);
       }
     } catch (error) {
@@ -110,12 +110,12 @@ export default function ChatWindow({ roomId }: ChatWindowProps) {
         ]);
 
         if (messagesRes.ok) {
-          const msgs = await messagesRes.json();
+          const msgs = (await messagesRes.json()) as any;
           setMessages(msgs);
         }
 
         if (participantsRes.ok) {
-          const parts = await participantsRes.json();
+          const parts = (await participantsRes.json()) as any;
           setParticipants(parts);
         }
       } catch (error) {
@@ -142,7 +142,7 @@ export default function ChatWindow({ roomId }: ChatWindowProps) {
         // Fetch updated messages
         const messagesRes = await authenticatedFetch(`/api/chat/rooms/${roomId}/messages`);
         if (messagesRes.ok) {
-          const msgs = await messagesRes.json();
+          const msgs = (await messagesRes.json()) as any;
           setMessages(msgs);
         }
       }

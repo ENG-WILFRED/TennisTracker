@@ -62,11 +62,12 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
     }
 
     const body = await req.json();
+    const bodyAny = body as any;
     const data: any = {};
-    if (body.bio !== undefined) data.bio = body.bio;
-    if (body.photo !== undefined) data.photo = body.photo;
-    if (body.nationality !== undefined) data.nationality = body.nationality;
-    if (body.experience !== undefined) data.experience = body.experience;
+    if (bodyAny.bio !== undefined) data.bio = bodyAny.bio;
+    if (bodyAny.photo !== undefined) data.photo = bodyAny.photo;
+    if (bodyAny.nationality !== undefined) data.nationality = bodyAny.nationality;
+    if (bodyAny.experience !== undefined) data.experience = bodyAny.experience;
 
     const updated = await prisma.referee.update({
       where: { userId: id },

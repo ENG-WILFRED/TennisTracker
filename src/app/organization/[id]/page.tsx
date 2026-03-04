@@ -47,7 +47,7 @@ export default function OrganizationDetailPage() {
       setLoading(true);
       const res = await authenticatedFetch(`/api/organization/${orgId}`, { requireAuth: false });
       if (res.ok) {
-        const data = await res.json();
+        const data = (await res.json()) as any;
         setOrg(data);
       } else {
         console.error('Failed to fetch organization');
