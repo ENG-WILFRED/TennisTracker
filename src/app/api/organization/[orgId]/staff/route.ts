@@ -4,7 +4,10 @@ import { verifyApiAuth } from '@/lib/authMiddleware';
 export async function GET(request: Request, { params }: { params: Promise<{ orgId: string }> }) {
   try {
     const { orgId } = await params;
-    const staff = await prisma.staff.findMany({ where: { organizationId: orgId } });
+    const staff = await prisma.staff.findMany({
+      where: { organizationId: orgId },
+      include: { user: true },
+    });
     return new Response(JSON.stringify(staff), {
       status: 200,
       headers: {

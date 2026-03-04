@@ -38,6 +38,9 @@ export function cleanupExpired() {
 }
 
 // periodic cleanup (best effort)
-setInterval(cleanupExpired, 30_000).unref();
+const interval = setInterval(cleanupExpired, 30_000);
+if (typeof interval.unref === 'function') {
+  interval.unref();
+}
 
 export default { isRateLimited, getRemaining, resetKey };
