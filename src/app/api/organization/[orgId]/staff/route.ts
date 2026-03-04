@@ -5,7 +5,13 @@ export async function GET(request: Request, { params }: { params: Promise<{ orgI
   try {
     const { orgId } = await params;
     const staff = await prisma.staff.findMany({ where: { organizationId: orgId } });
-    return new Response(JSON.stringify(staff), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify(staff), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'public, max-age=5, s-maxage=5, stale-while-revalidate=10',
+      },
+    });
   } catch (error) {
     console.error('Error listing staff:', error);
     return new Response(JSON.stringify({ error: 'Internal server error' }), { status: 500 });

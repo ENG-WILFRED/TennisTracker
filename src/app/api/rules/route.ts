@@ -32,7 +32,11 @@ export async function GET() {
       });
     });
 
-    return NextResponse.json(groupedRules);
+    return NextResponse.json(groupedRules, {
+      headers: {
+        'Cache-Control': 'public, max-age=5, s-maxage=5, stale-while-revalidate=10',
+      },
+    });
   } catch (error) {
     console.error('Error fetching rules:', error);
     return NextResponse.json({ error: 'Failed to fetch rules' }, { status: 500 });

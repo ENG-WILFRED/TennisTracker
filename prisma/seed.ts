@@ -1,4 +1,7 @@
-import { PrismaClient } from '../src/generated/prisma';
+// When running under ESM (package.json has "type": "module"), importing a directory
+// path fails with ERR_UNSUPPORTED_DIR_IMPORT. Point directly at the generated entry file.
+// Using the .js extension ensures Node resolves the file instead of the directory.
+import { PrismaClient } from '../src/generated/prisma/index.js';
 import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
@@ -110,7 +113,7 @@ async function main() {
     {
       username: 'morris',
       email: 'murray1@pwani.ac.ke',
-      phone: '0700000006',
+      phone: '0700000007', // unique phone
       passwordHash: password,
       firstName: 'morris',
       lastName: 'morris',
@@ -126,7 +129,7 @@ async function main() {
     {
       username: 'jojo',
       email: 'murray2@pwani.ac.ke',
-      phone: '0700000006',
+      phone: '0700000008', // unique phone
       passwordHash: password,
       firstName: 'jojo',
       lastName: 'jbouy',
@@ -352,9 +355,10 @@ async function main() {
 
     for (const r of refereeSeedData) {
       const passwordHash = await bcrypt.hash(r.password, 10);
+      // use email to avoid potential username collisions
       const user = await prisma.user.upsert({
-        where: { username: r.username },
-        update: { email: r.email, phone: r.phone },
+        where: { email: r.email },
+        update: { username: r.username, phone: r.phone },
         create: {
           username: r.username,
           email: r.email,
@@ -541,20 +545,35 @@ async function main() {
         const [firstName, ...rest] = s.name.split(' ');
         const lastName = rest.join(' ');
         const passwordHash = await bcrypt.hash('tennis123', 10);
+        // take out properties that belong on the User record rather than Staff
+        const { name, email, phone, photo, gender, nationality, bio, ...staffFields } = s;
+
+        // Upsert the User profile. Keep the additional fields (photo, gender,
+        // nationality, bio) synced in case they change in the seed data.
         const user = await prisma.user.upsert({
-          where: { username },
-          update: { email: s.email, phone: s.phone },
+          where: { email: email },
+          update: {
+            username,
+            phone,
+            photo,
+            gender,
+            nationality,
+            bio,
+          },
           create: {
             username,
-            email: s.email,
-            phone: s.phone,
+            email,
+            phone,
             passwordHash,
             firstName,
             lastName,
+            photo,
+            gender,
+            nationality,
+            bio,
           },
         });
-        const { name, email, phone, ...staffFields } = s;
-        // staffFields still contains employedById, role etc
+        // staffFields now only contains fields applicable to the Staff model
         await prisma.staff.upsert({
           where: { userId: user.id },
           update: { ...staffFields },
@@ -883,8 +902,18 @@ async function main() {
     console.log(`✅ Created ${org1.name} and ${org2.name}`);
 
     // Create Membership Tiers
-    const tierGold = await prisma.membershipTier.create({
-      data: {
+    const tierGold = await prisma.membershipTier.upsert({
+      where: { name: 'Gold' },
+      update: {
+        organizationId: org1.id,
+        description: 'Premium membership with unlimited court access',
+        monthlyPrice: 5000,
+        benefitsJson: JSON.stringify(['Unlimited court access', '50% coaching discount', 'Priority tournament registration']),
+        courtHoursPerMonth: 999,
+        maxConcurrentBookings: 10,
+        discountPercentage: 50,
+      },
+      create: {
         organizationId: org1.id,
         name: 'Gold',
         description: 'Premium membership with unlimited court access',
@@ -896,8 +925,18 @@ async function main() {
       },
     });
 
-    const tierSilver = await prisma.membershipTier.create({
-      data: {
+    const tierSilver = await prisma.membershipTier.upsert({
+      where: { name: 'Silver' },
+      update: {
+        organizationId: org1.id,
+        description: 'Standard membership with limited court access',
+        monthlyPrice: 2500,
+        benefitsJson: JSON.stringify(['40 hours court access', '25% coaching discount']),
+        courtHoursPerMonth: 40,
+        maxConcurrentBookings: 5,
+        discountPercentage: 25,
+      },
+      create: {
         organizationId: org1.id,
         name: 'Silver',
         description: 'Standard membership with limited court access',
@@ -912,8 +951,16 @@ async function main() {
     console.log('✅ Created membership tiers');
 
     // Create Courts
-    const court1 = await prisma.court.create({
-      data: {
+    const court1 = await prisma.court.upsert({
+      where: { organizationId_courtNumber: { organizationId: org1.id, courtNumber: 1 } },
+      update: {
+        name: 'Court 1',
+        surface: 'Hard',
+        indoorOutdoor: 'outdoor',
+        lights: true,
+        status: 'available',
+      },
+      create: {
         organizationId: org1.id,
         name: 'Court 1',
         courtNumber: 1,
@@ -924,8 +971,16 @@ async function main() {
       },
     });
 
-    const court2 = await prisma.court.create({
-      data: {
+    const court2 = await prisma.court.upsert({
+      where: { organizationId_courtNumber: { organizationId: org1.id, courtNumber: 2 } },
+      update: {
+        name: 'Court 2',
+        surface: 'Clay',
+        indoorOutdoor: 'outdoor',
+        lights: true,
+        status: 'available',
+      },
+      create: {
         organizationId: org1.id,
         name: 'Court 2',
         courtNumber: 2,
@@ -971,27 +1026,40 @@ async function main() {
 
     console.log('✅ Created club members');
 
-    // Create Organization Roles
-    const roleAdmin = await prisma.organizationRole.create({
-      data: {
+    // Create Organization Roles (idempotent via upsert on orgId+name unique index)
+    const roleAdmin = await prisma.organizationRole.upsert({
+      where: { organizationId_name: { organizationId: org1.id, name: 'Admin' } },
+      update: { description: 'Full access to all features' },
+      create: {
         organizationId: org1.id,
         name: 'Admin',
         description: 'Full access to all features',
-        permissions: {
-          create: [
-            { organizationId: org1.id, permissionName: 'manage_members' },
-            { organizationId: org1.id, permissionName: 'manage_courts' },
-            { organizationId: org1.id, permissionName: 'view_revenue' },
-          ],
-        },
       },
     });
 
+    // ensure admin permissions exist separately
+    const rolePermissions = ['manage_members', 'manage_courts', 'view_revenue'];
+    for (const perm of rolePermissions) {
+      await prisma.rolePermission.upsert({
+        where: { roleId_permissionName: { roleId: roleAdmin.id, permissionName: perm } },
+        update: {},
+        create: {
+          organizationId: org1.id,
+          roleId: roleAdmin.id,
+          permissionName: perm,
+        },
+      });
+    }
+
     console.log('✅ Created organization roles');
 
-    // Create Club Announcements
-    await prisma.clubAnnouncement.create({
-      data: {
+    // Create Club Announcements (use deterministic id to allow upsert)
+    const announcementId = 'welcome-nairobi';
+    await prisma.clubAnnouncement.upsert({
+      where: { id: announcementId },
+      update: {},
+      create: {
+        id: announcementId,
         organizationId: org1.id,
         title: 'Welcome to Nairobi Tennis Club',
         message: 'We are excited to have you as a member. Start booking courts today!',
@@ -1004,37 +1072,65 @@ async function main() {
 
     console.log('✅ Created announcements');
 
-    // Create Club Event
+    // Create Club Event. There is no unique index on (organizationId,name),
+    // so we first look for an existing event and create it if missing.
     const now = new Date();
-    const event = await prisma.clubEvent.create({
-      data: {
-        organizationId: org1.id,
-        name: 'February 2026 Tournament',
-        description: 'Monthly tournament for all members',
-        eventType: 'tournament',
-        startDate: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000),
-        registrationCap: 32,
-        registrationDeadline: new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000),
-        location: 'Nairobi Tennis Club',
-        prizePool: 50000,
-        entryFee: 2000,
-      },
+    let event = await prisma.clubEvent.findFirst({
+      where: { organizationId: org1.id, name: 'February 2026 Tournament' },
     });
+    if (!event) {
+      event = await prisma.clubEvent.create({
+        data: {
+          organizationId: org1.id,
+          name: 'February 2026 Tournament',
+          description: 'Monthly tournament for all members',
+          eventType: 'tournament',
+          startDate: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000),
+          registrationCap: 32,
+          registrationDeadline: new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000),
+          location: 'Nairobi Tennis Club',
+          prizePool: 50000,
+          entryFee: 2000,
+        },
+      });
+    } else {
+      // optionally update fields if they changed
+      await prisma.clubEvent.update({
+        where: { id: event.id },
+        data: {
+          description: 'Monthly tournament for all members',
+          eventType: 'tournament',
+          startDate: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000),
+          registrationCap: 32,
+          registrationDeadline: new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000),
+          location: 'Nairobi Tennis Club',
+          prizePool: 50000,
+          entryFee: 2000,
+        },
+      });
+    }
 
-    await prisma.eventRegistration.create({
-      data: {
-        eventId: event.id,
-        memberId: clubMember1.id,
-        status: 'registered',
-        signupOrder: 1,
-      },
+    await prisma.eventRegistration.upsert({
+      where: { eventId_memberId: { eventId: event.id, memberId: clubMember1.id } },
+      update: { status: 'registered', signupOrder: 1 },
+      create: { eventId: event.id, memberId: clubMember1.id, status: 'registered', signupOrder: 1 },
     });
 
     console.log('✅ Created club events');
 
     // Create Club Finance
-    await prisma.clubFinance.create({
-      data: {
+    await prisma.clubFinance.upsert({
+      where: { organizationId_month_year: { organizationId: org1.id, month: now.getMonth() + 1, year: now.getFullYear() } },
+      update: {
+        membershipRevenue: 45000,
+        courtBookingRevenue: 28500,
+        coachCommissions: 12000,
+        eventRevenue: 36000,
+        totalRevenue: 121500,
+        totalExpenses: 55000,
+        netProfit: 66500,
+      },
+      create: {
         organizationId: org1.id,
         month: now.getMonth() + 1,
         year: now.getFullYear(),
@@ -1050,17 +1146,82 @@ async function main() {
 
     console.log('✅ Created club finances');
 
-    // Create Organization Badges
-    await prisma.organizationBadge.create({
-      data: {
-        organizationId: org1.id,
-        badgeName: 'Verified Club',
-        badgeType: 'verified',
-        achievementDate: new Date('2023-06-01'),
-      },
+    // Create Organization Badges (use findFirst because there is no unique index)
+    const existingBadge = await prisma.organizationBadge.findFirst({
+      where: { organizationId: org1.id, badgeName: 'Verified Club' },
     });
+    if (!existingBadge) {
+      await prisma.organizationBadge.create({
+        data: {
+          organizationId: org1.id,
+          badgeName: 'Verified Club',
+          badgeType: 'verified',
+          achievementDate: new Date('2023-06-01'),
+        },
+      });
+    } else {
+      // optionally update
+      await prisma.organizationBadge.update({
+        where: { id: existingBadge.id },
+        data: { achievementDate: new Date('2023-06-01'), badgeType: 'verified' },
+      });
+    }
 
     console.log('✅ Created organization badges');
+
+    // ------------------------------------------------------------------
+    // SAMPLE CHAT DATA
+    // create a simple chat room between the first two players with
+    // a couple of messages demonstrating delivery/read durations
+    // ------------------------------------------------------------------
+    try {
+      const chatPlayers = await prisma.player.findMany({ take: 2, include: { user: true } });
+      if (chatPlayers.length >= 2) {
+        const [p1, p2] = chatPlayers;
+        let room = await prisma.chatRoom.findFirst({ where: { name: 'General' } });
+        if (!room) {
+          room = await prisma.chatRoom.create({
+            data: {
+              name: 'General',
+              description: 'General discussion',
+              createdBy: p1.userId,
+              participants: {
+                create: [
+                  { playerId: p1.userId, isOnline: false, lastSeen: new Date() },
+                  { playerId: p2.userId, isOnline: false, lastSeen: new Date() },
+                ],
+              },
+            },
+          });
+        }
+
+        // sample messages with varying receipt state
+        await prisma.chatMessage.createMany({
+          data: [
+            {
+              roomId: room.id,
+              playerId: p1.userId,
+              content: 'Hello there!',
+              createdAt: new Date(),
+              deliveredAt: new Date(),
+              // not read yet
+            },
+            {
+              roomId: room.id,
+              playerId: p2.userId,
+              content: "Hey! I'm online now.",
+              createdAt: new Date(),
+              deliveredAt: new Date(),
+              readAt: new Date(),
+            },
+          ],
+          skipDuplicates: true,
+        });
+        console.log('✅ Seeded sample chat room and messages');
+      }
+    } catch (chatError) {
+      console.error('Error seeding sample chat data:', chatError);
+    }
 
     console.log('\n✅ Club management system seeded successfully!\n');
   } catch (error) {

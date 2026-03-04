@@ -1,4 +1,5 @@
 import prisma from '@/lib/prisma';
+import { broadcastToRoom } from '@/lib/chatSockets';
 import { verifyApiAuth } from '@/lib/authMiddleware';
 
 export async function GET(
@@ -25,6 +26,19 @@ export async function GET(
       take: 100,
     });
 
+    // mark messages from others as read (simple global flag)
+    const me = await prisma.player.findUnique({ where: { userId: auth.playerId } });
+    if (me && me.userId) {
+      await prisma.chatMessage.updateMany({
+        where: {
+          roomId,
+          readAt: null,
+          playerId: { not: me.userId },
+        },
+        data: { readAt: new Date() },
+      });
+    }
+
     const formattedMessages = messages.map((msg: any) => ({
       id: msg.id,
       content: msg.content,
@@ -32,6 +46,8 @@ export async function GET(
       playerName: `${msg.player.user.firstName} ${msg.player.user.lastName}`,
       playerPhoto: msg.player.user.photo,
       createdAt: msg.createdAt,
+      deliveredAt: msg.deliveredAt,
+      readAt: msg.readAt,
     }));
 
     return new Response(JSON.stringify(formattedMessages), {
@@ -77,8 +93,25 @@ export async function POST(
         roomId: roomId,
         playerId: user.userId,
         content,
+        deliveredAt: new Date(),
       },
     });
+
+    // notify any websocket subscribers in this room
+    const formatted = {
+      type: 'message',
+      data: {
+        id: message.id,
+        content: message.content,
+        playerId: user.userId,
+        playerName: `${user.user.firstName} ${user.user.lastName}`,
+        playerPhoto: user.user.photo,
+        createdAt: message.createdAt,
+        deliveredAt: message.deliveredAt,
+        readAt: message.readAt,
+      },
+    };
+    broadcastToRoom(roomId, formatted);
 
     return new Response(
       JSON.stringify({
@@ -88,6 +121,8 @@ export async function POST(
         playerName: `${user.user.firstName} ${user.user.lastName}`,
         playerPhoto: user.user.photo,
         createdAt: message.createdAt,
+        deliveredAt: message.deliveredAt,
+        readAt: message.readAt,
       }),
       { status: 201, headers: { 'Content-Type': 'application/json' } }
     );

@@ -63,6 +63,8 @@ model Player {
   // Organization membership
   organization   Organization? @relation(fields: [organizationId], references: [id])
   organizationId String?
+
+  @@index([organizationId])
 }
 
 model InventoryItem {
@@ -403,6 +405,11 @@ model ChatMessage {
   player    Player   @relation(fields: [playerId], references: [userId])
   content   String
   createdAt DateTime @default(now())
+  // delivery/read receipt timestamps used for UI ticks
+  deliveredAt DateTime? // set when message has been delivered to the room
+  readAt      DateTime? // set when at least one recipient has opened/seen the message
+
+  @@index([roomId, createdAt])
 }
 
 model ChatParticipant {

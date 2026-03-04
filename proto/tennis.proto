@@ -1,0 +1,18 @@
+syntax = "proto3";
+package tennis;
+
+// simple analytics service exposing player statistics
+service Analytics {
+  rpc GetPlayerStats(PlayerRequest) returns (PlayerStats);
+}
+
+message PlayerRequest {
+  string playerId = 1;
+}
+
+message PlayerStats {
+  int32 matchesPlayed = 1;
+  int32 matchesWon = 2;
+  int32 matchesLost = 3;
+  int32 matchesRefereed = 4;
+}

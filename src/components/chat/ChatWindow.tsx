@@ -11,6 +11,8 @@ interface ChatMessage {
   playerName: string;
   photo?: string;
   createdAt: string;
+  deliveredAt?: string | null;
+  readAt?: string | null;
 }
 
 interface ChatParticipant {
@@ -33,13 +35,34 @@ export default function ChatWindow({ roomId }: ChatWindowProps) {
   const [currentUserId, setCurrentUserId] = useState<string>('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
     fetchRoomData();
     startPolling();
+    // open websocket connection for real-time updates
+    const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
+    const wsUrl = `${protocol}://${location.host}/api/chat/ws?roomId=${roomId}`;
+    try {
+      const ws = new WebSocket(wsUrl as string as string);
+      wsRef.current = ws;
+      ws.addEventListener('message', (evt) => {
+        try {
+          const msg = JSON.parse(evt.data);
+          if (msg.type === 'message') {
+            setMessages((prev) => [...prev, msg.data]);
+          }
+        } catch (e) {}
+      });
+    } catch (e) {
+      console.warn('WebSocket failed, falling back to polling');
+    }
     return () => {
       if (pollIntervalRef.current) {
         clearInterval(pollIntervalRef.current);
+      }
+      if (wsRef.current) {
+        wsRef.current.close();
       }
     };
   }, [roomId]);
@@ -190,6 +213,20 @@ export default function ChatWindow({ roomId }: ChatWindowProps) {
                   <p>{message.content}</p>
                   <p className="text-xs mt-1 opacity-70">
                     {new Date(message.createdAt).toLocaleTimeString()}
+                    <span className="ml-2 text-xs opacity-80">
+                      {message.deliveredAt ? (
+                        message.readAt ? (
+                          // double blue tick
+                          <span className="text-blue-400">✔✔</span>
+                        ) : (
+                          // double grey tick for delivered
+                          <span className="text-gray-400">✔✔</span>
+                        )
+                      ) : (
+                        // single tick for not delivered
+                        <span className="text-gray-400">✔</span>
+                      )}
+                    </span>
                   </p>
                 </div>
               </div>

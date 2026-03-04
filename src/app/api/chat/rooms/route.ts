@@ -15,35 +15,35 @@ export async function GET(request: Request) {
       return new Response(JSON.stringify({ error: 'User not found' }), { status: 404 });
     }
 
-    // Get all chat rooms with participant and online count
-    const rooms = await prisma.chatRoom.findMany({
-      include: {
-        participants: {
-          select: {
-            playerId: true,
-            isOnline: true,
-          },
-        },
-        messages: {
-          orderBy: { createdAt: 'desc' },
-          take: 1,
-          select: { content: true },
-        },
-      },
+    // Get all chat rooms but optimize: query counts and last message separately
+    const roomsBase = await prisma.chatRoom.findMany({
+      select: { id: true, name: true, description: true },
     });
 
-    const formattedRooms = rooms.map((room: any) => ({
-      id: room.id,
-      name: room.name,
-      description: room.description,
-      participantCount: room.participants.length,
-      onlineCount: room.participants.filter((p: any) => p.isOnline).length,
-      lastMessage: room.messages[0]?.content || '',
-    }));
+    const formattedRooms = await Promise.all(
+      roomsBase.map(async (room: any) => {
+        const participantCount = await prisma.chatParticipant.count({ where: { roomId: room.id } });
+        const onlineCount = await prisma.chatParticipant.count({ where: { roomId: room.id, isOnline: true } });
+        const lastMsg = await prisma.chatMessage.findFirst({ where: { roomId: room.id }, orderBy: { createdAt: 'desc' }, select: { content: true } });
 
+        return {
+          id: room.id,
+          name: room.name,
+          description: room.description,
+          participantCount,
+          onlineCount,
+          lastMessage: lastMsg?.content || '',
+        };
+      })
+    );
+
+    // Cache this list briefly at Cloudflare edge (5s) to reduce DB pressure
     return new Response(JSON.stringify(formattedRooms), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'public, max-age=5, s-maxage=5, stale-while-revalidate=10',
+      },
     });
   } catch (error) {
     console.error('Error fetching chat rooms:', error);

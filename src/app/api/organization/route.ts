@@ -49,7 +49,10 @@ export async function GET() {
 
     return new Response(JSON.stringify(enrichedOrgs), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'public, max-age=5, s-maxage=5, stale-while-revalidate=10',
+      },
     });
   } catch (error) {
     console.error('Error listing organizations:', error);
@@ -67,6 +70,25 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { name, description, city, country, phone, email, primaryColor, logo } = body;
 
+    // handle logo data URI upload
+    let logoUrl: string | null = null;
+    if (logo && typeof logo === 'string' && logo.startsWith('data:')) {
+      try {
+        const { uploadToR2 } = await import('@/lib/media');
+        const extMatch = logo.match(/^data:image\/(\w+);base64,/);
+        const ext = extMatch ? extMatch[1] : 'png';
+        const key = `logos/${Date.now()}.${ext}`;
+        const base64 = logo.split(',')[1];
+        const buffer = Buffer.from(base64, 'base64');
+        logoUrl = await uploadToR2(key, buffer, `image/${ext}`);
+      } catch (e) {
+        console.error('logo upload failed', e);
+        logoUrl = null;
+      }
+    } else {
+      logoUrl = logo || null;
+    }
+
     if (!name) {
       return new Response(JSON.stringify({ error: 'Name is required' }), { status: 400 });
     }
@@ -81,7 +103,7 @@ export async function POST(request: Request) {
         phone,
         email,
         primaryColor,
-        logo,
+        logo: logoUrl,
         createdBy: auth.playerId,
       },
     });

@@ -52,6 +52,26 @@ export async function registerPlayer({
   // Hash password
   const passwordHash = await bcrypt.hash(password, 10);
 
+  // handle photo upload if it's a data URI
+  let photoUrl: string | null = null;
+  if (photo && photo.startsWith('data:')) {
+    try {
+      const { uploadToR2 } = await import('@/lib/media');
+      // generate a filename from timestamp
+      const extMatch = photo.match(/^data:image\/(\w+);base64,/);
+      const ext = extMatch ? extMatch[1] : 'jpg';
+      const key = `avatars/${Date.now()}.${ext}`;
+      const base64 = photo.split(',')[1];
+      const buffer = Buffer.from(base64, 'base64');
+      photoUrl = await uploadToR2(key, buffer, `image/${ext}`);
+    } catch (e) {
+      console.error('Failed to upload photo to R2', e);
+      photoUrl = null;
+    }
+  } else {
+    photoUrl = photo || null;
+  }
+
   // Create user and associated player profile
   await prisma.user.create({
     data: {
@@ -61,7 +81,7 @@ export async function registerPlayer({
       passwordHash,
       firstName,
       lastName,
-      photo: photo || null,
+      photo: photoUrl,
       gender: gender || null,
       dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
       nationality: nationality || null,
