@@ -29,10 +29,10 @@ export async function GET(
     // mark messages from others as read (simple global flag)
     const me = await prisma.player.findUnique({ where: { userId: auth.playerId } });
     if (me && me.userId) {
+      // Mark unread messages from others as read
       await prisma.chatMessage.updateMany({
         where: {
           roomId,
-          readAt: null,
           playerId: { not: me.userId },
         },
         data: { readAt: new Date() },

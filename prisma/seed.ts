@@ -1203,7 +1203,6 @@ async function main() {
               playerId: p1.userId,
               content: 'Hello there!',
               createdAt: new Date(),
-              deliveredAt: new Date(),
               // not read yet
             },
             {
@@ -1211,8 +1210,6 @@ async function main() {
               playerId: p2.userId,
               content: "Hey! I'm online now.",
               createdAt: new Date(),
-              deliveredAt: new Date(),
-              readAt: new Date(),
             },
           ],
           skipDuplicates: true,
