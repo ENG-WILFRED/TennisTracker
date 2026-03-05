@@ -13,6 +13,7 @@ dependencies:
   http: ^0.13.6
   shared_preferences: ^2.0.15
   web_socket_channel: ^2.2.0
+  intl: ^0.17.0
 
 dev_dependencies:
   flutter_test:
@@ -20,3 +21,5 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/tennis.jpeg
