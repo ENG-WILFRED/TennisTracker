@@ -9,7 +9,8 @@ class AttendanceChartWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Group attendance by month for the chart
-    final monthlyData = <String, Map<String, int>>{};
+    final monthlyData = <String, Map<String, dynamic>>{};
+    final monthNames = <String, String>{};
 
     for (final record in attendance) {
       final date = DateTime.parse(record['date']);
@@ -17,7 +18,8 @@ class AttendanceChartWidget extends StatelessWidget {
       final monthName = '${_getMonthName(date.month)} ${date.year}';
 
       if (!monthlyData.containsKey(monthKey)) {
-        monthlyData[monthKey] = {'present': 0, 'total': 0, 'monthName': monthName};
+        monthlyData[monthKey] = {'present': 0, 'total': 0};
+        monthNames[monthKey] = monthName;
       }
 
       monthlyData[monthKey]!['total'] = (monthlyData[monthKey]!['total'] ?? 0) + 1;
@@ -32,9 +34,9 @@ class AttendanceChartWidget extends StatelessWidget {
     for (int i = 0; i < sortedMonths.length; i++) {
       final month = sortedMonths[i];
       final data = monthlyData[month]!;
-      final present = data['present'] ?? 0;
-      final total = data['total'] ?? 1;
-      final percentage = total > 0 ? (present / total) * 100 : 0;
+      final present = data['present'] as int? ?? 0;
+      final total = data['total'] as int? ?? 1;
+      final percentage = total > 0 ? (present.toDouble() / total.toDouble()) * 100.0 : 0.0;
 
       barGroups.add(
         BarChartGroupData(

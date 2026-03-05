@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
+import '../widgets/page_header.dart';
 
 class InventoryPage extends StatefulWidget {
   const InventoryPage({super.key});
@@ -51,6 +52,18 @@ class _InventoryPageState extends State<InventoryPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: const Text(''),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: const Icon(Icons.menu),
+            onPressed: () => Scaffold.of(context).openDrawer(),
+          ),
+        ),
+      ),
+      drawer: _buildDrawer(),
       backgroundColor: Colors.transparent,
       body: Container(
         decoration: BoxDecoration(
@@ -79,10 +92,18 @@ class _InventoryPageState extends State<InventoryPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      PageHeader(
+                        title: 'Inventory',
+                        description: 'Manage equipment and supplies',
+                        navItems: [
+                          NavItem(label: 'Dashboard', route: '/dashboard'),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
                       _buildHeader(items),
-                      SizedBox(height: 20),
+                      const SizedBox(height: 20),
                       _buildFilterChips(),
-                      SizedBox(height: 20),
+                      const SizedBox(height: 20),
                       if (display.isEmpty)
                         _buildEmptyState()
                       else
@@ -343,6 +364,142 @@ class _InventoryPageState extends State<InventoryPage> {
                 ),
                 child: Text('Details', style: TextStyle(color: Color(0xFFEA580C), fontSize: 10, fontWeight: FontWeight.bold)),
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDrawer() {
+    return Drawer(
+      child: SafeArea(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            const DrawerHeader(
+              decoration: BoxDecoration(
+                color: Colors.green,
+              ),
+              child: Text(
+                'Vico App',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                ),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.home),
+              title: const Text('Dashboard'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushReplacementNamed(context, '/dashboard');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.people),
+              title: const Text('Players'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushReplacementNamed(context, '/players');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.sports_tennis),
+              title: const Text('Matches'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushReplacementNamed(context, '/matches');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.inventory),
+              title: const Text('Inventory'),
+              onTap: () {
+                Navigator.pop(context);
+                // already here
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.analytics),
+              title: const Text('Analytics'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushReplacementNamed(context, '/analytics');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.contact_mail),
+              title: const Text('Contact'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushReplacementNamed(context, '/contact');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.group),
+              title: const Text('Staff'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushReplacementNamed(context, '/staff');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.school),
+              title: const Text('Teachings'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushReplacementNamed(context, '/teachings');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.gavel),
+              title: const Text('Referees'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushReplacementNamed(context, '/referees');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.business),
+              title: const Text('Organization'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushReplacementNamed(context, '/organizations');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.chat),
+              title: const Text('Chat'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushReplacementNamed(context, '/chat');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.leaderboard),
+              title: const Text('Leaderboard'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushReplacementNamed(context, '/leaderboard');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.sports),
+              title: const Text('Coaches'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushReplacementNamed(context, '/coaches');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.emoji_events),
+              title: const Text('Knockout'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushReplacementNamed(context, '/knockout');
+              },
             ),
           ],
         ),

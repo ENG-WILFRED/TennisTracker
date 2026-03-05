@@ -9,6 +9,8 @@ import '../widgets/attendance_chart_widget.dart';
 import '../widgets/inventory_panel_widget.dart';
 import '../widgets/coaches_panel_widget.dart';
 import '../widgets/edit_profile_modal.dart';
+import '../widgets/page_header.dart';
+import '../widgets/page_header.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -108,27 +110,67 @@ class _DashboardPageState extends State<DashboardPage> {
   Widget build(BuildContext context) {
     if (_loading) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Dashboard')),
-        body: const Center(child: CircularProgressIndicator()),
+        appBar: AppBar(
+          title: const Text('Dashboard'),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: Builder(
+            builder: (context) => IconButton(
+              icon: const Icon(Icons.menu),
+              onPressed: () => Scaffold.of(context).openDrawer(),
+            ),
+          ),
+        ),
+        drawer: _buildDrawer(),
+        body: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFFe0f7fa), Color(0xFFa5d6a7)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          child: const Center(child: CircularProgressIndicator()),
+        ),
       );
     }
 
     if (_error != null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Dashboard')),
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error, size: 64, color: Colors.red),
-              const SizedBox(height: 16),
-              Text(_error!, textAlign: TextAlign.center),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () => Navigator.pushReplacementNamed(context, '/login'),
-                child: const Text('Go to Login'),
-              ),
-            ],
+        appBar: AppBar(
+          title: const Text('Dashboard'),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: Builder(
+            builder: (context) => IconButton(
+              icon: const Icon(Icons.menu),
+              onPressed: () => Scaffold.of(context).openDrawer(),
+            ),
+          ),
+        ),
+        drawer: _buildDrawer(),
+        body: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFFe0f7fa), Color(0xFFa5d6a7)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error, size: 64, color: Colors.red),
+                const SizedBox(height: 16),
+                Text(_error!, textAlign: TextAlign.center),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () => Navigator.pushReplacementNamed(context, '/login'),
+                  child: const Text('Go to Login'),
+                ),
+              ],
+            ),
           ),
         ),
       );
@@ -136,8 +178,28 @@ class _DashboardPageState extends State<DashboardPage> {
 
     if (_dashboard == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Dashboard')),
-        body: const Center(child: Text('Could not load dashboard')),
+        appBar: AppBar(
+          title: const Text('Dashboard'),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: Builder(
+            builder: (context) => IconButton(
+              icon: const Icon(Icons.menu),
+              onPressed: () => Scaffold.of(context).openDrawer(),
+            ),
+          ),
+        ),
+        drawer: _buildDrawer(),
+        body: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFFe0f7fa), Color(0xFFa5d6a7)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          child: const Center(child: Text('Could not load dashboard')),
+        ),
       );
     }
 
@@ -151,125 +213,114 @@ class _DashboardPageState extends State<DashboardPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Player Dashboard'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.edit),
-            onPressed: _openEditModal,
+        title: const Text(''),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: const Icon(Icons.menu),
+            onPressed: () => Scaffold.of(context).openDrawer(),
           ),
-        ],
+        ),
       ),
-      body: Stack(
-        children: [
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFFe0f7fa), Color(0xFFa5d6a7)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  if (constraints.maxWidth > 800) {
-                    // Desktop layout
-                    return Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          flex: 1,
-                          child: Column(
-                            children: [
-                              ProfileCard(
-                                player: player,
-                                rank: rank,
-                                badges: badges,
-                              ),
-                              const SizedBox(height: 16),
-                              Expanded(
-                                child: InventoryPanel(inventory: inventory),
-                              ),
-                            ],
+      drawer: _buildDrawer(),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFFe0f7fa), Color(0xFFa5d6a7)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              children: [
+                PageHeader(
+                  title: 'Player Dashboard',
+                  navItems: [
+                    NavItem(label: 'Overview', active: true),
+                    NavItem(label: 'players', route: '/players'),
+                    NavItem(label: 'Matches', route: '/matches'),
+                    NavItem(label: 'Edit Profile', onPressed: _openEditModal),
+                  ],
+                ),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    if (constraints.maxWidth > 1024) {
+                      // Desktop layout: 4 columns
+                      return Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            flex: 1,
+                            child: Column(
+                              children: [
+                                ProfileCard(
+                                  player: player,
+                                  rank: rank,
+                                  badges: badges,
+                                ),
+                                const SizedBox(height: 16),
+                                Expanded(
+                                  child: InventoryPanel(inventory: inventory),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          flex: 2,
-                          child: Column(
-                            children: [
-                              StatsWidget(player: player),
-                              const SizedBox(height: 16),
-                              AttendanceChartWidget(attendance: attendance),
-                              const SizedBox(height: 16),
-                              UpcomingMatchesWidget(matches: upcomingMatches),
-                            ],
+                          const SizedBox(width: 24),
+                          Expanded(
+                            flex: 2,
+                            child: Column(
+                              children: [
+                                StatsWidget(player: player),
+                                const SizedBox(height: 16),
+                                AttendanceChartWidget(attendance: attendance),
+                                const SizedBox(height: 16),
+                                UpcomingMatchesWidget(matches: upcomingMatches),
+                              ],
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          flex: 1,
-                          child: CoachesPanel(coaches: coaches),
-                        ),
-                      ],
-                    );
-                  } else {
-                    // Mobile layout
-                    return ListView(
-                      children: [
-                        ProfileCard(
-                          player: player,
-                          rank: rank,
-                          badges: badges,
-                        ),
-                        const SizedBox(height: 16),
-                        StatsWidget(player: player),
-                        const SizedBox(height: 16),
-                        AttendanceChartWidget(attendance: attendance),
-                        const SizedBox(height: 16),
-                        UpcomingMatchesWidget(matches: upcomingMatches),
-                        const SizedBox(height: 16),
-                        InventoryPanel(inventory: inventory),
-                        const SizedBox(height: 16),
-                        CoachesPanel(coaches: coaches),
-                      ],
-                    );
-                  }
-                },
-              ),
+                          const SizedBox(width: 24),
+                          Expanded(
+                            flex: 1,
+                            child: CoachesPanel(coaches: coaches),
+                          ),
+                        ],
+                      );
+                    } else {
+                      // Mobile layout: single column
+                      return Column(
+                        children: [
+                          ProfileCard(
+                            player: player,
+                            rank: rank,
+                            badges: badges,
+                          ),
+                          const SizedBox(height: 16),
+                          StatsWidget(player: player),
+                          const SizedBox(height: 16),
+                          AttendanceChartWidget(attendance: attendance),
+                          const SizedBox(height: 16),
+                          UpcomingMatchesWidget(matches: upcomingMatches),
+                          const SizedBox(height: 16),
+                          InventoryPanel(inventory: inventory),
+                          const SizedBox(height: 16),
+                          CoachesPanel(coaches: coaches),
+                        ],
+                      );
+                    }
+                  },
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  '© 2025 Vico',
+                  style: TextStyle(color: Colors.grey, fontSize: 12),
+                ),
+              ],
             ),
           ),
-          if (_showEditModal && _editForm != null)
-            EditProfileModal(
-              editForm: _editForm!,
-              onFieldChange: _handleFieldChange,
-              onSave: _saveProfile,
-              onCancel: () => setState(() => _showEditModal = false),
-            ),
-        ],
-      ),
-      bottomNavigationBar: BottomAppBar(
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            IconButton(
-              icon: const Icon(Icons.home),
-              onPressed: () => Navigator.pushReplacementNamed(context, '/'),
-            ),
-            IconButton(
-              icon: const Icon(Icons.people),
-              onPressed: () => Navigator.pushNamed(context, '/players'),
-            ),
-            IconButton(
-              icon: const Icon(Icons.sports_tennis),
-              onPressed: () => Navigator.pushNamed(context, '/matches'),
-            ),
-            IconButton(
-              icon: const Icon(Icons.edit),
-              onPressed: _openEditModal,
-            ),
-          ],
         ),
       ),
       floatingActionButton: _showEditModal
@@ -278,6 +329,142 @@ class _DashboardPageState extends State<DashboardPage> {
               onPressed: _openEditModal,
               child: const Icon(Icons.edit),
             ),
+    );
+  }
+
+  Widget _buildDrawer() {
+    return Drawer(
+      child: SafeArea(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            const DrawerHeader(
+              decoration: BoxDecoration(
+                color: Colors.green,
+              ),
+              child: Text(
+                'Vico App',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                ),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.home),
+              title: const Text('Dashboard'),
+              onTap: () {
+                Navigator.pop(context);
+                // Already on dashboard
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.people),
+              title: const Text('Players'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushReplacementNamed(context, '/players');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.sports_tennis),
+              title: const Text('Matches'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushReplacementNamed(context, '/matches');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.inventory),
+              title: const Text('Inventory'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushReplacementNamed(context, '/inventory');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.analytics),
+              title: const Text('Analytics'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushReplacementNamed(context, '/analytics');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.contact_mail),
+              title: const Text('Contact'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushReplacementNamed(context, '/contact');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.group),
+              title: const Text('Staff'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushReplacementNamed(context, '/staff');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.school),
+              title: const Text('Teachings'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushReplacementNamed(context, '/teachings');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.gavel),
+              title: const Text('Referees'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushReplacementNamed(context, '/referees');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.business),
+              title: const Text('Organization'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushReplacementNamed(context, '/organizations');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.chat),
+              title: const Text('Chat'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushReplacementNamed(context, '/chat');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.leaderboard),
+              title: const Text('Leaderboard'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushReplacementNamed(context, '/leaderboard');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.sports),
+              title: const Text('Coaches'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushReplacementNamed(context, '/coaches');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.emoji_events),
+              title: const Text('Knockout'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushReplacementNamed(context, '/knockout');
+              },
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

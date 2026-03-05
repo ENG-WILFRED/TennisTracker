@@ -28,8 +28,15 @@ class _LandingPageState extends State<LandingPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Vico'),
-        backgroundColor: Colors.green,
+        title: const Text(''),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: const Icon(Icons.menu),
+            onPressed: () => Scaffold.of(context).openDrawer(),
+          ),
+        ),
       ),
       drawer: Drawer(
         child: SafeArea(
@@ -89,7 +96,7 @@ class _LandingPageState extends State<LandingPage> {
           end: Alignment.bottomRight,
         ),
       ),
-      padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 20),
+      padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
       child: Column(
         children: [
           Row(
@@ -113,7 +120,7 @@ class _LandingPageState extends State<LandingPage> {
                     const Text(
                       'Play. Track. Win.\nOn Vico.',
                       style: TextStyle(
-                        fontSize: 48,
+                        fontSize: 36,
                         fontWeight: FontWeight.bold,
                         color: Colors.black87,
                         height: 1.2,
@@ -122,7 +129,7 @@ class _LandingPageState extends State<LandingPage> {
                     const SizedBox(height: 20),
                     const Text(
                       'Connect with players and coaches. Track your matches, analyze your performance, and join a thriving community. Your sports ecosystem awaits.',
-                      style: TextStyle(fontSize: 18, color: Colors.black54, height: 1.5),
+                      style: TextStyle(fontSize: 16, color: Colors.black54, height: 1.5),
                     ),
                     const SizedBox(height: 30),
                     Row(
@@ -184,7 +191,7 @@ class _LandingPageState extends State<LandingPage> {
   Widget _buildStat(String number, String label) {
     return Column(
       children: [
-        Text(number, style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.black87)),
+        Text(number, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black87)),
         Text(label, style: const TextStyle(color: Colors.black54)),
       ],
     );
@@ -308,30 +315,11 @@ class _LandingPageState extends State<LandingPage> {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 60),
-          Row(
-            children: [
-              Expanded(
-                child: Container(
-                  height: 400,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
-                    image: const DecorationImage(
-                      image: NetworkImage('https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=600&q=80'),
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 40),
-              Expanded(
-                child: GridView.count(
-                  crossAxisCount: 2,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  children: features.map((feature) => _buildFeatureCard(feature)).toList(),
-                ),
-              ),
-            ],
+          Column(
+            children: features.map((feature) => Padding(
+              padding: const EdgeInsets.only(bottom: 20),
+              child: _buildFeatureCard(feature),
+            )).toList(),
           ),
         ],
       ),
@@ -340,14 +328,13 @@ class _LandingPageState extends State<LandingPage> {
 
   Widget _buildFeatureCard(Map<String, String> feature) {
     return Container(
-      margin: const EdgeInsets.all(8),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(15),
         boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10)],
       ),
-      child: Column(
+      child: Row(
         children: [
           Container(
             width: 50,
@@ -358,10 +345,17 @@ class _LandingPageState extends State<LandingPage> {
             ),
             child: Center(child: Text(feature['icon']!, style: const TextStyle(fontSize: 24))),
           ),
-          const SizedBox(height: 15),
-          Text(feature['title']!, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87)),
-          const SizedBox(height: 8),
-          Text(feature['desc']!, style: const TextStyle(color: Colors.black54, fontSize: 14), textAlign: TextAlign.center),
+          const SizedBox(width: 20),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(feature['title']!, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87)),
+                const SizedBox(height: 8),
+                Text(feature['desc']!, style: const TextStyle(color: Colors.black54, fontSize: 14)),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -379,42 +373,38 @@ class _LandingPageState extends State<LandingPage> {
       ),
       child: Column(
         children: [
-          Row(
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.green.shade100,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Text('Elite Players', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
-                    ),
-                    const SizedBox(height: 20),
-                    const Text(
-                      'Featured Players',
-                      style: TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: Colors.black87),
-                    ),
-                    const SizedBox(height: 20),
-                    const Text(
-                      'Discover talented players from around the world and track their journey to excellence',
-                      style: TextStyle(fontSize: 18, color: Colors.black54, height: 1.5),
-                    ),
-                    const SizedBox(height: 30),
-                    ElevatedButton(
-                      onPressed: () => Navigator.pushNamed(context, '/players'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                      child: const Text('View All Players'),
-                    ),
-                  ],
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade100,
+                  borderRadius: BorderRadius.circular(20),
                 ),
+                child: const Text('Elite Players', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Featured Players',
+                style: TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: Colors.black87),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Discover talented players from around the world and track their journey to excellence',
+                style: TextStyle(fontSize: 18, color: Colors.black54, height: 1.5),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 30),
+              ElevatedButton(
+                onPressed: () => Navigator.pushNamed(context, '/players'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                child: const Text('View All Players'),
               ),
             ],
           ),
@@ -429,8 +419,11 @@ class _LandingPageState extends State<LandingPage> {
                 return const Center(child: Text('Error loading players'));
               }
               final players = snapshot.data?.take(3) ?? [];
-              return Row(
-                children: players.map((player) => Expanded(child: _buildPlayerCard(player))).toList(),
+              return Column(
+                children: players.map((player) => Padding(
+                  padding: const EdgeInsets.only(bottom: 20),
+                  child: _buildPlayerCard(player),
+                )).toList(),
               );
             },
           ),
@@ -441,33 +434,46 @@ class _LandingPageState extends State<LandingPage> {
 
   Widget _buildPlayerCard(dynamic player) {
     final name = player['name'] ?? player['username'] ?? 'Unknown';
-    final matchesWon = player['matchesWon'] ?? 0;
+    final level = player['level'] ?? 'Intermediate';
     final matchesPlayed = player['matchesPlayed'] ?? 0;
-    final winRate = matchesPlayed > 0 ? ((matchesWon / matchesPlayed) * 100).round() : 0;
 
     return Container(
-      margin: const EdgeInsets.all(8),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(15),
         boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10)],
       ),
-      child: Column(
+      child: Row(
         children: [
-          CircleAvatar(
-            radius: 40,
-            backgroundImage: player['photo'] != null ? NetworkImage(player['photo']) : null,
-            child: player['photo'] == null ? const Icon(Icons.person, size: 40) : null,
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(colors: [Colors.green, Colors.teal]),
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: Text(
+                name.isNotEmpty ? name[0].toUpperCase() : 'P',
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 24),
+              ),
+            ),
           ),
-          const SizedBox(height: 15),
-          Text(name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 10),
-          Text('Win Rate: $winRate%', style: const TextStyle(color: Colors.black54)),
-          const SizedBox(height: 10),
+          const SizedBox(width: 20),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Text('$level • $matchesPlayed matches', style: const TextStyle(color: Colors.black54, fontSize: 14)),
+              ],
+            ),
+          ),
           ElevatedButton(
             onPressed: () => Navigator.pushNamed(context, '/players/${player['id']}'),
-            child: const Text('View Profile'),
+            child: const Text('Profile'),
           ),
         ],
       ),
@@ -486,42 +492,38 @@ class _LandingPageState extends State<LandingPage> {
       ),
       child: Column(
         children: [
-          Row(
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.green.shade100,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Text('Professional Coaching Staff', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
-                    ),
-                    const SizedBox(height: 20),
-                    const Text(
-                      'Meet Our Expert Coaches',
-                      style: TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: Colors.black87),
-                    ),
-                    const SizedBox(height: 20),
-                    const Text(
-                      'Learn from certified professionals with years of experience and proven track records',
-                      style: TextStyle(fontSize: 18, color: Colors.black54, height: 1.5),
-                    ),
-                    const SizedBox(height: 30),
-                    ElevatedButton(
-                      onPressed: () => Navigator.pushNamed(context, '/coaches'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                      child: const Text('View All Coaches'),
-                    ),
-                  ],
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade100,
+                  borderRadius: BorderRadius.circular(20),
                 ),
+                child: const Text('Professional Coaching Staff', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Meet Our Expert Coaches',
+                style: TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: Colors.black87),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Learn from certified professionals with years of experience and proven track records',
+                style: TextStyle(fontSize: 18, color: Colors.black54, height: 1.5),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 30),
+              ElevatedButton(
+                onPressed: () => Navigator.pushNamed(context, '/coaches'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                child: const Text('View All Coaches'),
               ),
             ],
           ),
@@ -536,8 +538,11 @@ class _LandingPageState extends State<LandingPage> {
                 return const Center(child: Text('Error loading coaches'));
               }
               final coaches = snapshot.data?.take(3) ?? [];
-              return Row(
-                children: coaches.map((coach) => Expanded(child: _buildCoachCard(coach))).toList(),
+              return Column(
+                children: coaches.map((coach) => Padding(
+                  padding: const EdgeInsets.only(bottom: 20),
+                  child: _buildCoachCard(coach),
+                )).toList(),
               );
             },
           ),
@@ -548,28 +553,42 @@ class _LandingPageState extends State<LandingPage> {
 
   Widget _buildCoachCard(dynamic coach) {
     return Container(
-      margin: const EdgeInsets.all(8),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(15),
         boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10)],
       ),
-      child: Column(
+      child: Row(
         children: [
-          CircleAvatar(
-            radius: 40,
-            backgroundImage: coach['photo'] != null ? NetworkImage(coach['photo']) : null,
-            child: coach['photo'] == null ? const Icon(Icons.person, size: 40) : null,
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(colors: [Colors.orange, Colors.amber]),
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: Text(
+                coach['name'] != null && coach['name'].isNotEmpty ? coach['name'][0].toUpperCase() : 'C',
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 24),
+              ),
+            ),
           ),
-          const SizedBox(height: 15),
-          Text(coach['name'] ?? 'Unknown', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 10),
-          Text(coach['expertise'] ?? '', style: const TextStyle(color: Colors.black54)),
-          const SizedBox(height: 10),
+          const SizedBox(width: 20),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(coach['name'] ?? 'Unknown', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Text(coach['expertise'] ?? 'Professional Coach', style: const TextStyle(color: Colors.black54, fontSize: 14)),
+              ],
+            ),
+          ),
           ElevatedButton(
             onPressed: () => Navigator.pushNamed(context, '/coaches/${coach['id']}'),
-            child: const Text('View Profile'),
+            child: const Text('Profile'),
           ),
         ],
       ),
@@ -588,42 +607,38 @@ class _LandingPageState extends State<LandingPage> {
       ),
       child: Column(
         children: [
-          Row(
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.green.shade100,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Text('Official Referees', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
-                    ),
-                    const SizedBox(height: 20),
-                    const Text(
-                      'Meet Our Referees & Ball Crew',
-                      style: TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: Colors.black87),
-                    ),
-                    const SizedBox(height: 20),
-                    const Text(
-                      'Certified professionals ensuring fair play and smooth match operations',
-                      style: TextStyle(fontSize: 18, color: Colors.black54, height: 1.5),
-                    ),
-                    const SizedBox(height: 30),
-                    ElevatedButton(
-                      onPressed: () => Navigator.pushNamed(context, '/referees'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                      child: const Text('View All Referees'),
-                    ),
-                  ],
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade100,
+                  borderRadius: BorderRadius.circular(20),
                 ),
+                child: const Text('Official Referees', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Meet Our Referees & Ball Crew',
+                style: TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: Colors.black87),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Certified professionals ensuring fair play and smooth match operations',
+                style: TextStyle(fontSize: 18, color: Colors.black54, height: 1.5),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 30),
+              ElevatedButton(
+                onPressed: () => Navigator.pushNamed(context, '/referees'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                child: const Text('View All Referees'),
               ),
             ],
           ),
@@ -638,8 +653,11 @@ class _LandingPageState extends State<LandingPage> {
                 return const Center(child: Text('Error loading referees'));
               }
               final referees = snapshot.data?.take(3) ?? [];
-              return Row(
-                children: referees.map((referee) => Expanded(child: _buildRefereeCard(referee))).toList(),
+              return Column(
+                children: referees.map((referee) => Padding(
+                  padding: const EdgeInsets.only(bottom: 20),
+                  child: _buildRefereeCard(referee),
+                )).toList(),
               );
             },
           ),
@@ -650,28 +668,42 @@ class _LandingPageState extends State<LandingPage> {
 
   Widget _buildRefereeCard(dynamic referee) {
     return Container(
-      margin: const EdgeInsets.all(8),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(15),
         boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10)],
       ),
-      child: Column(
+      child: Row(
         children: [
-          CircleAvatar(
-            radius: 40,
-            backgroundImage: referee['photo'] != null ? NetworkImage(referee['photo']) : null,
-            child: referee['photo'] == null ? const Icon(Icons.person, size: 40) : null,
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(colors: [Colors.pink, Colors.purple]),
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: Text(
+                ((referee['firstName'] ?? '') + (referee['lastName'] ?? '')).isNotEmpty ? (referee['firstName']?[0] ?? 'R').toUpperCase() : 'R',
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 24),
+              ),
+            ),
           ),
-          const SizedBox(height: 15),
-          Text('${referee['firstName'] ?? ''} ${referee['lastName'] ?? ''}'.trim(), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 10),
-          Text(referee['experience'] ?? '', style: const TextStyle(color: Colors.black54)),
-          const SizedBox(height: 10),
+          const SizedBox(width: 20),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('${referee['firstName'] ?? ''} ${referee['lastName'] ?? ''}'.trim(), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Text(referee['experience'] ?? 'Professional', style: const TextStyle(color: Colors.black54, fontSize: 14)),
+              ],
+            ),
+          ),
           ElevatedButton(
             onPressed: () => Navigator.pushNamed(context, '/referees/${referee['id']}'),
-            child: const Text('View Profile'),
+            child: const Text('Profile'),
           ),
         ],
       ),

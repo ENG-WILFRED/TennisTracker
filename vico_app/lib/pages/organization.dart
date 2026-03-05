@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
+import '../widgets/page_header.dart';
 import 'organization_detail.dart';
 
 class OrganizationPage extends StatefulWidget {
@@ -71,6 +72,18 @@ class _OrganizationPageState extends State<OrganizationPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: const Text(''),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: const Icon(Icons.menu),
+            onPressed: () => Scaffold.of(context).openDrawer(),
+          ),
+        ),
+      ),
+      drawer: _buildDrawer(),
       backgroundColor: Colors.transparent,
       body: Container(
         decoration: BoxDecoration(
@@ -97,28 +110,51 @@ class _OrganizationPageState extends State<OrganizationPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildHeader(orgs),
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: PageHeader(
+                        title: 'Organizations',
+                        description: 'Discover and join tennis organizations',
+                        navItems: [
+                          NavItem(label: 'Dashboard', route: '/dashboard'),
+                        ],
+                      ),
+                    ),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           // Main content with sidebar
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Sidebar
-                              Expanded(
-                                child: _buildSidebar(),
-                                flex: 1,
-                              ),
-                              SizedBox(width: 16),
-                              // Main Grid
-                              Expanded(
-                                flex: 3,
-                                child: _buildOrganizationsGrid(display),
-                              ),
-                            ],
+                          LayoutBuilder(
+                            builder: (context, constraints) {
+                              if (constraints.maxWidth > 800) {
+                                return Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // Sidebar
+                                    Expanded(
+                                      child: _buildSidebar(),
+                                      flex: 1,
+                                    ),
+                                    SizedBox(width: 16),
+                                    // Main Grid
+                                    Expanded(
+                                      flex: 3,
+                                      child: _buildOrganizationsGrid(display),
+                                    ),
+                                  ],
+                                );
+                              } else {
+                                return Column(
+                                  children: [
+                                    _buildSidebar(),
+                                    SizedBox(height: 16),
+                                    _buildOrganizationsGrid(display),
+                                  ],
+                                );
+                              }
+                            },
                           ),
                         ],
                       ),
@@ -425,6 +461,142 @@ class _OrganizationPageState extends State<OrganizationPage> {
           TextButton(onPressed: () => Navigator.pop(context), child: Text('Cancel')),
           ElevatedButton(onPressed: () => Navigator.pop(context), child: Text('Create')),
         ],
+      ),
+    );
+  }
+
+  Widget _buildDrawer() {
+    return Drawer(
+      child: SafeArea(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            const DrawerHeader(
+              decoration: BoxDecoration(
+                color: Colors.green,
+              ),
+              child: Text(
+                'Vico App',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                ),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.home),
+              title: const Text('Dashboard'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushReplacementNamed(context, '/dashboard');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.people),
+              title: const Text('Players'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushReplacementNamed(context, '/players');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.sports_tennis),
+              title: const Text('Matches'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushReplacementNamed(context, '/matches');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.inventory),
+              title: const Text('Inventory'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushReplacementNamed(context, '/inventory');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.analytics),
+              title: const Text('Analytics'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushReplacementNamed(context, '/analytics');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.contact_mail),
+              title: const Text('Contact'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushReplacementNamed(context, '/contact');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.group),
+              title: const Text('Staff'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushReplacementNamed(context, '/staff');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.school),
+              title: const Text('Teachings'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushReplacementNamed(context, '/teachings');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.gavel),
+              title: const Text('Referees'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushReplacementNamed(context, '/referees');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.business),
+              title: const Text('Organization'),
+              onTap: () {
+                Navigator.pop(context);
+                // already on organizations
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.chat),
+              title: const Text('Chat'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushReplacementNamed(context, '/chat');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.leaderboard),
+              title: const Text('Leaderboard'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushReplacementNamed(context, '/leaderboard');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.sports),
+              title: const Text('Coaches'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushReplacementNamed(context, '/coaches');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.emoji_events),
+              title: const Text('Knockout'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushReplacementNamed(context, '/knockout');
+              },
+            ),
+          ],
+        ),
       ),
     );
   }

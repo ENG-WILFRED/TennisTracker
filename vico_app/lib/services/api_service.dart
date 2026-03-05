@@ -36,7 +36,7 @@ class ApiService {
       if (query != null && query.isNotEmpty) {
         uri = uri.replace(queryParameters: {'query': query});
       }
-      final res = await http.get(uri, headers: _headers());
+      final res = await http.get(uri, headers: await _headers());
       if (res.statusCode == 200) {
         return jsonDecode(res.body) as List<dynamic>;
       }
@@ -46,34 +46,42 @@ class ApiService {
     } catch (e) {
       throw Exception('Error fetching players: $e');
     }
-    final res = await http.get(uri, headers: await _headers());
-    if (res.statusCode == 200) {
-      return jsonDecode(res.body) as List<dynamic>;
-    }
-    throw Exception('Failed to fetch players: ${res.statusCode}');
   }
 
   Future<List<dynamic>> fetchCoaches() async {
-    final uri = Uri.parse('$baseUrl/api/coaches');
-    final res = await http.get(uri, headers: await _headers());
-    if (res.statusCode == 200) {
-      return jsonDecode(res.body) as List<dynamic>;
+    try {
+      final uri = Uri.parse('$baseUrl/api/coaches');
+      final res = await http.get(uri, headers: await _headers());
+      if (res.statusCode == 200) {
+        return jsonDecode(res.body) as List<dynamic>;
+      }
+      throw Exception('Failed to fetch coaches: ${res.statusCode}');
+    } on SocketException catch (e) {
+      throw Exception('Network error while fetching coaches: ${e.message}');
+    } catch (e) {
+      throw Exception('Error fetching coaches: $e');
     }
   }
 
   Future<Map<String, dynamic>> post(String path, Map<String, dynamic> body) async {
-    final uri = Uri.parse('$baseUrl$path');
-    final res = await http.post(uri, headers: await _headers(), body: jsonEncode(body));
-    if (res.statusCode >= 200 && res.statusCode < 300) {
-      return jsonDecode(res.body) as Map<String, dynamic>;
+    try {
+      final uri = Uri.parse('$baseUrl$path');
+      final res = await http.post(uri, headers: await _headers(), body: jsonEncode(body));
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        return jsonDecode(res.body) as Map<String, dynamic>;
+      }
+      throw Exception('Failed to post to $path: ${res.statusCode}');
+    } on SocketException catch (e) {
+      throw Exception('Network error while posting to $path: ${e.message}');
+    } catch (e) {
+      throw Exception('Error posting to $path: $e');
     }
   }
 
-  // Matches
   Future<List<dynamic>> fetchMatches() async {
     try {
       final uri = Uri.parse('$baseUrl/api/matches');
-      final res = await http.get(uri, headers: _headers());
+      final res = await http.get(uri, headers: await _headers());
       if (res.statusCode == 200) {
         return jsonDecode(res.body) as List<dynamic>;
       }
@@ -88,7 +96,7 @@ class ApiService {
   Future<Map<String, dynamic>> getMatch(String id) async {
     try {
       final uri = Uri.parse('$baseUrl/api/matches/$id');
-      final res = await http.get(uri, headers: _headers());
+      final res = await http.get(uri, headers: await _headers());
       if (res.statusCode == 200) {
         return jsonDecode(res.body) as Map<String, dynamic>;
       }
@@ -104,7 +112,7 @@ class ApiService {
   Future<List<dynamic>> fetchReferees() async {
     try {
       final uri = Uri.parse('$baseUrl/api/referees');
-      final res = await http.get(uri, headers: _headers());
+      final res = await http.get(uri, headers: await _headers());
       if (res.statusCode == 200) {
         return jsonDecode(res.body) as List<dynamic>;
       }
@@ -119,7 +127,7 @@ class ApiService {
   Future<Map<String, dynamic>> getReferee(String id) async {
     try {
       final uri = Uri.parse('$baseUrl/api/referees/$id');
-      final res = await http.get(uri, headers: _headers());
+      final res = await http.get(uri, headers: await _headers());
       if (res.statusCode == 200) {
         return jsonDecode(res.body) as Map<String, dynamic>;
       }
@@ -131,11 +139,27 @@ class ApiService {
     }
   }
 
+  // Rules (returns grouped by category)
+  Future<Map<String, dynamic>> fetchRules() async {
+    try {
+      final uri = Uri.parse('$baseUrl/api/rules');
+      final res = await http.get(uri, headers: await _headers());
+      if (res.statusCode == 200) {
+        return jsonDecode(res.body) as Map<String, dynamic>;
+      }
+      throw Exception('Failed to fetch rules: ${res.statusCode}');
+    } on SocketException catch (e) {
+      throw Exception('Network error while fetching rules: ${e.message}');
+    } catch (e) {
+      throw Exception('Error fetching rules: $e');
+    }
+  }
+
   // Organizations
   Future<List<dynamic>> fetchOrganizations() async {
     try {
       final uri = Uri.parse('$baseUrl/api/organization');
-      final res = await http.get(uri, headers: _headers());
+      final res = await http.get(uri, headers: await _headers());
       if (res.statusCode == 200) {
         return jsonDecode(res.body) as List<dynamic>;
       }
@@ -150,7 +174,7 @@ class ApiService {
   Future<Map<String, dynamic>> getOrganization(String id) async {
     try {
       final uri = Uri.parse('$baseUrl/api/organization/$id');
-      final res = await http.get(uri, headers: _headers());
+      final res = await http.get(uri, headers: await _headers());
       if (res.statusCode == 200) {
         return jsonDecode(res.body) as Map<String, dynamic>;
       }
@@ -164,7 +188,7 @@ class ApiService {
 
   Future<List<dynamic>> fetchOrgStaff(String orgId) async {
     final uri = Uri.parse('$baseUrl/api/organization/$orgId/staff');
-    final res = await http.get(uri, headers: _headers());
+    final res = await http.get(uri, headers: await _headers());
     if (res.statusCode == 200) {
       return jsonDecode(res.body) as List<dynamic>;
     }
@@ -173,7 +197,7 @@ class ApiService {
 
   Future<List<dynamic>> fetchOrgInventory(String orgId) async {
     final uri = Uri.parse('$baseUrl/api/organization/$orgId/inventory');
-    final res = await http.get(uri, headers: _headers());
+    final res = await http.get(uri, headers: await _headers());
     if (res.statusCode == 200) {
       return jsonDecode(res.body) as List<dynamic>;
     }
@@ -182,7 +206,7 @@ class ApiService {
 
   Future<List<dynamic>> fetchOrgPlayers(String orgId) async {
     final uri = Uri.parse('$baseUrl/api/organization/$orgId/players');
-    final res = await http.get(uri, headers: _headers());
+    final res = await http.get(uri, headers: await _headers());
     if (res.statusCode == 200) {
       return jsonDecode(res.body) as List<dynamic>;
     }
@@ -192,7 +216,7 @@ class ApiService {
   // Generic GET method for any endpoint
   Future<dynamic> get(String path) async {
     final uri = Uri.parse('$baseUrl$path');
-    final res = await http.get(uri, headers: _headers());
+    final res = await http.get(uri, headers: await _headers());
     if (res.statusCode == 200) {
       return jsonDecode(res.body);
     }
@@ -202,7 +226,7 @@ class ApiService {
   // Generic POST method
   Future<dynamic> postData(String path, Map<String, dynamic> body) async {
     final uri = Uri.parse('$baseUrl$path');
-    final res = await http.post(uri, headers: _headers(), body: jsonEncode(body));
+    final res = await http.post(uri, headers: await _headers(), body: jsonEncode(body));
     if (res.statusCode >= 200 && res.statusCode < 300) {
       return jsonDecode(res.body);
     }
@@ -212,7 +236,7 @@ class ApiService {
   // Get single player
   Future<Map<String, dynamic>> getPlayer(String id) async {
     final uri = Uri.parse('$baseUrl/api/players/$id');
-    final res = await http.get(uri, headers: _headers());
+    final res = await http.get(uri, headers: await _headers());
     if (res.statusCode == 200) {
       return jsonDecode(res.body) as Map<String, dynamic>;
     }
@@ -222,7 +246,7 @@ class ApiService {
   // Get single coach
   Future<Map<String, dynamic>> getCoach(String id) async {
     final uri = Uri.parse('$baseUrl/api/coaches/$id');
-    final res = await http.get(uri, headers: _headers());
+    final res = await http.get(uri, headers: await _headers());
     if (res.statusCode == 200) {
       return jsonDecode(res.body) as Map<String, dynamic>;
     }
@@ -232,7 +256,7 @@ class ApiService {
   // Get leaderboard
   Future<List<dynamic>> fetchLeaderboard({String sort = 'rating'}) async {
     final uri = Uri.parse('$baseUrl/api/players?sort=$sort');
-    final res = await http.get(uri, headers: _headers());
+    final res = await http.get(uri, headers: await _headers());
     if (res.statusCode == 200) {
       return jsonDecode(res.body) as List<dynamic>;
     }
@@ -245,7 +269,7 @@ class ApiService {
     if (range != null && range.isNotEmpty) {
       uri = uri.replace(queryParameters: {'range': range});
     }
-    final res = await http.get(uri, headers: _headers());
+    final res = await http.get(uri, headers: await _headers());
     if (res.statusCode == 200) {
       return jsonDecode(res.body) as Map<String, dynamic>;
     }
@@ -255,7 +279,7 @@ class ApiService {
   // Get staff
   Future<List<dynamic>> fetchStaff() async {
     final uri = Uri.parse('$baseUrl/api/staff');
-    final res = await http.get(uri, headers: _headers());
+    final res = await http.get(uri, headers: await _headers());
     if (res.statusCode == 200) {
       return jsonDecode(res.body) as List<dynamic>;
     }

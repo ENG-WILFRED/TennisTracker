@@ -409,6 +409,7 @@ class _ChatWindowState extends State<ChatWindow> {
                     Expanded(
                       child: TextField(
                         controller: _messageController,
+                        style: const TextStyle(fontSize: 14),
                         decoration: const InputDecoration(
                           hintText: 'Type a message...',
                           border: OutlineInputBorder(

@@ -294,7 +294,7 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
                 color: Color(0xFFEDE9FE),
                 borderRadius: BorderRadius.circular(4),
               ),
-              child: Text('$rating', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Color(0xFF4F46E5)), textAlign: TextAlign.right),
+              child: Text('$rating', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 9, color: Color(0xFF4F46E5)), textAlign: TextAlign.right, maxLines: 1, overflow: TextOverflow.ellipsis),
             ),
           ),
         ],

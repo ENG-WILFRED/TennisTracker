@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
+import '../widgets/page_header.dart';
 
 class StaffPage extends StatefulWidget {
   const StaffPage({super.key});
@@ -51,9 +52,21 @@ class _StaffPageState extends State<StaffPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: const Text(''),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: const Icon(Icons.menu),
+            onPressed: () => Scaffold.of(context).openDrawer(),
+          ),
+        ),
+      ),
+      drawer: _buildDrawer(),
       backgroundColor: Colors.transparent,
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [Color(0xFFF8F4FF), Color(0xFFFBF5FF), Color(0xFFF3E8FF)],
             begin: Alignment.topLeft,
@@ -79,10 +92,18 @@ class _StaffPageState extends State<StaffPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildHeader(staff),
-                      SizedBox(height: 20),
+                      PageHeader(
+                        title: 'Staff Directory',
+                        description: 'Manage and browse your coaching staff',
+                        navItems: [
+                          NavItem(label: 'Dashboard', route: '/dashboard'),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      _buildStats(staff),
+                      const SizedBox(height: 20),
                       _buildFilterChips(),
-                      SizedBox(height: 20),
+                      const SizedBox(height: 20),
                       if (display.isEmpty)
                         _buildEmptyState()
                       else
@@ -116,51 +137,44 @@ class _StaffPageState extends State<StaffPage> {
     );
   }
 
-  Widget _buildHeader(List<dynamic> allStaff) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(colors: [Color(0xFF7C3AED), Color(0xFFA78BFA)]),
-            borderRadius: BorderRadius.circular(20),
+  Widget _buildStats(List<dynamic> allStaff) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          _buildStatCard('Total Staff', allStaff.length.toString(), Color(0xFF7C3AED)),
+          SizedBox(width: 12),
+          _buildStatCard('Active Coaches', allStaff.length.toString(), Color(0xFF0284C7)),
+          SizedBox(width: 12),
+          _buildStatCard('Available', allStaff.length.toString(), Color(0xFF16A34A)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatCard(String label, String value, Color color) {
+    return Container(
+      padding: EdgeInsets.all(16),
+      width: 160,
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.8),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.3)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 4,
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.groups, color: Colors.white, size: 16),
-              SizedBox(width: 8),
-              Text('Organization Team', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
-            ],
-          ),
-        ),
-        SizedBox(height: 12),
-        Text('Staff Members', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.grey[900])),
-        SizedBox(height: 8),
-        Text('Manage your organization team and staff roles', style: TextStyle(fontSize: 14, color: Colors.grey[600])),
-        SizedBox(height: 20),
-        Row(
-          children: [
-            Container(
-              padding: EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(colors: [Color(0xFF7C3AED), Color(0xFFA78BFA)]),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text('${allStaff.length}', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-            ),
-            SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Team Members', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-                Text('Active staff', style: TextStyle(fontSize: 11, color: Colors.grey[500])),
-              ],
-            ),
-          ],
-        ),
-      ],
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: TextStyle(color: Colors.grey[600], fontSize: 12, fontWeight: FontWeight.w600)),
+          SizedBox(height: 8),
+          Text(value, style: TextStyle(color: color, fontSize: 24, fontWeight: FontWeight.bold)),
+        ],
+      ),
     );
   }
 
@@ -359,6 +373,94 @@ class _StaffPageState extends State<StaffPage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildDrawer() {
+    return Drawer(
+      child: SafeArea(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            const DrawerHeader(
+              decoration: BoxDecoration(
+                color: Colors.green,
+              ),
+              child: Text(
+                'Vico App',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                ),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.home),
+              title: const Text('Dashboard'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushReplacementNamed(context, '/dashboard');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.people),
+              title: const Text('Players'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushReplacementNamed(context, '/players');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.sports_tennis),
+              title: const Text('Matches'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushReplacementNamed(context, '/matches');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.inventory),
+              title: const Text('Inventory'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushReplacementNamed(context, '/inventory');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.analytics),
+              title: const Text('Analytics'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushReplacementNamed(context, '/analytics');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.contact_mail),
+              title: const Text('Contact'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushReplacementNamed(context, '/contact');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.group),
+              title: const Text('Staff'),
+              onTap: () {
+                Navigator.pop(context);
+                // Already on staff
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.school),
+              title: const Text('Teachings'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushReplacementNamed(context, '/teachings');
+              },
+            ),
+          ],
+        ),
       ),
     );
   }

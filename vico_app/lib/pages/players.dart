@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
+import '../widgets/page_header.dart';
 import 'player_detail.dart';
 
 class PlayersPage extends StatefulWidget {
@@ -47,8 +48,15 @@ class _PlayersPageState extends State<PlayersPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Vico'),
-        backgroundColor: Colors.green,
+        title: const Text(''),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: const Icon(Icons.menu),
+            onPressed: () => Scaffold.of(context).openDrawer(),
+          ),
+        ),
       ),
       drawer: Drawer(
         child: SafeArea(
@@ -56,27 +64,129 @@ class _PlayersPageState extends State<PlayersPage> {
             padding: EdgeInsets.zero,
             children: [
               const DrawerHeader(
-                decoration: BoxDecoration(color: Colors.green),
-                child: Text('Vico', style: TextStyle(color: Colors.white, fontSize: 24)),
+                decoration: BoxDecoration(
+                  color: Colors.green,
+                ),
+                child: Text(
+                  'Vico App',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                  ),
+                ),
               ),
-              ListTile(title: const Text('Home'), leading: const Icon(Icons.home), onTap: () { Navigator.pop(context); Navigator.pushNamed(context, '/'); }),
-              ListTile(title: const Text('Coaches'), leading: const Icon(Icons.sports_tennis), onTap: () { Navigator.pop(context); Navigator.pushNamed(context, '/coaches'); }),
-              ListTile(title: const Text('Players'), leading: const Icon(Icons.person), onTap: () { Navigator.pop(context); Navigator.pushNamed(context, '/players'); }),
-              ListTile(title: const Text('Matches'), leading: const Icon(Icons.view_list), onTap: () { Navigator.pop(context); Navigator.pushNamed(context, '/matches'); }),
-              ListTile(title: const Text('Organizations'), leading: const Icon(Icons.business), onTap: () { Navigator.pop(context); Navigator.pushNamed(context, '/organizations'); }),
-              ListTile(title: const Text('Referees'), leading: const Icon(Icons.gavel), onTap: () { Navigator.pop(context); Navigator.pushNamed(context, '/referees'); }),
-              ListTile(title: const Text('Dashboard'), leading: const Icon(Icons.dashboard), onTap: () { Navigator.pop(context); Navigator.pushNamed(context, '/dashboard'); }),
-              ListTile(title: const Text('Inventory'), leading: const Icon(Icons.inventory), onTap: () { Navigator.pop(context); Navigator.pushNamed(context, '/inventory'); }),
-              ListTile(title: const Text('Analytics'), leading: const Icon(Icons.bar_chart), onTap: () { Navigator.pop(context); Navigator.pushNamed(context, '/analytics'); }),
-              ListTile(title: const Text('Contact'), leading: const Icon(Icons.contact_mail), onTap: () { Navigator.pop(context); Navigator.pushNamed(context, '/contact'); }),
-              ListTile(title: const Text('Chat'), leading: const Icon(Icons.chat), onTap: () { Navigator.pop(context); Navigator.pushNamed(context, '/chat'); }),
-              ListTile(title: const Text('Leaderboard'), leading: const Icon(Icons.leaderboard), onTap: () { Navigator.pop(context); Navigator.pushNamed(context, '/leaderboard'); }),
-              ListTile(title: const Text('Knockout'), leading: const Icon(Icons.sports_kabaddi), onTap: () { Navigator.pop(context); Navigator.pushNamed(context, '/knockout'); }),
-              ListTile(title: const Text('Staff'), leading: const Icon(Icons.people), onTap: () { Navigator.pop(context); Navigator.pushNamed(context, '/staff'); }),
-              ListTile(title: const Text('Teachings'), leading: const Icon(Icons.school), onTap: () { Navigator.pop(context); Navigator.pushNamed(context, '/teachings'); }),
-              ListTile(title: const Text('Login'), leading: const Icon(Icons.login), onTap: () { Navigator.pop(context); Navigator.pushNamed(context, '/login'); }),
-              ListTile(title: const Text('Register'), leading: const Icon(Icons.person_add), onTap: () { Navigator.pop(context); Navigator.pushNamed(context, '/register'); }),
-              ListTile(title: const Text('Register Coach'), leading: const Icon(Icons.person_add), onTap: () { Navigator.pop(context); Navigator.pushNamed(context, '/register_coach'); }),
+              ListTile(
+                leading: const Icon(Icons.home),
+                title: const Text('Dashboard'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.pushReplacementNamed(context, '/dashboard');
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.people),
+                title: const Text('Players'),
+                onTap: () {
+                  Navigator.pop(context);
+                  // Already on players
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.sports_tennis),
+                title: const Text('Matches'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.pushReplacementNamed(context, '/matches');
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.inventory),
+                title: const Text('Inventory'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.pushReplacementNamed(context, '/inventory');
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.analytics),
+                title: const Text('Analytics'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.pushReplacementNamed(context, '/analytics');
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.contact_mail),
+                title: const Text('Contact'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.pushReplacementNamed(context, '/contact');
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.group),
+                title: const Text('Staff'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.pushReplacementNamed(context, '/staff');
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.school),
+                title: const Text('Teachings'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.pushReplacementNamed(context, '/teachings');
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.gavel),
+                title: const Text('Referees'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.pushReplacementNamed(context, '/referees');
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.business),
+                title: const Text('Organization'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.pushReplacementNamed(context, '/organizations');
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.chat),
+                title: const Text('Chat'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.pushReplacementNamed(context, '/chat');
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.leaderboard),
+                title: const Text('Leaderboard'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.pushReplacementNamed(context, '/leaderboard');
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.sports),
+                title: const Text('Coaches'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.pushReplacementNamed(context, '/coaches');
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.emoji_events),
+                title: const Text('Knockout'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.pushReplacementNamed(context, '/knockout');
+                },
+              ),
             ],
           ),
         ),
@@ -185,13 +295,11 @@ class _PlayersPageState extends State<PlayersPage> {
   }
 
   Widget _buildHeader() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Players', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.grey[900])),
-        SizedBox(height: 8),
-        Text('Browse club players, view profiles, and challenge them.',
-            style: TextStyle(fontSize: 14, color: Colors.grey[600])),
+    return PageHeader(
+      title: 'Players',
+      description: 'Browse club players, view profiles, and challenge them.',
+      navItems: [
+        NavItem(label: 'Dashboard', route: '/dashboard'),
       ],
     );
   }

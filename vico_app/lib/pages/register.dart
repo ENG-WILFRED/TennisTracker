@@ -193,8 +193,8 @@ class _RegisterPageState extends State<RegisterPage> {
                                 : [const BoxShadow(color: Colors.black12, blurRadius: 4)],
                           ),
                           transform: _isHovered
-                              ? Matrix4.rotationZ(0.1)..scale(1.1)
-                              : Matrix4.rotationZ(0.0)..scale(1.0),
+                              ? (Matrix4.rotationZ(0.1)..scale(1.1))
+                              : (Matrix4.rotationZ(0.0)..scale(1.0)),
                         ),
                       ),
                       const SizedBox(height: 16),
