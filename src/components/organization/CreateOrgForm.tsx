@@ -77,12 +77,12 @@ export default function CreateOrgForm({ isOpen, onClose, onSuccess }: CreateOrgF
       });
 
       if (!res.ok) {
-        const data = await res.json();
+        const data = (await res.json()) as any;
         setError(data.error || 'Failed to create organization');
         return;
       }
 
-      const org = await res.json();
+      const org = (await res.json()) as any;
       onSuccess(org);
       setFormData({
         name: '',

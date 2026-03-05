@@ -34,9 +34,12 @@ This document summarizes the steps required to deploy **TennisTracker** to a pro
 
 ### Workers / Pages
 
-- Deploy the Next.js app to [Cloudflare Pages](https://developers.cloudflare.com/pages/) or Workers.
+- Deploy the Next.js app to [Cloudflare Pages](https://developers.cloudflare.com/pages/) or Workers.  
+  A sample `wrangler.toml` is included in the repo which defines an R2 bucket binding (`MEDIA_BUCKET`) and a Durable Object namespace (`CHAT_ROOMS`).
+  Use `wrangler publish` or the Pages CI action to deploy.
 - Enable the **Edge Runtime** so that API routes (`/api/*`) run on Workers.
-- Bind Cloudflare R2 bucket as an environment variable if running on Workers, e.g. `MY_BUCKET`.
+- Bind Cloudflare R2 bucket as an environment variable if running on Workers, e.g. `MY_BUCKET`.  
+  The `MEDIA_BUCKET` binding in `wrangler.toml` corresponds to your R2 bucket name.
 
 ### R2 (Buckets)
 
@@ -102,7 +105,14 @@ This document summarizes the steps required to deploy **TennisTracker** to a pro
   ```bash
   node src/grpc/server.ts
   ```
+## Continuous deployment
 
+The repository includes a GitHub Actions workflow (`.github/workflows/deploy-cloudflare.yml`) that builds the project and pushes it to Cloudflare Pages on every `main` branch push.  Set up the following secrets in your repo:
+
+* `CLOUDFLARE_API_TOKEN` – token with Pages and R2 permissions
+* `CLOUDFLARE_ACCOUNT_ID` – your account ID
+
+The workflow runs `npm run build` and then invokes the Pages action; it respects the `wrangler.toml` bindings automatically.
 ## 6. Additional Notes
 
 - Keep `browserslist` up to date with `npx update-browserslist-db@latest`.

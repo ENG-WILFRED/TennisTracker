@@ -44,7 +44,7 @@ export default function EditRefereePage({ params }: { params: { id: string } }) 
       try {
         const res = await fetch(`/api/referees/${id}`);
         if (!res.ok) return;
-        const data = await res.json();
+        const data = (await res.json()) as any;
         setForm({ 
           bio: data.bio || '', 
           photo: data.photo || '', 
@@ -177,7 +177,7 @@ export default function EditRefereePage({ params }: { params: { id: string } }) 
       });
       
       if (!res.ok) {
-        const err = await res.json();
+        const err = (await res.json()) as any;
         throw new Error(err.error || 'Failed to save changes');
       }
       

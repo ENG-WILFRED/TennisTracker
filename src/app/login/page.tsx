@@ -29,11 +29,11 @@ export default function LoginPage() {
             });
 
             if (!response.ok) {
-                const error = await response.json();
+                const error = await response.json() as any;
                 throw new Error(error.error || 'Login failed');
             }
 
-            const data = await response.json();
+            const data = await response.json() as any;
             
             // Use the auth context to login
             login(

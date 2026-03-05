@@ -25,7 +25,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ org
 
     const { orgId } = await params;
     const body = await request.json();
-    const { name, count, condition } = body;
+    const { name, count, condition } = body as any;
 
     if (!name) return new Response(JSON.stringify({ error: 'name required' }), { status: 400 });
 

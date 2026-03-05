@@ -11,7 +11,7 @@ export async function POST(request: Request) {
     const auth = verifyApiAuth(request);
     if (!auth) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
 
-    const body = await request.json();
+    const body = await request.json() as { coachId: string };
     const { coachId } = body;
     if (!coachId) return new Response(JSON.stringify({ error: 'coachId required' }), { status: 400 });
 

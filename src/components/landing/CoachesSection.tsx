@@ -26,7 +26,7 @@ export default function CoachesSection() {
           setCoaches([]);
           return;
         }
-        const data = await res.json();
+        const data = (await res.json()) as any;
         setCoaches(data || []);
       } catch (err) {
         console.error('Failed to fetch coaches:', err);

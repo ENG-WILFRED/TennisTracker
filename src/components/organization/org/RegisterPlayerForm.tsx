@@ -47,7 +47,7 @@ export default function RegisterPlayerForm({ orgId, onRegistered, readOnly = fal
     try {
       const res = await authenticatedFetch(`/api/organization/${orgId}/players`, { requireAuth: false });
       if (res.ok) {
-        const data = await res.json();
+        const data = (await res.json()) as any;
         const mapped = data.map((p: any) => ({ id: p.id, name: p.name, username: p.username, img: p.img }));
         setRegisteredPlayers(mapped);
         setRegisteredIds(new Set(mapped.map((p: { id: any; }) => p.id)));
@@ -74,7 +74,7 @@ export default function RegisterPlayerForm({ orgId, onRegistered, readOnly = fal
         const q = query.trim();
         const res = await fetch(`/api/players?query=${encodeURIComponent(q)}`);
         if (res.ok) {
-          const data = await res.json();
+          const data = (await res.json()) as any;
           setOptions(data.map((p: any) => ({ id: p.id, name: p.name, username: p.username, img: p.img, registered: registeredIds.has(p.id) })));
         } else {
           setOptions([]);

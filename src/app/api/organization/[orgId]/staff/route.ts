@@ -28,7 +28,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ org
 
     const { orgId } = await params;
     const body = await request.json();
-    const { userId, role, contact, expertise } = body;
+    const { userId, role, contact, expertise } = body as any;
 
     if (!userId || !role) return new Response(JSON.stringify({ error: 'userId and role required' }), { status: 400 });
 

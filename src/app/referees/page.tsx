@@ -32,7 +32,7 @@ export default function RefereesPage() {
                     setReferees([]);
                     return;
                 }
-                const data = await res.json();
+                const data = (await res.json()) as any;
                 setReferees(data || []);
             } catch (err) {
                 console.error('Failed to fetch referees:', err);

@@ -68,7 +68,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { name, description, city, country, phone, email, primaryColor, logo } = body;
+    const { name, description, city, country, phone, email, primaryColor, logo } = body as any;
 
     // handle logo data URI upload
     let logoUrl: string | null = null;

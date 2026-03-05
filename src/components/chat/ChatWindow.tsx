@@ -80,17 +80,17 @@ export default function ChatWindow({ roomId }: ChatWindowProps) {
       ]);
 
       if (messagesRes.ok) {
-        const msgs = await messagesRes.json();
+        const msgs = (await messagesRes.json()) as any;
         setMessages(msgs);
       }
 
       if (participantsRes.ok) {
-        const parts = await participantsRes.json();
+        const parts = (await participantsRes.json()) as any;
         setParticipants(parts);
       }
 
       if (userRes.ok) {
-        const user = await userRes.json();
+        const user = (await userRes.json()) as any;
         setCurrentUserId(user.id);
       }
     } catch (error) {
@@ -110,12 +110,12 @@ export default function ChatWindow({ roomId }: ChatWindowProps) {
         ]);
 
         if (messagesRes.ok) {
-          const msgs = await messagesRes.json();
+          const msgs = (await messagesRes.json()) as any;
           setMessages(msgs);
         }
 
         if (participantsRes.ok) {
-          const parts = await participantsRes.json();
+          const parts = (await participantsRes.json()) as any;
           setParticipants(parts);
         }
       } catch (error) {
@@ -142,7 +142,7 @@ export default function ChatWindow({ roomId }: ChatWindowProps) {
         // Fetch updated messages
         const messagesRes = await authenticatedFetch(`/api/chat/rooms/${roomId}/messages`);
         if (messagesRes.ok) {
-          const msgs = await messagesRes.json();
+          const msgs = (await messagesRes.json()) as any;
           setMessages(msgs);
         }
       }
@@ -199,10 +199,10 @@ export default function ChatWindow({ roomId }: ChatWindowProps) {
                   </div>
                 )}
                 <div
-                  className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                  className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl shadow-sm ${
                     message.playerId === currentUserId
-                      ? 'bg-blue-500 text-white rounded-br-none'
-                      : 'bg-gray-200 text-gray-800 rounded-bl-none'
+                      ? 'bg-blue-500 text-white rounded-br-md'
+                      : 'bg-white text-gray-800 rounded-bl-md border border-gray-200'
                   }`}
                 >
                   {message.playerId !== currentUserId && (
@@ -243,14 +243,13 @@ export default function ChatWindow({ roomId }: ChatWindowProps) {
               value={messageText}
               onChange={(e) => setMessageText(e.target.value)}
               placeholder="Type a message..."
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
             <button
               type="submit"
-              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition flex items-center gap-2"
+              className="p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition shadow-lg"
             >
-              <Send size={18} />
-              Send
+              <Send size={20} />
             </button>
           </div>
         </form>

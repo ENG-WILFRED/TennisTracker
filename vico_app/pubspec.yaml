@@ -13,7 +13,7 @@ dependencies:
   http: ^0.13.6
   shared_preferences: ^2.0.15
   web_socket_channel: ^2.2.0
-  intl: ^0.17.0
+  fl_chart: ^0.66.2
 
 dev_dependencies:
   flutter_test:

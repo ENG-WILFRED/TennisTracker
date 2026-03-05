@@ -8,7 +8,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ org
 
     const { orgId } = await params;
     const body = await request.json();
-    const { playerId } = body;
+    const { playerId } = body as any;
 
     if (!playerId) return new Response(JSON.stringify({ error: 'playerId required' }), { status: 400 });
 

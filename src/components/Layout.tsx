@@ -8,13 +8,15 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         <ToastProvider>
         <div className="min-h-screen flex flex-col app-bg">
             <Head>
-                <title>Vico - Sports Management Platform</title>
+                <title>Vico</title>
                 <meta name="description" content="Manage your sports matches, teams, and competitions on Vico" />
                 <link rel="icon" href="/favicon.ico" />
             </Head>
                  <header className="bg-white/90 shadow p-4 flex items-center justify-between w-full">
                     <div className="flex items-center gap-4">
-                      <h1 className="text-xl font-bold text-green-800">Vico Dashboard</h1>
+                      {/* logo image */}
+                      <img src="/tennis.jpeg" alt="Vico logo" className="w-10 h-10 rounded-full object-cover" />
+                      <h1 className="text-xl font-bold text-green-800">Vico</h1>
                       <span className="text-sm text-gray-600">Sports Management</span>
                     </div>
                     <nav className="flex items-center gap-6">

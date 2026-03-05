@@ -62,7 +62,7 @@ export default function OrganizationListPage() {
       setLoading(true);
       const res = await authenticatedFetch('/api/organization', { requireAuth: false });
       if (res.ok) {
-        const data = await res.json();
+        const data = (await res.json()) as any;
         setOrgs(data);
       }
     } catch (err) {

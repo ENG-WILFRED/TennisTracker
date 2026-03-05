@@ -9,7 +9,7 @@ const prisma = new PrismaClient();
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { usernameOrEmail, password } = body;
+    const { usernameOrEmail, password } = body as any;
 
     if (!usernameOrEmail || !password) {
       return NextResponse.json({ error: 'Username/email and password are required' }, { status: 400 });
