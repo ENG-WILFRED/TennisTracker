@@ -17,11 +17,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.169.0",
-<<<<<<< HEAD
-    "@grpc/grpc-js": "^1.6.11",
-=======
     "@grpc/grpc-js": "^1.14.3",
->>>>>>> 4fbb627d8d7e09ef2e255410631d0569c0165822
     "@grpc/proto-loader": "^0.7.6",
     "@hookform/resolvers": "^5.2.2",
     "@prisma/client": "^6.16.1",

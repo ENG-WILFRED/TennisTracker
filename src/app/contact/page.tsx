@@ -1,3 +1,5 @@
+"use client";
+
 import PageHeader from "@/components/PageHeader";
 import { Mail, Phone, MapPin, Clock, User, Award } from "lucide-react";
 import { useState } from "react";

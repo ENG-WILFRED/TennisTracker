@@ -1,18 +1,27 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../config.dart';
+import 'auth_service.dart';
 
 class ApiService {
   final String baseUrl;
   String? _authToken;
+  final AuthService _auth = AuthService();
 
   ApiService({this.baseUrl = Config.baseUrl});
+
+  Future<void> _ensureToken() async {
+    if (_authToken == null) {
+      _authToken = await _auth.getToken();
+    }
+  }
 
   void setAuthToken(String? token) {
     _authToken = token;
   }
 
-  Map<String, String> _headers() {
+  Future<Map<String, String>> _headers() async {
+    await _ensureToken();
     final headers = {'Content-Type': 'application/json'};
     if (_authToken != null && _authToken!.isNotEmpty) {
       headers['Authorization'] = 'Bearer $_authToken';
@@ -25,7 +34,7 @@ class ApiService {
     if (query != null && query.isNotEmpty) {
       uri = uri.replace(queryParameters: {'query': query});
     }
-    final res = await http.get(uri, headers: _headers());
+    final res = await http.get(uri, headers: await _headers());
     if (res.statusCode == 200) {
       return jsonDecode(res.body) as List<dynamic>;
     }
@@ -34,7 +43,7 @@ class ApiService {
 
   Future<List<dynamic>> fetchCoaches() async {
     final uri = Uri.parse('$baseUrl/api/coaches');
-    final res = await http.get(uri, headers: _headers());
+    final res = await http.get(uri, headers: await _headers());
     if (res.statusCode == 200) {
       return jsonDecode(res.body) as List<dynamic>;
     }
@@ -43,7 +52,7 @@ class ApiService {
 
   Future<Map<String, dynamic>> post(String path, Map<String, dynamic> body) async {
     final uri = Uri.parse('$baseUrl$path');
-    final res = await http.post(uri, headers: _headers(), body: jsonEncode(body));
+    final res = await http.post(uri, headers: await _headers(), body: jsonEncode(body));
     if (res.statusCode >= 200 && res.statusCode < 300) {
       return jsonDecode(res.body) as Map<String, dynamic>;
     }
@@ -210,11 +219,103 @@ class ApiService {
   // Get inventory
   Future<List<dynamic>> fetchInventory() async {
     final uri = Uri.parse('$baseUrl/api/inventory');
-    final res = await http.get(uri, headers: _headers());
+    final res = await http.get(uri, headers: await _headers());
     if (res.statusCode == 200) {
       return jsonDecode(res.body) as List<dynamic>;
     }
     throw Exception('Failed to fetch inventory: ${res.statusCode}');
+  }
+
+  // Chat functions
+  Future<List<dynamic>> fetchChatRooms() async {
+    final uri = Uri.parse('$baseUrl/api/chat/rooms');
+    final res = await http.get(uri, headers: await _headers());
+    if (res.statusCode == 200) {
+      return jsonDecode(res.body) as List<dynamic>;
+    }
+    throw Exception('Failed to fetch chat rooms: ${res.statusCode}');
+  }
+
+  Future<Map<String, dynamic>> createChatRoom(String name) async {
+    final uri = Uri.parse('$baseUrl/api/chat/rooms');
+    final res = await http.post(uri, headers: await _headers(), body: jsonEncode({'name': name}));
+    if (res.statusCode >= 200 && res.statusCode < 300) {
+      return jsonDecode(res.body) as Map<String, dynamic>;
+    }
+    throw Exception('Failed to create chat room: ${res.statusCode}');
+  }
+
+  Future<List<dynamic>> fetchChatMessages(String roomId) async {
+    final uri = Uri.parse('$baseUrl/api/chat/rooms/$roomId/messages');
+    final res = await http.get(uri, headers: await _headers());
+    if (res.statusCode == 200) {
+      return jsonDecode(res.body) as List<dynamic>;
+    }
+    throw Exception('Failed to fetch chat messages: ${res.statusCode}');
+  }
+
+  Future<Map<String, dynamic>> sendChatMessage(String roomId, String content) async {
+    final uri = Uri.parse('$baseUrl/api/chat/rooms/$roomId/messages');
+    final res = await http.post(uri, headers: await _headers(), body: jsonEncode({'content': content}));
+    if (res.statusCode >= 200 && res.statusCode < 300) {
+      return jsonDecode(res.body) as Map<String, dynamic>;
+    }
+    throw Exception('Failed to send message: ${res.statusCode}');
+  }
+
+  Future<List<dynamic>> fetchChatParticipants(String roomId) async {
+    final uri = Uri.parse('$baseUrl/api/chat/rooms/$roomId/participants');
+    final res = await http.get(uri, headers: await _headers());
+    if (res.statusCode == 200) {
+      return jsonDecode(res.body) as List<dynamic>;
+    }
+    throw Exception('Failed to fetch participants: ${res.statusCode}');
+  }
+
+  Future<Map<String, dynamic>> fetchChatMe() async {
+    final uri = Uri.parse('$baseUrl/api/chat/me');
+    final res = await http.get(uri, headers: await _headers());
+    if (res.statusCode == 200) {
+      return jsonDecode(res.body) as Map<String, dynamic>;
+    }
+    throw Exception('Failed to fetch user: ${res.statusCode}');
+  }
+
+  Future<void> setChatOnline(String roomId) async {
+    final uri = Uri.parse('$baseUrl/api/chat/rooms/$roomId/status');
+    final res = await http.post(uri, headers: await _headers());
+    if (res.statusCode >= 200 && res.statusCode < 300) {
+      return;
+    }
+    throw Exception('Failed to set online: ${res.statusCode}');
+  }
+
+  Future<void> setChatOffline(String roomId) async {
+    final uri = Uri.parse('$baseUrl/api/chat/rooms/$roomId/status');
+    final res = await http.delete(uri, headers: await _headers());
+    if (res.statusCode >= 200 && res.statusCode < 300) {
+      return;
+    }
+    throw Exception('Failed to set offline: ${res.statusCode}');
+  }
+
+  // Dashboard functions
+  Future<Map<String, dynamic>> fetchPlayerDashboard(String playerId) async {
+    final uri = Uri.parse('$baseUrl/api/dashboard?playerId=$playerId');
+    final res = await http.get(uri, headers: await _headers());
+    if (res.statusCode == 200) {
+      return jsonDecode(res.body) as Map<String, dynamic>;
+    }
+    throw Exception('Failed to fetch dashboard: ${res.statusCode}');
+  }
+
+  Future<Map<String, dynamic>> updatePlayerProfile(String playerId, Map<String, dynamic> data) async {
+    final uri = Uri.parse('$baseUrl/api/players/$playerId');
+    final res = await http.put(uri, headers: await _headers(), body: jsonEncode(data));
+    if (res.statusCode >= 200 && res.statusCode < 300) {
+      return jsonDecode(res.body) as Map<String, dynamic>;
+    }
+    throw Exception('Failed to update profile: ${res.statusCode}');
   }
 }
 

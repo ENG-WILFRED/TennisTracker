@@ -1,8 +1,6 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:web_socket_channel/web_socket_channel.dart';
-import '../services/auth_service.dart';
-import '../config.dart';
+import '../widgets/chat_room_list.dart';
+import '../widgets/chat_window.dart';
 
 class ChatPage extends StatefulWidget {
   const ChatPage({super.key});
@@ -12,90 +10,42 @@ class ChatPage extends StatefulWidget {
 }
 
 class _ChatPageState extends State<ChatPage> {
-  final AuthService _auth = AuthService();
-  WebSocketChannel? _channel;
-  String _roomId = '';
-  List<Map<String, dynamic>> _messages = [];
-  final TextEditingController _msgController = TextEditingController();
-  bool _connected = false;
+  String? _selectedRoomId;
 
-  Future<void> _connect() async {
-    final token = await _auth.getToken();
-    if (token == null) return;
-    final wsUrl = Uri.parse(Config.baseUrl.replaceFirst('https://', 'wss://') + '/api/chat/ws?roomId=$_roomId');
-    _channel = WebSocketChannel.connect(wsUrl);
-    _channel!.stream.listen((data) {
-      try {
-        final msg = jsonDecode(data as String) as Map<String, dynamic>;
-        if (msg['type'] == 'message') {
-          setState(() {
-            _messages.add(msg['data']);
-          });
-        }
-      } catch (_) {}
-    }, onDone: () {
-      setState(() => _connected = false);
-    });
-    setState(() => _connected = true);
-  }
-
-  void _sendMessage() {
-    if (_channel != null && _msgController.text.trim().isNotEmpty) {
-      _channel!.sink.add(jsonEncode({'type': 'message', 'content': _msgController.text.trim()}));
-      _msgController.clear();
-    }
-  }
-
-  @override
-  void dispose() {
-    _channel?.sink.close();
-    super.dispose();
+  void _handleSelectRoom(String roomId) {
+    setState(() => _selectedRoomId = roomId);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Chat')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            TextField(
-              decoration: const InputDecoration(labelText: 'Room ID'),
-              onChanged: (v) => _roomId = v,
-            ),
-            const SizedBox(height: 8),
-            ElevatedButton(
-              onPressed: _connected ? null : _connect,
-              child: Text(_connected ? 'Connected' : 'Join Room'),
-            ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: ListView.builder(
-                itemCount: _messages.length,
-                itemBuilder: (context, index) {
-                  final m = _messages[index];
-                  return ListTile(
-                    title: Text(m['playerName'] ?? 'Anon'),
-                    subtitle: Text(m['content'] ?? ''),
-                  );
-                },
-              ),
-            ),
-            if (_connected)
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _msgController,
-                      decoration: const InputDecoration(hintText: 'Type message'),
+      appBar: AppBar(
+        title: const Text('Chat'),
+        backgroundColor: Colors.blue,
+        foregroundColor: Colors.white,
+      ),
+      body: Row(
+        children: [
+          // Sidebar - Chat Rooms List
+          ChatRoomList(
+            selectedRoomId: _selectedRoomId,
+            onSelectRoom: _handleSelectRoom,
+          ),
+          // Main Chat Area
+          Expanded(
+            child: _selectedRoomId != null
+                ? ChatWindow(roomId: _selectedRoomId!)
+                : Container(
+                    color: Colors.grey[50],
+                    child: const Center(
+                      child: Text(
+                        'Select a chat room to start messaging',
+                        style: TextStyle(color: Colors.grey),
+                      ),
                     ),
                   ),
-                  IconButton(onPressed: _sendMessage, icon: const Icon(Icons.send)),
-                ],
-              ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
