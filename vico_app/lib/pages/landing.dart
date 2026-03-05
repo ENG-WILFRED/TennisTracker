@@ -91,96 +91,84 @@ class _LandingPageState extends State<LandingPage> {
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFFE8F5E8), Color(0xFFE0F2FE)],
+          colors: [Color(0xFFF0FFFE), Color(0xFFF0F9F8)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
       ),
-      padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
+      padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 20),
       child: Column(
         children: [
-          Row(
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.green.shade100,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const Text(
+              'Join Thousands on Vico',
+              style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 14),
+            ),
+          ),
+          const SizedBox(height: 24),
+          const Text(
+            'Play. Track. Win.\nOn Vico.',
+            style: TextStyle(
+              fontSize: 48,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+              height: 1.2,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 24),
+          const Text(
+            'Connect with players and coaches. Track your matches, analyze your performance, and join a thriving community. Your sports ecosystem awaits.',
+            style: TextStyle(fontSize: 16, color: Colors.black54, height: 1.6),
+            textAlign: TextAlign.center,
+            maxLines: 4,
+          ),
+          const SizedBox(height: 40),
+          Wrap(
+            spacing: 16,
+            runSpacing: 12,
+            alignment: WrapAlignment.center,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.green.shade100,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Text(
-                        'Join Thousands on Vico',
-                        style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    const Text(
-                      'Play. Track. Win.\nOn Vico.',
-                      style: TextStyle(
-                        fontSize: 36,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                        height: 1.2,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    const Text(
-                      'Connect with players and coaches. Track your matches, analyze your performance, and join a thriving community. Your sports ecosystem awaits.',
-                      style: TextStyle(fontSize: 16, color: Colors.black54, height: 1.5),
-                    ),
-                    const SizedBox(height: 30),
-                    Row(
-                      children: [
-                        ElevatedButton(
-                          onPressed: () => Navigator.pushNamed(context, '/register'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green,
-                            padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          ),
-                          child: const Text('Get Started Free', style: TextStyle(fontSize: 16)),
-                        ),
-                        const SizedBox(width: 20),
-                        OutlinedButton(
-                          onPressed: () {},
-                          style: OutlinedButton.styleFrom(
-                            side: const BorderSide(color: Colors.green),
-                            padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          ),
-                          child: const Text('Learn More', style: TextStyle(color: Colors.green, fontSize: 16)),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 40),
-                    Row(
-                      children: [
-                        _buildStat('10K+', 'Active Players'),
-                        const SizedBox(width: 40),
-                        _buildStat('500+', 'Pro Coaches'),
-                        const SizedBox(width: 40),
-                        _buildStat('50K+', 'Matches Tracked'),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 40),
-              Expanded(
-                child: Container(
-                  height: 400,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
-                    image: const DecorationImage(
-                      image: NetworkImage('https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=800&q=80'),
-                      fit: BoxFit.cover,
-                    ),
+              SizedBox(
+                width: 200,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pushNamed(context, '/register'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
+                  child: const Text('Get Started Free', style: TextStyle(fontSize: 16, color: Colors.white)),
                 ),
               ),
+              SizedBox(
+                width: 200,
+                child: OutlinedButton(
+                  onPressed: () {},
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Colors.green),
+                    padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  child: const Text('Learn More', style: TextStyle(color: Colors.green, fontSize: 16)),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 50),
+          Wrap(
+            spacing: 40,
+            runSpacing: 20,
+            alignment: WrapAlignment.center,
+            children: [
+              _buildStat('10K+', 'Active Players'),
+              _buildStat('500+', 'Pro Coaches'),
+              _buildStat('50K+', 'Matches Tracked'),
             ],
           ),
         ],
@@ -202,7 +190,7 @@ class _LandingPageState extends State<LandingPage> {
       padding: const EdgeInsets.symmetric(vertical: 80, horizontal: 20),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFFE8F5E8), Color(0xFFE0F2FE)],
+          colors: [Color(0xFFF0FFFE), Color(0xFFF0F9F8)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -211,41 +199,32 @@ class _LandingPageState extends State<LandingPage> {
         children: [
           const Text(
             'The Beautiful Game of Tennis',
-            style: TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: Colors.black87),
+            style: TextStyle(fontSize: 44, fontWeight: FontWeight.bold, color: Colors.black87),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 20),
           const Text(
             'A sport that combines athleticism, strategy, and mental toughness — played and loved worldwide',
-            style: TextStyle(fontSize: 18, color: Colors.black54),
+            style: TextStyle(fontSize: 16, color: Colors.black54),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 60),
-          Row(
+          Wrap(
+            spacing: 24,
+            runSpacing: 24,
+            alignment: WrapAlignment.center,
             children: [
-              Expanded(
-                child: Container(
-                  height: 300,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
-                    image: const DecorationImage(
-                      image: NetworkImage('https://images.unsplash.com/photo-1571902943202-507ec2618e8f?w=800&q=80'),
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                ),
+              SizedBox(
+                width: MediaQuery.of(context).size.width > 800 ? 250 : double.infinity,
+                child: _buildAboutPoint('🏆', 'Rich History & Prestige', 'From Wimbledon\'s grass courts to Roland Garros\' clay, tennis boasts centuries of tradition and the most prestigious Grand Slam tournaments in sports.'),
               ),
-              const SizedBox(width: 40),
-              Expanded(
-                child: Column(
-                  children: [
-                    _buildAboutPoint('🏆', 'Rich History & Prestige', 'From Wimbledon\'s grass courts to Roland Garros\' clay, tennis boasts centuries of tradition and the most prestigious Grand Slam tournaments in sports.'),
-                    const SizedBox(height: 20),
-                    _buildAboutPoint('💪', 'Total Body Workout', 'Improve cardiovascular health, build strength, enhance agility and coordination. Tennis provides a complete fitness solution for all ages and skill levels.'),
-                    const SizedBox(height: 20),
-                    _buildAboutPoint('🌍', 'Global Community', 'Join millions worldwide in the tennis community. Connect with players, coaches, and enthusiasts who share your passion for the sport.'),
-                  ],
-                ),
+              SizedBox(
+                width: MediaQuery.of(context).size.width > 800 ? 250 : double.infinity,
+                child: _buildAboutPoint('💪', 'Total Body Workout', 'Improve cardiovascular health, build strength, enhance agility and coordination. Tennis provides a complete fitness solution for all ages and skill levels.'),
+              ),
+              SizedBox(
+                width: MediaQuery.of(context).size.width > 800 ? 250 : double.infinity,
+                child: _buildAboutPoint('🌍', 'Global Community', 'Join millions worldwide in the tennis community. Connect with players, coaches, and enthusiasts who share your passion for the sport.'),
               ),
             ],
           ),
@@ -255,30 +234,29 @@ class _LandingPageState extends State<LandingPage> {
   }
 
   Widget _buildAboutPoint(String icon, String title, String desc) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: 50,
-          height: 50,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(colors: [Colors.green, Colors.teal]),
-            borderRadius: BorderRadius.circular(15),
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(15),
+        boxShadow: [BoxShadow(color: Colors.black.withAlpha(20), blurRadius: 12, spreadRadius: 2)],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(icon, style: const TextStyle(fontSize: 32)),
+          const SizedBox(height: 16),
+          Text(
+            title,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
           ),
-          child: Center(child: Text(icon, style: const TextStyle(fontSize: 24))),
-        ),
-        const SizedBox(width: 20),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87)),
-              const SizedBox(height: 8),
-              Text(desc, style: const TextStyle(color: Colors.black54, height: 1.5)),
-            ],
+          const SizedBox(height: 12),
+          Text(
+            desc,
+            style: const TextStyle(color: Colors.black54, height: 1.6, fontSize: 14),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -296,7 +274,7 @@ class _LandingPageState extends State<LandingPage> {
       padding: const EdgeInsets.symmetric(vertical: 80, horizontal: 20),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFFE8F5E8), Color(0xFFE0F2FE)],
+          colors: [Color(0xFFF0FFFE), Color(0xFFF0F9F8)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -305,21 +283,26 @@ class _LandingPageState extends State<LandingPage> {
         children: [
           const Text(
             'Why Choose Vico?',
-            style: TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: Colors.black87),
+            style: TextStyle(fontSize: 44, fontWeight: FontWeight.bold, color: Colors.black87),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 20),
           const Text(
             'Your complete sports ecosystem for managing matches, teams, and competition',
-            style: TextStyle(fontSize: 18, color: Colors.black54),
+            style: TextStyle(fontSize: 16, color: Colors.black54),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 60),
-          Column(
-            children: features.map((feature) => Padding(
-              padding: const EdgeInsets.only(bottom: 20),
-              child: _buildFeatureCard(feature),
-            )).toList(),
+          Wrap(
+            spacing: 20,
+            runSpacing: 20,
+            alignment: WrapAlignment.center,
+            children: features.map((feature) {
+              return SizedBox(
+                width: MediaQuery.of(context).size.width > 900 ? 280 : (MediaQuery.of(context).size.width > 600 ? 250 : double.infinity),
+                child: _buildFeatureCard(feature),
+              );
+            }).toList(),
           ),
         ],
       ),
@@ -328,33 +311,25 @@ class _LandingPageState extends State<LandingPage> {
 
   Widget _buildFeatureCard(Map<String, String> feature) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(15),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10)],
+        boxShadow: [BoxShadow(color: Colors.black.withAlpha(20), blurRadius: 12, spreadRadius: 2)],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(colors: [Colors.blue, Colors.cyan]),
-              borderRadius: BorderRadius.circular(15),
-            ),
-            child: Center(child: Text(feature['icon']!, style: const TextStyle(fontSize: 24))),
+          Text(feature['icon']!, style: const TextStyle(fontSize: 32)),
+          const SizedBox(height: 16),
+          Text(
+            feature['title']!,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
           ),
-          const SizedBox(width: 20),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(feature['title']!, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87)),
-                const SizedBox(height: 8),
-                Text(feature['desc']!, style: const TextStyle(color: Colors.black54, fontSize: 14)),
-              ],
-            ),
+          const SizedBox(height: 12),
+          Text(
+            feature['desc']!,
+            style: const TextStyle(color: Colors.black54, fontSize: 14, height: 1.5),
           ),
         ],
       ),
@@ -366,7 +341,7 @@ class _LandingPageState extends State<LandingPage> {
       padding: const EdgeInsets.symmetric(vertical: 80, horizontal: 20),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFFE8F5E8), Color(0xFFE0F2FE)],
+          colors: [Color(0xFFF0FFFE), Color(0xFFF0F9F8)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -442,7 +417,7 @@ class _LandingPageState extends State<LandingPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(15),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10)],
+        boxShadow: [BoxShadow(color: Colors.black.withAlpha(26), blurRadius: 10)],
       ),
       child: Row(
         children: [
@@ -485,7 +460,7 @@ class _LandingPageState extends State<LandingPage> {
       padding: const EdgeInsets.symmetric(vertical: 80, horizontal: 20),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFFE8F5E8), Color(0xFFE0F2FE)],
+          colors: [Color(0xFFF0FFFE), Color(0xFFF0F9F8)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -557,7 +532,7 @@ class _LandingPageState extends State<LandingPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(15),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10)],
+        boxShadow: [BoxShadow(color: Colors.black.withAlpha(26), blurRadius: 10)],
       ),
       child: Row(
         children: [
@@ -600,7 +575,7 @@ class _LandingPageState extends State<LandingPage> {
       padding: const EdgeInsets.symmetric(vertical: 80, horizontal: 20),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFFE8F5E8), Color(0xFFE0F2FE)],
+          colors: [Color(0xFFF0FFFE), Color(0xFFF0F9F8)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -672,7 +647,7 @@ class _LandingPageState extends State<LandingPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(15),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10)],
+        boxShadow: [BoxShadow(color: Colors.black.withAlpha(26), blurRadius: 10)],
       ),
       child: Row(
         children: [
@@ -715,7 +690,7 @@ class _LandingPageState extends State<LandingPage> {
       padding: const EdgeInsets.symmetric(vertical: 80, horizontal: 20),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFFE8F5E8), Color(0xFFE0F2FE)],
+          colors: [Color(0xFFF0FFFE), Color(0xFFF0F9F8)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -771,7 +746,7 @@ class _LandingPageState extends State<LandingPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(15),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10)],
+        boxShadow: [BoxShadow(color: Colors.black.withAlpha(26), blurRadius: 10)],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

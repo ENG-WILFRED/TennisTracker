@@ -4,13 +4,15 @@ import { useEffect, useState } from 'react';
 import { authenticatedFetch } from '@/lib/authenticatedFetch';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import ChatRoomList from '@/components/chat/ChatRoomList';
+import ConversationsSidebar from '@/components/chat/ConversationsSidebar';
 import ChatWindow from '@/components/chat/ChatWindow';
 
 export default function ChatPage() {
   const router = useRouter();
   const { playerId, isLoading } = useAuth();
-  const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
+  const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
+  const [selectedContactName, setSelectedContactName] = useState<string | null>(null);
+  const [selectedContactPhoto, setSelectedContactPhoto] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isLoading && !playerId) {
@@ -18,39 +20,26 @@ export default function ChatPage() {
     }
   }, [playerId, isLoading, router]);
 
-  const handleSelectRoom = (roomId: string) => {
-    setSelectedRoomId(roomId);
-  };
-
-  const handleRoomChange = (roomId: string | null) => {
-    if (selectedRoomId && selectedRoomId !== roomId) {
-      // Set previous room user to offline
-      authenticatedFetch(`/api/chat/rooms/${selectedRoomId}/status`, {
-        method: 'DELETE',
-      }).catch(console.error);
-    }
-
-    if (roomId) {
-      // Set new room user to online
-      authenticatedFetch(`/api/chat/rooms/${roomId}/status`, {
-        method: 'POST',
-      }).catch(console.error);
-    }
-
-    setSelectedRoomId(roomId);
+  const handleSelectContact = (contactId: string, contactName: string) => {
+    setSelectedContactId(contactId);
+    setSelectedContactName(contactName);
+    // Set online status
+    authenticatedFetch(`/api/chat/rooms/${contactId}/status`, {
+      method: 'POST',
+    }).catch(console.error);
   };
 
   useEffect(() => {
     // Set user to offline when leaving the page
     return () => {
-      if (selectedRoomId) {
-        authenticatedFetch(`/api/chat/rooms/${selectedRoomId}/status`, {
+      if (selectedContactId) {
+        authenticatedFetch(`/api/chat/rooms/${selectedContactId}/status`, {
           method: 'DELETE',
           keepalive: true,
         }).catch(console.error);
       }
     };
-  }, [selectedRoomId]);
+  }, [selectedContactId]);
 
   if (isLoading) {
     return <div className="flex items-center justify-center h-screen">Loading...</div>;
@@ -61,19 +50,47 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="flex h-screen bg-gray-100">
-      {/* Sidebar - Chat Rooms List */}
-      <div className="w-1/4 bg-white border-r border-gray-300 overflow-y-auto">
-        <ChatRoomList selectedRoomId={selectedRoomId} onSelectRoom={handleRoomChange} />
+    <div className="flex h-screen bg-white">
+      {/* Sidebar - Messages/Conversations List */}
+      <div className="w-full md:w-80 lg:w-96 bg-white border-r border-gray-200 overflow-y-auto">
+        <ConversationsSidebar 
+          selectedContactId={selectedContactId} 
+          onSelectContact={handleSelectContact} 
+        />
       </div>
 
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col">
-        {selectedRoomId ? (
-          <ChatWindow roomId={selectedRoomId} />
+      <div className="hidden md:flex flex-1 flex-col">
+        {selectedContactId ? (
+          <ChatWindow 
+            roomId={selectedContactId} 
+            contactName={selectedContactName || 'Conversation'}
+            contactPhoto={selectedContactPhoto}
+          />
         ) : (
           <div className="flex items-center justify-center h-full text-gray-500">
-            <p>Select a chat room to start messaging</p>
+            <div className="text-center">
+              <p className="text-xl font-semibold mb-2">No conversation selected</p>
+              <p className="text-sm text-gray-400">Choose a contact to start chatting</p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Mobile Chat View */}
+      <div className="flex md:hidden flex-1 flex-col">
+        {selectedContactId ? (
+          <ChatWindow 
+            roomId={selectedContactId} 
+            contactName={selectedContactName || 'Conversation'}
+            contactPhoto={selectedContactPhoto}
+          />
+        ) : (
+          <div className="flex items-center justify-center h-full text-gray-500">
+            <div className="text-center">
+              <p className="text-lg font-semibold mb-2">Select a contact</p>
+              <p className="text-sm text-gray-400">Tap a contact to start chatting</p>
+            </div>
           </div>
         )}
       </div>

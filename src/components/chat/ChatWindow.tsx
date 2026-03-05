@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { authenticatedFetch } from '@/lib/authenticatedFetch';
-import { Send } from 'lucide-react';
+import { Send, MoreVertical } from 'lucide-react';
 
 interface ChatMessage {
   id: string;
@@ -25,9 +25,11 @@ interface ChatParticipant {
 
 interface ChatWindowProps {
   roomId: string;
+  contactName?: string;
+  contactPhoto?: string;
 }
 
-export default function ChatWindow({ roomId }: ChatWindowProps) {
+export default function ChatWindow({ roomId, contactName = 'Conversation', contactPhoto }: ChatWindowProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [participants, setParticipants] = useState<ChatParticipant[]>([]);
   const [messageText, setMessageText] = useState('');
@@ -156,35 +158,52 @@ export default function ChatWindow({ roomId }: ChatWindowProps) {
   }
 
   return (
-    <div className="flex h-full">
+    <div className="flex h-full flex-col lg:flex-row bg-white">
       {/* Messages Area */}
-      <div className="flex-1 flex flex-col">
-        {/* Header with Room Info */}
-        <div className="bg-white border-b border-gray-300 p-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-gray-800">Chat Room</h2>
-            <div className="text-sm text-gray-600">
-              {participants.filter((p) => p.isOnline).length} online
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Header with Contact Info */}
+        <div className="bg-white border-b border-gray-200 p-3 md:p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3 min-w-0">
+            {contactPhoto && (
+              <img
+                src={contactPhoto}
+                alt={contactName}
+                className="w-10 h-10 md:w-12 md:h-12 rounded-full object-cover flex-shrink-0 bg-gray-200"
+              />
+            )}
+            <div className="min-w-0">
+              <h2 className="text-lg md:text-xl font-bold text-gray-800 truncate">
+                {contactName}
+              </h2>
+              <p className="text-xs md:text-sm text-gray-500">
+                {participants.filter((p) => p.isOnline).length} online
+              </p>
             </div>
           </div>
+          <button className="p-2 hover:bg-gray-100 rounded-lg flex-shrink-0">
+            <MoreVertical size={20} className="text-gray-600" />
+          </button>
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto bg-white p-4 space-y-4">
+        <div className="flex-1 overflow-y-auto bg-gray-50 p-3 md:p-4 space-y-3 md:space-y-4">
           {messages.length === 0 ? (
             <div className="flex items-center justify-center h-full text-gray-500">
-              <p>No messages yet. Start the conversation!</p>
+              <div className="text-center">
+                <p className="text-lg font-medium mb-2">Start a conversation</p>
+                <p className="text-sm">Send a message to begin chatting</p>
+              </div>
             </div>
           ) : (
             messages.map((message) => (
               <div
                 key={message.id}
-                className={`flex gap-3 ${
+                className={`flex gap-2 ${
                   message.playerId === currentUserId ? 'justify-end' : 'justify-start'
                 }`}
               >
                 {message.playerId !== currentUserId && (
-                  <div className="w-8 h-8 rounded-full bg-gray-300 flex-shrink-0 overflow-hidden">
+                  <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-gray-300 flex-shrink-0 overflow-hidden">
                     {message.photo ? (
                       <img
                         src={message.photo}
@@ -199,10 +218,10 @@ export default function ChatWindow({ roomId }: ChatWindowProps) {
                   </div>
                 )}
                 <div
-                  className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl shadow-sm ${
+                  className={`max-w-xs lg:max-w-md px-3 md:px-4 py-2 rounded-lg text-sm ${
                     message.playerId === currentUserId
-                      ? 'bg-blue-500 text-white rounded-br-md'
-                      : 'bg-white text-gray-800 rounded-bl-md border border-gray-200'
+                      ? 'bg-blue-500 text-white rounded-br-none'
+                      : 'bg-white text-gray-800 rounded-bl-none border border-gray-200'
                   }`}
                 >
                   {message.playerId !== currentUserId && (
@@ -210,21 +229,19 @@ export default function ChatWindow({ roomId }: ChatWindowProps) {
                       {message.playerName}
                     </p>
                   )}
-                  <p>{message.content}</p>
+                  <p className="break-words">{message.content}</p>
                   <p className="text-xs mt-1 opacity-70">
-                    {new Date(message.createdAt).toLocaleTimeString()}
-                    <span className="ml-2 text-xs opacity-80">
-                      {message.deliveredAt ? (
-                        message.readAt ? (
-                          // double blue tick
-                          <span className="text-blue-400">✔✔</span>
-                        ) : (
-                          // double grey tick for delivered
-                          <span className="text-gray-400">✔✔</span>
-                        )
+                    {new Date(message.createdAt).toLocaleTimeString([], {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                    <span className="ml-1">
+                      {message.readAt ? (
+                        <span className="text-blue-300">✔✔</span>
+                      ) : message.deliveredAt ? (
+                        <span className="text-gray-300">✔✔</span>
                       ) : (
-                        // single tick for not delivered
-                        <span className="text-gray-400">✔</span>
+                        <span className="text-gray-300">✔</span>
                       )}
                     </span>
                   </p>
@@ -236,38 +253,38 @@ export default function ChatWindow({ roomId }: ChatWindowProps) {
         </div>
 
         {/* Message Input */}
-        <form onSubmit={handleSendMessage} className="bg-white border-t border-gray-300 p-4">
+        <form onSubmit={handleSendMessage} className="bg-white border-t border-gray-200 p-3 md:p-4">
           <div className="flex gap-2">
             <input
               type="text"
               value={messageText}
               onChange={(e) => setMessageText(e.target.value)}
               placeholder="Type a message..."
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="flex-1 px-3 md:px-4 py-2 border border-gray-300 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
             <button
               type="submit"
-              className="p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition shadow-lg"
+              className="p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition flex-shrink-0"
             >
-              <Send size={20} />
+              <Send size={18} />
             </button>
           </div>
         </form>
       </div>
 
-      {/* Participants Sidebar */}
-      <div className="w-64 bg-gray-50 border-l border-gray-300 overflow-y-auto">
-        <div className="p-4 border-b border-gray-300">
+      {/* Participants Sidebar - Hidden on mobile */}
+      <div className="hidden lg:flex lg:w-72 bg-gray-50 border-l border-gray-200 flex-col">
+        <div className="p-4 border-b border-gray-200">
           <h3 className="font-bold text-gray-800">Participants</h3>
-          <p className="text-xs text-gray-600 mt-1">
-            {participants.filter((p) => p.isOnline).length}/{participants.length} online
+          <p className="text-xs text-gray-600 mt-2">
+            {participants.filter((p) => p.isOnline).length} of {participants.length} online
           </p>
         </div>
-        <div className="divide-y">
+        <div className="flex-1 overflow-y-auto divide-y">
           {participants.map((participant) => (
             <div key={participant.id} className="p-3 flex items-center gap-2">
               <div
-                className={`w-3 h-3 rounded-full ${
+                className={`w-2 h-2 rounded-full flex-shrink-0 ${
                   participant.isOnline ? 'bg-green-500' : 'bg-gray-400'
                 }`}
               />

@@ -4,14 +4,14 @@ import '../widgets/chat_window.dart';
 import '../widgets/page_header.dart';
 import '../services/api_service.dart';
 
-class ChatPage extends StatefulWidget {
-  const ChatPage({super.key});
+class ImprovedChatPage extends StatefulWidget {
+  const ImprovedChatPage({super.key});
 
   @override
-  State<ChatPage> createState() => _ChatPageState();
+  State<ImprovedChatPage> createState() => _ImprovedChatPageState();
 }
 
-class _ChatPageState extends State<ChatPage> {
+class _ImprovedChatPageState extends State<ImprovedChatPage> {
   String? _selectedContactId;
   String? _selectedContactName;
   bool _sidebarVisible = true;
@@ -35,7 +35,9 @@ class _ChatPageState extends State<ChatPage> {
   @override
   Widget build(BuildContext context) {
     final isMobile = MediaQuery.of(context).size.width < 600;
+    
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text(''),
         backgroundColor: Colors.transparent,
@@ -48,7 +50,6 @@ class _ChatPageState extends State<ChatPage> {
         ),
       ),
       drawer: _buildDrawer(),
-      backgroundColor: Colors.transparent,
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -64,7 +65,10 @@ class _ChatPageState extends State<ChatPage> {
                 padding: const EdgeInsets.all(16.0),
                 child: PageHeader(
                   title: 'Messages',
-                  description: 'Chat with players, coaches, and your network',
+                  description:
+                      _selectedContactName != null
+                          ? 'Chat with ${_selectedContactName!}'
+                          : 'Select a contact to start messaging',
                   navItems: [
                     NavItem(label: 'Dashboard', route: '/dashboard'),
                   ],
@@ -74,53 +78,49 @@ class _ChatPageState extends State<ChatPage> {
             Expanded(
               child: Row(
                 children: [
-                  // Sidebar - responsive based on screen width
+                  // Sidebar
                   if (_sidebarVisible || !isMobile)
-                    SizedBox(
-                      width: isMobile ? double.infinity : 320,
-                      child: ChatContactsSidebar(
-                        selectedContactId: _selectedContactId,
-                        onSelectContact: _handleSelectContact,
-                      ),
+                    ChatContactsSidebar(
+                      selectedContactId: _selectedContactId,
+                      onSelectContact: _handleSelectContact,
                     ),
-                  // Chat window - only show on desktop when sidebar is visible, or always on mobile when selected
-                  if (!isMobile || _selectedContactId != null)
-                    Expanded(
-                      child: _selectedContactId != null
-                          ? ChatWindow(roomId: _selectedContactId!)
-                          : Container(
-                              color: Colors.grey[50],
-                              child: Center(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.message,
-                                      size: 64,
-                                      color: Colors.grey[300],
+                  // Chat Window
+                  Expanded(
+                    child: _selectedContactId != null
+                        ? ChatWindow(roomId: _selectedContactId!)
+                        : Container(
+                            color: Colors.grey[50],
+                            child: Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.message,
+                                    size: 64,
+                                    color: Colors.grey[300],
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'No conversation selected',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: Colors.grey[500],
+                                      fontWeight: FontWeight.w500,
                                     ),
-                                    const SizedBox(height: 16),
-                                    Text(
-                                      'No conversation selected',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        color: Colors.grey[500],
-                                        fontWeight: FontWeight.w500,
-                                      ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Select a contact from the sidebar to start chatting',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey[400],
                                     ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      'Select a contact to start chatting',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.grey[400],
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
                             ),
-                    ),
+                          ),
+                  ),
                 ],
               ),
             ),

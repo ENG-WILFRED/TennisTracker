@@ -22,6 +22,8 @@ class _RegisterPageState extends State<RegisterPage> {
     'lastName': TextEditingController(),
     'phone': TextEditingController(),
     'bio': TextEditingController(),
+    'nationality': TextEditingController(),
+    'dateOfBirth': TextEditingController(),
   };
 
   String? _gender;
@@ -101,7 +103,7 @@ class _RegisterPageState extends State<RegisterPage> {
         body: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
-              colors: [Color(0xFFe0f7fa), Color(0xFFa5d6a7)],
+              colors: [Color(0xFFF0FFFE), Color(0xFFF0F9F8)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -110,36 +112,54 @@ class _RegisterPageState extends State<RegisterPage> {
             child: Card(
               elevation: 8,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(24),
               ),
               child: Padding(
-                padding: const EdgeInsets.all(24.0),
+                padding: const EdgeInsets.all(32.0),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(
-                      Icons.check_circle,
-                      color: Colors.green,
-                      size: 64,
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF16A34A).withAlpha(51),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.check_circle,
+                        color: Color(0xFF16A34A),
+                        size: 56,
+                      ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
                     const Text(
-                      'Registration Successful!',
+                      'Registration Successful! 🎾',
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
-                        color: Colors.green,
+                        color: Color(0xFF16A34A),
                       ),
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                      'Please login with your credentials',
+                      'Welcome to Vico',
                       textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.grey,
+                        fontSize: 16,
+                      ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 24),
                     ElevatedButton(
                       onPressed: () => Navigator.pushReplacementNamed(context, '/login'),
-                      child: const Text('Go to Login'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF16A34A),
+                        padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: const Text('Go to Login', style: TextStyle(color: Colors.white)),
                     ),
                   ],
                 ),
@@ -154,67 +174,107 @@ class _RegisterPageState extends State<RegisterPage> {
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color(0xFFe0f7fa), Color(0xFFa5d6a7)],
+            colors: [Color(0xFFF0FFFE), Color(0xFFF0F9F8)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
         ),
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 600),
-              child: Card(
-                elevation: 8,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(24.0),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Header
-                      MouseRegion(
-                        onEnter: (_) => setState(() => _isHovered = true),
-                        onExit: (_) => setState(() => _isHovered = false),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 300),
-                          width: 80,
-                          height: 80,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            image: const DecorationImage(
-                              image: AssetImage('assets/tennis_ball.png'),
-                              fit: BoxFit.cover,
+              constraints: const BoxConstraints(maxWidth: 900),
+              child: Column(
+                children: [
+                  // Header Card
+                  Card(
+                    elevation: 4,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(24.0),
+                      child: Column(
+                        children: [
+                          MouseRegion(
+                            onEnter: (_) => setState(() => _isHovered = true),
+                            onExit: (_) => setState(() => _isHovered = false),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 300),
+                              width: 100,
+                              height: 100,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFF16A34A).withAlpha(51),
+                                    blurRadius: _isHovered ? 16 : 8,
+                                    spreadRadius: _isHovered ? 4 : 0,
+                                  )
+                                ],
+                              ),
+                              transform: _isHovered
+                                  ? (Matrix4.identity()..scale(1.05))
+                                  : Matrix4.identity(),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(16),
+                                  image: const DecorationImage(
+                                    image: AssetImage('assets/tennis.jpeg'),
+                                    fit: BoxFit.cover,
+                                  ),
+                                  border: Border.all(
+                                    color: Colors.white,
+                                    width: 4,
+                                  ),
+                                ),
+                              ),
                             ),
-                            boxShadow: _isHovered
-                                ? [const BoxShadow(color: Colors.black26, blurRadius: 8, spreadRadius: 2)]
-                                : [const BoxShadow(color: Colors.black12, blurRadius: 4)],
                           ),
-                          transform: _isHovered
-                              ? (Matrix4.rotationZ(0.1)..scale(1.1))
-                              : (Matrix4.rotationZ(0.0)..scale(1.0)),
-                        ),
+                          const SizedBox(height: 20),
+                          const Text(
+                            'Join Vico',
+                            style: TextStyle(
+                              fontSize: 32,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF16A34A),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Create your account and start competing today',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.grey,
+                              fontSize: 16,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          Wrap(
+                            spacing: 12,
+                            runSpacing: 8,
+                            alignment: WrapAlignment.center,
+                            children: [
+                              _buildBenefitBadge('🎯 Free to join'),
+                              _buildBenefitBadge('📊 Track performance'),
+                              _buildBenefitBadge('👥 Connect with players'),
+                            ],
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'Join Vico',
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.green,
-                        ),
-                      ),
-                      const Text(
-                        'Create your account and start competing today',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                      const SizedBox(height: 24),
-
-                      // Form
-                      Form(
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  
+                  // Form Card
+                  Card(
+                    elevation: 4,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(32.0),
+                      child: Form(
                         key: _formKey,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -224,126 +284,134 @@ class _RegisterPageState extends State<RegisterPage> {
                               Icons.lock,
                               'Account Credentials',
                               'Your login information',
+                              Color(0xFF16A34A),
+                              Color(0xFF0D9488),
                             ),
-                            const SizedBox(height: 16),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _buildTextField(
-                                    controller: _controllers['username']!,
-                                    label: 'Username',
-                                    icon: Icons.person,
-                                    required: true,
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: _buildTextField(
-                                    controller: _controllers['email']!,
-                                    label: 'Email',
-                                    icon: Icons.email,
-                                    keyboardType: TextInputType.emailAddress,
-                                    required: true,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 16),
-                            _buildTextField(
-                              controller: _controllers['password']!,
-                              label: 'Password',
-                              icon: Icons.lock,
-                              obscureText: true,
-                              required: true,
-                            ),
+                            const SizedBox(height: 20),
+                            _buildFormGrid([
+                              _buildTextField(
+                                controller: _controllers['username']!,
+                                label: 'Username',
+                                icon: Icons.person,
+                                required: true,
+                                placeholder: 'Choose a username',
+                              ),
+                              _buildTextField(
+                                controller: _controllers['email']!,
+                                label: 'Email',
+                                icon: Icons.mail_outline,
+                                keyboardType: TextInputType.emailAddress,
+                                required: true,
+                                placeholder: 'your.email@example.com',
+                              ),
+                              _buildTextField(
+                                controller: _controllers['password']!,
+                                label: 'Password',
+                                icon: Icons.lock_outline,
+                                obscureText: true,
+                                required: true,
+                                placeholder: 'Min. 8 characters',
+                              ),
+                            ]),
 
-                            const SizedBox(height: 24),
+                            const SizedBox(height: 32),
 
                             // Personal Information Section
                             _buildSectionHeader(
-                              Icons.person,
-                              'Personal Information',
+                              Icons.person_outline,
+                              'Personal Details',
                               'Tell us about yourself',
+                              Color(0xFF3B82F6),
+                              Color(0xFF0891B2),
                             ),
+                            const SizedBox(height: 20),
+                            _buildFormGrid([
+                              _buildTextField(
+                                controller: _controllers['firstName']!,
+                                label: 'First Name',
+                                icon: Icons.person,
+                                required: true,
+                                placeholder: 'John',
+                              ),
+                              _buildTextField(
+                                controller: _controllers['lastName']!,
+                                label: 'Last Name',
+                                icon: Icons.person,
+                                required: true,
+                                placeholder: 'Doe',
+                              ),
+                              _buildTextField(
+                                controller: _controllers['phone']!,
+                                label: 'Phone Number',
+                                icon: Icons.phone_outlined,
+                                placeholder: '+254 700 000000',
+                              ),
+                            ]),
                             const SizedBox(height: 16),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _buildTextField(
-                                    controller: _controllers['firstName']!,
-                                    label: 'First Name',
-                                    icon: Icons.person_outline,
-                                    required: true,
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: _buildTextField(
-                                    controller: _controllers['lastName']!,
-                                    label: 'Last Name',
-                                    icon: Icons.person_outline,
-                                    required: true,
-                                  ),
-                                ),
-                              ],
+                            _buildFormGrid([
+                              _buildGenderDropdown(),
+                              _buildTextField(
+                                controller: _controllers['dateOfBirth']!,
+                                label: 'Date of Birth',
+                                icon: Icons.calendar_today,
+                                placeholder: 'YYYY-MM-DD',
+                              ),
+                              _buildTextField(
+                                controller: _controllers['nationality']!,
+                                label: 'Nationality',
+                                icon: Icons.public,
+                                placeholder: 'e.g., Kenyan',
+                              ),
+                            ]),
+
+                            const SizedBox(height: 32),
+
+                            // Bio Section
+                            _buildSectionHeader(
+                              Icons.description_outlined,
+                              'About You',
+                              'Share your tennis journey',
+                              Color(0xFFA855F7),
+                              Color(0xFFEC4899),
                             ),
-                            const SizedBox(height: 16),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: DropdownButtonFormField<String>(
-                                    value: _gender,
-                                    decoration: const InputDecoration(
-                                      labelText: 'Gender',
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.all(Radius.circular(8)),
-                                      ),
-                                      prefixIcon: Icon(Icons.wc),
-                                    ),
-                                    items: ['Male', 'Female', 'Other'].map((gender) {
-                                      return DropdownMenuItem(value: gender, child: Text(gender));
-                                    }).toList(),
-                                    onChanged: (value) => setState(() => _gender = value),
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: _buildTextField(
-                                    controller: _controllers['phone']!,
-                                    label: 'Phone',
-                                    icon: Icons.phone,
-                                    keyboardType: TextInputType.phone,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 20),
                             _buildTextField(
                               controller: _controllers['bio']!,
                               label: 'Bio',
-                              icon: Icons.description,
-                              maxLines: 3,
+                              icon: Icons.description_outlined,
+                              maxLines: 4,
+                              placeholder: 'Tell us about your tennis experience, playing style, and goals...',
                             ),
 
-                            const SizedBox(height: 24),
+                            const SizedBox(height: 32),
 
                             // Error Message
-                            if (_error != null)
+                            if (_error != null) ...[
                               Container(
-                                padding: const EdgeInsets.all(12),
+                                padding: const EdgeInsets.all(16),
                                 decoration: BoxDecoration(
                                   color: Colors.red[50],
-                                  borderRadius: BorderRadius.circular(8),
+                                  borderRadius: BorderRadius.circular(12),
                                   border: Border.all(color: Colors.red[200]!),
                                 ),
-                                child: Text(
-                                  _error!,
-                                  style: const TextStyle(color: Colors.red),
-                                  textAlign: TextAlign.center,
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.error_outline, color: Colors.red[600],),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        _error!,
+                                        style: TextStyle(
+                                          color: Colors.red[700],
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    )
+                                  ],
                                 ),
                               ),
-
-                            const SizedBox(height: 24),
+                              const SizedBox(height: 24),
+                            ],
 
                             // Submit Button
                             SizedBox(
@@ -353,80 +421,95 @@ class _RegisterPageState extends State<RegisterPage> {
                                 style: ElevatedButton.styleFrom(
                                   padding: const EdgeInsets.symmetric(vertical: 16),
                                   shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
+                                    borderRadius: BorderRadius.circular(10),
                                   ),
-                                  backgroundColor: Colors.green,
+                                  backgroundColor: const Color(0xFF16A34A),
                                   foregroundColor: Colors.white,
                                 ),
                                 child: _loading
                                     ? const SizedBox(
-                                        height: 20,
-                                        width: 20,
+                                        height: 24,
+                                        width: 24,
                                         child: CircularProgressIndicator(
-                                          strokeWidth: 2,
+                                          strokeWidth: 2.5,
                                           valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                                         ),
                                       )
-                                    : const Text('Create Account', style: TextStyle(fontSize: 16)),
+                                    : const Text(
+                                        'Create Account',
+                                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                                      ),
                               ),
                             ),
-
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 20),
 
                             // Login Link
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Text('Already have an account? '),
-                                TextButton(
-                                  onPressed: () => Navigator.pushNamed(context, '/login'),
-                                  child: const Text(
-                                    'Login here',
-                                    style: TextStyle(
-                                      color: Colors.green,
-                                      fontWeight: FontWeight.bold,
+                            Center(
+                              child: Wrap(
+                                alignment: WrapAlignment.center,
+                                children: [
+                                  const Text(
+                                    'Already have an account? ',
+                                    style: TextStyle(color: Colors.grey),
+                                  ),
+                                  TextButton(
+                                    onPressed: () => Navigator.pushNamed(context, '/login'),
+                                    child: const Text(
+                                      'Login here',
+                                      style: TextStyle(
+                                        color: Color(0xFF16A34A),
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ],
                         ),
                       ),
-                    ],
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 24),
+                  
+                  // Footer
+                  Text(
+                    '© ${DateTime.now().year} Vico. All rights reserved.',
+                    style: const TextStyle(
+                      color: Colors.grey,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
         ),
       ),
-      bottomNavigationBar: Container(
-        padding: const EdgeInsets.all(16),
-        child: const Text(
-          '© 2026 Vico',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.grey),
-        ),
-      ),
     );
   }
 
-  Widget _buildSectionHeader(IconData icon, String title, String subtitle) {
+  Widget _buildSectionHeader(
+    IconData icon,
+    String title,
+    String subtitle,
+    Color color1,
+    Color color2,
+  ) {
     return Row(
       children: [
         Container(
-          width: 40,
-          height: 40,
-          decoration: const BoxDecoration(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [Colors.green, Colors.teal],
+              colors: [color1, color2],
             ),
-            borderRadius: BorderRadius.all(Radius.circular(8)),
+            borderRadius: BorderRadius.circular(10),
           ),
-          child: Icon(icon, color: Colors.white),
+          child: Icon(icon, color: Colors.white, size: 22),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: 16),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -435,18 +518,36 @@ class _RegisterPageState extends State<RegisterPage> {
               style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
+                color: Colors.black87,
               ),
             ),
             Text(
               subtitle,
               style: const TextStyle(
                 color: Colors.grey,
-                fontSize: 12,
+                fontSize: 13,
               ),
             ),
           ],
         ),
       ],
+    );
+  }
+
+  Widget _buildFormGrid(List<Widget> fields) {
+    // Responsive grid based on screen size
+    final isSmall = MediaQuery.of(context).size.width < 600;
+    final crossAxisCount = isSmall ? 1 : (fields.length > 2 ? 3 : 2);
+    
+    return Wrap(
+      spacing: 16,
+      runSpacing: 16,
+      children: fields.map((field) {
+        return SizedBox(
+          width: (MediaQuery.of(context).size.width - 64) / crossAxisCount - 11,
+          child: field,
+        );
+      }).toList(),
     );
   }
 
@@ -458,22 +559,124 @@ class _RegisterPageState extends State<RegisterPage> {
     bool obscureText = false,
     TextInputType keyboardType = TextInputType.text,
     int maxLines = 1,
+    String placeholder = '',
   }) {
-    return TextFormField(
-      controller: controller,
-      decoration: InputDecoration(
-        labelText: required ? '$label *' : label,
-        border: const OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(8)),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, size: 18, color: const Color(0xFF16A34A)),
+            const SizedBox(width: 8),
+            Text(
+              required ? '$label *' : label,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
+            ),
+          ],
         ),
-        prefixIcon: Icon(icon),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: controller,
+          decoration: InputDecoration(
+            hintText: placeholder,
+            hintStyle: const TextStyle(color: Colors.grey),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: Colors.grey, width: 1),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: Colors.grey, width: 1),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: Color(0xFF16A34A), width: 2),
+            ),
+            filled: true,
+            fillColor: Colors.grey[50],
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          ),
+          obscureText: obscureText,
+          keyboardType: keyboardType,
+          maxLines: obscureText ? 1 : maxLines,
+          validator: required
+              ? (value) => (value == null || value.isEmpty) ? 'Required' : null
+              : null,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildGenderDropdown() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(Icons.wc, size: 18, color: Color(0xFF16A34A)),
+            const SizedBox(width: 8),
+            const Text(
+              'Gender',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<String>(
+          value: _gender,
+          decoration: InputDecoration(
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: Colors.grey, width: 1),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: Colors.grey, width: 1),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: Color(0xFF16A34A), width: 2),
+            ),
+            filled: true,
+            fillColor: Colors.grey[50],
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          ),
+          items: const [
+            DropdownMenuItem(value: null, child: Text('Select gender')),
+            DropdownMenuItem(value: 'Male', child: Text('Male')),
+            DropdownMenuItem(value: 'Female', child: Text('Female')),
+            DropdownMenuItem(value: 'Other', child: Text('Other')),
+          ],
+          onChanged: (value) => setState(() => _gender = value),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBenefitBadge(String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFF16A34A).withAlpha(25),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFF16A34A).withAlpha(102)),
       ),
-      obscureText: obscureText,
-      keyboardType: keyboardType,
-      maxLines: maxLines,
-      validator: required
-          ? (value) => (value == null || value.isEmpty) ? 'Required' : null
-          : null,
+      child: Text(
+        text,
+        style: const TextStyle(
+          color: Color(0xFF16A34A),
+          fontSize: 13,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
     );
   }
 }
