@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import '../config.dart';
 import 'auth_service.dart';
@@ -30,9 +31,20 @@ class ApiService {
   }
 
   Future<List<dynamic>> fetchPlayers({String? query}) async {
-    var uri = Uri.parse('$baseUrl/api/players');
-    if (query != null && query.isNotEmpty) {
-      uri = uri.replace(queryParameters: {'query': query});
+    try {
+      var uri = Uri.parse('$baseUrl/api/players');
+      if (query != null && query.isNotEmpty) {
+        uri = uri.replace(queryParameters: {'query': query});
+      }
+      final res = await http.get(uri, headers: _headers());
+      if (res.statusCode == 200) {
+        return jsonDecode(res.body) as List<dynamic>;
+      }
+      throw Exception('Failed to fetch players: ${res.statusCode}');
+    } on SocketException catch (e) {
+      throw Exception('Network error while fetching players: ${e.message}');
+    } catch (e) {
+      throw Exception('Error fetching players: $e');
     }
     final res = await http.get(uri, headers: await _headers());
     if (res.statusCode == 200) {
@@ -47,7 +59,6 @@ class ApiService {
     if (res.statusCode == 200) {
       return jsonDecode(res.body) as List<dynamic>;
     }
-    throw Exception('Failed to fetch coaches: ${res.statusCode}');
   }
 
   Future<Map<String, dynamic>> post(String path, Map<String, dynamic> body) async {
@@ -56,64 +67,99 @@ class ApiService {
     if (res.statusCode >= 200 && res.statusCode < 300) {
       return jsonDecode(res.body) as Map<String, dynamic>;
     }
-    throw Exception('Request failed: ${res.statusCode} ${res.body}');
   }
 
   // Matches
   Future<List<dynamic>> fetchMatches() async {
-    final uri = Uri.parse('$baseUrl/api/matches');
-    final res = await http.get(uri, headers: _headers());
-    if (res.statusCode == 200) {
-      return jsonDecode(res.body) as List<dynamic>;
+    try {
+      final uri = Uri.parse('$baseUrl/api/matches');
+      final res = await http.get(uri, headers: _headers());
+      if (res.statusCode == 200) {
+        return jsonDecode(res.body) as List<dynamic>;
+      }
+      throw Exception('Failed to fetch matches: ${res.statusCode}');
+    } on SocketException catch (e) {
+      throw Exception('Network error while fetching matches: ${e.message}');
+    } catch (e) {
+      throw Exception('Error fetching matches: $e');
     }
-    throw Exception('Failed to fetch matches: ${res.statusCode}');
   }
 
   Future<Map<String, dynamic>> getMatch(String id) async {
-    final uri = Uri.parse('$baseUrl/api/matches/$id');
-    final res = await http.get(uri, headers: _headers());
-    if (res.statusCode == 200) {
-      return jsonDecode(res.body) as Map<String, dynamic>;
+    try {
+      final uri = Uri.parse('$baseUrl/api/matches/$id');
+      final res = await http.get(uri, headers: _headers());
+      if (res.statusCode == 200) {
+        return jsonDecode(res.body) as Map<String, dynamic>;
+      }
+      throw Exception('Failed to fetch match: ${res.statusCode}');
+    } on SocketException catch (e) {
+      throw Exception('Network error while fetching match $id: ${e.message}');
+    } catch (e) {
+      throw Exception('Error fetching match $id: $e');
     }
-    throw Exception('Failed to fetch match: ${res.statusCode}');
   }
 
   // Referees
   Future<List<dynamic>> fetchReferees() async {
-    final uri = Uri.parse('$baseUrl/api/referees');
-    final res = await http.get(uri, headers: _headers());
-    if (res.statusCode == 200) {
-      return jsonDecode(res.body) as List<dynamic>;
+    try {
+      final uri = Uri.parse('$baseUrl/api/referees');
+      final res = await http.get(uri, headers: _headers());
+      if (res.statusCode == 200) {
+        return jsonDecode(res.body) as List<dynamic>;
+      }
+      throw Exception('Failed to fetch referees: ${res.statusCode}');
+    } on SocketException catch (e) {
+      throw Exception('Network error while fetching referees: ${e.message}');
+    } catch (e) {
+      throw Exception('Error fetching referees: $e');
     }
-    throw Exception('Failed to fetch referees: ${res.statusCode}');
   }
 
   Future<Map<String, dynamic>> getReferee(String id) async {
-    final uri = Uri.parse('$baseUrl/api/referees/$id');
-    final res = await http.get(uri, headers: _headers());
-    if (res.statusCode == 200) {
-      return jsonDecode(res.body) as Map<String, dynamic>;
+    try {
+      final uri = Uri.parse('$baseUrl/api/referees/$id');
+      final res = await http.get(uri, headers: _headers());
+      if (res.statusCode == 200) {
+        return jsonDecode(res.body) as Map<String, dynamic>;
+      }
+      throw Exception('Failed to fetch referee: ${res.statusCode}');
+    } on SocketException catch (e) {
+      throw Exception('Network error while fetching referee $id: ${e.message}');
+    } catch (e) {
+      throw Exception('Error fetching referee $id: $e');
     }
-    throw Exception('Failed to fetch referee: ${res.statusCode}');
   }
 
   // Organizations
   Future<List<dynamic>> fetchOrganizations() async {
-    final uri = Uri.parse('$baseUrl/api/organization');
-    final res = await http.get(uri, headers: _headers());
-    if (res.statusCode == 200) {
-      return jsonDecode(res.body) as List<dynamic>;
+    try {
+      final uri = Uri.parse('$baseUrl/api/organization');
+      final res = await http.get(uri, headers: _headers());
+      if (res.statusCode == 200) {
+        return jsonDecode(res.body) as List<dynamic>;
+      }
+      throw Exception('Failed to fetch organizations: ${res.statusCode}');
+    } on SocketException catch (e) {
+      throw Exception('Network error while fetching organizations: ${e.message}');
+    } catch (e) {
+      throw Exception('Error fetching organizations: $e');
     }
-    throw Exception('Failed to fetch organizations: ${res.statusCode}');
   }
 
   Future<Map<String, dynamic>> getOrganization(String id) async {
-    final uri = Uri.parse('$baseUrl/api/organization/$id');
-    final res = await http.get(uri, headers: _headers());
-    if (res.statusCode == 200) {
-      return jsonDecode(res.body) as Map<String, dynamic>;
+    try {
+      final uri = Uri.parse('$baseUrl/api/organization/$id');
+      final res = await http.get(uri, headers: _headers());
+      if (res.statusCode == 200) {
+        return jsonDecode(res.body) as Map<String, dynamic>;
+      }
+      throw Exception('Failed to fetch organization: ${res.statusCode}');
+    } on SocketException catch (e) {
+      throw Exception('Network error while fetching organization $id: ${e.message}');
+    } catch (e) {
+      throw Exception('Error fetching organization $id: $e');
     }
-    throw Exception('Failed to fetch organization: ${res.statusCode}');
   }
 
   Future<List<dynamic>> fetchOrgStaff(String orgId) async {

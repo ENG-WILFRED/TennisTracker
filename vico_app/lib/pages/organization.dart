@@ -21,16 +21,19 @@ class _OrganizationPageState extends State<OrganizationPage> {
   void initState() {
     super.initState();
     _orgs = api.fetchOrganizations();
-  }
-
-  void _extractCountries(List<dynamic> orgs) {
-    final countries = <String>{};
-    for (var org in orgs) {
-      if (org['country'] != null && org['country'].isNotEmpty) {
-        countries.add(org['country']);
+    // when the list is returned compute unique countries once
+    _orgs.then((orgs) {
+      final countries = <String>{};
+      for (var org in orgs) {
+        final c = org['country']?.toString();
+        if (c != null && c.isNotEmpty) countries.add(c);
       }
-    }
-    setState(() => _countries = countries.toList()..sort());
+      setState(() {
+        _countries = countries.toList()..sort();
+      });
+    }).catchError((_) {
+      // ignore errors here, will be handled by FutureBuilder
+    });
   }
 
   List<dynamic> _filterAndSort(List<dynamic> orgs) {
@@ -87,7 +90,6 @@ class _OrganizationPageState extends State<OrganizationPage> {
               return Center(child: Text('Error: ${snapshot.error}'));
             }
             final orgs = snapshot.data ?? [];
-            _extractCountries(orgs);
             final display = _filterAndSort(orgs);
 
             return SingleChildScrollView(
