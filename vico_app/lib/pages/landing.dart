@@ -99,76 +99,89 @@ class _LandingPageState extends State<LandingPage> {
       padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 20),
       child: Column(
         children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.green.shade100,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: const Text(
-              'Join Thousands on Vico',
-              style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 14),
-            ),
-          ),
-          const SizedBox(height: 24),
-          const Text(
-            'Play. Track. Win.\nOn Vico.',
-            style: TextStyle(
-              fontSize: 48,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-              height: 1.2,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-          const Text(
-            'Connect with players and coaches. Track your matches, analyze your performance, and join a thriving community. Your sports ecosystem awaits.',
-            style: TextStyle(fontSize: 16, color: Colors.black54, height: 1.6),
-            textAlign: TextAlign.center,
-            maxLines: 4,
-          ),
-          const SizedBox(height: 40),
-          Wrap(
-            spacing: 16,
-            runSpacing: 12,
-            alignment: WrapAlignment.center,
+          Row(
             children: [
-              SizedBox(
-                width: 200,
-                child: ElevatedButton(
-                  onPressed: () => Navigator.pushNamed(context, '/register'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  ),
-                  child: const Text('Get Started Free', style: TextStyle(fontSize: 16, color: Colors.white)),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade100,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Text(
+                        'Join Thousands on Vico',
+                        style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    const Text(
+                      'Play. Track. Win.\nOn Vico.',
+                      style: TextStyle(
+                        fontSize: 36,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                        height: 1.2,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    const Text(
+                      'Connect with players and coaches. Track your matches, analyze your performance, and join a thriving community. Your sports ecosystem awaits.',
+                      style: TextStyle(fontSize: 16, color: Colors.black54, height: 1.5),
+                    ),
+                    const SizedBox(height: 30),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: [
+                        ElevatedButton(
+                          onPressed: () => Navigator.pushNamed(context, '/register'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green,
+                            padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          child: const Text('Get Started Free', style: TextStyle(fontSize: 16)),
+                        ),
+                        OutlinedButton(
+                          onPressed: () {},
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: Colors.green),
+                            padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          child: const Text('Learn More', style: TextStyle(color: Colors.green, fontSize: 16)),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 40),
+                    Row(
+                      children: [
+                        _buildStat('10K+', 'Active Players'),
+                        const SizedBox(width: 40),
+                        _buildStat('500+', 'Pro Coaches'),
+                        const SizedBox(width: 40),
+                        _buildStat('50K+', 'Matches Tracked'),
+                      ],
+                    ),
+                  ],
                 ),
               ),
-              SizedBox(
-                width: 200,
-                child: OutlinedButton(
-                  onPressed: () {},
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Colors.green),
-                    padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              const SizedBox(width: 40),
+              Expanded(
+                child: Container(
+                  height: 400,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    image: const DecorationImage(
+                      image: NetworkImage('https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=800&q=80'),
+                      fit: BoxFit.cover,
+                    ),
                   ),
-                  child: const Text('Learn More', style: TextStyle(color: Colors.green, fontSize: 16)),
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 50),
-          Wrap(
-            spacing: 40,
-            runSpacing: 20,
-            alignment: WrapAlignment.center,
-            children: [
-              _buildStat('10K+', 'Active Players'),
-              _buildStat('500+', 'Pro Coaches'),
-              _buildStat('50K+', 'Matches Tracked'),
             ],
           ),
         ],

@@ -16,10 +16,8 @@ class _StaffPageState extends State<StaffPage> {
   String _roleFilter = 'all';
   List<String> _roles = [];
 
-  @override
-  void initState() {
-    super.initState();
-    _staff = api.fetchStaff().then((items) {
+  void _loadStaff({String? query, String? role}) {
+    _staff = api.fetchStaff(query: query, role: role).then((items) {
       if (items is List) {
         final roles = <String>{};
         for (var item in items) {
@@ -32,22 +30,12 @@ class _StaffPageState extends State<StaffPage> {
     });
   }
 
-  List<dynamic> _filterStaff(List<dynamic> staff) {
-    var filtered = staff;
-
-    if (_search.isNotEmpty) {
-      filtered = staff.where((s) {
-        final name = '${s['firstName'] ?? s['name'] ?? ''} ${s['lastName'] ?? ''}'.toLowerCase();
-        return name.contains(_search.toLowerCase());
-      }).toList();
-    }
-
-    if (_roleFilter != 'all' && _roleFilter.isNotEmpty) {
-      filtered = filtered.where((s) => s['role'] == _roleFilter).toList();
-    }
-
-    return filtered;
+  @override
+  void initState() {
+    super.initState();
+    _loadStaff();
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -68,7 +56,7 @@ class _StaffPageState extends State<StaffPage> {
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color(0xFFF8F4FF), Color(0xFFFBF5FF), Color(0xFFF3E8FF)],
+            colors: [Color(0xFFF0FDF4), Color(0xFFF0F9FF)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -83,7 +71,7 @@ class _StaffPageState extends State<StaffPage> {
               return Center(child: Text('Error: ${snapshot.error}'));
             }
             final staff = snapshot.data ?? [];
-            final display = _filterStaff(staff);
+            final display = staff; // server already filtered
 
             return SingleChildScrollView(
               child: SafeArea(
@@ -191,9 +179,13 @@ class _StaffPageState extends State<StaffPage> {
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
             contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           ),
-          onChanged: (v) => setState(() => _search = v),
-        ),
-        SizedBox(height: 12),
+          onChanged: (v) {
+            setState(() {
+              _search = v;
+              _loadStaff(query: _search, role: _roleFilter);
+            });
+          },
+        ),        SizedBox(height: 12),
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
@@ -216,7 +208,12 @@ class _StaffPageState extends State<StaffPage> {
     return FilterChip(
       label: Text(label, style: TextStyle(color: isActive ? Colors.white : Colors.grey[700], fontWeight: FontWeight.bold, fontSize: 12)),
       selected: isActive,
-      onSelected: (_) => setState(() => _roleFilter = value),
+      onSelected: (_) {
+        setState(() {
+          _roleFilter = value;
+          _loadStaff(query: _search, role: _roleFilter);
+        });
+      },
       backgroundColor: Colors.white,
       selectedColor: Color(0xFF7C3AED),
       side: BorderSide(color: isActive ? Color(0xFF7C3AED) : Color(0xFFE9D5FF)),
@@ -446,6 +443,7 @@ class _StaffPageState extends State<StaffPage> {
             ListTile(
               leading: const Icon(Icons.group),
               title: const Text('Staff'),
+              tileColor: Colors.green.withOpacity(0.1),
               onTap: () {
                 Navigator.pop(context);
                 // Already on staff

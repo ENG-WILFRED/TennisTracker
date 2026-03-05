@@ -213,6 +213,28 @@ class ApiService {
     throw Exception('Failed to fetch players: ${res.statusCode}');
   }
 
+  Future<Map<String, dynamic>> createOrganization(Map<String, dynamic> data) async {
+    return await postData('/api/organization', data) as Map<String, dynamic>;
+  }
+
+  Future<List<dynamic>> searchPlayers(String query) async {
+    final uri = Uri.parse('$baseUrl/api/players?query=${Uri.encodeComponent(query)}');
+    final res = await http.get(uri, headers: await _headers());
+    if (res.statusCode == 200) {
+      return jsonDecode(res.body) as List<dynamic>;
+    }
+    throw Exception('Failed to search players: ${res.statusCode}');
+  }
+
+  Future<Map<String, dynamic>> registerPlayerToOrg(String orgId, String playerId) async {
+    final uri = Uri.parse('$baseUrl/api/organization/$orgId/register-player');
+    final res = await http.post(uri, headers: await _headers(), body: jsonEncode({'playerId': playerId}));
+    if (res.statusCode >= 200 && res.statusCode < 300) {
+      return jsonDecode(res.body) as Map<String, dynamic>;
+    }
+    throw Exception('Failed to register player: ${res.statusCode}');
+  }
+
   // Generic GET method for any endpoint
   Future<dynamic> get(String path) async {
     final uri = Uri.parse('$baseUrl$path');
@@ -277,8 +299,14 @@ class ApiService {
   }
 
   // Get staff
-  Future<List<dynamic>> fetchStaff() async {
-    final uri = Uri.parse('$baseUrl/api/staff');
+  Future<List<dynamic>> fetchStaff({String? query, String? role}) async {
+    var uri = Uri.parse('$baseUrl/api/staff');
+    final params = <String,String>{};
+    if (query != null && query.isNotEmpty) params['query'] = query;
+    if (role != null && role.isNotEmpty && role != 'all') params['role'] = role;
+    if (params.isNotEmpty) {
+      uri = uri.replace(queryParameters: params);
+    }
     final res = await http.get(uri, headers: await _headers());
     if (res.statusCode == 200) {
       return jsonDecode(res.body) as List<dynamic>;

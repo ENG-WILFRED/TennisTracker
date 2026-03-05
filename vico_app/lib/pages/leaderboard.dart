@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
+import '../widgets/page_header.dart';
 
 class LeaderboardPage extends StatefulWidget {
   const LeaderboardPage({super.key});
@@ -52,7 +53,17 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildHeader(rankings),
+                      PageHeader(
+                        title: 'Leaderboard',
+                        description: 'Top players and their ratings',
+                        icon: Icon(Icons.leaderboard, color: Colors.white),
+                        navItems: [
+                          NavItem(label: 'Dashboard', route: '/dashboard'),
+                          NavItem(label: 'Players', route: '/players'),
+                        ],
+                      ),
+                      SizedBox(height: 20),
+                      _buildStats(rankings),
                       SizedBox(height: 20),
                       _buildFilterButtons(),
                       SizedBox(height: 20),
@@ -89,48 +100,23 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
     );
   }
 
-  Widget _buildHeader(List<dynamic> rankings) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildStats(List<dynamic> rankings) {
+    return Row(
       children: [
         Container(
-          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          padding: EdgeInsets.all(12),
           decoration: BoxDecoration(
             gradient: LinearGradient(colors: [Color(0xFF4F46E5), Color(0xFF6366F1)]),
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(12),
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.leaderboard, color: Colors.white, size: 16),
-              SizedBox(width: 8),
-              Text('Player Rankings', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
-            ],
-          ),
+          child: Text('${rankings.length}', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
         ),
-        SizedBox(height: 12),
-        Text('Leaderboard', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.grey[900])),
-        SizedBox(height: 8),
-        Text('Top players and their ratings', style: TextStyle(fontSize: 14, color: Colors.grey[600])),
-        SizedBox(height: 20),
-        Row(
+        SizedBox(width: 12),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              padding: EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(colors: [Color(0xFF4F46E5), Color(0xFF6366F1)]),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text('${rankings.length}', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-            ),
-            SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Total Players', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-                Text('In rankings', style: TextStyle(fontSize: 11, color: Colors.grey[500])),
-              ],
-            ),
+            Text('Total Players', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+            Text('In rankings', style: TextStyle(fontSize: 11, color: Colors.grey[500])),
           ],
         ),
       ],

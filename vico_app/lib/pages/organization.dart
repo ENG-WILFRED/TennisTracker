@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import '../widgets/page_header.dart';
 import 'organization_detail.dart';
+import 'organization_report.dart';
 
 class OrganizationPage extends StatefulWidget {
   const OrganizationPage({super.key});
@@ -166,10 +167,26 @@ class _OrganizationPageState extends State<OrganizationPage> {
           },
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showCreateDialog(context),
-        backgroundColor: Color(0xFF0EA5E9),
-        child: Icon(Icons.add),
+      floatingActionButton: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          FloatingActionButton(
+            onPressed: () => _showCreateDialog(context),
+            backgroundColor: Color(0xFF0EA5E9),
+            child: Icon(Icons.add),
+            heroTag: 'create_org',
+          ),
+          SizedBox(height: 16),
+          FloatingActionButton(
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => OrganizationReportPage()),
+            ),
+            backgroundColor: Color(0xFF10B981),
+            child: Icon(Icons.description),
+            heroTag: 'report',
+          ),
+        ],
       ),
     );
   }
@@ -441,26 +458,136 @@ class _OrganizationPageState extends State<OrganizationPage> {
   }
 
   void _showCreateDialog(BuildContext context) {
+    final nameController = TextEditingController();
+    final descriptionController = TextEditingController();
+    final cityController = TextEditingController();
+    final countryController = TextEditingController();
+    final phoneController = TextEditingController();
+    final emailController = TextEditingController();
+    String? primaryColor = '#0EA5E9';
+    bool isLoading = false;
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Create Organization'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(decoration: InputDecoration(labelText: 'Organization Name')),
-              SizedBox(height: 8),
-              TextField(decoration: InputDecoration(labelText: 'City')),
-              SizedBox(height: 8),
-              TextField(decoration: InputDecoration(labelText: 'Country')),
-            ],
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: Text('Create Organization'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameController,
+                  decoration: InputDecoration(labelText: 'Organization Name *'),
+                ),
+                SizedBox(height: 8),
+                TextField(
+                  controller: descriptionController,
+                  decoration: InputDecoration(labelText: 'Description'),
+                  maxLines: 3,
+                ),
+                SizedBox(height: 8),
+                TextField(
+                  controller: cityController,
+                  decoration: InputDecoration(labelText: 'City'),
+                ),
+                SizedBox(height: 8),
+                TextField(
+                  controller: countryController,
+                  decoration: InputDecoration(labelText: 'Country'),
+                ),
+                SizedBox(height: 8),
+                TextField(
+                  controller: phoneController,
+                  decoration: InputDecoration(labelText: 'Phone'),
+                ),
+                SizedBox(height: 8),
+                TextField(
+                  controller: emailController,
+                  decoration: InputDecoration(labelText: 'Email'),
+                ),
+                SizedBox(height: 16),
+                Text('Primary Color', style: TextStyle(fontWeight: FontWeight.bold)),
+                SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    '#0EA5E9',
+                    '#10B981',
+                    '#F59E0B',
+                    '#EF4444',
+                    '#8B5CF6',
+                    '#06B6D4'
+                  ].map((color) => GestureDetector(
+                    onTap: () => setState(() => primaryColor = color),
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: Color(int.parse(color.substring(1, 7), radix: 16) + 0xFF000000),
+                        border: Border.all(
+                          color: primaryColor == color ? Colors.black : Colors.grey,
+                          width: primaryColor == color ? 3 : 1,
+                        ),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                    ),
+                  )).toList(),
+                ),
+              ],
+            ),
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: isLoading ? null : () async {
+                if (nameController.text.trim().isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Organization name is required')),
+                  );
+                  return;
+                }
+
+                setState(() => isLoading = true);
+
+                try {
+                  final data = {
+                    'name': nameController.text.trim(),
+                    'description': descriptionController.text.trim().isNotEmpty ? descriptionController.text.trim() : null,
+                    'city': cityController.text.trim().isNotEmpty ? cityController.text.trim() : null,
+                    'country': countryController.text.trim().isNotEmpty ? countryController.text.trim() : null,
+                    'phone': phoneController.text.trim().isNotEmpty ? phoneController.text.trim() : null,
+                    'email': emailController.text.trim().isNotEmpty ? emailController.text.trim() : null,
+                    'primaryColor': primaryColor,
+                  };
+
+                  final newOrg = await api.createOrganization(data);
+                  
+                  // Refresh the organizations list
+                  setState(() {
+                    _orgs = api.fetchOrganizations();
+                  });
+
+                  Navigator.pop(context);
+                  
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Organization created successfully!')),
+                  );
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed to create organization: $e')),
+                  );
+                } finally {
+                  setState(() => isLoading = false);
+                }
+              },
+              child: isLoading ? SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) : Text('Create'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: Text('Cancel')),
-          ElevatedButton(onPressed: () => Navigator.pop(context), child: Text('Create')),
-        ],
       ),
     );
   }
