@@ -12,7 +12,7 @@ export default function ChatPage() {
   const { playerId, isLoading } = useAuth();
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [selectedContactName, setSelectedContactName] = useState<string | null>(null);
-  const [selectedContactPhoto, setSelectedContactPhoto] = useState<string | null>(null);
+  const [selectedContactPhoto, setSelectedContactPhoto] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     if (!isLoading && !playerId) {
@@ -20,9 +20,10 @@ export default function ChatPage() {
     }
   }, [playerId, isLoading, router]);
 
-  const handleSelectContact = (contactId: string, contactName: string) => {
+  const handleSelectContact = (contactId: string, contactName: string, contactPhoto?: string) => {
     setSelectedContactId(contactId);
     setSelectedContactName(contactName);
+    setSelectedContactPhoto(contactPhoto);
     // Set online status
     authenticatedFetch(`/api/chat/rooms/${contactId}/status`, {
       method: 'POST',

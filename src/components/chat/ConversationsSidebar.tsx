@@ -18,7 +18,7 @@ interface Contact {
 
 interface ConversationsSidebarProps {
   selectedContactId: string | null;
-  onSelectContact: (contactId: string, contactName: string) => void;
+  onSelectContact: (contactId: string, contactName: string, contactPhoto?: string) => void;
 }
 
 export default function ConversationsSidebar({
@@ -133,7 +133,7 @@ export default function ConversationsSidebar({
           filteredContacts.map((contact) => (
             <div
               key={contact.id}
-              onClick={() => onSelectContact(contact.id, contact.name || contact.fullName || 'Unknown')}
+              onClick={() => onSelectContact(contact.id, contact.name || contact.fullName || 'Unknown', contact.photo || contact.profilePhoto)}
               className={`p-3 border-b border-gray-100 cursor-pointer transition hover:bg-gray-50 ${
                 selectedContactId === contact.id ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''
               }`}
