@@ -28,18 +28,18 @@ class ProfileCard extends StatelessWidget {
               child: player['photo'] == null
                   ? Text(
                       '${player['firstName']?[0] ?? ''}${player['lastName']?[0] ?? ''}',
-                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                     )
                   : null,
             ),
             const SizedBox(height: 16),
             Text(
               '${player['firstName'] ?? ''} ${player['lastName'] ?? ''}',
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
-            Text('@${player['username'] ?? ''}'),
+            Text('@${player['username'] ?? ''}', style: const TextStyle(fontSize: 12)),
             const SizedBox(height: 8),
-            Text('Rank: #$rank'),
+            Text('Rank: #$rank', style: const TextStyle(fontSize: 12)),
             const SizedBox(height: 16),
             if (badges.isNotEmpty) ...[
               const Text('Badges', style: TextStyle(fontWeight: FontWeight.bold)),

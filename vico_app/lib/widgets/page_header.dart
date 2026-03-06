@@ -70,11 +70,9 @@ class PageHeader extends StatelessWidget {
               ),
               if (navItems.isNotEmpty) ...[
                 const SizedBox(width: 12.0),
-                Row(
-                  children: navItems.map((item) => Padding(
-                    padding: const EdgeInsets.only(left: 8.0),
-                    child: item.build(context),
-                  )).toList(),
+                Wrap(
+                  spacing: 8.0,
+                  children: navItems.map((item) => item.build(context)).toList(),
                 ),
               ],
             ],

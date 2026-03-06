@@ -45,7 +45,7 @@ class _LandingPageState extends State<LandingPage> {
             children: [
               const DrawerHeader(
                 decoration: BoxDecoration(color: Colors.green),
-                child: Text('Vico', style: TextStyle(color: Colors.white, fontSize: 24)),
+                child: const Text('Vico', style: TextStyle(color: Colors.white, fontSize: 24)),
               ),
               ListTile(title: const Text('Home'), leading: const Icon(Icons.home), onTap: () => Navigator.pop(context)),
               ListTile(title: const Text('Coaches'), leading: const Icon(Icons.sports_tennis), onTap: () { Navigator.pop(context); Navigator.pushNamed(context, '/coaches'); }),
@@ -73,14 +73,14 @@ class _LandingPageState extends State<LandingPage> {
         child: Column(
           children: [
             _buildHero(),
-            _buildAbout(),
-            _buildFeatures(),
-            _buildPlayersSection(),
-            _buildCoachesSection(),
-            _buildRefereesSection(),
-            _buildRulesSection(),
-            _buildCTA(),
-            _buildFooter(),
+            _buildAbout(context),
+            _buildFeatures(context),
+            _buildPlayersSection(context),
+            _buildCoachesSection(context),
+            _buildRefereesSection(context),
+            _buildRulesSection(context),
+            _buildCTA(context),
+            _buildFooter(context),
           ],
         ),
       ),
@@ -96,92 +96,76 @@ class _LandingPageState extends State<LandingPage> {
           end: Alignment.bottomRight,
         ),
       ),
-      padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 20),
+      padding: const EdgeInsets.only(top: 60, bottom: 60, left: 20, right: 20),
       child: Column(
         children: [
-          Row(
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.green.shade100,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const Text(
+              'Join Thousands on Vico',
+              style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 14),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Container(
+            color: Colors.green,
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+            child: const Text(
+              'Play. Track. Win.\nOn Vico.',
+              style: const TextStyle(
+                fontSize: 42,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+                height: 1.1,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(height: 20),
+          const Text(
+            'Connect with players and coaches. Track your matches, analyze your performance, and join a thriving community. Your sports ecosystem awaits.',
+            style: const TextStyle(fontSize: 18, color: Colors.black54, height: 1.6),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 30),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            alignment: WrapAlignment.center,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.green.shade100,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Text(
-                        'Join Thousands on Vico',
-                        style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    const Text(
-                      'Play. Track. Win.\nOn Vico.',
-                      style: TextStyle(
-                        fontSize: 36,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                        height: 1.2,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    const Text(
-                      'Connect with players and coaches. Track your matches, analyze your performance, and join a thriving community. Your sports ecosystem awaits.',
-                      style: TextStyle(fontSize: 16, color: Colors.black54, height: 1.5),
-                    ),
-                    const SizedBox(height: 30),
-                    Wrap(
-                      spacing: 12,
-                      runSpacing: 12,
-                      children: [
-                        ElevatedButton(
-                          onPressed: () => Navigator.pushNamed(context, '/register'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green,
-                            padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          ),
-                          child: const Text('Get Started Free', style: TextStyle(fontSize: 16)),
-                        ),
-                        OutlinedButton(
-                          onPressed: () {},
-                          style: OutlinedButton.styleFrom(
-                            side: const BorderSide(color: Colors.green),
-                            padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          ),
-                          child: const Text('Learn More', style: TextStyle(color: Colors.green, fontSize: 16)),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 40),
-                    Row(
-                      children: [
-                        _buildStat('10K+', 'Active Players'),
-                        const SizedBox(width: 40),
-                        _buildStat('500+', 'Pro Coaches'),
-                        const SizedBox(width: 40),
-                        _buildStat('50K+', 'Matches Tracked'),
-                      ],
-                    ),
-                  ],
+              ElevatedButton(
+                onPressed: () => Navigator.pushNamed(context, '/register'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),
+                child: const Text('Get Started Free', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
               ),
-              const SizedBox(width: 40),
-              Expanded(
-                child: Container(
-                  height: 400,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
-                    image: const DecorationImage(
-                      image: NetworkImage('https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=800&q=80'),
-                      fit: BoxFit.cover,
-                    ),
-                  ),
+              OutlinedButton(
+                onPressed: () {},
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: Colors.green),
+                  padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),
+                child: const Text('Learn More', style: const TextStyle(color: Colors.green, fontSize: 16, fontWeight: FontWeight.w600)),
               ),
+            ],
+          ),
+          const SizedBox(height: 40),
+          Wrap(
+            spacing: 40,
+            runSpacing: 20,
+            alignment: WrapAlignment.center,
+            children: [
+              _buildStat('10K+', 'Active Players'),
+              _buildStat('500+', 'Pro Coaches'),
+              _buildStat('50K+', 'Matches Tracked'),
             ],
           ),
         ],
@@ -192,15 +176,33 @@ class _LandingPageState extends State<LandingPage> {
   Widget _buildStat(String number, String label) {
     return Column(
       children: [
-        Text(number, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black87)),
-        Text(label, style: const TextStyle(color: Colors.black54)),
+        Text(number, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.black87)),
+        const SizedBox(height: 4),
+        Text(label, style: const TextStyle(color: Colors.black54, fontSize: 14, fontWeight: FontWeight.w500)),
       ],
     );
   }
 
-  Widget _buildAbout() {
+  Widget _sectionHeader(String text, {double fontSize = 32}) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 80, horizontal: 20),
+      width: double.infinity,
+      color: Colors.green,
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: fontSize,
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
+        ),
+        textAlign: TextAlign.center,
+      ),
+    );
+  }
+
+  Widget _buildAbout(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 80, horizontal: 0),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           colors: [Color(0xFFF0FFFE), Color(0xFFF0F9F8)],
@@ -208,17 +210,15 @@ class _LandingPageState extends State<LandingPage> {
           end: Alignment.bottomRight,
         ),
       ),
-      child: Column(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: Column(
         children: [
-          const Text(
-            'The Beautiful Game of Tennis',
-            style: TextStyle(fontSize: 44, fontWeight: FontWeight.bold, color: Colors.black87),
-            textAlign: TextAlign.center,
-          ),
+          _sectionHeader('The Beautiful Game of Tennis on Vico', fontSize: 44),
           const SizedBox(height: 20),
           const Text(
             'A sport that combines athleticism, strategy, and mental toughness — played and loved worldwide',
-            style: TextStyle(fontSize: 16, color: Colors.black54),
+            style: const TextStyle(fontSize: 16, color: Colors.black54),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 60),
@@ -243,6 +243,7 @@ class _LandingPageState extends State<LandingPage> {
           ),
         ],
       ),
+    ), // close padding wrapper
     );
   }
 
@@ -257,23 +258,23 @@ class _LandingPageState extends State<LandingPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(icon, style: const TextStyle(fontSize: 32)),
+          Text(icon, style: TextStyle(fontSize: 32)),
           const SizedBox(height: 16),
           Text(
             title,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
           ),
           const SizedBox(height: 12),
           Text(
             desc,
-            style: const TextStyle(color: Colors.black54, height: 1.6, fontSize: 14),
+            style: TextStyle(color: Colors.black54, height: 1.6, fontSize: 14),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildFeatures() {
+  Widget _buildFeatures(BuildContext context) {
     final features = [
       {'icon': '📊', 'title': 'Match Analytics', 'desc': 'Comprehensive statistics and insights from every match you play'},
       {'icon': '👥', 'title': 'Player Network', 'desc': 'Connect with thousands of players at your skill level'},
@@ -283,43 +284,42 @@ class _LandingPageState extends State<LandingPage> {
       {'icon': '📅', 'title': 'Smart Scheduling', 'desc': 'Manage matches, training sessions, and tournaments effortlessly'},
     ];
 
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 80, horizontal: 20),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFFF0FFFE), Color(0xFFF0F9F8)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+      return Container(
+        padding: const EdgeInsets.symmetric(vertical: 80, horizontal: 0),
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFFF0FFFE), Color(0xFFF0F9F8)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
         ),
-      ),
-      child: Column(
-        children: [
-          const Text(
-            'Why Choose Vico?',
-            style: TextStyle(fontSize: 44, fontWeight: FontWeight.bold, color: Colors.black87),
-            textAlign: TextAlign.center,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Column(
+            children: [
+              _sectionHeader('Why Choose Vico?', fontSize: 44),
+              const SizedBox(height: 20),
+              const Text(
+                'Your complete sports ecosystem for managing matches, teams, and competition',
+                style: const TextStyle(fontSize: 16, color: Colors.black54),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 60),
+              Wrap(
+                spacing: 20,
+                runSpacing: 20,
+                alignment: WrapAlignment.center,
+                children: features.map((feature) {
+                  return SizedBox(
+                    width: MediaQuery.of(context).size.width > 900 ? 280 : (MediaQuery.of(context).size.width > 600 ? 250 : double.infinity),
+                    child: _buildFeatureCard(feature),
+                  );
+                }).toList(),
+              ),
+            ],
           ),
-          const SizedBox(height: 20),
-          const Text(
-            'Your complete sports ecosystem for managing matches, teams, and competition',
-            style: TextStyle(fontSize: 16, color: Colors.black54),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 60),
-          Wrap(
-            spacing: 20,
-            runSpacing: 20,
-            alignment: WrapAlignment.center,
-            children: features.map((feature) {
-              return SizedBox(
-                width: MediaQuery.of(context).size.width > 900 ? 280 : (MediaQuery.of(context).size.width > 600 ? 250 : double.infinity),
-                child: _buildFeatureCard(feature),
-              );
-            }).toList(),
-          ),
-        ],
-      ),
-    );
+        ),
+      );
   }
 
   Widget _buildFeatureCard(Map<String, String> feature) {
@@ -333,23 +333,23 @@ class _LandingPageState extends State<LandingPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(feature['icon']!, style: const TextStyle(fontSize: 32)),
+          Text(feature['icon']!, style: TextStyle(fontSize: 32)),
           const SizedBox(height: 16),
           Text(
             feature['title']!,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
           ),
           const SizedBox(height: 12),
           Text(
             feature['desc']!,
-            style: const TextStyle(color: Colors.black54, fontSize: 14, height: 1.5),
+            style: TextStyle(color: Colors.black54, fontSize: 14, height: 1.5),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildPlayersSection() {
+  Widget _buildPlayersSection(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 80, horizontal: 20),
       decoration: const BoxDecoration(
@@ -370,18 +370,14 @@ class _LandingPageState extends State<LandingPage> {
                   color: Colors.green.shade100,
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: const Text('Elite Players', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+                child: const Text('Elite Players', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
               ),
               const SizedBox(height: 20),
-              const Text(
-                'Featured Players',
-                style: TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: Colors.black87),
-                textAlign: TextAlign.center,
-              ),
+              _sectionHeader('Featured Players on Vico', fontSize: 40),
               const SizedBox(height: 20),
               const Text(
                 'Discover talented players from around the world and track their journey to excellence',
-                style: TextStyle(fontSize: 18, color: Colors.black54, height: 1.5),
+                style: const TextStyle(fontSize: 18, color: Colors.black54, height: 1.5),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 30),
@@ -453,22 +449,27 @@ class _LandingPageState extends State<LandingPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                Text(name, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
-                Text('$level • $matchesPlayed matches', style: const TextStyle(color: Colors.black54, fontSize: 14)),
+                Text('$level • $matchesPlayed matches', style: TextStyle(color: Colors.black54, fontSize: 14)),
               ],
             ),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pushNamed(context, '/players/${player['id']}'),
-            child: const Text('Profile'),
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: const Text('Profile', style: const TextStyle(fontSize: 12)),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildCoachesSection() {
+  Widget _buildCoachesSection(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 80, horizontal: 20),
       decoration: const BoxDecoration(
@@ -489,18 +490,14 @@ class _LandingPageState extends State<LandingPage> {
                   color: Colors.green.shade100,
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: const Text('Professional Coaching Staff', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+                child: const Text('Professional Coaching Staff', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
               ),
               const SizedBox(height: 20),
-              const Text(
-                'Meet Our Expert Coaches',
-                style: TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: Colors.black87),
-                textAlign: TextAlign.center,
-              ),
+              _sectionHeader('Meet Our Expert Coaches on Vico', fontSize: 40),
               const SizedBox(height: 20),
               const Text(
                 'Learn from certified professionals with years of experience and proven track records',
-                style: TextStyle(fontSize: 18, color: Colors.black54, height: 1.5),
+                style: const TextStyle(fontSize: 18, color: Colors.black54, height: 1.5),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 30),
@@ -568,9 +565,9 @@ class _LandingPageState extends State<LandingPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(coach['name'] ?? 'Unknown', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                Text(coach['name'] ?? 'Unknown', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
-                Text(coach['expertise'] ?? 'Professional Coach', style: const TextStyle(color: Colors.black54, fontSize: 14)),
+                Text(coach['expertise'] ?? 'Professional Coach', style: TextStyle(color: Colors.black54, fontSize: 14)),
               ],
             ),
           ),
@@ -583,7 +580,7 @@ class _LandingPageState extends State<LandingPage> {
     );
   }
 
-  Widget _buildRefereesSection() {
+  Widget _buildRefereesSection(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 80, horizontal: 20),
       decoration: const BoxDecoration(
@@ -604,18 +601,14 @@ class _LandingPageState extends State<LandingPage> {
                   color: Colors.green.shade100,
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: const Text('Official Referees', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+                child: const Text('Official Referees', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
               ),
               const SizedBox(height: 20),
-              const Text(
-                'Meet Our Referees & Ball Crew',
-                style: TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: Colors.black87),
-                textAlign: TextAlign.center,
-              ),
+              _sectionHeader('Meet Our Referees & Ball Crew on Vico', fontSize: 40),
               const SizedBox(height: 20),
               const Text(
                 'Certified professionals ensuring fair play and smooth match operations',
-                style: TextStyle(fontSize: 18, color: Colors.black54, height: 1.5),
+                style: const TextStyle(fontSize: 18, color: Colors.black54, height: 1.5),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 30),
@@ -683,9 +676,9 @@ class _LandingPageState extends State<LandingPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('${referee['firstName'] ?? ''} ${referee['lastName'] ?? ''}'.trim(), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                Text('${referee['firstName'] ?? ''} ${referee['lastName'] ?? ''}'.trim(), style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
-                Text(referee['experience'] ?? 'Professional', style: const TextStyle(color: Colors.black54, fontSize: 14)),
+                Text(referee['experience'] ?? 'Professional', style: TextStyle(color: Colors.black54, fontSize: 14)),
               ],
             ),
           ),
@@ -698,7 +691,7 @@ class _LandingPageState extends State<LandingPage> {
     );
   }
 
-  Widget _buildRulesSection() {
+  Widget _buildRulesSection(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 80, horizontal: 20),
       decoration: const BoxDecoration(
@@ -710,15 +703,11 @@ class _LandingPageState extends State<LandingPage> {
       ),
       child: Column(
         children: [
-          const Text(
-            'Master the Game',
-            style: TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: Colors.black87),
-            textAlign: TextAlign.center,
-          ),
+          _sectionHeader('Master the Game on Vico', fontSize: 40),
           const SizedBox(height: 20),
           const Text(
             'Everything you need to know to play tennis like a professional',
-            style: TextStyle(fontSize: 18, color: Colors.black54),
+            style: const TextStyle(fontSize: 18, color: Colors.black54),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 40),
@@ -764,18 +753,18 @@ class _LandingPageState extends State<LandingPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(category, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+          Text(category, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
           const SizedBox(height: 10),
           ...rules.take(3).map((rule) => Padding(
             padding: const EdgeInsets.symmetric(vertical: 5),
-            child: Text('${rule['label']}: ${rule['value'] ?? ''}', style: const TextStyle(color: Colors.black54)),
+            child: Text('${rule['label']}: ${rule['value'] ?? ''}', style: TextStyle(color: Colors.black54)),
           )),
         ],
       ),
     );
   }
 
-  Widget _buildCTA() {
+  Widget _buildCTA(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 80, horizontal: 20),
       decoration: const BoxDecoration(
@@ -785,13 +774,13 @@ class _LandingPageState extends State<LandingPage> {
         children: [
           const Text(
             'Ready to Join Vico?',
-            style: TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: Colors.white),
+            style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: Colors.white),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 20),
           const Text(
             'Thousands of players, coaches, and organizations already compete on Vico. Your next level awaits.',
-            style: TextStyle(fontSize: 18, color: Colors.white70),
+            style: const TextStyle(fontSize: 18, color: Colors.white70),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 40),
@@ -822,8 +811,10 @@ class _LandingPageState extends State<LandingPage> {
             ],
           ),
           const SizedBox(height: 40),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+          Wrap(
+            spacing: 16,
+            runSpacing: 12,
+            alignment: WrapAlignment.center,
             children: [
               _buildCTABenefit('Free Forever'),
               _buildCTABenefit('No Credit Card'),
@@ -846,7 +837,7 @@ class _LandingPageState extends State<LandingPage> {
     );
   }
 
-  Widget _buildFooter() {
+  Widget _buildFooter(BuildContext context) {
     return Container(
       color: Colors.grey[900],
       padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
@@ -858,11 +849,11 @@ class _LandingPageState extends State<LandingPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Vico', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+                    const Text('Vico', style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 10),
                     const Text(
                       'Your complete sports ecosystem. Connect, compete, and achieve greatness on Vico.',
-                      style: TextStyle(color: Colors.grey),
+                      style: const TextStyle(color: Colors.grey),
                     ),
                     const SizedBox(height: 20),
                     Row(
@@ -879,12 +870,12 @@ class _LandingPageState extends State<LandingPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Quick Links', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    const Text('Quick Links', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 10),
-                    TextButton(onPressed: () {}, child: const Text('About', style: TextStyle(color: Colors.grey))),
-                    TextButton(onPressed: () {}, child: const Text('Players', style: TextStyle(color: Colors.grey))),
-                    TextButton(onPressed: () {}, child: const Text('Coaches', style: TextStyle(color: Colors.grey))),
-                    TextButton(onPressed: () {}, child: const Text('Rules', style: TextStyle(color: Colors.grey))),
+                    TextButton(onPressed: () {}, child: const Text('About', style: const TextStyle(color: Colors.grey))),
+                    TextButton(onPressed: () {}, child: const Text('Players', style: const TextStyle(color: Colors.grey))),
+                    TextButton(onPressed: () {}, child: const Text('Coaches', style: const TextStyle(color: Colors.grey))),
+                    TextButton(onPressed: () {}, child: const Text('Rules', style: const TextStyle(color: Colors.grey))),
                   ],
                 ),
               ),
@@ -892,11 +883,11 @@ class _LandingPageState extends State<LandingPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Get Started', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    const Text('Get Started', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 10),
-                    TextButton(onPressed: () => Navigator.pushNamed(context, '/register'), child: const Text('Register', style: TextStyle(color: Colors.grey))),
-                    TextButton(onPressed: () => Navigator.pushNamed(context, '/login'), child: const Text('Login', style: TextStyle(color: Colors.grey))),
-                    TextButton(onPressed: () => Navigator.pushNamed(context, '/contact'), child: const Text('Contact', style: TextStyle(color: Colors.grey))),
+                    TextButton(onPressed: () => Navigator.pushNamed(context, '/register'), child: const Text('Register', style: const TextStyle(color: Colors.grey))),
+                    TextButton(onPressed: () => Navigator.pushNamed(context, '/login'), child: const Text('Login', style: const TextStyle(color: Colors.grey))),
+                    TextButton(onPressed: () => Navigator.pushNamed(context, '/contact'), child: const Text('Contact', style: const TextStyle(color: Colors.grey))),
                   ],
                 ),
               ),
@@ -908,11 +899,11 @@ class _LandingPageState extends State<LandingPage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('© 2026 Vico. All rights reserved.', style: TextStyle(color: Colors.grey)),
+              const Text('© 2026 Vico. All rights reserved.', style: const TextStyle(color: Colors.grey)),
               Row(
                 children: [
-                  TextButton(onPressed: () {}, child: const Text('Privacy Policy', style: TextStyle(color: Colors.grey))),
-                  TextButton(onPressed: () {}, child: const Text('Terms of Service', style: TextStyle(color: Colors.grey))),
+                  TextButton(onPressed: () {}, child: const Text('Privacy Policy', style: const TextStyle(color: Colors.grey))),
+                  TextButton(onPressed: () {}, child: const Text('Terms of Service', style: const TextStyle(color: Colors.grey))),
                 ],
               ),
             ],

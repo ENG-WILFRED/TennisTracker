@@ -16,7 +16,7 @@ class UpcomingMatchesWidget extends StatelessWidget {
           children: [
             const Text(
               'Upcoming Matches',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             if (matches.isEmpty)

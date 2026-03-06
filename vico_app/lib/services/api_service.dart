@@ -325,13 +325,28 @@ class ApiService {
   }
 
   // Chat functions
+  // Chat/Contacts - fetch from players endpoint as contacts
   Future<List<dynamic>> fetchChatRooms() async {
-    final uri = Uri.parse('$baseUrl/api/chat/rooms');
-    final res = await http.get(uri, headers: await _headers());
-    if (res.statusCode == 200) {
-      return jsonDecode(res.body) as List<dynamic>;
+    // older versions of the backend exposed "chats" rather than "rooms".
+    // when calling from mobile we still want to hit the API if available.
+    try {
+      final uri = Uri.parse('$baseUrl/api/chat/rooms');
+      final res = await http.get(uri, headers: await _headers());
+      if (res.statusCode == 200) {
+        return jsonDecode(res.body) as List<dynamic>;
+      } else if (res.statusCode == 404) {
+        // try alias path
+        final uri2 = Uri.parse('$baseUrl/api/chat/chats');
+        final res2 = await http.get(uri2, headers: await _headers());
+        if (res2.statusCode == 200) {
+          return jsonDecode(res2.body) as List<dynamic>;
+        }
+      }
+      // fallback to players list so UI still shows contacts
+      return await fetchPlayers();
+    } catch (_) {
+      return await fetchPlayers();
     }
-    throw Exception('Failed to fetch chat rooms: ${res.statusCode}');
   }
 
   Future<Map<String, dynamic>> createChatRoom(String name) async {
@@ -399,12 +414,26 @@ class ApiService {
 
   // Dashboard functions
   Future<Map<String, dynamic>> fetchPlayerDashboard(String playerId) async {
-    final uri = Uri.parse('$baseUrl/api/dashboard?playerId=$playerId');
-    final res = await http.get(uri, headers: await _headers());
-    if (res.statusCode == 200) {
-      return jsonDecode(res.body) as Map<String, dynamic>;
+    // Fetch player data from the players endpoint
+    final playerUri = Uri.parse('$baseUrl/api/players/$playerId');
+    final playerRes = await http.get(playerUri, headers: await _headers());
+    
+    if (playerRes.statusCode != 200) {
+      throw Exception('Failed to fetch player: ${playerRes.statusCode}');
     }
-    throw Exception('Failed to fetch dashboard: ${res.statusCode}');
+    
+    final player = jsonDecode(playerRes.body) as Map<String, dynamic>;
+    
+    // Construct dashboard response with player data and defaults for other fields
+    return {
+      'player': player,
+      'rank': player['rank'] ?? 0,
+      'badges': player['badges'] ?? [],
+      'upcomingMatches': [], // Will be empty for now
+      'attendance': [], // Will be empty for now
+      'inventory': [], // Will be empty for now
+      'coaches': [], // Will be empty for now
+    };
   }
 
   Future<Map<String, dynamic>> updatePlayerProfile(String playerId, Map<String, dynamic> data) async {

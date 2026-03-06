@@ -32,10 +32,17 @@ export default function ChatRoomList({ selectedRoomId, onSelectRoom }: ChatRoomL
 
   const fetchRooms = async () => {
     try {
-      const response = await authenticatedFetch('/api/chat/rooms');
+      // primary endpoint uses /rooms, but we provide an alias at /chats
+      let response = await authenticatedFetch('/api/chat/rooms');
+      if (!response.ok && response.status === 404) {
+        // try the alias path
+        response = await authenticatedFetch('/api/chat/chats');
+      }
       if (response.ok) {
         const data = (await response.json()) as any;
         setRooms(data);
+      } else {
+        console.error('Chat rooms fetch failed with status', response.status);
       }
     } catch (error) {
       console.error('Failed to fetch chat rooms:', error);

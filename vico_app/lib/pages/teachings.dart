@@ -430,7 +430,7 @@ class _TeachingsPageState extends State<TeachingsPage> {
               ),
             ),
             child: const Row(
-              mainSize: MainAxisSize.min,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   'Book a Coach',

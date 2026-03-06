@@ -92,10 +92,7 @@ class _LoginPageState extends State<LoginPage> {
                           height: 100,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            image: const DecorationImage(
-                              image: AssetImage('assets/tennis_ball.png'), // You'll need to add this asset
-                              fit: BoxFit.cover,
-                            ),
+                            color: Colors.green[100],
                             boxShadow: _isHovered
                                 ? [const BoxShadow(color: Colors.black26, blurRadius: 8, spreadRadius: 2)]
                                 : [const BoxShadow(color: Colors.black12, blurRadius: 4)],
@@ -103,6 +100,13 @@ class _LoginPageState extends State<LoginPage> {
                           transform: _isHovered
                               ? (Matrix4.rotationZ(0.1)..scale(1.1))
                               : (Matrix4.rotationZ(0.0)..scale(1.0)),
+                          child: Center(
+                            child: Icon(
+                              Icons.sports_tennis,
+                              size: 50,
+                              color: Colors.green[700],
+                            ),
+                          ),
                         ),
                       ),
                       const SizedBox(height: 16),

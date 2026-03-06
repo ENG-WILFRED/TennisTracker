@@ -72,21 +72,14 @@ class _ChatPageState extends State<ChatPage> {
               ),
             ),
             Expanded(
-              child: Row(
-                children: [
-                  // Sidebar - responsive based on screen width
-                  if (_sidebarVisible || !isMobile)
-                    SizedBox(
-                      width: isMobile ? double.infinity : 320,
-                      child: ChatContactsSidebar(
-                        selectedContactId: _selectedContactId,
-                        onSelectContact: _handleSelectContact,
-                      ),
-                    ),
-                  // Chat window - only show on desktop when sidebar is visible, or always on mobile when selected
-                  if (!isMobile || _selectedContactId != null)
-                    Expanded(
-                      child: _selectedContactId != null
+              child: isMobile
+                  ? // Mobile: show sidebar OR chat window, not both
+                  (_sidebarVisible
+                      ? ChatContactsSidebar(
+                          selectedContactId: _selectedContactId,
+                          onSelectContact: _handleSelectContact,
+                        )
+                      : (_selectedContactId != null
                           ? ChatWindow(roomId: _selectedContactId!)
                           : Container(
                               color: Colors.grey[50],
@@ -119,10 +112,55 @@ class _ChatPageState extends State<ChatPage> {
                                   ],
                                 ),
                               ),
-                            ),
+                            )))
+                  : // Desktop: show sidebar + chat window side by side
+                  Row(
+                      children: [
+                        SizedBox(
+                          width: 320,
+                          child: ChatContactsSidebar(
+                            selectedContactId: _selectedContactId,
+                            onSelectContact: _handleSelectContact,
+                          ),
+                        ),
+                        Expanded(
+                          child: _selectedContactId != null
+                              ? ChatWindow(roomId: _selectedContactId!)
+                              : Container(
+                                  color: Colors.grey[50],
+                                  child: Center(
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.message,
+                                          size: 64,
+                                          color: Colors.grey[300],
+                                        ),
+                                        const SizedBox(height: 16),
+                                        Text(
+                                          'No conversation selected',
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            color: Colors.grey[500],
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          'Select a contact to start chatting',
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            color: Colors.grey[400],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                        ),
+                      ],
                     ),
-                ],
-              ),
             ),
           ],
         ),
