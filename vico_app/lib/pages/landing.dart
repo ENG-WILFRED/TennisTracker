@@ -857,10 +857,12 @@ class _LandingPageState extends State<LandingPage> {
                     ),
                     const SizedBox(height: 20),
                     Row(
+                      mainAxisSize: MainAxisSize.max,
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
-                        IconButton(icon: const Icon(Icons.facebook, color: Colors.grey), onPressed: () {}),
-                        IconButton(icon: const Icon(Icons.link, color: Colors.grey), onPressed: () {}),
-                        IconButton(icon: const Icon(Icons.camera_alt, color: Colors.grey), onPressed: () {}),
+                        IconButton(icon: const Icon(Icons.facebook, color: Colors.grey, size: 20), onPressed: () {}, padding: EdgeInsets.zero, constraints: const BoxConstraints()),
+                        IconButton(icon: const Icon(Icons.link, color: Colors.grey, size: 20), onPressed: () {}, padding: EdgeInsets.zero, constraints: const BoxConstraints()),
+                        IconButton(icon: const Icon(Icons.camera_alt, color: Colors.grey, size: 20), onPressed: () {}, padding: EdgeInsets.zero, constraints: const BoxConstraints()),
                       ],
                     ),
                   ],

@@ -68,8 +68,9 @@ class ChatParticipant {
 
 class ChatWindow extends StatefulWidget {
   final String roomId;
+  final VoidCallback? onBack;
 
-  const ChatWindow({super.key, required this.roomId});
+  const ChatWindow({super.key, required this.roomId, this.onBack});
 
   @override
   State<ChatWindow> createState() => _ChatWindowState();
@@ -84,6 +85,7 @@ class _ChatWindowState extends State<ChatWindow> {
   List<ChatParticipant> _participants = [];
   String _currentUserId = '';
   bool _loading = true;
+  bool _participantsVisible = true;
   WebSocketChannel? _channel;
   Timer? _pollTimer;
 
@@ -248,14 +250,128 @@ class _ChatWindowState extends State<ChatWindow> {
     super.dispose();
   }
 
+  void _showPlayerModal(ChatParticipant participant) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(participant.playerName),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.grey[300],
+              ),
+              child: participant.playerPhoto != null
+                  ? ClipOval(
+                      child: Image.network(
+                        'https://picsum.photos/100/100?random=${participant.playerId.hashCode}',
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => Center(
+                          child: Text(
+                            participant.playerName[0].toUpperCase(),
+                            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.grey),
+                          ),
+                        ),
+                      ),
+                    )
+                  : Center(
+                      child: Text(
+                        participant.playerName[0].toUpperCase(),
+                        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.grey),
+                      ),
+                    ),
+            ),
+            const SizedBox(height: 16),
+            Text('Online: ${participant.isOnline ? 'Yes' : 'No'}'),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                // Navigate to profile
+                Navigator.pushNamed(context, '/players');
+              },
+              child: const Text('View Profile'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showMessageSenderModal(ChatMessage message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(message.playerName),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.grey[300],
+              ),
+              child: message.photo != null
+                  ? ClipOval(
+                      child: Image.network(
+                        'https://picsum.photos/100/100?random=${message.playerId.hashCode}',
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => Center(
+                          child: Text(
+                            message.playerName[0].toUpperCase(),
+                            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.grey),
+                          ),
+                        ),
+                      ),
+                    )
+                  : Center(
+                      child: Text(
+                        message.playerName[0].toUpperCase(),
+                        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.grey),
+                      ),
+                    ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                // Navigate to profile
+                Navigator.pushNamed(context, '/players');
+              },
+              child: const Text('View Profile'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildMessageBubble(ChatMessage message, bool isMe) {
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-        padding: const EdgeInsets.all(12),
+        margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 6),
+        padding: const EdgeInsets.all(6),
         constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.7,
+          maxWidth: (MediaQuery.of(context).size.width - (MediaQuery.of(context).size.width < 600 ? 180 : 250)) * 0.8,
         ),
         decoration: BoxDecoration(
           color: isMe ? Colors.blue : Colors.grey[300],
@@ -273,7 +389,7 @@ class _ChatWindowState extends State<ChatWindow> {
               Text(
                 message.playerName,
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: 10,
                   fontWeight: FontWeight.bold,
                   color: Colors.grey[700],
                 ),
@@ -284,7 +400,7 @@ class _ChatWindowState extends State<ChatWindow> {
               message.content,
               style: TextStyle(
                 color: isMe ? Colors.white : Colors.black,
-                fontSize: 16,
+                fontSize: 14,
               ),
             ),
             const SizedBox(height: 4),
@@ -294,7 +410,7 @@ class _ChatWindowState extends State<ChatWindow> {
                 Text(
                   '${message.createdAt.hour}:${message.createdAt.minute.toString().padLeft(2, '0')}',
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 10,
                     color: isMe ? Colors.white70 : Colors.grey[600],
                   ),
                 ),
@@ -324,26 +440,168 @@ class _ChatWindowState extends State<ChatWindow> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    return Row(
+    return Column(
       children: [
-        // Messages Area
         Expanded(
+          child: Row(
+            children: [
+              _participantsVisible ? Container(
+            width: MediaQuery.of(context).size.width < 600 ? 120 : 150,
+            color: Colors.grey[50],
+            child: Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  color: Colors.white,
+                  child: Row(
+                    children: [
+                      const Text(
+                        'Participants',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        icon: const Icon(Icons.close, size: 16),
+                        onPressed: () {
+                          setState(() => _participantsVisible = !_participantsVisible);
+                        },
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: ListView(
+                    children: _participants.map((participant) {
+                      return Container(
+                        padding: const EdgeInsets.all(6),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                color: participant.isOnline ? Colors.green : Colors.grey,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            GestureDetector(
+                              onTap: () => _showPlayerModal(participant),
+                              child: Container(
+                                width: 24,
+                                height: 24,
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[300],
+                                  shape: BoxShape.circle,
+                                ),
+                                child: participant.playerPhoto != null
+                                    ? ClipOval(
+                                        child: Image.network(
+                                          'https://picsum.photos/100/100?random=${participant.playerId.hashCode}',
+                                          fit: BoxFit.cover,
+                                          loadingBuilder: (context, child, loadingProgress) {
+                                            if (loadingProgress == null) return child;
+                                            return Center(
+                                              child: CircularProgressIndicator(
+                                                value: loadingProgress.expectedTotalBytes != null
+                                                    ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                                                    : null,
+                                              ),
+                                            );
+                                          },
+                                          errorBuilder: (context, error, stackTrace) => Center(
+                                            child: Text(
+                                              participant.playerName[0].toUpperCase(),
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.grey,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      )
+                                    : Center(
+                                        child: Text(
+                                          participant.playerName[0].toUpperCase(),
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.grey,
+                                          ),
+                                        ),
+                                      ),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    participant.playerName,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 10,
+                                    ),
+                                  ),
+                                  Text(
+                                    participant.isOnline ? 'Online' : 'Offline',
+                                    style: TextStyle(
+                                      color: Colors.grey[600],
+                                      fontSize: 8,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ],
+            ),
+              ) : SizedBox.shrink(),
+              // Messages Area
+              Expanded(
           child: Column(
             children: [
               // Header
               Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(6),
                 color: Colors.white,
                 child: Row(
                   children: [
+                    if (widget.onBack != null) ...[
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back, size: 16),
+                        onPressed: widget.onBack,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                      const SizedBox(width: 6),
+                    ],
                     const Text(
                       'Chat Room',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                     const Spacer(),
+                    if (!_participantsVisible) ...[
+                      IconButton(
+                        icon: const Icon(Icons.people, size: 16),
+                        onPressed: () {
+                          setState(() => _participantsVisible = true);
+                        },
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                      const SizedBox(width: 6),
+                    ],
                     Text(
                       '${_participants.where((p) => p.isOnline).length} online',
-                      style: TextStyle(color: Colors.grey[600]),
+                      style: TextStyle(color: Colors.grey[600], fontSize: 10),
                     ),
                   ],
                 ),
@@ -354,7 +612,7 @@ class _ChatWindowState extends State<ChatWindow> {
                     ? const Center(child: Text('No messages yet. Start the conversation!'))
                     : ListView.builder(
                         controller: _scrollController,
-                        padding: const EdgeInsets.all(8),
+                        padding: const EdgeInsets.fromLTRB(6, 6, 6, 80),
                         itemCount: _messages.length,
                         itemBuilder: (context, index) {
                           final message = _messages[index];
@@ -366,33 +624,55 @@ class _ChatWindowState extends State<ChatWindow> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               if (!isMe && showAvatar) ...[
-                                Container(
-                                  width: 32,
-                                  height: 32,
-                                  margin: const EdgeInsets.only(right: 8, top: 4),
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey[300],
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: message.photo != null
-                                      ? ClipOval(
-                                          child: Image.network(
-                                            message.photo!,
-                                            fit: BoxFit.cover,
-                                          ),
-                                        )
-                                      : Center(
-                                          child: Text(
-                                            message.playerName[0].toUpperCase(),
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.grey,
+                                GestureDetector(
+                                  onTap: () => _showMessageSenderModal(message),
+                                  child: Container(
+                                    width: 24,
+                                    height: 24,
+                                    margin: const EdgeInsets.only(right: 6, top: 4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey[300],
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: message.photo != null
+                                        ? ClipOval(
+                                            child: Image.network(
+                                              'https://picsum.photos/100/100?random=${message.playerId.hashCode}',
+                                              fit: BoxFit.cover,
+                                              loadingBuilder: (context, child, loadingProgress) {
+                                                if (loadingProgress == null) return child;
+                                                return Center(
+                                                  child: CircularProgressIndicator(
+                                                    value: loadingProgress.expectedTotalBytes != null
+                                                        ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                                                        : null,
+                                                  ),
+                                                );
+                                              },
+                                              errorBuilder: (context, error, stackTrace) => Center(
+                                                child: Text(
+                                                  message.playerName[0].toUpperCase(),
+                                                  style: const TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Colors.grey,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          )
+                                        : Center(
+                                            child: Text(
+                                              message.playerName[0].toUpperCase(),
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.grey,
+                                              ),
                                             ),
                                           ),
-                                        ),
+                                  ),
                                 ),
                               ] else if (!isMe) ...[
-                                const SizedBox(width: 40),
+                                const SizedBox(width: 30),
                               ],
                               Expanded(child: _buildMessageBubble(message, isMe)),
                             ],
@@ -400,131 +680,41 @@ class _ChatWindowState extends State<ChatWindow> {
                         },
                       ),
               ),
-              // Input
-              Container(
-                padding: const EdgeInsets.all(8),
-                color: Colors.white,
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _messageController,
-                        style: const TextStyle(fontSize: 14),
-                        decoration: const InputDecoration(
-                          hintText: 'Type a message...',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.all(Radius.circular(24)),
-                          ),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        ),
-                        onSubmitted: (_) => _sendMessage(),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    FloatingActionButton(
-                      onPressed: _sendMessage,
-                      mini: true,
-                      child: const Icon(Icons.send),
-                    ),
-                  ],
-                ),
-              ),
+            ],
+          ),
             ],
           ),
         ),
-        // Participants Sidebar
-        Container(
-          width: 250,
-          color: Colors.grey[50],
-          child: Column(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                color: Colors.white,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Participants',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${_participants.where((p) => p.isOnline).length}/${_participants.length} online',
-                      style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: ListView(
-                  children: _participants.map((participant) {
-                    return Container(
-                      padding: const EdgeInsets.all(12),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 8,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              color: participant.isOnline ? Colors.green : Colors.grey,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Container(
-                            width: 32,
-                            height: 32,
-                            decoration: BoxDecoration(
-                              color: Colors.grey[300],
-                              shape: BoxShape.circle,
-                            ),
-                            child: participant.playerPhoto != null
-                                ? ClipOval(
-                                    child: Image.network(
-                                      participant.playerPhoto!,
-                                      fit: BoxFit.cover,
-                                    ),
-                                  )
-                                : Center(
-                                    child: Text(
-                                      participant.playerName[0].toUpperCase(),
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.grey,
-                                      ),
-                                    ),
-                                  ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  participant.playerName,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                                Text(
-                                  participant.isOnline ? 'Online' : 'Offline',
-                                  style: TextStyle(
-                                    color: Colors.grey[600],
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+        // Input
+        Padding(
+          padding: const EdgeInsets.all(6),
+          child: Container(
+            padding: const EdgeInsets.all(6),
+            color: Colors.white,
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _messageController,
+                    style: const TextStyle(fontSize: 12),
+                    decoration: const InputDecoration(
+                      hintText: 'Type a message...',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(24)),
                       ),
-                    );
-                  }).toList(),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    ),
+                    onSubmitted: (_) => _sendMessage(),
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(width: 6),
+                FloatingActionButton(
+                  onPressed: _sendMessage,
+                  mini: true,
+                  child: const Icon(Icons.send),
+                ),
+              ],
+            ),
           ),
         ),
       ],

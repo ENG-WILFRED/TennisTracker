@@ -73,11 +73,10 @@ class _ChatContactsSidebarState extends State<ChatContactsSidebar> {
 
   Future<void> _fetchContacts() async {
     try {
-      // Fetch players, coaches, and staff
+      // Fetch players and coaches (matching web version)
       final results = await Future.wait([
         _api.get('/api/players'),
         _api.get('/api/coaches'),
-        _api.get('/api/staff'),
       ]);
 
       final players = (results[0] as List<dynamic>)
@@ -87,13 +86,9 @@ class _ChatContactsSidebarState extends State<ChatContactsSidebar> {
       final coaches = (results[1] as List<dynamic>)
           .map((json) => ChatContact.fromJson({...json, 'role': 'coach'}))
           .toList();
-      
-      final staff = (results[2] as List<dynamic>)
-          .map((json) => ChatContact.fromJson({...json, 'role': 'staff'}))
-          .toList();
 
       setState(() {
-        _allContacts = [...players, ...coaches, ...staff];
+        _allContacts = [...players, ...coaches];
         _filteredContacts = _allContacts;
         _loading = false;
       });
@@ -141,7 +136,7 @@ class _ChatContactsSidebarState extends State<ChatContactsSidebar> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 320,
+      width: 400,
       decoration: BoxDecoration(
         color: Colors.white,
         border: Border(
@@ -152,7 +147,7 @@ class _ChatContactsSidebarState extends State<ChatContactsSidebar> {
         children: [
           // Header
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(5),
             decoration: BoxDecoration(
               color: Colors.blue[50],
               border: Border(
@@ -218,7 +213,7 @@ class _ChatContactsSidebarState extends State<ChatContactsSidebar> {
                             onTap: () =>
                                 widget.onSelectContact(contact.id, contact.name),
                             child: Container(
-                              padding: const EdgeInsets.all(12),
+                              padding: const EdgeInsets.all(5),
                               decoration: BoxDecoration(
                                 color: isSelected ? Colors.blue[50] : Colors.white,
                                 border: Border(

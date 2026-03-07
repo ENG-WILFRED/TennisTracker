@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../widgets/chat_contacts_sidebar.dart';
 import '../widgets/chat_window.dart';
 import '../widgets/page_header.dart';
 import '../services/api_service.dart';
+import '../services/auth_service.dart';
 
 class ChatPage extends StatefulWidget {
   const ChatPage({super.key});
@@ -16,6 +18,29 @@ class _ChatPageState extends State<ChatPage> {
   String? _selectedContactName;
   bool _sidebarVisible = true;
   final ApiService _api = ApiService();
+  final AuthService _auth = AuthService();
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAuth();
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersive);
+  }
+
+  @override
+  void dispose() {
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual, overlays: SystemUiOverlay.values);
+    super.dispose();
+  }
+
+  Future<void> _checkAuth() async {
+    final token = await _auth.getToken();
+    if (token == null || token.isEmpty) {
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/login');
+      }
+    }
+  }
 
   void _handleSelectContact(String contactId, String contactName) {
     setState(() {
@@ -25,6 +50,10 @@ class _ChatPageState extends State<ChatPage> {
       if (MediaQuery.of(context).size.width < 600) {
         _sidebarVisible = false;
       }
+    });
+    // Set online status like the web version
+    _api.postData('/api/chat/rooms/$contactId/status', {}).catchError((e) {
+      // Ignore errors for status updates
     });
   }
 
@@ -80,7 +109,7 @@ class _ChatPageState extends State<ChatPage> {
                           onSelectContact: _handleSelectContact,
                         )
                       : (_selectedContactId != null
-                          ? ChatWindow(roomId: _selectedContactId!)
+                          ? ChatWindow(roomId: _selectedContactId!, onBack: () => setState(() => _selectedContactId = null))
                           : Container(
                               color: Colors.grey[50],
                               child: Center(
@@ -125,7 +154,7 @@ class _ChatPageState extends State<ChatPage> {
                         ),
                         Expanded(
                           child: _selectedContactId != null
-                              ? ChatWindow(roomId: _selectedContactId!)
+                              ? ChatWindow(roomId: _selectedContactId!, onBack: () => setState(() => _selectedContactId = null))
                               : Container(
                                   color: Colors.grey[50],
                                   child: Center(

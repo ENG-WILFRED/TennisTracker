@@ -511,7 +511,7 @@ async function main() {
       },
       {
         name: 'Mohamed Hassan',
-        photo: 'https://images.unsplash.com/photo-1545996124-1b3d5b84c0b5?w=800&q=80',
+        photo: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800&q=80',
         role: 'Assistant Coach',
         email: 'mohamed@club.com',
         phone: '+254722111005',
