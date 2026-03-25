@@ -16,6 +16,7 @@ export default function Header() {
           <a href="#players" className="text-gray-600 hover:text-green-700 transition-colors font-medium">Players</a>
           <a href="#coaches" className="text-gray-600 hover:text-green-700 transition-colors font-medium">Coaches</a>
           <a href="#rules" className="text-gray-600 hover:text-green-700 transition-colors font-medium">Rules</a>
+          <Link href="/courts" className="text-gray-600 hover:text-green-700 transition-colors font-medium">🎾 Courts</Link>
         </nav>
         <div className="flex items-center gap-3">
           <MessagesAnnouncements />

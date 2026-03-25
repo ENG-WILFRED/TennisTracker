@@ -1,5 +1,6 @@
 import prisma from '@/lib/prisma';
 import { verifyApiAuth } from '@/lib/authMiddleware';
+import { broadcastToRoom } from '@/lib/chatSockets';
 
 // Update user online status when they join a chat room
 export async function POST(
@@ -14,6 +15,15 @@ export async function POST(
 
     const userId = auth.playerId;
     const { roomId } = await params;
+
+    // Check if the room exists
+    const room = await prisma.chatRoom.findUnique({
+      where: { id: roomId },
+    });
+
+    if (!room) {
+      return new Response(JSON.stringify({ error: 'Room not found' }), { status: 404 });
+    }
 
     // Check if participant already exists
     let participant = await prisma.chatParticipant.findUnique({
@@ -49,6 +59,16 @@ export async function POST(
         },
       });
     }
+
+    // Broadcast online status to room
+    const onlineMessage = {
+      type: 'participant_online',
+      data: {
+        playerId: userId,
+        lastSeen: participant.lastSeen.toISOString(),
+      },
+    };
+    broadcastToRoom(roomId, onlineMessage);
 
     return new Response(JSON.stringify(participant), {
       status: 200,
@@ -87,6 +107,16 @@ export async function DELETE(
         lastSeen: new Date(),
       },
     });
+
+    // Broadcast offline status to room
+    const offlineMessage = {
+      type: 'participant_offline',
+      data: {
+        playerId: userId,
+        lastSeen: participant.lastSeen.toISOString(),
+      },
+    };
+    broadcastToRoom(roomId, offlineMessage);
 
     return new Response(JSON.stringify(participant), {
       status: 200,

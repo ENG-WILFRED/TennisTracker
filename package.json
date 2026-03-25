@@ -4,7 +4,10 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "next dev",
+    "websocket": "tsx src/websocket-server.ts",
+    "websocket:dev": "tsx --watch src/websocket-server.ts",
+    "test:websocket": "bash test-websocket.sh",
     "build": "next build --turbopack",
     "start": "next start",
     "lint": "eslint",
@@ -13,7 +16,7 @@
     "migrate:reset": "prisma migrate reset"
   },
   "prisma": {
-    "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
+    "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.169.0",
@@ -23,6 +26,7 @@
     "@prisma/client": "^6.16.1",
     "@types/jsonwebtoken": "^9.0.10",
     "bcryptjs": "^3.0.2",
+    "express": "^4.18.2",
     "html2pdf.js": "^0.14.0",
     "jsonwebtoken": "^9.0.3",
     "lucide-react": "^0.563.0",
@@ -35,21 +39,25 @@
     "react-is": "^19.2.4",
     "recharts": "^3.2.1",
     "socket.io": "^4.8.3",
-    "socket.io-client": "^4.8.3"
+    "socket.io-client": "^4.8.3",
+    "ws": "^8.15.1"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260301.1",
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4.1.17",
+    "@types/express": "^5.0.6",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/ws": "^8.18.1",
     "autoprefixer": "^10.4.21",
     "eslint": "^9",
     "eslint-config-next": "15.5.3",
     "postcss": "^8.5.6",
     "tailwindcss": "^4",
     "ts-node": "^10.9.2",
+    "tsx": "^4.21.0",
     "typescript": "^5"
   }
 }

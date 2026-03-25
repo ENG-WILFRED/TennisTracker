@@ -33,5 +33,5 @@ binding = "CHAT_ROOMS"
 # id = "your-kv-namespace-id"
 
 # Environment variables will be provided via the dashboard or action
-```
-This file should be placed at the repo root. Use `wrangler publish` or Pages integration to deploy.
+# ```
+# This file should be placed at the repo root. Use `wrangler publish` or Pages integration to deploy.

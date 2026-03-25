@@ -17,7 +17,7 @@ export async function GET(request: Request) {
 
     // Get all chat rooms but optimize: query counts and last message separately
     const roomsBase = await prisma.chatRoom.findMany({
-      select: { id: true, name: true, description: true },
+      select: { id: true, name: true, description: true, isDM: true },
     });
 
     const formattedRooms = await Promise.all(
@@ -26,13 +26,34 @@ export async function GET(request: Request) {
         const onlineCount = await prisma.chatParticipant.count({ where: { roomId: room.id, isOnline: true } });
         const lastMsg = await prisma.chatMessage.findFirst({ where: { roomId: room.id }, orderBy: { createdAt: 'desc' }, select: { content: true } });
 
+        // For DM rooms, get participant info to show the other person's details
+        let dmParticipant = null;
+        if (room.isDM) {
+          const participants = await prisma.chatParticipant.findMany({
+            where: { roomId: room.id },
+            include: {
+              player: {
+                include: {
+                  user: {
+                    select: { id: true, firstName: true, lastName: true, photo: true }
+                  }
+                }
+              }
+            }
+          });
+          // Find the participant that's not the current user
+          dmParticipant = participants.find((p: any) => p.playerId !== user.id)?.player;
+        }
+
         return {
           id: room.id,
-          name: room.name,
+          name: room.isDM && dmParticipant ? `${dmParticipant.user.firstName} ${dmParticipant.user.lastName}` : room.name,
           description: room.description,
           participantCount,
           onlineCount,
           lastMessage: lastMsg?.content || '',
+          isDM: room.isDM,
+          dmParticipant: dmParticipant,
         };
       })
     );

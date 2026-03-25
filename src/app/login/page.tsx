@@ -3,15 +3,23 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Button from '@/components/Button';
+import { RoleSelection } from '@/components/RoleSelection';
 import { useAuth } from "@/context/AuthContext";
+import { useRole } from "@/context/RoleContext";
+import { UserRole } from "@/config/roles";
 
 export default function LoginPage() {
     const router = useRouter();
     const { login } = useAuth();
+    const { setCurrentRole, setUserRoles } = useRole();
     const [form, setForm] = useState({ usernameOrEmail: "", password: "" });
     const [loading, setLoading] = useState(false);
     const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
     const [isHovered, setIsHovered] = useState(false);
+    const [showRoleSelection, setShowRoleSelection] = useState(false);
+    const [availableRoles, setAvailableRoles] = useState<UserRole[]>([]);
+    const [pendingUser, setPendingUser] = useState<any>(null);
+    const [tokens, setTokens] = useState<any>(null);
 
     function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
         setForm({ ...form, [e.target.name]: e.target.value });
@@ -35,23 +43,92 @@ export default function LoginPage() {
 
             const data = await response.json() as any;
             
+            // If multiple roles available, show role selection
+            if (data.user.availableRoles && data.user.availableRoles.length > 1) {
+                setAvailableRoles(data.user.availableRoles);
+                setPendingUser(data.user);
+                setTokens({ accessToken: data.accessToken, refreshToken: data.refreshToken });
+                setShowRoleSelection(true);
+                setLoading(false);
+                return;
+            }
+
+            // Single role - proceed directly
+            const selectedRole = data.user.availableRoles?.[0] || data.user.role || 'player';
+            await completeLogin(data, selectedRole);
+        } catch (err: any) {
+            setToast({ type: "error", message: err.message || "Login failed." });
+            setLoading(false);
+        }
+    }
+
+    async function completeLogin(data: any, selectedRole: UserRole) {
+        try {
+            // Update user with selected role
+            const finalUser = {
+                ...data.user,
+                role: selectedRole,
+            };
+
+            // Set role in context
+            setCurrentRole(selectedRole);
+            setUserRoles(data.user.availableRoles || [selectedRole]);
+
             // Use the auth context to login
             login(
                 {
                     accessToken: data.accessToken,
                     refreshToken: data.refreshToken,
                 },
-                data.user
+                finalUser
             );
 
             setToast({ type: "success", message: "Login successful! 🎾" });
             setTimeout(() => {
-                router.push("/dashboard");
+                router.push(`/dashboard/${selectedRole}/${finalUser.id}`);
             }, 500);
         } catch (err: any) {
             setToast({ type: "error", message: err.message || "Login failed." });
+            setLoading(false);
         }
-        setLoading(false);
+    }
+
+    async function handleRoleSelect(selectedRole: UserRole) {
+        setLoading(true);
+        try {
+            if (!tokens || !pendingUser) {
+                throw new Error("Session expired");
+            }
+            await completeLogin({ ...tokens, user: pendingUser }, selectedRole);
+        } catch (err: any) {
+            setToast({ type: "error", message: err.message || "Login failed." });
+            setShowRoleSelection(false);
+            setPendingUser(null);
+            setTokens(null);
+            setLoading(false);
+        }
+    }
+
+    // Show role selection modal if needed
+    if (showRoleSelection && availableRoles.length > 0 && pendingUser) {
+        return (
+            <>
+                <div className="min-h-screen app-bg flex flex-col items-center justify-center py-8">
+                    <RoleSelection
+                        availableRoles={availableRoles}
+                        userName={`${pendingUser.firstName} ${pendingUser.lastName}`}
+                        userPhoto={pendingUser.photo}
+                        onRoleSelect={handleRoleSelect}
+                        isLoading={loading}
+                    />
+                </div>
+                {toast && (
+                    <div className={`fixed top-4 right-4 rounded-md px-4 py-3 font-semibold ${toast.type === 'success' ? 'text-emerald-800 bg-emerald-100 border border-emerald-300' : 'text-red-700 bg-red-100 border border-red-300'}`}>
+                        {toast.message}
+                    </div>
+                )}
+            </>
+        );
     }
 
     return (

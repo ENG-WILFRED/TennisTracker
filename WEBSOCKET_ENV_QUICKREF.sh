@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+# WebSocket Environment Variable Quick Reference
+
+echo "🔧 WebSocket Environment Variables Quick Reference"
+echo "=================================================="
+echo ""
+
+echo "📋 Server Configuration (WebSocket process):"
+echo "  WS_PORT=3001      - Port to listen on (default: 3001)"
+echo "  WS_HOST=localhost - Address to bind to (default: localhost)"
+echo ""
+echo "  Example:"
+echo "    WS_PORT=8080 WS_HOST=0.0.0.0 npm run websocket:dev"
+echo ""
+
+echo "📋 API Configuration (Next.js to WebSocket):"
+echo "  WS_SERVER_URL=http://localhost:3001 - URL for API to send broadcasts"
+echo ""
+echo "  Example:"
+echo "    WS_SERVER_URL=https://api.example.com:3001 npm run dev"
+echo ""
+
+echo "📋 Client Configuration (Browser to WebSocket):"
+echo "  NEXT_PUBLIC_WS_URL=ws://localhost:3001 - URL for browser to connect"
+echo "  (Note: Requires NEXT_PUBLIC_ prefix for Next.js)"
+echo ""
+echo "  Example:"
+echo "    NEXT_PUBLIC_WS_URL=wss://api.example.com:3001 npm run dev"
+echo ""
+
+echo "🚀 Quick Start Examples:"
+echo ""
+echo "1. Development (defaults, no env vars needed):"
+echo "   Terminal 1: npm run websocket:dev"
+echo "   Terminal 2: npm run dev"
+echo ""
+
+echo "2. Development (custom port):"
+echo "   Terminal 1: WS_PORT=8080 npm run websocket:dev"
+echo "   Terminal 2: npm run dev"
+echo ""
+
+echo "3. Docker/Server (listen on all interfaces):"
+echo "   WS_PORT=3001 WS_HOST=0.0.0.0 npm run websocket:dev"
+echo ""
+
+echo "4. Production (HTTPS):"
+echo "   WS_PORT=443 WS_HOST=0.0.0.0 WS_SERVER_URL=https://api.example.com:443 npm run websocket"
+echo "   NEXT_PUBLIC_WS_URL=wss://api.example.com:443 npm run dev"
+echo ""
+
+echo "5. Using .env.local (recommended):"
+echo "   Create .env.local with:"
+echo "   ---"
+echo "   WS_PORT=3001"
+echo "   WS_HOST=localhost"
+echo "   WS_SERVER_URL=http://localhost:3001"
+echo "   NEXT_PUBLIC_WS_URL=ws://localhost:3001"
+echo "   ---"
+echo "   Then just run: npm run websocket:dev & npm run dev"
+echo ""
+
+echo "📚 For detailed documentation:"
+echo "   See: WEBSOCKET_ENV_CONFIG.md"
+echo ""

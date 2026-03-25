@@ -77,16 +77,19 @@ export async function getPlayerDashboard(playerId: string) {
       },
     },
     include: {
-      user: { select: { firstName: true, lastName: true } }
+      user: { select: { firstName: true,email: true, lastName: true } }
     },
     orderBy: { user: { firstName: 'asc' } },
   });
 
   const coaches = coachesRaw.map((c) => ({
     id: c.userId,
+    name: `${c.user.firstName} ${c.user.lastName}`,
     firstName: c.user.firstName || '',
     lastName: c.user.lastName || '',
     role: c.role,
+    contact: c.contact,
+    email: c.user.email,
   }));
 
   // Get attendance records for the player

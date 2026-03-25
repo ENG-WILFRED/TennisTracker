@@ -136,3 +136,104 @@ export async function loginPlayer({
     photo: user.photo || null,
   };
 }
+
+export async function updateProfile(
+  userId: string,
+  data: {
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    phone?: string;
+    gender?: string;
+    dateOfBirth?: string;
+    nationality?: string;
+    bio?: string;
+    photo?: string;
+  }
+) {
+  if (!userId) {
+    throw new Error("User ID is required.");
+  }
+
+  // Handle photo upload if it's a data URI
+  let photoUrl: string | null = null;
+  if (data.photo && data.photo.startsWith('data:')) {
+    try {
+      const { uploadToR2 } = await import('@/lib/media');
+      const extMatch = data.photo.match(/^data:image\/(\w+);base64,/);
+      const ext = extMatch ? extMatch[1] : 'jpg';
+      const key = `avatars/${userId}-${Date.now()}.${ext}`;
+      const base64 = data.photo.split(',')[1];
+      const buffer = Buffer.from(base64, 'base64');
+      photoUrl = await uploadToR2(key, buffer, `image/${ext}`);
+    } catch (e) {
+      console.error('Failed to upload photo to R2', e);
+      photoUrl = null;
+    }
+  } else if (data.photo && !data.photo.startsWith('data:')) {
+    // If it's a URL, keep it as is
+    photoUrl = data.photo;
+  }
+
+  // Build update object
+  const updateData: any = {};
+  if (data.firstName) updateData.firstName = data.firstName;
+  if (data.lastName) updateData.lastName = data.lastName;
+  if (data.email) updateData.email = data.email;
+  if (data.phone) updateData.phone = data.phone;
+  if (data.gender !== undefined) updateData.gender = data.gender;
+  if (data.dateOfBirth) updateData.dateOfBirth = new Date(data.dateOfBirth);
+  if (data.nationality !== undefined) updateData.nationality = data.nationality;
+  if (data.bio !== undefined) updateData.bio = data.bio;
+  if (photoUrl) updateData.photo = photoUrl;
+
+  const updatedUser = await prisma.user.update({
+    where: { id: userId },
+    data: updateData,
+    select: {
+      id: true,
+      username: true,
+      email: true,
+      firstName: true,
+      lastName: true,
+      photo: true,
+      gender: true,
+      dateOfBirth: true,
+      nationality: true,
+      bio: true,
+      phone: true,
+    },
+  });
+
+  return updatedUser;
+}
+
+export async function getUserProfile(userId: string) {
+  if (!userId) {
+    throw new Error("User ID is required.");
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      username: true,
+      email: true,
+      firstName: true,
+      lastName: true,
+      photo: true,
+      gender: true,
+      dateOfBirth: true,
+      nationality: true,
+      bio: true,
+      phone: true,
+      createdAt: true,
+    },
+  });
+
+  if (!user) {
+    throw new Error("User not found.");
+  }
+
+  return user;
+}

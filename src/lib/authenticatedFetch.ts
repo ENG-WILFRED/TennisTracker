@@ -21,7 +21,8 @@ export async function authenticatedFetch(
       headers.set('Authorization', authHeader);
     } else {
       // If auth is required but we don't have a token, redirect to login
-      if (typeof window !== 'undefined') {
+      // But don't redirect if already on login page to prevent infinite loops
+      if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
         window.location.href = '/login';
       }
       throw new Error('Authentication required');

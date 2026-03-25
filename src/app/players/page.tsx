@@ -19,9 +19,9 @@ export default function PlayersPage() {
   }, []);
 
   const handleContactClick = (player: any) => {
-    setContactLoadingId(player.id);
-    const playerName = `${player.firstName} ${player.lastName}`.trim();
-    router.push(`/contact?type=player&id=${player.id}&name=${encodeURIComponent(playerName)}&email=${encodeURIComponent(player.email || '')}`);
+    setContactLoadingId(player.userId);
+    const playerName = `${player.user.firstName} ${player.user.lastName}`.trim();
+    router.push(`/contact?type=player&id=${player.userId}&name=${encodeURIComponent(playerName)}&email=${encodeURIComponent(player.user.email || '')}`);
   };
 
   if (loading) {
@@ -97,17 +97,17 @@ export default function PlayersPage() {
                 <div className="flex items-start gap-4">
                   <div className="relative">
                     <div className="w-16 h-16 bg-gradient-to-br from-green-400 to-sky-400 rounded-full flex items-center justify-center text-white text-2xl font-bold shadow-md">
-                      {p.firstName?.[0] || "P"}
+                      {p.user.firstName?.[0] || "P"}
                     </div>
                     <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full border-2 border-white"></div>
                   </div>
                   
                   <div className="flex-1 min-w-0">
                     <h3 className="font-bold text-lg text-gray-900 truncate">
-                      {p.firstName} {p.lastName}
+                      {p.user.firstName} {p.user.lastName}
                     </h3>
                     <p className="text-sm text-gray-500 truncate mt-0.5">
-                      {p.email || p.phone || "No contact"}
+                      {p.user.email || p.user.phone || "No contact"}
                     </p>
                   </div>
                 </div>
@@ -116,32 +116,36 @@ export default function PlayersPage() {
                 <div className="mt-5 grid grid-cols-3 gap-3">
                   <div className="text-center p-2.5 bg-gradient-to-br from-green-50 to-sky-50 rounded-lg">
                     <div className="text-xs text-gray-600 font-medium">Matches</div>
-                    <div className="text-lg font-bold text-green-700 mt-0.5">0</div>
+                    <div className="text-lg font-bold text-green-700 mt-0.5">{p.matchesPlayed ?? 0}</div>
                   </div>
                   <div className="text-center p-2.5 bg-gradient-to-br from-green-50 to-sky-50 rounded-lg">
                     <div className="text-xs text-gray-600 font-medium">Wins</div>
-                    <div className="text-lg font-bold text-sky-700 mt-0.5">0</div>
+                    <div className="text-lg font-bold text-sky-700 mt-0.5">{p.matchesWon ?? 0}</div>
                   </div>
                   <div className="text-center p-2.5 bg-gradient-to-br from-green-50 to-sky-50 rounded-lg">
-                    <div className="text-xs text-gray-600 font-medium">Rating</div>
-                    <div className="text-lg font-bold text-green-700 mt-0.5">-</div>
+                    <div className="text-xs text-gray-600 font-medium">Win Rate</div>
+                    <div className="text-lg font-bold text-green-700 mt-0.5">
+                      {(p.matchesPlayed ?? 0) > 0 
+                        ? `${Math.round(((p.matchesWon ?? 0) / (p.matchesPlayed ?? 0)) * 100)}%`
+                        : '—'}
+                    </div>
                   </div>
                 </div>
 
                 {/* Action Buttons */}
                 <div className="mt-5 flex gap-2">
                   <Link 
-                    href={`/players/${p.id}`}
+                    href={`/players/${p.userId}`}
                     className="flex-1 text-center px-4 py-2.5 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 transition-all shadow-sm font-medium text-sm"
                   >
                     View Profile
                   </Link>
                   <button 
                     onClick={() => handleContactClick(p)}
-                    disabled={contactLoadingId === p.id}
+                    disabled={contactLoadingId === p.userId}
                     className="px-4 py-2.5 border border-sky-300 text-sky-700 rounded-lg hover:bg-sky-50 transition-all font-medium text-sm disabled:opacity-75 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
-                    {contactLoadingId === p.id ? (
+                    {contactLoadingId === p.userId ? (
                       <>
                         <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>

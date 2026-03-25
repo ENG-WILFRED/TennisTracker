@@ -1,57 +1,32 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
+import { useRole } from '@/context/RoleContext';
 import LandingPage from '@/components/LandingPage';
 
 export default function Home() {
+  const { isLoggedIn, user, isLoading } = useAuth();
+  const { currentRole, isRoleLoaded } = useRole();
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(true);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
-    // Check if user is logged in by checking for auth token/session
-    const checkAuth = async () => {
-      try {
-        // You can check localStorage, cookies, or call an auth endpoint
-        const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
-        
-        if (token) {
-          setIsLoggedIn(true);
-          // Redirect to dashboard if already logged in
-          router.push('/dashboard');
-        } else {
-          setIsLoggedIn(false);
-        }
-      } catch (error) {
-        console.error('Auth check failed:', error);
-        setIsLoggedIn(false);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+    if (!isLoading && isLoggedIn && user && isRoleLoaded && currentRole) {
+      // Redirect authenticated users to their role-based dashboard
+      router.push(`/dashboard/${currentRole}/${user.id}`);
+    }
+  }, [isLoggedIn, user, isLoading, router, isRoleLoaded, currentRole]);
 
-    checkAuth();
-  }, [router]);
-
-  // Show loading state briefly
+  // Show loading state while checking authentication
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-100 to-sky-100">
-        <div className="text-center">
-          <div className="text-6xl mb-4">🎾</div>
-          <p className="text-2xl font-bold text-gray-900">Vico</p>
-          <p className="text-gray-600 mt-2">Loading...</p>
-        </div>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-green-600"></div>
       </div>
     );
   }
 
-  // If logged in, dashboard redirect handled above
-  if (isLoggedIn) {
-    return null;
-  }
-
-  // Show landing page for non-logged-in users
+  // Show landing page for unauthenticated users
   return <LandingPage />;
 }

@@ -8,834 +8,893 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// base table for all user types with shared attributes
 model User {
-  id           String   @id @default(uuid())
-  username     String   @unique
-  email        String   @unique
-  phone        String?  @unique
+  id           String     @id @default(uuid())
+  username     String     @unique
+  email        String     @unique
+  phone        String?    @unique
   passwordHash String
   firstName    String
   lastName     String
-  photo        String? // profile picture URL
-  gender       String? // Male/Female/Other
+  photo        String?
+  gender       String?
   dateOfBirth  DateTime?
   nationality  String?
   bio          String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // relations to various specialized profiles
-  player   Player?
-  referee  Referee?
-  staff    Staff?
-  spectator Spectator?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  player       Player?
+  referee      Referee?
+  spectator    Spectator?
+  staff        Staff?
 }
 
 model Player {
-  // one-to-one with User for common fields
-  userId         String   @id
-  user           User     @relation(fields: [userId], references: [id])
-
-  // Statistics
-  matchesPlayed   Int @default(0)
-  matchesWon      Int @default(0)
-  matchesLost     Int @default(0)
-
-  // Relations
-  playerBadges    PlayerBadge[]
-  matchesA        Match[]         @relation("PlayerA")
-  matchesB        Match[]         @relation("PlayerB")
-  ballCrewMatches MatchBallCrew[]
-  chatMessages    ChatMessage[]
-  chatRooms       ChatParticipant[]
-  clubMembers     ClubMember[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  Match Match[]
-  inventoryItems InventoryItem[]
-  staffMembers Staff[]
-  attendance Attendance[]
+  matchesPlayed     Int                @default(0)
+  matchesWon        Int                @default(0)
+  matchesLost       Int                @default(0)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  isClub            Boolean            @default(false)
+  organizationId    String?
+  userId            String             @id
+  attendance        Attendance[]
+  chatMessages      ChatMessage[]
+  chatRooms         ChatParticipant[]
+  clubMembers       ClubMember[]
+  commentReactions  CommentReaction[]  @relation("comment_reactions")
+  communityPosts    CommunityPost[]
+  inventoryItems    InventoryItem[]
+  matchesA          Match[]            @relation("PlayerA")
+  matchesB          Match[]            @relation("PlayerB")
+  Match             Match[]
+  ballCrewMatches   MatchBallCrew[]
+  messageReactions  MessageReaction[]
   performancePoints PerformancePoint[]
-  isClub      Boolean   @default(false)
-  // Organization membership
-  organization   Organization? @relation(fields: [organizationId], references: [id])
-  organizationId String?
+  organization      Organization?      @relation(fields: [organizationId], references: [id])
+  user              User               @relation(fields: [userId], references: [id])
+  playerBadges      PlayerBadge[]
+  commentedPosts    PostComment[]
+  reactions         PostReaction[]
+  staffMembers      Staff[]
+  followers         UserFollower[]     @relation("followers")
+  following         UserFollower[]     @relation("following")
+  tournamentComments TournamentComment[]
+  tournamentCommentReactions TournamentCommentReaction[] @relation("tournament_comment_reactions")
+  activities        OrganizationActivity[]
 
   @@index([organizationId])
 }
 
 model InventoryItem {
-  id        String   @id @default(uuid())
-  name      String
-  count     Int      @default(0)
-  condition String?
-  club      Player?  @relation(fields: [clubId], references: [userId])
-  clubId    String?
-  // Optional organization ownership
-  organization   Organization? @relation(fields: [organizationId], references: [id])
+  id             String        @id @default(uuid())
+  name           String
+  count          Int           @default(0)
+  condition      String?
+  clubId         String?
+  updatedAt      DateTime      @updatedAt
   organizationId String?
-  updatedAt DateTime @updatedAt
+  club           Player?       @relation(fields: [clubId], references: [userId])
+  organization   Organization? @relation(fields: [organizationId], references: [id])
 }
 
 model Referee {
-  userId        String   @id
-  user          User     @relation(fields: [userId], references: [id])
-
-  // Statistics
-  matchesRefereed Int @default(0)
-  ballCrewMatches Int @default(0)
-  experience     String? // years of experience
-  certifications String[] @default([]) // referee certifications
-
-  // Relations
-  refereedMatches Match[]        @relation("Referee")
+  matchesRefereed  Int             @default(0)
+  ballCrewMatches  Int             @default(0)
+  experience       String?
+  certifications   String[]        @default([])
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  userId           String          @id
+  refereedMatches  Match[]         @relation("Referee")
   ballCrewReferees MatchBallCrew[] @relation("BallCrewReferee")
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  user             User            @relation(fields: [userId], references: [id])
 }
 
 model Staff {
-  userId                String   @id
-  user                  User     @relation(fields: [userId], references: [id])
-
-  // core contact info beyond User
-  contact               String? // Contact information (email or phone preferred for display)
-
-  // Core coaching info
-  role                  String // Head Coach, Assistant Coach, Fitness Coach, Junior Coach
-  yearsOfExperience     Int? @default(0)
-  expertise             String? // primary specialization
-  
-  // Qualifications & Credibility
-  coachingLevel         String? // Beginner, Intermediate, Advanced, Professional
-  formerPlayerBackground String? // bio about playing career
-  certifications        Certification[]
-  specializations       Specialization[]
-  
-  // Capabilities
-  playerAgeGroups       String[] @default([]) // Kids, Teens, Adults
-  skillLevelsTrained    String[] @default([]) // Beginner, Intermediate, Advanced, Professional
-  trainingTypes         String[] @default([]) // Private sessions, Group sessions, Clinics, Online coaching
-  languagesSpoken       String[] @default([])
-  
-  // Availability & Scheduling
-  availability          Availability[]
-  sessionDurations      Int[] @default([30, 60, 90]) // in minutes
-  maxStudentsPerSession Int? @default(1)
-  courtLocations        String[] @default([])
-  
-  // Pricing & Monetization
-  pricing               CoachPricing?
-  
-  // Bio & Content
-  bio                   String? // short bio
-  coachingPhilosophy    String? // coaching philosophy
-  achievements          String? // notable achievements
-  introVideoUrl         String? // optional intro video
-  
-  // Reputation & Social Proof
-  reviews               CoachReview[]
-  studentCount          Int @default(0) // denormalized count
-  
-  // Admin/System
-  isVerified            Boolean @default(false)
-  isActive              Boolean @default(true)
-  isDeleted             Boolean @default(false)
-  ownerId               String? // User/Player who owns this coach profile
-  auditLogs             AuditLog[]
-  
-  // Relations
-  employedBy            Player?  @relation(fields: [employedById], references: [userId])
-  employedById          String?
-  // Organization employment
-  organization   Organization? @relation(fields: [organizationId], references: [id])
-  organizationId String?
-  
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  role                   String
+  expertise              String?
+  contact                String?
+  employedById           String?
+  createdAt              DateTime         @default(now())
+  updatedAt              DateTime         @updatedAt
+  yearsOfExperience      Int?             @default(0)
+  coachingLevel          String?
+  formerPlayerBackground String?
+  playerAgeGroups        String[]         @default([])
+  skillLevelsTrained     String[]         @default([])
+  trainingTypes          String[]         @default([])
+  languagesSpoken        String[]         @default([])
+  sessionDurations       Int[]            @default([30, 60, 90])
+  maxStudentsPerSession  Int?             @default(1)
+  courtLocations         String[]         @default([])
+  bio                    String?
+  coachingPhilosophy     String?
+  achievements           String?
+  introVideoUrl          String?
+  studentCount           Int              @default(0)
+  isVerified             Boolean          @default(false)
+  isActive               Boolean          @default(true)
+  isDeleted              Boolean          @default(false)
+  ownerId                String?
+  organizationId         String?
+  userId                 String           @id
+  auditLogs              AuditLog[]
+  availability           Availability[]
+  certifications         Certification[]
+  pricing                CoachPricing?
+  reviews                CoachReview[]
+  specializations        Specialization[]
+  employedBy             Player?          @relation(fields: [employedById], references: [userId])
+  organization           Organization?    @relation(fields: [organizationId], references: [id])
+  user                   User             @relation(fields: [userId], references: [id])
 }
 
-// Spectators represent users who attend matches/events but do not participate
 model Spectator {
-  userId String @id
-  user   User   @relation(fields: [userId], references: [id])
-  // additional spectator-specific fields could go here
+  userId    String   @id
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id])
 }
 
-// Organization model for clubs/teams
 model Organization {
-  // optionally link to a user account representing the organization
-  id          String       @id @default(uuid())
-  name        String       @unique
-  slug        String?      @unique
-  description String?
-  address     String?
-  city        String?
-  country     String?
-  phone       String?
-  email       String?
-  logo        String?      // URL to logo image
-  primaryColor String?     // e.g. '#0ea5e9' or 'blue-500'
-  createdBy   String?      // Player ID who created the organization
-  
-  // Club rating & reputation
-  rating      Float?       @default(0) // 0-5 stars
-  ratingCount Int          @default(0)
-  verifiedBadge Boolean    @default(false)
-  activityScore Int        @default(0) // 0-100
-  playerDevScore Int       @default(0) // 0-100 (player development)
-  tournamentEngScore Int   @default(0) // 0-100 (tournament engagement)
-
-  // Relations
-  players     Player[]
-  staff       Staff[]
-  inventory   InventoryItem[]
-  courts      Court[]
-  bookings    CourtBooking[]
-  members     ClubMember[]
-  rankings    PlayerRanking[]
-  events      ClubEvent[]
-  announcements ClubAnnouncement[]
-  finances    ClubFinance[]
-  roles       OrganizationRole[]
-  permissions RolePermission[]
+  id                 String              @id @default(uuid())
+  name               String              @unique
+  slug               String?             @unique
+  description        String?
+  address            String?
+  city               String?
+  country            String?
+  phone              String?
+  email              String?
+  logo               String?
+  primaryColor       String?
+  createdBy          String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  activityScore      Int                 @default(0)
+  playerDevScore     Int                 @default(0)
+  rating             Float?              @default(0)
+  ratingCount        Int                 @default(0)
+  tournamentEngScore Int                 @default(0)
+  verifiedBadge      Boolean             @default(false)
+  announcements      ClubAnnouncement[]
+  events             ClubEvent[]
+  finances           ClubFinance[]
+  members            ClubMember[]
+  ratings            ClubRating[]
+  courts             Court[]
+  bookings           CourtBooking[]
+  inventory          InventoryItem[]
+  membershipTiers    MembershipTier[]    @relation("membershipTiers")
+  orgBadges          OrganizationBadge[]
+  roles              OrganizationRole[]
+  players            Player[]
+  rankings           PlayerRanking[]
+  challenges         RankingChallenge[]  @relation("challenges")
+  permissions        RolePermission[]
+  staff              Staff[]
   tournamentBrackets TournamentBracket[]
-  matches     TournamentMatch[]
-  orgBadges   OrganizationBadge[]
-  ratings     ClubRating[]
-  membershipTiers MembershipTier[] @relation("membershipTiers")
-  challenges  RankingChallenge[] @relation("challenges")
-
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  matches            TournamentMatch[]
+  activities         OrganizationActivity[]
 }
 
-// Certifications
 model Certification {
-  id        String   @id @default(uuid())
+  id        String    @id @default(uuid())
   staffId   String
-  staff     Staff    @relation(fields: [staffId], references: [userId], onDelete: Cascade)
-  name      String   // ITF, ATP, WTA, National federation, etc.
-  issuer    String? // Organization that issued it
+  name      String
+  issuer    String?
   issuedAt  DateTime?
   expiresAt DateTime?
-  createdAt DateTime @default(now())
-  
+  createdAt DateTime  @default(now())
+  staff     Staff     @relation(fields: [staffId], references: [userId], onDelete: Cascade)
+
   @@unique([staffId, name])
 }
 
-// Specializations
 model Specialization {
-  id        String   @id @default(uuid())
-  staffId   String
-  staff     Staff    @relation(fields: [staffId], references: [userId], onDelete: Cascade)
-  name      String   // Singles, Doubles, Juniors, High-performance, Fitness, Injury recovery
-  level     String? // Beginner, Intermediate, Advanced
-  yearsOfFocus Int? // years focused on this specialization
-  createdAt DateTime @default(now())
-  
+  id           String   @id @default(uuid())
+  staffId      String
+  name         String
+  level        String?
+  yearsOfFocus Int?
+  createdAt    DateTime @default(now())
+  staff        Staff    @relation(fields: [staffId], references: [userId], onDelete: Cascade)
+
   @@unique([staffId, name])
 }
 
-// Weekly Availability
 model Availability {
   id        String   @id @default(uuid())
   staffId   String
-  staff     Staff    @relation(fields: [staffId], references: [userId], onDelete: Cascade)
-  dayOfWeek Int      // 0=Monday, 1=Tuesday, ..., 6=Sunday
-  startTime String   // HH:MM format (24-hour)
-  endTime   String   // HH:MM format (24-hour)
+  dayOfWeek Int
+  startTime String
+  endTime   String
   createdAt DateTime @default(now())
-  
+  staff     Staff    @relation(fields: [staffId], references: [userId], onDelete: Cascade)
+
   @@unique([staffId, dayOfWeek, startTime])
 }
 
-// Pricing
 model CoachPricing {
-  id                 String   @id @default(uuid())
-  staffId            String   @unique
-  staff              Staff    @relation(fields: [staffId], references: [userId], onDelete: Cascade)
-  pricePerSession    Float    // base price
-  currency           String   @default("USD")
-  
-  // Package pricing
-  package3Sessions   Float?   // 3-session package price
-  package10Sessions  Float?   // 10-session package price
-  
-  // Discounts
-  juniorDiscount     Float? @default(0) // percentage discount
-  groupSessionDiscount Float? @default(0) // percentage discount
-  
-  // Commission (if marketplace)
-  commissionRate     Float? @default(0) // percentage
-  
-  paymentMethods     String[] @default(["credit_card", "bank_transfer"]) // supported payment methods
-  
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  id                   String   @id @default(uuid())
+  staffId              String   @unique
+  pricePerSession      Float
+  currency             String   @default("USD")
+  package3Sessions     Float?
+  package10Sessions    Float?
+  juniorDiscount       Float?   @default(0)
+  groupSessionDiscount Float?   @default(0)
+  commissionRate       Float?   @default(0)
+  paymentMethods       String[] @default(["credit_card", "bank_transfer"])
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  staff                Staff    @relation(fields: [staffId], references: [userId], onDelete: Cascade)
 }
 
-// Reviews & Ratings
 model CoachReview {
-  id           String   @id @default(uuid())
-  staffId      String
-  staff        Staff    @relation(fields: [staffId], references: [userId], onDelete: Cascade)
-  playerId     String   // student who reviewed
-  rating       Float    // 1-5 rating
-  reviewText   String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  
+  id         String   @id @default(uuid())
+  staffId    String
+  playerId   String
+  rating     Float
+  reviewText String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  staff      Staff    @relation(fields: [staffId], references: [userId], onDelete: Cascade)
+
   @@unique([staffId, playerId])
 }
 
-// Audit Logs for admin/system changes
 model AuditLog {
-  id        String   @id @default(uuid())
-  staffId   String
-  staff     Staff    @relation(fields: [staffId], references: [userId], onDelete: Cascade)
-  action    String   // Created, Updated, Verified, Deleted, etc.
-  field     String?  // which field was changed
-  oldValue  String?  // previous value
-  newValue  String?  // new value
-  performedBy String? // User who performed action
-  createdAt DateTime @default(now())
+  id          String   @id @default(uuid())
+  staffId     String
+  action      String
+  createdAt   DateTime @default(now())
+  field       String?
+  newValue    String?
+  oldValue    String?
+  performedBy String?
+  staff       Staff    @relation(fields: [staffId], references: [userId], onDelete: Cascade)
 }
-
 
 model Match {
   id        String          @id @default(uuid())
   round     Int
-  playerA   Player          @relation("PlayerA", fields: [playerAId], references: [userId])
   playerAId String
-  playerB   Player          @relation("PlayerB", fields: [playerBId], references: [userId])
   playerBId String
-  referee   Referee?        @relation("Referee", fields: [refereeId], references: [userId])
   refereeId String?
-  ballCrew  MatchBallCrew[]
-  winner    Player?         @relation(fields: [winnerId], references: [userId])
   winnerId  String?
-  group     String?
   score     String?
   createdAt DateTime        @default(now())
+  group     String?
+  playerA   Player          @relation("PlayerA", fields: [playerAId], references: [userId])
+  playerB   Player          @relation("PlayerB", fields: [playerBId], references: [userId])
+  referee   Referee?        @relation("Referee", fields: [refereeId], references: [userId])
+  winner    Player?         @relation(fields: [winnerId], references: [userId])
+  ballCrew  MatchBallCrew[]
 }
 
 model MatchBallCrew {
-  id       String  @id @default(uuid())
-  match    Match   @relation(fields: [matchId], references: [id])
-  matchId  String
-  player   Player  @relation(fields: [playerId], references: [userId])
-  playerId String
+  id              String   @id @default(uuid())
+  matchId         String
+  playerId        String
+  refereeId       String?
+  match           Match    @relation(fields: [matchId], references: [id])
+  player          Player   @relation(fields: [playerId], references: [userId])
   ballCrewReferee Referee? @relation("BallCrewReferee", fields: [refereeId], references: [userId])
-  refereeId String?
 }
 
 model Badge {
   id           String        @id @default(uuid())
   name         String
   description  String
-  category     String // e.g. "Wins", "Referee", "Participation"
-  icon         String? // optional icon/image URL
+  category     String
+  icon         String?
   playerBadges PlayerBadge[]
 }
 
 model PlayerBadge {
   id       String   @id @default(uuid())
-  player   Player   @relation(fields: [playerId], references: [userId])
   playerId String
-  badge    Badge    @relation(fields: [badgeId], references: [id])
   badgeId  String
   earnedAt DateTime @default(now())
+  badge    Badge    @relation(fields: [badgeId], references: [id])
+  player   Player   @relation(fields: [playerId], references: [userId])
 }
 
-// Analytics models: attendance records and per-player performance points
 model Attendance {
-  id       String   @id @default(uuid())
-  player   Player   @relation(fields: [playerId], references: [userId])
-  playerId String
-  date     DateTime
-  present  Boolean  @default(true)
+  id        String   @id @default(uuid())
+  playerId  String
+  date      DateTime
+  present   Boolean  @default(true)
   createdAt DateTime @default(now())
+  player    Player   @relation(fields: [playerId], references: [userId])
 }
 
 model PerformancePoint {
-  id       String   @id @default(uuid())
-  player   Player   @relation(fields: [playerId], references: [userId])
-  playerId String
-  date     DateTime
-  rating   Float
-  points   Int
+  id        String   @id @default(uuid())
+  playerId  String
+  date      DateTime
+  rating    Float
+  points    Int
   createdAt DateTime @default(now())
+  player    Player   @relation(fields: [playerId], references: [userId])
 }
 
 model TennisRule {
   id        String   @id @default(uuid())
-  category  String   // Scoring, Basic Rules, Court & Equipment, Key Violations
-  label     String   // display label
-  value     String?  // description or value
+  category  String
+  label     String
+  value     String?
   createdAt DateTime @default(now())
 
   @@unique([category, label])
 }
 
-// Chat Models
 model ChatRoom {
-  id           String   @id @default(uuid())
+  id           String            @id @default(uuid())
   name         String
   description  String?
-  isPrivate    Boolean  @default(false)
-  createdBy    String   // Player ID who created the room
+  isPrivate    Boolean           @default(false)
+  createdBy    String
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  isDM         Boolean           @default(false)
   messages     ChatMessage[]
   participants ChatParticipant[]
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
 }
 
 model ChatMessage {
-  id        String   @id @default(uuid())
-  roomId    String
-  room      ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  playerId  String   // Player who sent the message
-  player    Player   @relation(fields: [playerId], references: [userId])
-  content   String
-  createdAt DateTime @default(now())
-  // delivery/read receipt timestamps used for UI ticks
-  deliveredAt DateTime? // set when message has been delivered to the room
-  readAt      DateTime? // set when at least one recipient has opened/seen the message
+  id          String            @id @default(uuid())
+  roomId      String
+  playerId    String
+  content     String
+  createdAt   DateTime          @default(now())
+  deliveredAt DateTime?
+  readAt      DateTime?
+  isDeleted   Boolean           @default(false)
+  replyToId   String?
+  updatedAt   DateTime          @updatedAt
+  player      Player            @relation(fields: [playerId], references: [userId])
+  replyTo     ChatMessage?      @relation("MessageReplies", fields: [replyToId], references: [id])
+  replies     ChatMessage[]     @relation("MessageReplies")
+  room        ChatRoom          @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  reactions   MessageReaction[]
 
   @@index([roomId, createdAt])
+}
+
+model MessageReaction {
+  id        String      @id @default(uuid())
+  messageId String
+  playerId  String
+  emoji     String
+  createdAt DateTime    @default(now())
+  message   ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  player    Player      @relation(fields: [playerId], references: [userId])
+
+  @@unique([messageId, playerId, emoji])
+  @@index([messageId])
 }
 
 model ChatParticipant {
   id        String   @id @default(uuid())
   roomId    String
-  room      ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
   playerId  String
-  player    Player   @relation(fields: [playerId], references: [userId])
   isOnline  Boolean  @default(false)
   lastSeen  DateTime @default(now())
   createdAt DateTime @default(now())
+  player    Player   @relation(fields: [playerId], references: [userId])
+  room      ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
 
   @@unique([roomId, playerId])
 }
 
-// ==================== COURT MANAGEMENT ====================
-
 model Court {
-  id              String   @id @default(uuid())
-  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  organizationId  String
-  
-  name            String   // Court 1, Court 2, etc.
-  courtNumber     Int
-  surface         String   // Hard, Clay, Grass, etc.
-  indoorOutdoor   String   @default("outdoor") // indoor/outdoor
-  lights          Boolean  @default(false)
-  
-  status          String   @default("available") // available, booked, maintenance, closed
-  maintenedUntil  DateTime? // when maintenance ends
-  
-  bookings        CourtBooking[]
+  id                String            @id @default(uuid())
+  organizationId    String
+  name              String
+  courtNumber       Int
+  surface           String
+  indoorOutdoor     String            @default("outdoor")
+  lights            Boolean           @default(false)
+  status            String            @default("available")
+  maintenedUntil    DateTime?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  organization      Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  bookings          CourtBooking[]
   tournamentMatches TournamentMatch[]
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
+
   @@unique([organizationId, courtNumber])
 }
 
 model CourtBooking {
-  id              String   @id @default(uuid())
-  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  organizationId  String
-  court           Court    @relation(fields: [courtId], references: [id], onDelete: Cascade)
-  courtId         String
-  
-  member          ClubMember? @relation(fields: [memberId], references: [id])
-  memberId        String?
-  playerName      String? // for guests
-  
-  startTime       DateTime
-  endTime         DateTime
-  
-  bookingType     String   @default("regular") // regular, tournament, maintenance, guest
-  guestCount      Int      @default(1)
-  
-  status          String   @default("confirmed") // confirmed, cancelled, no-show, completed
-  price           Float?
-  isPeak          Boolean  @default(false) // peak hours pricing
-  
+  id                 String       @id @default(uuid())
+  organizationId     String
+  courtId            String
+  memberId           String?
+  playerName         String?
+  startTime          DateTime
+  endTime            DateTime
+  bookingType        String       @default("regular")
+  guestCount         Int          @default(1)
+  status             String       @default("confirmed")
+  price              Float?
+  isPeak             Boolean      @default(false)
   cancellationReason String?
-  cancelledAt     DateTime?
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  cancelledAt        DateTime?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  court              Court        @relation(fields: [courtId], references: [id], onDelete: Cascade)
+  member             ClubMember?  @relation(fields: [memberId], references: [id])
+  organization       Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 }
 
-// ==================== MEMBERSHIP MANAGEMENT ====================
-
 model MembershipTier {
-  id              String   @id @default(uuid())
-  organization    Organization? @relation("membershipTiers", fields: [organizationId], references: [id])
-  organizationId  String?
-  
-  name            String   @unique // Gold, Silver, Junior, etc.
-  description     String?
-  
-  monthlyPrice    Float
-  benefitsJson    String? // JSON string of benefits
-  
-  courtHoursPerMonth Int?
-  maxConcurrentBookings Int? @default(3)
-  discountPercentage Float? @default(0)
-  
-  clubMembers     ClubMember[] @relation("membershipTier")
-  
-  createdAt       DateTime @default(now())
+  id                    String        @id @default(uuid())
+  organizationId        String?
+  name                  String        @unique
+  description           String?
+  monthlyPrice          Float
+  benefitsJson          String?
+  courtHoursPerMonth    Int?
+  maxConcurrentBookings Int?          @default(3)
+  discountPercentage    Float?        @default(0)
+  createdAt             DateTime      @default(now())
+  clubMembers           ClubMember[]  @relation("membershipTier")
+  organization          Organization? @relation("membershipTiers", fields: [organizationId], references: [id])
 }
 
 model ClubMember {
-  // future spectator or additional user types could reference here
-  id              String   @id @default(uuid())
-  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  organizationId  String
-  player          Player   @relation(fields: [playerId], references: [userId], onDelete: Cascade)
-  playerId        String
-  
-  membershipTier  MembershipTier? @relation("membershipTier", fields: [tierId], references: [id])
-  tierId          String?
-  
-  joinDate        DateTime @default(now())
-  expiryDate      DateTime?
-  autoRenew       Boolean  @default(true)
-  
-  paymentStatus   String   @default("active") // active, suspended, expired, overdue
-  outstandingBalance Float @default(0)
-  
-  attendanceCount Int      @default(0) // this month or overall
-  lastAttendance  DateTime?
-  
-  role            String   @default("member") // member, coach, admin, finance_officer, guest
-  
-  suspensionReason String?
-  suspendedUntil  DateTime?
-  
-  bookings        CourtBooking[]
-  eventRegistrations EventRegistration[]
-  waitlistItems   EventWaitlist[]
-  rankings        PlayerRanking[]
-  challengesAsChallenger RankingChallenge[] @relation("challenger")
-  challengesAsOpponent RankingChallenge[] @relation("opponent")
-  tournamentMatchesA TournamentMatch[] @relation("matchPlayerA")
-  tournamentMatchesB TournamentMatch[] @relation("matchPlayerB")
-  financeTransactions FinanceTransaction[]
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
+  id                     String               @id @default(uuid())
+  organizationId         String
+  playerId               String
+  tierId                 String?
+  joinDate               DateTime             @default(now())
+  expiryDate             DateTime?
+  autoRenew              Boolean              @default(true)
+  paymentStatus          String               @default("active")
+  outstandingBalance     Float                @default(0)
+  attendanceCount        Int                  @default(0)
+  lastAttendance         DateTime?
+  role                   String               @default("member")
+  suspensionReason       String?
+  suspendedUntil         DateTime?
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime             @updatedAt
+  organization           Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  player                 Player               @relation(fields: [playerId], references: [userId], onDelete: Cascade)
+  membershipTier         MembershipTier?      @relation("membershipTier", fields: [tierId], references: [id])
+  bookings               CourtBooking[]
+  eventRegistrations     EventRegistration[]
+  waitlistItems          EventWaitlist[]
+  financeTransactions    FinanceTransaction[]
+  rankings               PlayerRanking[]
+  challengesAsChallenger RankingChallenge[]   @relation("challenger")
+  challengesAsOpponent   RankingChallenge[]   @relation("opponent")
+  tournamentMatchesA     TournamentMatch[]    @relation("matchPlayerA")
+  tournamentMatchesB     TournamentMatch[]    @relation("matchPlayerB")
+  amenityBookings        AmenityBooking[]
+
   @@unique([organizationId, playerId])
 }
 
-// ==================== RANKING SYSTEM ====================
-
 model PlayerRanking {
-  id              String   @id @default(uuid())
-  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  organizationId  String
-  member          ClubMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
-  memberId        String
-  
-  weekNumber      Int // ISO week number
-  year            Int
-  
-  currentRank     Int      // 1, 2, 3...
-  previousRank    Int?
-  ratingPoints    Int      // tennis rating points
-  
-  matchesWon      Int      @default(0)
-  matchesLost     Int      @default(0)
-  winRate         Float    @default(0)
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
+  id             String       @id @default(uuid())
+  organizationId String
+  memberId       String
+  weekNumber     Int
+  year           Int
+  currentRank    Int
+  previousRank   Int?
+  ratingPoints   Int
+  matchesWon     Int          @default(0)
+  matchesLost    Int          @default(0)
+  winRate        Float        @default(0)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  member         ClubMember   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
   @@unique([organizationId, memberId, weekNumber, year])
 }
 
 model RankingChallenge {
-  id              String   @id @default(uuid())
-  organization    Organization? @relation("challenges", fields: [organizationId], references: [id])
-  organizationId  String?
-  
-  challenger      ClubMember @relation("challenger", fields: [challengerId], references: [id])
-  challengerId    String
-  
-  opponent        ClubMember @relation("opponent", fields: [opponentId], references: [id])
-  opponentId      String
-  
-  challengeDate   DateTime
-  matchDate       DateTime?
-  
-  status          String   @default("pending") // pending, accepted, rejected, completed
-  winnerId        String? // ClubMember ID
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id             String        @id @default(uuid())
+  organizationId String?
+  challengerId   String
+  opponentId     String
+  challengeDate  DateTime
+  matchDate      DateTime?
+  status         String        @default("pending")
+  winnerId       String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  challenger     ClubMember    @relation("challenger", fields: [challengerId], references: [id])
+  opponent       ClubMember    @relation("opponent", fields: [opponentId], references: [id])
+  organization   Organization? @relation("challenges", fields: [organizationId], references: [id])
 }
 
-// ==================== EVENTS & TOURNAMENTS ====================
-
 model ClubEvent {
-  id              String   @id @default(uuid())
-  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  organizationId  String
-  
-  name            String
-  description     String?
-  eventType       String   // tournament, clinic, social, match, training
-  
-  startDate       DateTime
-  endDate         DateTime?
-  
-  registrationCap Int      @default(64)
+  id                   String              @id @default(uuid())
+  organizationId       String
+  name                 String
+  description          String?
+  eventType            String
+  startDate            DateTime
+  endDate              DateTime?
+  registrationCap      Int                 @default(64)
   registrationDeadline DateTime
-  
-  location        String?
-  prizePool       Float?
-  entryFee        Float?
-  
-  registrations   EventRegistration[]
-  waitlist        EventWaitlist[]
-  bracket         TournamentBracket?
-  matches         TournamentMatch[]
-  reminders       EventReminder[] @relation("reminders")
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  location             String?
+  prizePool            Float?
+  entryFee             Float?
+  rules                String?
+  instructions         String?
+  eatingAreas          String?
+  sleepingAreas        String?
+  courtInfo            String?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  organization         Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  registrations        EventRegistration[]
+  reminders            EventReminder[]     @relation("reminders")
+  waitlist             EventWaitlist[]
+  bracket              TournamentBracket?
+  matches              TournamentMatch[]
+  amenities            EventAmenity[]
+  tournamentComments   TournamentComment[]
 }
 
 model EventRegistration {
-  id              String   @id @default(uuid())
-  event           ClubEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  eventId         String
-  member          ClubMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
-  memberId        String
-  
-  registeredAt    DateTime @default(now())
-  status          String   @default("registered") // registered, waitlisted, cancelled, withdrawn
-  signupOrder     Int // for determining bracket seeding
-  
+  id           String     @id @default(uuid())
+  eventId      String
+  memberId     String
+  registeredAt DateTime   @default(now())
+  status       String     @default("registered")
+  signupOrder  Int
+  event        ClubEvent  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  member       ClubMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
   @@unique([eventId, memberId])
 }
 
 model EventWaitlist {
-  id              String   @id @default(uuid())
-  event           ClubEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  eventId         String
-  member          ClubMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
-  memberId        String
-  
-  position        Int // waitlist position
-  addedAt         DateTime @default(now())
-  
+  id       String     @id @default(uuid())
+  eventId  String
+  memberId String
+  position Int
+  addedAt  DateTime   @default(now())
+  event    ClubEvent  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  member   ClubMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
   @@unique([eventId, memberId])
 }
 
 model TournamentBracket {
-  id              String   @id @default(uuid())
-  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  organizationId  String
-  event           ClubEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  eventId         String @unique
-  
-  bracketType     String   @default("single_elimination") // single_elimination, double_elimination, round_robin, etc.
-  totalRounds     Int
-  
-  matches         TournamentMatch[]
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id             String            @id @default(uuid())
+  organizationId String
+  eventId        String            @unique
+  bracketType    String            @default("single_elimination")
+  totalRounds    Int
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  event          ClubEvent         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  matches        TournamentMatch[]
 }
 
 model TournamentMatch {
-  id              String   @id @default(uuid())
-  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  organizationId  String
-  event           ClubEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  eventId         String
-  bracket         TournamentBracket @relation(fields: [bracketId], references: [id], onDelete: Cascade)
-  bracketId       String
-  
-  round           Int
-  matchPosition   Int
-  
-  playerA         ClubMember? @relation("matchPlayerA", fields: [playerAId], references: [id])
-  playerAId       String?
-  playerB         ClubMember? @relation("matchPlayerB", fields: [playerBId], references: [id])
-  playerBId       String?
-  
-  scoreSetA       String? // "6-4,7-5" etc
-  scoreSetB       String?
-  scoreSetC       String?
-  
-  winnerId        String? // ClubMember ID
-  
-  scheduledTime   DateTime?
-  court           Court?  @relation(fields: [courtId], references: [id])
-  courtId         String?
-  
-  status          String   @default("pending") // pending, scheduled, in_progress, completed, walked_over
+  id                String            @id @default(uuid())
+  organizationId    String
+  eventId           String
+  bracketId         String
+  round             Int
+  matchPosition     Int
+  playerAId         String?
+  playerBId         String?
+  scoreSetA         String?
+  scoreSetB         String?
+  scoreSetC         String?
+  winnerId          String?
+  scheduledTime     DateTime?
+  courtId           String?
+  status            String            @default("pending")
   resultSubmittedAt DateTime?
-  resultSubmittedBy String? // Player ID
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  resultSubmittedBy String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  bracket           TournamentBracket @relation(fields: [bracketId], references: [id], onDelete: Cascade)
+  court             Court?            @relation(fields: [courtId], references: [id])
+  event             ClubEvent         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  organization      Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  playerA           ClubMember?       @relation("matchPlayerA", fields: [playerAId], references: [id])
+  playerB           ClubMember?       @relation("matchPlayerB", fields: [playerBId], references: [id])
 }
 
-// ==================== ANNOUNCEMENTS & COMMUNICATIONS ====================
-
 model ClubAnnouncement {
-  id              String   @id @default(uuid())
-  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  organizationId  String
-  
-  title           String
-  message         String
-  announcementType String @default("general") // general, alert, reminder, maintenance, policy
-  
-  targetRoles     String[] @default(["member"]) // roles this is visible to
-  
-  createdBy       String? // Player ID
-  
-  isActive        Boolean  @default(true)
-  expiresAt       DateTime?
-  
-  readBy          String[] @default([]) // list of Player IDs who read this
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id               String       @id @default(uuid())
+  organizationId   String
+  title            String
+  message          String
+  announcementType String       @default("general")
+  targetRoles      String[]     @default(["member"])
+  createdBy        String?
+  isActive         Boolean      @default(true)
+  expiresAt        DateTime?
+  readBy           String[]     @default([])
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 }
 
 model EventReminder {
-  id              String   @id @default(uuid())
-  event           ClubEvent @relation("reminders", fields: [eventId], references: [id], onDelete: Cascade)
-  eventId         String
-  
-  reminderText    String
-  scheduleTime    DateTime // when to send the reminder
-  sentAt          DateTime? // when it was actually sent
-  
-  createdAt       DateTime @default(now())
+  id           String    @id @default(uuid())
+  eventId      String
+  reminderText String
+  scheduleTime DateTime
+  sentAt       DateTime?
+  createdAt    DateTime  @default(now())
+  event        ClubEvent @relation("reminders", fields: [eventId], references: [id], onDelete: Cascade)
 }
 
-// ==================== CLUB FINANCES ====================
-
 model ClubFinance {
-  id              String   @id @default(uuid())
-  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  organizationId  String
-  
-  month           Int      // 1-12
-  year            Int
-  
-  membershipRevenue Float  @default(0)
-  courtBookingRevenue Float @default(0)
-  coachCommissions Float  @default(0)
-  eventRevenue    Float    @default(0)
-  
-  totalRevenue    Float    @default(0)
-  totalExpenses   Float    @default(0)
-  netProfit       Float    @default(0)
-  
-  transactionRecords FinanceTransaction[]
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
+  id                  String               @id @default(uuid())
+  organizationId      String
+  month               Int
+  year                Int
+  membershipRevenue   Float                @default(0)
+  courtBookingRevenue Float                @default(0)
+  coachCommissions    Float                @default(0)
+  eventRevenue        Float                @default(0)
+  totalRevenue        Float                @default(0)
+  totalExpenses       Float                @default(0)
+  netProfit           Float                @default(0)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  organization        Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  transactionRecords  FinanceTransaction[]
+
   @@unique([organizationId, month, year])
 }
 
 model FinanceTransaction {
-  id              String   @id @default(uuid())
-  finance         ClubFinance @relation(fields: [financeId], references: [id], onDelete: Cascade)
+  id              String      @id @default(uuid())
   financeId       String
-  
   description     String
-  category        String   // membership, court_booking, coach_commission, event, expense
+  category        String
   amount          Float
-  transactionType String   @default("credit") // credit, debit
-  
-  relatedToMember ClubMember? @relation(fields: [memberId], references: [id])
+  transactionType String      @default("credit")
   memberId        String?
-  
-  recordedBy      String? // User/Admin who recorded it
-  
-  createdAt       DateTime @default(now())
+  recordedBy      String?
+  createdAt       DateTime    @default(now())
+  finance         ClubFinance @relation(fields: [financeId], references: [id], onDelete: Cascade)
+  relatedToMember ClubMember? @relation(fields: [memberId], references: [id])
 }
 
-// ==================== ROLE-BASED PERMISSIONS ====================
+model PaymentRecord {
+  id                    String   @id @default(uuid())
+  userId                String
+  eventId               String?
+  bookingType           String
+  amount                Float
+  currency              String
+  provider              String
+  providerStatus        String   @default("pending")
+  providerTransactionId String?
+  checkoutUrl           String?
+  metadata              String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
 
 model OrganizationRole {
-  id              String   @id @default(uuid())
-  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  organizationId  String
-  
-  name            String   // Admin, Coach, Member, Finance Officer, Guest
-  description     String?
-  
-  permissions     RolePermission[]
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
+  id             String           @id @default(uuid())
+  organizationId String
+  name           String
+  description    String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  permissions    RolePermission[]
+
   @@unique([organizationId, name])
 }
 
 model RolePermission {
-  id              String   @id @default(uuid())
-  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  organizationId  String
-  role            OrganizationRole @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  roleId          String
-  
-  permissionName  String   // manage_rankings, manage_bookings, manage_members, view_revenue, etc.
-  
-  createdAt       DateTime @default(now())
-  
+  id             String           @id @default(uuid())
+  organizationId String
+  roleId         String
+  permissionName String
+  createdAt      DateTime         @default(now())
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  role           OrganizationRole @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
   @@unique([roleId, permissionName])
 }
 
-// ==================== CLUB REPUTATION ====================
-
 model OrganizationBadge {
-  id              String   @id @default(uuid())
-  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  id              String       @id @default(uuid())
   organizationId  String
-  
-  badgeName       String   // "Verified Club", "High Engagement", "Player Developer", etc.
-  badgeType       String   @default("custom") // verified, engagement, development, performance
-  achievementDate DateTime @default(now())
-  
-  createdAt       DateTime @default(now())
+  badgeName       String
+  badgeType       String       @default("custom")
+  achievementDate DateTime     @default(now())
+  createdAt       DateTime     @default(now())
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 }
 
 model ClubRating {
-  id              String   @id @default(uuid())
-  organization    Organization? @relation(fields: [organizationId], references: [id])
-  organizationId  String?
-  
-  ratedBy         String? // Player ID or anonymous
-  rating          Float    // 1-5 stars
-  category        String? // facilities, coaching, community, value, overall
-  
-  comment         String?
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id             String        @id @default(uuid())
+  organizationId String?
+  ratedBy        String?
+  rating         Float
+  category       String?
+  comment        String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+}
+
+model CommunityPost {
+  id         String         @id @default(uuid())
+  authorId   String
+  content    String
+  visibility String         @default("public")
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+  type       String         @default("post")
+  tournamentId String?
+  shareCount Int            @default(1)
+  author     Player         @relation(fields: [authorId], references: [userId], onDelete: Cascade)
+  comments   PostComment[]
+  likes      PostReaction[]
+
+  @@index([authorId])
+  @@index([createdAt])
+  @@index([tournamentId])
+}
+
+model PostComment {
+  id              String            @id @default(uuid())
+  postId          String
+  authorId        String
+  content         String
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  parentCommentId String?
+  reactions       CommentReaction[]
+  author          Player            @relation(fields: [authorId], references: [userId], onDelete: Cascade)
+  parentComment   PostComment?      @relation("comment_replies", fields: [parentCommentId], references: [id], onDelete: Cascade)
+  replies         PostComment[]     @relation("comment_replies")
+  post            CommunityPost     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@index([authorId])
+  @@index([parentCommentId])
+}
+
+model TournamentComment {
+  id              String                        @id @default(uuid())
+  eventId         String
+  authorId        String
+  content         String
+  createdAt       DateTime                      @default(now())
+  updatedAt       DateTime                      @updatedAt
+  parentCommentId String?
+  author          Player                        @relation(fields: [authorId], references: [userId], onDelete: Cascade)
+  parentComment   TournamentComment?            @relation("tournament_comment_replies", fields: [parentCommentId], references: [id], onDelete: Cascade)
+  replies         TournamentComment[]           @relation("tournament_comment_replies")
+  event           ClubEvent                     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  reactions       TournamentCommentReaction[]
+
+  @@index([eventId])
+  @@index([authorId])
+  @@index([parentCommentId])
+}
+
+model TournamentCommentReaction {
+  id              String              @id @default(uuid())
+  tournamentCommentId String
+  userId          String
+  type            String              @default("like")
+  createdAt       DateTime            @default(now())
+  comment         TournamentComment   @relation(fields: [tournamentCommentId], references: [id], onDelete: Cascade)
+  user            Player              @relation("tournament_comment_reactions", fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@unique([tournamentCommentId, userId])
+  @@index([tournamentCommentId])
+  @@index([userId])
+}
+
+model CommentReaction {
+  id        String      @id @default(uuid())
+  commentId String
+  userId    String
+  type      String      @default("like")
+  createdAt DateTime    @default(now())
+  comment   PostComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user      Player      @relation("comment_reactions", fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@unique([commentId, userId])
+  @@index([commentId])
+  @@index([userId])
+}
+
+model PostReaction {
+  id        String        @id @default(uuid())
+  postId    String
+  userId    String
+  type      String        @default("like")
+  createdAt DateTime      @default(now())
+  post      CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      Player        @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@index([postId])
+  @@index([userId])
+}
+
+model UserFollower {
+  id          String   @id @default(uuid())
+  followerId  String
+  followingId String
+  createdAt   DateTime @default(now())
+  follower    Player   @relation("followers", fields: [followerId], references: [userId], onDelete: Cascade)
+  following   Player   @relation("following", fields: [followingId], references: [userId], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+}
+
+model EventAmenity {
+  id             String        @id @default(uuid())
+  eventId        String
+  name           String
+  type           String        // 'eating', 'sleeping', 'parking', etc.
+  description    String?
+  capacity       Int?
+  price          Float?
+  availableFrom  DateTime?
+  availableUntil DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  event          ClubEvent     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  bookings       AmenityBooking[]
+
+  @@index([eventId])
+}
+
+model AmenityBooking {
+  id             String       @id @default(uuid())
+  amenityId      String
+  memberId       String?
+  guestName      String?
+  startTime      DateTime
+  endTime        DateTime
+  status         String       @default("confirmed")
+  price          Float?
+  notes          String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  amenity        EventAmenity @relation(fields: [amenityId], references: [id], onDelete: Cascade)
+  member         ClubMember?  @relation(fields: [memberId], references: [id])
+
+  @@index([amenityId])
+  @@index([memberId])
+}
+
+model OrganizationActivity {
+  id             String       @id @default(uuid())
+  organizationId String
+  playerId       String
+  action         String
+  details        Json
+  metadata       Json         @default("{}")
+  createdAt      DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  player         Player       @relation(fields: [playerId], references: [userId], onDelete: Cascade)
+
+  @@index([organizationId, createdAt])
+  @@index([playerId])
 }

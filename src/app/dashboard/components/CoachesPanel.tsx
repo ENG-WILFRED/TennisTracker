@@ -121,7 +121,7 @@ export default function CoachesPanel({ coaches }: { coaches: any[] }) {
                     <div className="flex items-center gap-2 mt-3">
                         {isLoggedIn ? (
                           <button
-                            onClick={() => router.push(`/contact?to=${encodeURIComponent(c.contact || '')}&title=${encodeURIComponent('Contact ' + c.name)}`)}
+                            onClick={() => router.push(`/contact?type=coach&id=${c.id}&name=${encodeURIComponent(c.name)}&email=${encodeURIComponent(c.email || '')}`)}
                             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white border-2 border-green-200 text-green-700 text-sm font-medium hover:bg-green-50 hover:border-green-300 transition-all"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

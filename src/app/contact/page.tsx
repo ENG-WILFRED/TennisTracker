@@ -2,26 +2,44 @@
 
 import PageHeader from "@/components/PageHeader";
 import { Mail, Phone, MapPin, Clock, User, Award } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 
-export default function ContactPage({ 
-  searchParams 
-}: { 
-  searchParams: Promise<{ type?: string; id?: string; name?: string; email?: string }> 
-}) {
-  return <ContactContent searchParams={searchParams} />;
+export default function ContactPage() {
+  const searchParams = useSearchParams();
+  const [contactType, setContactType] = useState('club');
+  const [entityId, setEntityId] = useState<string | undefined>();
+  const [entityName, setEntityName] = useState<string | undefined>();
+  const [entityEmail, setEntityEmail] = useState<string | undefined>();
+
+  useEffect(() => {
+    setContactType(searchParams.get('type') || 'club');
+    setEntityId(searchParams.get('id') || undefined);
+    setEntityName(searchParams.get('name') || undefined);
+    setEntityEmail(searchParams.get('email') || undefined);
+  }, [searchParams]);
+
+  return <ContactContent
+    contactType={contactType}
+    entityId={entityId}
+    entityName={entityName}
+    entityEmail={entityEmail}
+  />;
 }
 
-async function ContactContent({ 
-  searchParams 
-}: { 
-  searchParams: Promise<{ type?: string; id?: string; name?: string; email?: string }> 
+
+function ContactContent({
+  contactType,
+  entityId,
+  entityName,
+  entityEmail
+}: {
+  contactType: string;
+  entityId?: string;
+  entityName?: string;
+  entityEmail?: string;
 }) {
-  const params = await searchParams;
-  const contactType = params.type || 'club';
-  const entityId = params.id;
-  const entityName = params.name;
-  const entityEmail = params.email;
+  const [selectedContact, setSelectedContact] = useState<string | null>(null);
 
   const baseContactInfo = [
     {
@@ -61,7 +79,7 @@ async function ContactContent({
       type: 'coach',
       name: entityName,
       id: entityId,
-      email: `coach.${entityId}@tennisclub.com`,
+      email: entityEmail || `coach.${entityId}@tennisclub.com`,
       phone: "+254 (0) 123-456-789 ext. 101"
     };
   } else if (contactType === 'player' && entityId && entityName) {
@@ -71,7 +89,7 @@ async function ContactContent({
       type: 'player',
       name: entityName,
       id: entityId,
-      email: `player.${entityId}@tennisclub.com`,
+      email: entityEmail || `player.${entityId}@tennisclub.com`,
       phone: "+254 (0) 123-456-789 ext. 102"
     };
   }
