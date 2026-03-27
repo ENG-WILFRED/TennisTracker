@@ -4,8 +4,8 @@ export function SuccessModal({ onClose, type = 'registration' }: { onClose: () =
   const messages = {
     registration: {
       icon: '🎉',
-      title: "You're in!",
-      text: "Registration confirmed. Check your email for details, schedule updates, and match notifications. Good luck!"
+      title: "Application Submitted!",
+      text: "Your tournament application has been submitted for review. The organizer will review your application and you'll receive an email with their decision. Good luck!"
     },
     booking: {
       icon: '✅',

@@ -1,8 +1,8 @@
 import React from 'react';
 
 interface TabNavigationProps {
-  activeTab: 'overview' | 'registrations' | 'settings' | 'rules' | 'facilities' | 'schedule' | 'analytics' | 'announcements';
-  setActiveTab: (tab: 'overview' | 'registrations' | 'settings' | 'rules' | 'facilities' | 'schedule' | 'analytics' | 'announcements') => void;
+  activeTab: 'overview' | 'registrations' | 'settings' | 'rules' | 'facilities' | 'schedule' | 'analytics' | 'announcements' | 'appeals';
+  setActiveTab: (tab: 'overview' | 'registrations' | 'settings' | 'rules' | 'facilities' | 'schedule' | 'analytics' | 'announcements' | 'appeals') => void;
   pendingRegistrations?: any[];
 }
 
@@ -15,6 +15,7 @@ const TABS = [
   { key: 'rules', label: '📋 Rules & Details', icon: '📋' },
   { key: 'facilities', label: '🏨 Facilities', icon: '🏨' },
   { key: 'settings', label: '⚙️ Settings', icon: '⚙️' },
+  { key: 'appeals', label: '🔔 Appeals', icon: '🔔' },
 ];
 
 export function TabNavigation({

@@ -22,7 +22,7 @@ export function TournamentHeader({
   return (
     <div style={{ marginBottom: '32px' }}>
       {/* Back link */}
-      <Link href={`/organization/${orgId}`} style={{
+      <Link href={`/dashboard/org/${orgId}`} style={{
         display: 'inline-flex',
         alignItems: 'center',
         gap: '6px',

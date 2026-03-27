@@ -23,19 +23,26 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
   const [tournament, setTournament] = useState<any>(null);
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [modal, setModal] = useState<'checkout' | 'contact' | 'repost' | 'success' | 'amenity-booking' | 'profile' | null>(null);
+  const [modal, setModal] = useState<'apply' | 'checkout' | 'contact' | 'repost' | 'success' | 'amenity-booking' | 'profile' | 'cancel' | 'appeal' | null>(null);
   const [selectedAmenity, setSelectedAmenity] = useState<any>(null);
   const [bookingLoading, setBookingLoading] = useState(false);
   const [successType, setSuccessType] = useState<'registration' | 'booking'>('registration');
-  const [activeTab, setActiveTab] = useState<'overview' | 'details' | 'leaderboard' | 'matches' | 'comments' | 'management'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'rules' | 'details' | 'leaderboard' | 'matches' | 'comments' | 'announcements' | 'management'>('overview');
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyText, setReplyText] = useState('');
   const [comments, setComments] = useState<any[]>([]);
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [newComment, setNewComment] = useState('');
+  const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [announcementsLoading, setAnnouncementsLoading] = useState(false);
+  const [announcementsError, setAnnouncementsError] = useState<string | null>(null);
   const [isOrganizer, setIsOrganizer] = useState(false);
   const [pendingRegistrations, setPendingRegistrations] = useState<any[]>([]);
   const [approvedRegistrations, setApprovedRegistrations] = useState<any[]>([]);
+  const [rejectedRegistrations, setRejectedRegistrations] = useState<any[]>([]);
+  const [userRegistration, setUserRegistration] = useState<any>(null);
+  const [isPaid, setIsPaid] = useState(false);
+  const [showRejectionReason, setShowRejectionReason] = useState(false);
 
   // Unwrap params Promise (Next.js 15)
   const resolvedParams = use(params);
@@ -55,6 +62,14 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
 
       if (tournamentData) {
         setTournament(tournamentData);
+        
+        // Filter registrations by status
+        const pending = tournamentData.registrations?.filter((r: any) => r.status === 'pending') || [];
+        const approved = tournamentData.registrations?.filter((r: any) => r.status === 'approved') || [];
+        const rejected = tournamentData.registrations?.filter((r: any) => r.status === 'rejected') || [];
+        setPendingRegistrations(pending);
+        setApprovedRegistrations(approved);
+        setRejectedRegistrations(rejected);
         
         // Check if user is an organizer/admin of this tournament's organization
         if (user?.id && tournamentData.organization?.id) {
@@ -85,13 +100,44 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
     }
   };
 
+  const fetchUserRegistrationStatus = async () => {
+    if (!user?.id || !tournamentId) return;
+
+    try {
+      const response = await authenticatedFetch('/api/user/tournament-applications');
+      if (!response.ok) return;
+
+      const applications = await response.json();
+      
+      // Find the registration for this specific tournament
+      const registration = applications.find((app: any) => app.eventId === tournamentId);
+      
+      if (registration) {
+        setUserRegistration(registration);
+        // User is considered paid if their registration status is 'registered'
+        setIsPaid(registration.status === 'registered');
+      } else {
+        setUserRegistration(null);
+        setIsPaid(false);
+      }
+    } catch (error) {
+      console.error('Error fetching user registration status:', error);
+    }
+  };
+
   useEffect(() => {
     fetchTournamentData();
-  }, [tournamentId]);
+    if (user?.id) {
+      fetchUserRegistrationStatus();
+    }
+  }, [tournamentId, user?.id]);
 
   useEffect(() => {
     if (activeTab === 'comments' && tournamentId) {
       fetchComments();
+    }
+    if (activeTab === 'announcements' && tournamentId) {
+      fetchAnnouncements();
     }
   }, [activeTab, tournamentId]);
 
@@ -105,6 +151,25 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
       console.error('Error fetching comments:', error);
     } finally {
       setCommentsLoading(false);
+    }
+  };
+
+  const fetchAnnouncements = async () => {
+    if (!tournamentId) return;
+    setAnnouncementsLoading(true);
+    setAnnouncementsError(null);
+    try {
+      const response = await authenticatedFetch(`/api/tournaments/${tournamentId}/announcements`);
+      if (!response.ok) {
+        throw new Error('Failed to load announcements');
+      }
+      const data = await response.json();
+      setAnnouncements(data || []);
+    } catch (error) {
+      console.error('Error fetching tournament announcements:', error);
+      setAnnouncementsError('Failed to load announcements.');
+    } finally {
+      setAnnouncementsLoading(false);
     }
   };
 
@@ -350,6 +415,65 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
     }
   };
 
+  const handleApproveRegistration = async (registrationId: string) => {
+    if (!tournamentId) return;
+    try {
+      const response = await authenticatedFetch(
+        `/api/tournaments/${tournamentId}/registrations/${registrationId}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'approve' }),
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        alert(`Failed to approve: ${error.error}`);
+        return;
+      }
+
+      // Refresh tournament data
+      await fetchTournamentData();
+    } catch (error) {
+      console.error('Error approving registration:', error);
+      alert('Failed to approve application');
+    }
+  };
+
+  const handleRejectRegistration = async (registrationId: string) => {
+    // The rejection reason is handled in the TournamentDetailView component
+    // when the RejectionReasonModal is shown. This handler would be called
+    // if we need additional logic after rejection.
+    await fetchTournamentData();
+  };
+
+  const handleUpdateTournamentStatus = async (status: string) => {
+    if (!tournamentId) return;
+    try {
+      const response = await authenticatedFetch(
+        `/api/tournaments/${tournamentId}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status }),
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        alert(`Failed to update status: ${error.error}`);
+        return;
+      }
+
+      // Refresh tournament data
+      await fetchTournamentData();
+    } catch (error) {
+      console.error('Error updating tournament status:', error);
+      alert('Failed to update tournament status');
+    }
+  };
+
   if (loading) {
     return (
       <div className="font-epilogue min-h-screen bg-[#050d08] text-[#dde8d4]">
@@ -394,6 +518,10 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
       replyText={replyText}
       setReplyText={setReplyText}
       onAddComment={handleAddComment}
+      announcements={announcements}
+      announcementsLoading={announcementsLoading}
+      announcementsError={announcementsError}
+      refreshAnnouncements={fetchAnnouncements}
       onReplyToComment={handleReplyToComment}
       onReactToComment={handleReactToComment}
       onDMUser={handleDMUser}
@@ -408,9 +536,28 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
       onNavigateTournaments={() => router.push('/tournaments')}
       onNavigateHome={() => router.push('/')}
       modal={modal}
-      onSuccessModal={async () => { setSuccessType('registration'); setModal('success'); await fetchTournamentData(); }}
+      onSuccessModal={async () => { 
+        setSuccessType('registration'); 
+        // Fetch registration status FIRST before showing success modal to ensure button updates
+        await fetchUserRegistrationStatus();
+        await fetchTournamentData();
+        // Show success modal after status is fetched
+        setModal('success'); 
+      }}
       successType={successType}
       isOrganizer={isOrganizer}
+      pendingRegistrations={pendingRegistrations}
+      approvedRegistrations={approvedRegistrations}
+      rejectedRegistrations={rejectedRegistrations}
+      onApproveRegistration={handleApproveRegistration}
+      onRejectRegistration={handleRejectRegistration}
+      onUpdateTournamentStatus={handleUpdateTournamentStatus}
+      managementLoading={false}
+      userRegistration={userRegistration}
+      isPaid={isPaid}
+      fetchUserRegistrationStatus={fetchUserRegistrationStatus}
+      showRejectionReason={showRejectionReason}
+      setShowRejectionReason={setShowRejectionReason}
     />
   );
 }

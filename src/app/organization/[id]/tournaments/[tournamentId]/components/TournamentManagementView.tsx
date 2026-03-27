@@ -16,10 +16,11 @@ import { TournamentSettingsSection } from './TournamentSettingsSection';
 interface TournamentManagementViewProps {
   tournament: any;
   leaderboard: any[];
-  activeTab: 'overview' | 'registrations' | 'settings' | 'rules' | 'facilities' | 'schedule' | 'analytics' | 'announcements';
-  setActiveTab: (tab: 'overview' | 'registrations' | 'settings' | 'rules' | 'facilities' | 'schedule' | 'analytics' | 'announcements') => void;
+  activeTab: 'overview' | 'registrations' | 'settings' | 'rules' | 'facilities' | 'schedule' | 'analytics' | 'announcements' | 'appeals';
+  setActiveTab: (tab: 'overview' | 'registrations' | 'settings' | 'rules' | 'facilities' | 'schedule' | 'analytics' | 'announcements' | 'appeals') => void;
   pendingRegistrations: any[];
   approvedRegistrations: any[];
+  rejectedRegistrations?: any[];
   onRegistrationAction: (registrationId: string, action: 'approve' | 'reject') => void;
   managementLoading: boolean;
   fetchTournamentData: () => void;
@@ -35,6 +36,7 @@ export function TournamentManagementView({
   setActiveTab,
   pendingRegistrations,
   approvedRegistrations,
+  rejectedRegistrations = [],
   onRegistrationAction,
   managementLoading,
   fetchTournamentData,
@@ -118,8 +120,10 @@ export function TournamentManagementView({
               tournament={tournament}
               pendingRegistrations={pendingRegistrations}
               approvedRegistrations={approvedRegistrations}
+              rejectedRegistrations={rejectedRegistrations}
               onRegistrationAction={onRegistrationAction}
               managementLoading={managementLoading}
+              onRefresh={fetchTournamentData}
             />
           )}
 

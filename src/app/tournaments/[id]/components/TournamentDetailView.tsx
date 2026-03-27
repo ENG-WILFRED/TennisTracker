@@ -1,24 +1,35 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { TournamentApplicationForm } from '@/components/tournament/TournamentApplicationForm';
+import { CancelApplicationModal } from '@/components/tournament/CancelApplicationModal';
+import { PlayerProfileModal } from './PlayerProfileModal';
+import { RejectionReasonModal } from './RejectionReasonModal';
+import { authenticatedFetch } from '@/lib/authenticatedFetch';
 import {
   CheckoutModal,
   ContactModal,
   RepostModal,
   SuccessModal,
   ProfileModal,
-  AmenityBookingModal
+  AmenityBookingModal,
+  AppealModal
 } from './';
 
-type ModalType = 'checkout' | 'contact' | 'repost' | 'success' | 'amenity-booking' | 'profile' | null;
+type ModalType = 'apply' | 'checkout' | 'contact' | 'repost' | 'success' | 'amenity-booking' | 'profile' | 'cancel' | 'appeal' | null;
 
 type TournamentDetailViewProps = {
   tournament: any;
   user: any;
   leaderboard: any[];
-  activeTab: 'overview' | 'details' | 'leaderboard' | 'matches' | 'comments' | 'management';
-  setActiveTab: (tab: 'overview' | 'details' | 'leaderboard' | 'matches' | 'comments' | 'management') => void;
+  activeTab: 'overview' | 'rules' | 'details' | 'leaderboard' | 'matches' | 'comments' | 'announcements' | 'management';
+  setActiveTab: (tab: 'overview' | 'rules' | 'details' | 'leaderboard' | 'matches' | 'comments' | 'announcements' | 'management') => void;
   comments: any[];
+  announcements: any[];
+  announcementsLoading: boolean;
+  announcementsError: string | null;
+  refreshAnnouncements: () => Promise<void>;
   pendingRegistrations?: any[];
   approvedRegistrations?: any[];
+  rejectedRegistrations?: any[];
   onApproveRegistration?: (registrationId: string) => void;
   onRejectRegistration?: (registrationId: string) => void;
   onUpdateTournamentStatus?: (status: string) => void;
@@ -48,6 +59,11 @@ type TournamentDetailViewProps = {
   modal: ModalType;
   onSuccessModal: () => Promise<void>;
   isOrganizer?: boolean;
+  userRegistration?: any;
+  isPaid?: boolean;
+  fetchUserRegistrationStatus?: () => Promise<void>;
+  showRejectionReason?: boolean;
+  setShowRejectionReason?: (show: boolean) => void;
 };
 
 export function TournamentDetailView({
@@ -75,6 +91,10 @@ export function TournamentDetailView({
   onConfirmAmenityBooking,
   bookingLoading,
   fetchTournamentData,
+  announcements,
+  announcementsLoading,
+  announcementsError,
+  refreshAnnouncements,
   onNavigateDashboard,
   onNavigateTournaments,
   onNavigateHome,
@@ -84,11 +104,112 @@ export function TournamentDetailView({
   isOrganizer = false,
   pendingRegistrations = [],
   approvedRegistrations = [],
+  rejectedRegistrations = [],
   onApproveRegistration,
   onRejectRegistration,
   onUpdateTournamentStatus,
   managementLoading = false,
+  userRegistration = null,
+  isPaid = false,
+  fetchUserRegistrationStatus,
+  showRejectionReason = false,
+  setShowRejectionReason,
 }: TournamentDetailViewProps) {
+  // New states for modals
+  const [selectedPlayer, setSelectedPlayer] = useState<any>(null);
+  const [rejectingRegistrationId, setRejectingRegistrationId] = useState<string | null>(null);
+  const [rejectionLoading, setRejectionLoading] = useState(false);
+
+  // Calculate confirmed participants (approved + registered, excluding pending)
+  const confirmedParticipants = tournament.registrations?.filter((reg: any) => 
+    ['approved', 'registered'].includes(reg.status)
+  )?.length || 0;
+
+  // Handle rejection with reason
+  const handleRejectWithReason = async (rejectionReason: string) => {
+    if (!rejectingRegistrationId) return;
+
+    setRejectionLoading(true);
+    try {
+      const response = await authenticatedFetch(
+        `/api/tournaments/${tournament.id}/registrations/${rejectingRegistrationId}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'reject', rejectionReason }),
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        alert(`Failed to reject: ${error.error}`);
+        return;
+      }
+
+      // Close modal and refresh data
+      setRejectingRegistrationId(null);
+      // Refresh tournament data
+      await fetchTournamentData();
+    } catch (error) {
+      console.error('Error rejecting registration:', error);
+      alert('Failed to reject application');
+    } finally {
+      setRejectionLoading(false);
+    }
+  };
+
+  // Handle undo rejection (revert rejected back to pending)
+  const handleUndoRejection = async (registrationId: string) => {
+    if (!window.confirm('Restore this application to pending review? The player will be notified.')) {
+      return;
+    }
+
+    try {
+      const response = await authenticatedFetch(
+        `/api/tournaments/${tournament.id}/registrations/${registrationId}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'undo' }),
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        alert(`Failed to restore: ${error.error}`);
+        return;
+      }
+
+      // Refresh tournament data
+      await fetchTournamentData();
+    } catch (error) {
+      console.error('Error restoring registration:', error);
+      alert('Failed to restore application');
+    }
+  };
+
+  // Determine button state based on user's registration
+  const getButtonState = () => {
+    if (!userRegistration) {
+      return { label: `Apply Now - $${tournament.entryFee || 0}`, status: 'apply', className: 'bg-[linear-gradient(135deg,#3b6d11,#639922)] text-[#f0fae8] hover:brightness-110 hover:-translate-y-0.5', disabled: false };
+    }
+    if (userRegistration.status === 'pending') {
+      return { label: '⏳ Pending Review - Application Submitted', status: 'pending', className: 'bg-[#4a3f1a] text-[#f0c94a] hover:bg-[#5a4f2a]', disabled: true };
+    }
+    if (userRegistration.status === 'approved') {
+      return { label: `Proceed to Payment - $${tournament.entryFee || 0}`, status: 'payment', className: 'bg-[linear-gradient(135deg,#3b6d11,#639922)] text-[#f0fae8] hover:brightness-110 hover:-translate-y-0.5', disabled: false };
+    }
+    if (userRegistration.status === 'registered') {
+      return { label: '✓ Applied & Registered', status: 'registered', className: 'bg-[#1a3a0a] text-[#8dc843] hover:bg-[#2a4a1a]', disabled: true };
+    }
+    if (userRegistration.status === 'rejected') {
+      return { label: '❌ Application Rejected - Click to View', status: 'rejected', className: 'bg-[rgba(220,76,100,0.15)] text-[#ff6b7a] hover:bg-[rgba(220,76,100,0.25)] border border-[rgba(220,76,100,0.3)]', disabled: false };
+    }
+    return { label: `Apply Now - $${tournament.entryFee || 0}`, status: 'apply', className: 'bg-[linear-gradient(135deg,#3b6d11,#639922)] text-[#f0fae8] hover:brightness-110 hover:-translate-y-0.5', disabled: false };
+  };
+
+  const buttonState = getButtonState();
+
   return (
     <div className="font-epilogue min-h-screen bg-[#050d08] text-[#dde8d4]">
       {/* Navigation */}
@@ -119,9 +240,36 @@ export function TournamentDetailView({
             </h1>
             <p className="text-lg text-[#5a7242] leading-[1.65] mb-5">{tournament.description}</p>
             <div className="flex gap-3 flex-wrap">
-              <button className="inline-flex items-center gap-1 font-epilogue font-semibold cursor-pointer border-none transition-all duration-150 text-lg px-6 py-3 rounded-lg bg-[linear-gradient(135deg,#3b6d11,#639922)] text-[#f0fae8] hover:brightness-110 hover:-translate-y-0.5 disabled:bg-[#1a2e0a] disabled:text-[#334a22] disabled:cursor-not-allowed disabled:transform-none disabled:filter-none" onClick={() => onOpenModal('checkout')}>
-                Apply Now - ${tournament.entryFee || 0}
+              <button 
+                className={`inline-flex items-center gap-1 font-epilogue font-semibold cursor-pointer border-none transition-all duration-150 text-lg px-6 py-3 rounded-lg ${buttonState.className} ${buttonState.disabled ? 'opacity-60 cursor-not-allowed' : ''}`}
+                disabled={buttonState.disabled}
+                onClick={() => {
+                  if (buttonState.status === 'apply') {
+                    onOpenModal('apply');
+                  } else if (buttonState.status === 'payment') {
+                    // Open payment modal
+                    onOpenModal('checkout');
+                  } else if (buttonState.status === 'pending') {
+                    // Show application status/details
+                    alert('Your application is under review. You will receive an email when the organizer makes a decision.');
+                  } else if (buttonState.status === 'registered') {
+                    // Show registered details
+                    alert('You are registered for this tournament!');
+                  } else if (buttonState.status === 'rejected') {
+                    // Show rejection reason modal
+                    if (setShowRejectionReason) {
+                      setShowRejectionReason(true);
+                    }
+                  }
+                }}
+              >
+                {buttonState.label}
               </button>
+              {userRegistration?.status === 'registered' && (
+                <button className="inline-flex items-center gap-1 font-epilogue font-semibold cursor-pointer border-none transition-all duration-150 text-lg px-6 py-3 rounded-lg bg-[rgba(220,76,100,0.15)] border border-[rgba(220,76,100,0.3)] text-[#ff6b7a] hover:border-[rgba(220,76,100,0.5)] hover:bg-[rgba(220,76,100,0.25)]" onClick={() => onOpenModal('cancel')}>
+                  ❌ Cancel Application
+                </button>
+              )}
               <button className="inline-flex items-center gap-1 font-epilogue font-semibold cursor-pointer border-none transition-all duration-150 text-lg px-6 py-3 rounded-lg bg-transparent border border-[rgba(99,153,34,0.12)] text-[#4a6335] hover:border-[rgba(99,153,34,0.3)] hover:text-[#5a7242]" onClick={() => onOpenModal('contact')}>
                 💬 Contact Organizer
               </button>
@@ -129,7 +277,7 @@ export function TournamentDetailView({
           </div>
           <div className="flex gap-4 flex-wrap">
             <div className="bg-[rgba(99,153,34,0.08)] border border-[rgba(99,153,34,0.15)] rounded-[14px] p-4 px-5.5 min-w-[100px] text-center">
-              <div className="font-clash text-4xl font-bold text-[#8dc843]">{tournament.registrations?.length || 0}/{tournament.maxParticipants || 64}</div>
+              <div className="font-clash text-4xl font-bold text-[#8dc843]">{confirmedParticipants}/{tournament.maxParticipants || 64}</div>
               <div className="text-base text-[#4a6335] mt-0.5">Players</div>
             </div>
             <div className="bg-[rgba(99,153,34,0.08)] border border-[rgba(99,153,34,0.15)] rounded-[14px] p-4 px-5.5 min-w-[100px] text-center">
@@ -159,7 +307,7 @@ export function TournamentDetailView({
             </div>
             <div className="bg-[#0a1510] border border-[rgba(99,153,34,0.12)] rounded-[14px] p-5 text-center">
               <div className="text-[#c0d8ff] text-sm mb-1">Participants</div>
-              <div className="text-4xl font-bold text-[#f2d55b]">{tournament.registrations?.length || 0}</div>
+              <div className="text-4xl font-bold text-[#f2d55b]">{confirmedParticipants}</div>
             </div>
             <div className="bg-[#0a1510] border border-[rgba(99,153,34,0.12)] rounded-[14px] p-5 text-center">
               <div className="text-[#c0d8ff] text-sm mb-1">Entry Fee</div>
@@ -169,8 +317,9 @@ export function TournamentDetailView({
 
           <div className="flex gap-2 mb-8 border-b border-[rgba(99,153,34,0.08)] pb-4">
             {(() => {
-              const baseTabs = ['overview', 'details', 'leaderboard', 'matches', 'comments'] as const;
-              const tabs = isOrganizer ? [...baseTabs, 'management' as const] : baseTabs;
+              type TabName = 'overview' | 'rules' | 'details' | 'leaderboard' | 'matches' | 'comments' | 'announcements' | 'management';
+              const baseTabs: TabName[] = ['overview', 'rules', 'details', 'leaderboard', 'matches', 'comments', 'announcements'];
+              const tabs: TabName[] = isOrganizer ? [...baseTabs, 'management'] : baseTabs;
               return tabs.map((tab) => (
                 <button
                   key={tab}
@@ -178,10 +327,12 @@ export function TournamentDetailView({
                   className={`px-4 py-2 rounded-lg border-none ${activeTab === tab ? 'bg-[rgba(99,153,34,0.18)] text-[#a3d45e]' : 'bg-transparent text-[#5a7242]'} text-xl font-semibold cursor-pointer transition-all duration-150`}
                 >
                   {tab === 'overview' && '📋 Overview'}
+                  {tab === 'rules' && '📋 Rules'}
                   {tab === 'details' && '🏨 Facilities'}
                   {tab === 'leaderboard' && '🏆 Leaderboard'}
                   {tab === 'matches' && '🎾 Matches'}
                   {tab === 'comments' && '💬 Comments'}
+                  {tab === 'announcements' && '📢 Announcements'}
                   {tab === 'management' && '⚙️ Management'}
                 </button>
               ));
@@ -214,24 +365,52 @@ export function TournamentDetailView({
             </div>
           )}
 
-          {activeTab === 'details' && (
-            <div className="grid grid-cols-2 gap-6">
+          {activeTab === 'rules' && (
+            <div className="space-y-6">
               <div className="bg-[#0a1510] border border-[rgba(99,153,34,0.12)] rounded-[14px] p-6">
-                <h3 className="text-2xl font-semibold text-[#e8f8d8] mb-4">🏛️ Rules & Instructions</h3>
+                <h3 className="text-2xl font-semibold text-[#e8f8d8] mb-4">🏛️ Tournament Rules</h3>
                 {tournament.rules && (
                   <div className="mb-4">
-                    <div className="text-sm text-[#4a6335] mb-2 font-semibold">Rules</div>
-                    <div className="text-base text-[#c8e0a8] leading-relaxed">{tournament.rules}</div>
+                    <div className="text-base text-[#c8e0a8] leading-relaxed whitespace-pre-wrap">{tournament.rules}</div>
                   </div>
                 )}
-                {tournament.instructions && (
-                  <div>
-                    <div className="text-sm text-[#4a6335] mb-2 font-semibold">Instructions</div>
-                    <div className="text-base text-[#c8e0a8] leading-relaxed">{tournament.instructions}</div>
-                  </div>
+                {!tournament.rules && (
+                  <div className="text-[#6a8c5a] italic">No specific rules have been set for this tournament.</div>
                 )}
               </div>
 
+              <div className="bg-[#0a1510] border border-[rgba(99,153,34,0.12)] rounded-[14px] p-6">
+                <h3 className="text-2xl font-semibold text-[#e8f8d8] mb-4">📋 General Tennis Rules</h3>
+                <div className="text-base text-[#c8e0a8] leading-relaxed">
+                  <p className="mb-3">Standard tennis rules apply unless otherwise specified:</p>
+                  <ul className="list-disc list-inside space-y-1 ml-4">
+                    <li>Matches are best of 3 sets</li>
+                    <li>First to 6 games wins a set (with tiebreak at 6-6)</li>
+                    <li>Tiebreaks are first to 7 points (win by 2)</li>
+                    <li>Players change ends after odd games</li>
+                    <li>Let serves are replayed</li>
+                    <li>Foot faults result in point penalties</li>
+                  </ul>
+                </div>
+              </div>
+
+              <div className="bg-[#0a1510] border border-[rgba(99,153,34,0.12)] rounded-[14px] p-6">
+                <h3 className="text-2xl font-semibold text-[#e8f8d8] mb-4">⚖️ Appeal a Rule</h3>
+                <p className="text-[#c8e0a8] mb-4">
+                  If you believe a rule is unfair or needs clarification, you can submit an appeal to the tournament organizers.
+                </p>
+                <button
+                  onClick={() => onOpenModal('appeal')}
+                  className="bg-[#7dc142] hover:bg-[#6ba83a] text-white px-6 py-2 rounded-lg font-semibold transition-colors"
+                >
+                  Submit Appeal
+                </button>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'details' && (
+            <div className="grid grid-cols-2 gap-6">
               <div className="bg-[#0a1510] border border-[rgba(99,153,34,0.12)] rounded-[14px] p-6">
                 <h3 className="text-2xl font-semibold text-[#e8f8d8] mb-4">🏨 Facilities & Amenities</h3>
                 {tournament.eatingAreas && (
@@ -532,6 +711,41 @@ export function TournamentDetailView({
             </div>
           )}
 
+          {activeTab === 'announcements' && (
+            <div className="bg-[#0a1510] border border-[rgba(99,153,34,0.12)] rounded-[14px] p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-2xl font-semibold text-[#e8f8d8]">📢 Tournament Announcements</h3>
+                <button
+                  onClick={refreshAnnouncements}
+                  className="text-sm text-[#8dc843] hover:text-[#a3d45e] border border-[rgba(99,153,34,0.3)] rounded px-3 py-1 hover:bg-[rgba(99,153,34,0.1)]"
+                >
+                  Refresh
+                </button>
+              </div>
+
+              {announcementsLoading ? (
+                <div className="text-[#5a7242] text-center py-8">Loading announcements...</div>
+              ) : announcementsError ? (
+                <div className="text-[#f59e0b] text-center py-8">{announcementsError}</div>
+              ) : announcements.length === 0 ? (
+                <div className="text-[#5a7242] text-center py-8">No announcements yet.</div>
+              ) : (
+                <div className="space-y-4">
+                  {announcements.map((announcement) => (
+                    <div key={announcement.id} className="bg-[rgba(99,153,34,0.05)] border border-[rgba(99,153,34,0.1)] rounded-lg p-4">
+                      <div className="flex items-start justify-between mb-2">
+                        <h4 className="text-lg font-semibold text-[#c8e0a8]">{announcement.title}</h4>
+                        <span className="text-xs text-[#5a7242]">{new Date(announcement.createdAt).toLocaleDateString()}</span>
+                      </div>
+                      <p className="text-[#dde8d4] leading-relaxed mb-2">{announcement.message}</p>
+                      <div className="text-xs text-[#8dc843]">Type: {announcement.announcementType || 'general'}{announcement.event?.name ? ` • ${announcement.event.name}` : ''}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {activeTab === 'management' && isOrganizer && (
             <div className="bg-[#0a1510] border border-[rgba(99,153,34,0.12)] rounded-[14px] p-6">
               <h3 className="text-2xl font-semibold text-[#e8f8d8] mb-6">Tournament Management</h3>
@@ -558,7 +772,7 @@ export function TournamentDetailView({
               </div>
 
               {/* Registrations Management */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Pending Registrations */}
                 <div>
                   <h4 className="text-xl font-semibold text-[#a3d45e] mb-4">Pending Registrations ({pendingRegistrations.length})</h4>
@@ -581,6 +795,12 @@ export function TournamentDetailView({
                             </div>
                             <div className="flex gap-2">
                               <button
+                                onClick={() => setSelectedPlayer(registration.member?.player)}
+                                className="px-3 py-1 bg-[#639922] text-[#f0fae8] rounded font-semibold hover:bg-[#7ab82e] text-xs"
+                              >
+                                👤 Profile
+                              </button>
+                              <button
                                 onClick={() => onApproveRegistration?.(registration.id)}
                                 disabled={managementLoading}
                                 className="px-3 py-1 bg-[#8dc843] text-[#0f1f0f] rounded font-semibold hover:bg-[#a3d45e] disabled:opacity-50"
@@ -588,7 +808,7 @@ export function TournamentDetailView({
                                 ✓ Approve
                               </button>
                               <button
-                                onClick={() => onRejectRegistration?.(registration.id)}
+                                onClick={() => setRejectingRegistrationId(registration.id)}
                                 disabled={managementLoading}
                                 className="px-3 py-1 bg-[#e05050] text-white rounded font-semibold hover:bg-[#e07070] disabled:opacity-50"
                               >
@@ -613,8 +833,8 @@ export function TournamentDetailView({
                     ) : (
                       approvedRegistrations.map((registration: any) => (
                         <div key={registration.id} className="bg-[#0f1f0f] border border-[#2d5a35] rounded-lg p-4">
-                          <div className="flex items-center justify-between">
-                            <div>
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex-1">
                               <div className="text-[#c8e0a8] font-semibold">
                                 {registration.player?.user?.firstName} {registration.player?.user?.lastName}
                               </div>
@@ -622,7 +842,62 @@ export function TournamentDetailView({
                                 Approved {new Date(registration.updatedAt).toLocaleDateString()}
                               </div>
                             </div>
-                            <div className="text-[#8dc843] font-semibold">✓ Approved</div>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => setSelectedPlayer(registration.member?.player)}
+                                className="px-3 py-1 bg-[#639922] text-[#f0fae8] rounded font-semibold hover:bg-[#7ab82e] text-xs"
+                              >
+                                👤 Profile
+                              </button>
+                              <div className="text-[#8dc843] font-semibold text-sm px-3 py-1">✓ Approved</div>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                {/* Rejected Registrations */}
+                <div>
+                  <h4 className="text-xl font-semibold text-[#e05050] mb-4">Rejected Registrations ({rejectedRegistrations.length})</h4>
+                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                    {rejectedRegistrations.length === 0 ? (
+                      <div className="text-[#5a7242] text-center py-4">
+                        No rejected registrations
+                      </div>
+                    ) : (
+                      rejectedRegistrations.map((registration: any) => (
+                        <div key={registration.id} className="bg-[#1f0f0f] border border-[#5a2d2d] rounded-lg p-4">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex-1">
+                              <div className="text-[#e8a4a4] font-semibold">
+                                {registration.player?.user?.firstName} {registration.player?.user?.lastName}
+                              </div>
+                              <div className="text-[#8a5a5a] text-sm">
+                                Rejected {new Date(registration.updatedAt).toLocaleDateString()}
+                              </div>
+                              {registration.rejectionReason && (
+                                <div className="text-[#8a5a5a] text-xs mt-1 italic">
+                                  Reason: {registration.rejectionReason}
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex gap-2 flex-col">
+                              <button
+                                onClick={() => setSelectedPlayer(registration.member?.player)}
+                                className="px-3 py-1 bg-[#639922] text-[#f0fae8] rounded font-semibold hover:bg-[#7ab82e] text-xs"
+                              >
+                                👤 Profile
+                              </button>
+                              <button
+                                onClick={() => handleUndoRejection(registration.id)}
+                                disabled={managementLoading}
+                                className="px-3 py-1 bg-[#f59e0b] text-white rounded font-semibold hover:bg-[#fbbf24] disabled:opacity-50 text-xs"
+                              >
+                                ↺ Undo
+                              </button>
+                            </div>
                           </div>
                         </div>
                       ))
@@ -653,7 +928,27 @@ export function TournamentDetailView({
             <div className="bg-[#0a1510] border border-[rgba(99,153,34,0.12)] rounded-[14px] p-6">
               <div className="font-clash text-2xl font-semibold text-[#a3d45e] mb-4">Quick Actions</div>
               <div className="grid grid-cols-1 gap-3">
-                <button className="rounded-lg px-4 py-3 text-xl font-semibold bg-gradient-to-r from-[#49b42f] to-[#2ea22b] text-[#f0fae8] hover:from-[#57d23f] hover:to-[#3ac637] transition" onClick={() => onOpenModal('checkout')}>💳 Register Now</button>
+                <button 
+                  className={`rounded-lg px-4 py-3 text-xl font-semibold transition ${buttonState.className} ${buttonState.disabled ? 'opacity-60 cursor-not-allowed' : ''}`}
+                  disabled={buttonState.disabled}
+                  onClick={() => {
+                    if (buttonState.status === 'apply') {
+                      onOpenModal('apply');
+                    } else if (buttonState.status === 'payment') {
+                      onOpenModal('checkout');
+                    } else if (buttonState.status === 'pending') {
+                      alert('Your application is under review. You will receive an email when the organizer makes a decision.');
+                    } else if (buttonState.status === 'registered') {
+                      alert('You are registered for this tournament!');
+                    } else if (buttonState.status === 'rejected') {
+                      if (setShowRejectionReason) {
+                        setShowRejectionReason(true);
+                      }
+                    }
+                  }}
+                >
+                  {buttonState.label}
+                </button>
                 <button className="rounded-lg px-4 py-3 text-xl font-semibold border border-[#639922] bg-[#0d1b0d] text-[#a3d45e] hover:bg-[#192f18] transition" onClick={() => onOpenModal('contact')}>📧 Contact Organizer</button>
                 <button className="rounded-lg px-4 py-3 text-xl font-semibold border border-[#639922] bg-[#0d1b0d] text-[#a3d45e] hover:bg-[#192f18] transition" onClick={() => onOpenModal('repost')}>🔗 Share Tournament</button>
                 <button className="rounded-lg px-4 py-3 text-xl font-semibold border border-[#639922] bg-[#0d1b0d] text-[#a3d45e] hover:bg-[#192f18] transition" onClick={onNavigateTournaments}>← Back to Tournaments</button>
@@ -664,6 +959,14 @@ export function TournamentDetailView({
         </div>
       </div>
 
+      {modal === 'apply' && user?.id && (
+        <TournamentApplicationForm
+          tournament={tournament}
+          userId={user.id}
+          onSuccess={onSuccessModal}
+          onCancel={onCloseModal}
+        />
+      )}
       {modal === 'checkout' && (
         <CheckoutModal t={tournament} user={user} onClose={onCloseModal} onSuccess={onSuccessModal} />
       )}
@@ -686,6 +989,131 @@ export function TournamentDetailView({
       )}
       {modal === 'profile' && (
         <ProfileModal t={tournament} user={user} leaderboard={leaderboard} onClose={onCloseModal} />
+      )}
+      {modal === 'cancel' && userRegistration && (
+        <CancelApplicationModal
+          tournament={tournament}
+          registration={userRegistration}
+          isPaid={isPaid}
+          onSuccess={async () => {
+            onCloseModal();
+            if (fetchUserRegistrationStatus) {
+              await fetchUserRegistrationStatus();
+            }
+          }}
+          onClose={onCloseModal}
+        />
+      )}
+      {selectedPlayer && (
+        <PlayerProfileModal
+          player={selectedPlayer}
+          onClose={() => setSelectedPlayer(null)}
+        />
+      )}
+      {rejectingRegistrationId && (
+        <RejectionReasonModal
+          playerName={
+            pendingRegistrations.find((r: any) => r.id === rejectingRegistrationId)?.player?.user?.firstName || 'Player'
+          }
+          onConfirm={handleRejectWithReason}
+          onCancel={() => setRejectingRegistrationId(null)}
+          loading={rejectionLoading}
+        />
+      )}
+      {showRejectionReason && userRegistration?.status === 'rejected' && (
+        <div 
+          className="fixed inset-0 bg-[rgba(2,7,3,0.85)] backdrop-blur-lg z-[200] flex items-center justify-center p-4" 
+          onClick={() => {
+            if (setShowRejectionReason) {
+              setShowRejectionReason(false);
+            }
+          }}
+        >
+          <div 
+            className="bg-[#0a1510] border border-[rgba(220,76,100,0.3)] rounded-[18px] w-full max-w-[500px] overflow-hidden animate-[modalIn_0.2s_ease]" 
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="border-b border-[rgba(220,76,100,0.2)] px-8 py-6 bg-[rgba(220,76,100,0.05)]">
+              <div className="text-3xl mb-2">❌</div>
+              <h2 className="text-2xl font-bold text-[#ff6b7a] mb-1">Application Rejected</h2>
+              <p className="text-sm text-[#ff8a93]">Your application was not accepted this time</p>
+            </div>
+
+            {/* Content */}
+            <div className="px-8 py-6 space-y-6">
+              {/* Tournament Info */}
+              <div>
+                <div className="text-sm text-[#4a6335] font-semibold mb-2">Tournament</div>
+                <div className="text-lg text-[#c8e0a8]">{tournament.name}</div>
+              </div>
+
+              {/* Rejection Reason */}
+              {userRegistration?.rejectionReason && (
+                <div className="bg-[rgba(220,76,100,0.08)] border border-[rgba(220,76,100,0.2)] rounded-lg p-4">
+                  <div className="text-sm text-[#ff6b7a] font-semibold mb-2">Rejection Reason</div>
+                  <p className="text-base text-[#c8e0a8] leading-relaxed">
+                    {userRegistration.rejectionReason}
+                  </p>
+                </div>
+              )}
+
+              {!userRegistration?.rejectionReason && (
+                <div className="bg-[rgba(99,153,34,0.08)] border border-[rgba(99,153,34,0.2)] rounded-lg p-4">
+                  <p className="text-base text-[#8fa878]">
+                    No specific rejection reason was provided. Please contact the organizer for more details.
+                  </p>
+                </div>
+              )}
+
+              {/* Next Steps */}
+              <div className="bg-[rgba(99,153,34,0.05)] border border-[rgba(99,153,34,0.1)] rounded-lg p-4">
+                <div className="text-sm text-[#4a6335] font-semibold mb-2">Next Steps</div>
+                <ul className="text-sm text-[#8fa878] space-y-1">
+                  <li>• Review the feedback provided above</li>
+                  <li>• Contact the organizer if you need clarification</li>
+                  <li>• Address the concerns and reapply</li>
+                </ul>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="flex gap-3 px-8 py-4 border-t border-[rgba(220,76,100,0.2)] bg-[rgba(220,76,100,0.02)]">
+              <button 
+                className="flex-1 px-4 py-2.5 rounded-lg border border-[rgba(99,153,34,0.3)] bg-transparent text-[#8dc843] hover:bg-[rgba(99,153,34,0.1)] font-semibold transition-colors"
+                onClick={() => {
+                  if (setShowRejectionReason) {
+                    setShowRejectionReason(false);
+                  }
+                }}
+              >
+                Close
+              </button>
+              <button 
+                className="flex-1 px-4 py-2.5 rounded-lg bg-[linear-gradient(135deg,#3b6d11,#639922)] text-[#f0fae8] hover:brightness-110 font-semibold transition-all"
+                onClick={() => {
+                  if (setShowRejectionReason) {
+                    setShowRejectionReason(false);
+                  }
+                  onOpenModal('apply');
+                }}
+              >
+                🔄 Reapply
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {modal === 'appeal' && (
+        <AppealModal
+          isOpen={true}
+          onClose={onCloseModal}
+          tournamentId={tournament.id}
+          onAppealSubmitted={() => {
+            // Could refresh appeals or show success message
+            onCloseModal();
+          }}
+        />
       )}
     </div>
   );

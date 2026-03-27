@@ -11,6 +11,7 @@ import { TournamentsView } from '@/components/tournaments/TournamentsView';
 import { StatsView } from '@/components/stats/StatsView';
 import { SettingsView } from '@/components/settings/SettingsView';
 import { DashboardHome, ProfileSnapshot, UpcomingEvents, FriendsOnline } from '@/components/dashboards/DashboardHome';
+import { PaymentRemindersWidget } from '@/components/dashboards/PaymentRemindersWidget';
 
 const G = {
   dark: '#0f1f0f', sidebar: '#152515', card: '#1a3020', cardBorder: '#2d5a35',
@@ -83,6 +84,7 @@ export const PlayerDashboard: React.FC = () => {
     { label: 'My Profile', icon: '👤', href: '?profile=true' },
     { label: 'Tournaments', icon: '🏆', href: '?tournaments=true' }, 
     { label: 'Court Booking', icon: '📅', href: '?booking=true' },
+    { label: 'Services', icon: '🛠️', href: '/services' },
     { label: 'Stats', icon: '📊', href: '?stats=true' }, 
     { label: 'Community', icon: '👥', href: '?community=true' },
     { label: 'Settings', icon: '⚙️', href: '?settings=true' },
@@ -202,6 +204,8 @@ export const PlayerDashboard: React.FC = () => {
       {/* ── RIGHT SIDEBAR ── */}
       <aside style={{ width: 188, background: G.sidebar, borderLeft: `2px solid ${G.lime}`, padding: '14px 12px', display: 'flex', flexDirection: 'column', gap: 16, flexShrink: 0, minWidth: 188 }}>
         <ProfileSnapshot user={user} playerData={playerData} />
+
+        <PaymentRemindersWidget />
 
         <UpcomingEvents events={upcomingEvents} />
 

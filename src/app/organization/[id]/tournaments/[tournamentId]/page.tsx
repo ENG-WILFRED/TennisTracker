@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, use, JSX } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { getTournamentDetails, getTournamentLeaderboard } from '@/actions/tournaments';
 import { authenticatedFetch } from '@/lib/authenticatedFetch';
@@ -22,15 +22,28 @@ export default function OrganizationTournamentManagementPage({
   params: Promise<{ id: string; tournamentId: string }>
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user } = useAuth();
   const [tournament, setTournament] = useState<any>(null);
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'registrations' | 'settings' | 'rules' | 'facilities' | 'schedule' | 'analytics' | 'announcements'>('overview');
+  
+  // Initialize activeTab from URL query param or default to 'overview'
+  const initialTab = searchParams.get('tab') as any || 'overview';
+  const [activeTab, setActiveTabState] = useState<'overview' | 'registrations' | 'settings' | 'rules' | 'facilities' | 'schedule' | 'analytics' | 'announcements' | 'appeals'>(initialTab);
+  
   const [pendingRegistrations, setPendingRegistrations] = useState<any[]>([]);
   const [approvedRegistrations, setApprovedRegistrations] = useState<any[]>([]);
+  const [rejectedRegistrations, setRejectedRegistrations] = useState<any[]>([]);
   const [managementLoading, setManagementLoading] = useState(false);
   const [updateLoading, setUpdateLoading] = useState(false);
+
+  // Wrapper for setActiveTab that also updates URL
+  const setActiveTab = (tab: 'overview' | 'registrations' | 'settings' | 'rules' | 'facilities' | 'schedule' | 'analytics' | 'announcements' | 'appeals') => {
+    setActiveTabState(tab);
+    // Update URL with query parameter
+    router.push(`?tab=${tab}`, { scroll: false } as any);
+  };
 
   // Unwrap params Promise (Next.js 15)
   const resolvedParams = use(params);
@@ -65,6 +78,9 @@ export default function OrganizationTournamentManagementPage({
           );
           setApprovedRegistrations(
             tournamentData.registrations.filter((r: any) => r.status === 'approved')
+          );
+          setRejectedRegistrations(
+            tournamentData.registrations.filter((r: any) => r.status === 'rejected')
           );
         }
       }
@@ -163,6 +179,7 @@ export default function OrganizationTournamentManagementPage({
       setActiveTab={setActiveTab}
       pendingRegistrations={pendingRegistrations}
       approvedRegistrations={approvedRegistrations}
+      rejectedRegistrations={rejectedRegistrations}
       onRegistrationAction={handleRegistrationAction}
       managementLoading={managementLoading}
       fetchTournamentData={fetchTournamentData}

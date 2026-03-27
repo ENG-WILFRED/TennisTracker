@@ -6,8 +6,8 @@ import Link from 'next/link';
 interface TournamentManagementViewProps {
   tournament: any;
   leaderboard: any[];
-  activeTab: 'overview' | 'registrations' | 'settings' | 'rules' | 'facilities' | 'schedule' | 'analytics' | 'announcements';
-  setActiveTab: (tab: 'overview' | 'registrations' | 'settings' | 'rules' | 'facilities' | 'schedule' | 'analytics' | 'announcements') => void;
+  activeTab: 'overview' | 'registrations' | 'settings' | 'rules' | 'facilities' | 'schedule' | 'analytics' | 'announcements' | 'appeals';
+  setActiveTab: (tab: 'overview' | 'registrations' | 'settings' | 'rules' | 'facilities' | 'schedule' | 'analytics' | 'announcements' | 'appeals') => void;
   pendingRegistrations: any[];
   approvedRegistrations: any[];
   onRegistrationAction: (registrationId: string, action: 'approve' | 'reject') => void;
@@ -17,7 +17,6 @@ interface TournamentManagementViewProps {
   updateLoading: boolean;
   orgId: string;
 }
-
 const TABS = [
   { key: 'overview',       label: 'Overview',       icon: '⬡' },
   { key: 'registrations',  label: 'Registrations',  icon: '◈' },
@@ -25,6 +24,7 @@ const TABS = [
   { key: 'analytics',      label: 'Analytics',       icon: '◎' },
   { key: 'announcements',  label: 'Announcements',   icon: '◉' },
   { key: 'rules',          label: 'Rules',           icon: '◆' },
+  { key: 'appeals',        label: 'Appeals',         icon: '⚖️' },
   { key: 'facilities',     label: 'Facilities',      icon: '◫' },
   { key: 'settings',       label: 'Settings',        icon: '◌' },
 ];
@@ -79,6 +79,8 @@ export function TournamentManagementView({
   const [draft, setDraft]           = useState<any>(null);
   const [newAnnouncement, setNewAnnouncement] = useState({ title: '', body: '' });
   const [announcements, setAnnouncements]     = useState(MOCK_ANNOUNCEMENTS);
+  const [appeals, setAppeals] = useState<any[]>([]);
+  const [appealsLoading, setAppealsLoading] = useState(false);
 
   useEffect(() => {
     if (tournament) {
@@ -109,6 +111,50 @@ export function TournamentManagementView({
     catch (e) { console.error(e); }
     finally { setSavingRules(false); }
   };
+
+  const fetchAppeals = async () => {
+    if (!tournament) return;
+    setAppealsLoading(true);
+    try {
+      const response = await fetch(`/api/tournaments/${tournament.id}/appeals`);
+      if (response.ok) {
+        const data = await response.json();
+        setAppeals(data);
+      }
+    } catch (e) {
+      console.error('Error fetching appeals:', e);
+    } finally {
+      setAppealsLoading(false);
+    }
+  };
+
+  const handleRespondToAppeal = async (appealId: string, status: 'approved' | 'denied') => {
+    const responseText = prompt(`Enter your response for this ${status} decision:`);
+    if (!responseText?.trim()) return;
+
+    try {
+      const response = await fetch(`/api/tournaments/${tournament.id}/appeals/${appealId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status, responseText: responseText.trim() })
+      });
+
+      if (response.ok) {
+        await fetchAppeals(); // Refresh appeals
+      } else {
+        alert('Failed to respond to appeal');
+      }
+    } catch (e) {
+      console.error('Error responding to appeal:', e);
+      alert('Failed to respond to appeal');
+    }
+  };
+
+  useEffect(() => {
+    if (tournament && activeTab === 'appeals') {
+      fetchAppeals();
+    }
+  }, [tournament, activeTab]);
 
   const fillRate = tournament?.registrationCap
     ? Math.round((approvedRegistrations.length / tournament.registrationCap) * 100)
@@ -363,7 +409,7 @@ export function TournamentManagementView({
       <div className="tmv-root">
         <div className="tmv-content">
 
-          <Link href={`/organization/${orgId}`} className="tmv-back">
+          <Link href={`/dashboard/org/${orgId}`} className="tmv-back">
             ← Back to Organization
           </Link>
 
@@ -823,6 +869,85 @@ export function TournamentManagementView({
                   </button>
                 </div>
               </div>
+            </div>
+          )}
+
+          {activeTab === 'appeals' && (
+            <div>
+              <h2 style={{ fontFamily: 'Syne,sans-serif', fontSize: 24, fontWeight: 700, color: '#a8d84e', marginBottom: 24 }}>Rule Appeals</h2>
+
+              {appealsLoading ? (
+                <div className="g-card" style={{ color: '#6a9058' }}>Loading appeals…</div>
+              ) : appeals.length === 0 ? (
+                <div className="g-card" style={{ color: '#6a9058' }}>No appeals submitted yet.</div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  {appeals.map((appeal) => (
+                    <div key={appeal.id} className="g-card">
+                      <div className="g-card-title">
+                        Appeal from {appeal.user.user.firstName} {appeal.user.user.lastName}
+                        <span style={{
+                          marginLeft: 12,
+                          padding: '2px 8px',
+                          borderRadius: '12px',
+                          fontSize: '12px',
+                          background: appeal.status === 'pending' ? 'rgba(212,165,116,0.2)' :
+                                     appeal.status === 'approved' ? 'rgba(125,193,66,0.2)' : 'rgba(220,53,69,0.2)',
+                          color: appeal.status === 'pending' ? '#d4a574' :
+                                 appeal.status === 'approved' ? '#7dc142' : '#dc3545'
+                        }}>
+                          {appeal.status}
+                        </span>
+                      </div>
+
+                      {appeal.ruleCategory && (
+                        <div style={{ marginBottom: 8 }}>
+                          <span style={{ color: '#7a9c6a', fontSize: 13 }}>Category:</span>
+                          <span style={{ color: '#c8e0a8', marginLeft: 8 }}>{appeal.ruleCategory}</span>
+                        </div>
+                      )}
+
+                      {appeal.ruleLabel && (
+                        <div style={{ marginBottom: 8 }}>
+                          <span style={{ color: '#7a9c6a', fontSize: 13 }}>Rule:</span>
+                          <span style={{ color: '#c8e0a8', marginLeft: 8 }}>{appeal.ruleLabel}</span>
+                        </div>
+                      )}
+
+                      <div style={{ marginBottom: 12 }}>
+                        <div style={{ color: '#7a9c6a', fontSize: 13, marginBottom: 4 }}>Appeal:</div>
+                        <div style={{ color: '#c8e0a8', lineHeight: 1.5 }}>{appeal.appealText}</div>
+                      </div>
+
+                      {appeal.status !== 'pending' && appeal.responseText && (
+                        <div style={{ marginTop: 12, padding: '12px', background: 'rgba(10,20,10,0.5)', borderRadius: '8px' }}>
+                          <div style={{ color: '#7a9c6a', fontSize: 13, marginBottom: 4 }}>Response:</div>
+                          <div style={{ color: '#c8e0a8', lineHeight: 1.5 }}>{appeal.responseText}</div>
+                        </div>
+                      )}
+
+                      {appeal.status === 'pending' && (
+                        <div style={{ marginTop: 16, display: 'flex', gap: 12 }}>
+                          <button
+                            className="btn-primary"
+                            style={{ background: 'rgba(125,193,66,0.15)', color: '#7dc142', border: '1px solid rgba(125,193,66,0.3)' }}
+                            onClick={() => handleRespondToAppeal(appeal.id, 'approved')}
+                          >
+                            Approve
+                          </button>
+                          <button
+                            className="btn-primary"
+                            style={{ background: 'rgba(220,53,69,0.15)', color: '#dc3545', border: '1px solid rgba(220,53,69,0.3)' }}
+                            onClick={() => handleRespondToAppeal(appeal.id, 'denied')}
+                          >
+                            Deny
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 

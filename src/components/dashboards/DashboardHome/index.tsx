@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-
 // ─── Tiny SVG Charts ──────────────────────────────────────────────────────────
 
 const BarChart: React.FC<{ data: number[] }> = ({ data }) => {

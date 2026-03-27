@@ -304,9 +304,9 @@ export function TournamentOverviewSection({
           }}>
             🏅 Top Players
           </div>
-          {data.slice(0, 4).map(p => (
+          {data.slice(0, 4).map((p, index) => (
             <div
-              key={p.rank}
+              key={`${index}-${p.name}`}
               style={{
                 display: 'flex',
                 alignItems: 'center',

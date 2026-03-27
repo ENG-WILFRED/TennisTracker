@@ -519,12 +519,18 @@ export async function submitTournamentInquiry(tournamentId: string, message: str
   }
 }
 
-export async function applyForTournament(tournamentId: string, userId?: string) {
+export async function applyForTournament(
+  tournamentId: string,
+  userId?: string,
+  options?: { skipPayment?: boolean }
+) {
   try {
     // If userId not provided, throw (user must be authenticated)
     if (!userId) {
       throw new Error('Not authenticated');
     }
+    
+    const skipPayment = options?.skipPayment ?? false;
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -603,7 +609,15 @@ export async function applyForTournament(tournamentId: string, userId?: string) 
     });
 
     if (existing) {
-      throw new Error('Already registered for this tournament');
+      // Allow reapplication if previously rejected
+      if (existing.status === 'rejected') {
+        // Delete the old rejected registration to allow fresh application
+        await prisma.eventRegistration.delete({
+          where: { id: existing.id },
+        });
+      } else {
+        throw new Error('Already registered for this tournament');
+      }
     }
 
     // Check if tournament is at capacity
@@ -666,7 +680,7 @@ export async function applyForTournament(tournamentId: string, userId?: string) 
       data: {
         eventId: tournamentId,
         memberId: clubMember.id,
-        status: 'registered',
+        status: skipPayment ? 'pending' : 'registered',
         signupOrder,
       },
     });
@@ -675,13 +689,14 @@ export async function applyForTournament(tournamentId: string, userId?: string) 
     await OrganizationActivityTracker.trackActivity({
       organizationId: tournament.organizationId,
       playerId: player.userId,
-      action: 'tournament_registration',
+      action: skipPayment ? 'tournament_application' : 'tournament_registration',
       details: {
         tournamentName: tournament.name,
         tournamentType: tournament.eventType,
         registrationDate: new Date().toISOString(),
         registrationId: registration.id,
         signupOrder,
+        status: skipPayment ? 'pending_approval' : 'registered',
       },
       metadata: {
         eventId: tournamentId,
@@ -691,8 +706,10 @@ export async function applyForTournament(tournamentId: string, userId?: string) 
 
     return {
       success: true,
-      status: 'registered',
-      message: 'Successfully registered for the tournament!',
+      status: skipPayment ? 'pending' : 'registered',
+      message: skipPayment
+        ? 'Successfully applied for the tournament! Your application has been submitted for approval.'
+        : 'Successfully registered for the tournament!',
       registrationId: registration.id,
     };
   } catch (error) {

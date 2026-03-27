@@ -6,4 +6,5 @@ export { RepostModal } from './RepostModal';
 export { SuccessModal } from './SuccessModal';
 export { ProfileModal } from './ProfileModal';
 export { AmenityBookingModal } from './AmenityBookingModal';
+export { AppealModal } from './AppealModal';
 export { TournamentDetailView } from './TournamentDetailView';

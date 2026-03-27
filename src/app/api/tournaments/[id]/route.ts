@@ -12,7 +12,19 @@ export async function GET(request: NextRequest, context: any) {
     const tournament = await prisma.clubEvent.findUnique({
       where: { id: tournamentId },
       include: {
-        registrations: true,
+        registrations: {
+          include: {
+            member: {
+              include: {
+                player: {
+                  include: {
+                    user: true,
+                  },
+                },
+              },
+            },
+          },
+        },
         organization: true,
         bracket: true,
         amenities: true,
