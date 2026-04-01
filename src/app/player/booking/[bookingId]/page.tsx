@@ -184,7 +184,7 @@ export default function BookingDetailPage() {
                   <p className="font-semibold" style={{ color: G.accent }}>Contact Support</p>
                   <p className="text-sm mt-1" style={{ color: G.muted }}>We're here 24/7</p>
                 </div>
-                <button className="px-4 py-2 rounded-lg font-semibold text-sm transition-colors" style={{ background: G.lime, color: G.dark }} className="hover:opacity-90">
+                <button className="px-4 py-2 rounded-lg font-semibold text-sm transition-colors hover:opacity-90" style={{ background: G.lime, color: G.dark }}>
                   Contact
                 </button>
               </div>
