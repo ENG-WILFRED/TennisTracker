@@ -17,7 +17,7 @@ import { TournamentDetailView } from './components';
 /* ─────────────────────────────────────────
    MAIN PAGE - TOURNAMENT DETAIL
 ───────────────────────────────────────── */
-export default function TournamentDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default function TournamentDetailPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const router = useRouter();
   const { user } = useAuth();
   const [tournament, setTournament] = useState<any>(null);
@@ -46,7 +46,24 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
 
   // Unwrap params Promise (Next.js 15)
   const resolvedParams = use(params);
+  const resolvedSearchParams = use(searchParams);
   const tournamentId = resolvedParams.id;
+
+  // Set initial tab from URL query param
+  React.useEffect(() => {
+    if (resolvedSearchParams.tab && typeof resolvedSearchParams.tab === 'string') {
+      const validTab = resolvedSearchParams.tab as any;
+      if (['overview', 'rules', 'details', 'leaderboard', 'matches', 'comments', 'announcements', 'management'].includes(validTab)) {
+        setActiveTab(validTab);
+      }
+    }
+  }, [resolvedSearchParams.tab]);
+
+  // Update URL when active tab changes
+  const handleTabChange = (tab: 'overview' | 'rules' | 'details' | 'leaderboard' | 'matches' | 'comments' | 'announcements' | 'management') => {
+    setActiveTab(tab);
+    router.push(`/tournaments/${tournamentId}?tab=${tab}`);
+  };
 
   const fetchTournamentData = async () => {
     if (!tournamentId) {
@@ -62,7 +79,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
 
       if (tournamentData) {
         setTournament(tournamentData);
-        
+
         // Filter registrations by status
         const pending = tournamentData.registrations?.filter((r: any) => r.status === 'pending') || [];
         const approved = tournamentData.registrations?.filter((r: any) => r.status === 'approved') || [];
@@ -70,16 +87,16 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
         setPendingRegistrations(pending);
         setApprovedRegistrations(approved);
         setRejectedRegistrations(rejected);
-        
+
         // Check if user is an organizer/admin of this tournament's organization
         if (user?.id && tournamentData.organization?.id) {
           try {
             const orgResponse = await authenticatedFetch(`/api/user/organizations`);
             if (orgResponse.ok) {
               const userOrgs = await orgResponse.json();
-              
-              const isOrgAdmin = userOrgs.some((org: any) => 
-                org.organizationId === tournamentData.organization.id && 
+
+              const isOrgAdmin = userOrgs.some((org: any) =>
+                org.organizationId === tournamentData.organization.id &&
                 (org.role === 'admin' || org.role === 'owner')
               );
               setIsOrganizer(isOrgAdmin);
@@ -108,10 +125,10 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
       if (!response.ok) return;
 
       const applications = await response.json();
-      
+
       // Find the registration for this specific tournament
       const registration = applications.find((app: any) => app.eventId === tournamentId);
-      
+
       if (registration) {
         setUserRegistration(registration);
         // User is considered paid if their registration status is 'registered'
@@ -165,9 +182,13 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
       }
       const data = await response.json();
       setAnnouncements(data || []);
+      setAnnouncementsLoading(false);
+
     } catch (error) {
       console.error('Error fetching tournament announcements:', error);
       setAnnouncementsError('Failed to load announcements.');
+      setAnnouncementsLoading(false);
+
     } finally {
       setAnnouncementsLoading(false);
     }
@@ -508,7 +529,7 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
       user={user}
       leaderboard={leaderboard}
       activeTab={activeTab}
-      setActiveTab={setActiveTab}
+      setActiveTab={handleTabChange}
       comments={comments}
       commentsLoading={commentsLoading}
       newComment={newComment}
@@ -536,13 +557,13 @@ export default function TournamentDetailPage({ params }: { params: Promise<{ id:
       onNavigateTournaments={() => router.push('/tournaments')}
       onNavigateHome={() => router.push('/')}
       modal={modal}
-      onSuccessModal={async () => { 
-        setSuccessType('registration'); 
+      onSuccessModal={async () => {
+        setSuccessType('registration');
         // Fetch registration status FIRST before showing success modal to ensure button updates
         await fetchUserRegistrationStatus();
         await fetchTournamentData();
         // Show success modal after status is fetched
-        setModal('success'); 
+        setModal('success');
       }}
       successType={successType}
       isOrganizer={isOrganizer}

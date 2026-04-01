@@ -5,10 +5,44 @@ export async function GET(request: Request, { params }: { params: Promise<{ orgI
   try {
     const { orgId } = await params;
     const staff = await prisma.staff.findMany({
-      where: { organizationId: orgId },
-      include: { user: true },
+      where: {
+        organizationId: orgId,
+        isDeleted: false,
+      },
+      select: {
+        userId: true,
+        role: true,
+        expertise: true,
+        coachingLevel: true,
+        yearsOfExperience: true,
+        isActive: true,
+        studentCount: true,
+        user: {
+          select: {
+            firstName: true,
+            lastName: true,
+            email: true,
+            photo: true,
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' },
     });
-    return new Response(JSON.stringify(staff), {
+
+    const formattedStaff = staff.map(s => ({
+      id: s.userId,
+      name: `${s.user.firstName} ${s.user.lastName}`,
+      email: s.user.email,
+      photo: s.user.photo,
+      role: s.role,
+      expertise: s.expertise,
+      coachingLevel: s.coachingLevel,
+      experience: s.yearsOfExperience || 0,
+      status: s.isActive ? 'Active' : 'Inactive',
+      sessions: s.studentCount || 0,
+    }));
+
+    return new Response(JSON.stringify(formattedStaff), {
       status: 200,
       headers: {
         'Content-Type': 'application/json',

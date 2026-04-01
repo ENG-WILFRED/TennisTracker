@@ -5,6 +5,7 @@ import { AuthProvider } from "@/context/AuthContext";
 import { RoleProvider } from "@/context/RoleContext";
 import { ChatProvider } from "@/context/chat/ChatContext";
 import { Metadata } from "next";
+import { Toaster } from "react-hot-toast";
 
 export const metadata: Metadata = {
   title: "Vico",
@@ -25,6 +26,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             <ChatProvider>
               {children}
               <FloatingMessagesPanel />
+              <Toaster position="top-right" />
             </ChatProvider>
           </RoleProvider>
         </AuthProvider>

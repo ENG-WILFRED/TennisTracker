@@ -14,72 +14,193 @@ The project structure includes:
 
 ## 🚀 Key Capabilities
 
-### 🎟 Authentication & Profiles
-- Support for **Players**, **Referees**, **Coaches/Staff** and **Organizations**.
-- Detailed profiles with contact info, photos, bio, demographics and credentials.
-- Password‑based login with role‑based access control.
-- Organizations (clubs/teams) with ownership and member relationships.
+### 🔐 Authentication & User Management
+- **Multi-role user system** with 7 distinct roles: Players, Coaches, Referees, Organizations, Finance Officers, Admins, and Spectators
+- **Secure password authentication** with role-based access control
+- **Flexible profile management** - Personal information, photos, bio, demographics
+- **Organization creation and management** - Clubs, teams, and academies with full branding control
+- **Permission management** - Granular RBAC for each organization role
 
-### 🏢 Club & Organization Management
-- Create and manage organizations with branding, location and contact data.
-- Track club reputation via badges, ratings and activity scores.
-- Role‑based permission system (`OrganizationRole` & `RolePermission`).
-- Inventory tracking for equipment and resources per club or organization.
-- Court management including surface, indoor/outdoor, status and maintenance.
+### 👥 Player & Community Features
+- **Personal dashboards** with match statistics (wins/losses/win rate), current ranking, and upcoming matches
+- **Social profiles** - Follow other players, view achievements and badges
+- **Community activity feed** - Post updates, share achievements, engage with other players
+- **Comment and reaction system** - Discuss posts, react with emojis
+- **Leaderboard integration** - Compete for rankings within your organization
+- **Achievement badges** - Earn and display accomplishments and milestones
+- **Attendance tracking** - Monitor participation in events and training sessions
+- **Performance point tracking** - Historical performance data and trends
 
-### 🤝 Membership & Ranking
-- Membership tiers (Gold, Silver, Junior, etc.) with pricing and benefits.
-- Club member profiles capturing payment status, attendance and role.
-- Rankings updated weekly with win/loss records and rating points.
-- Challenge system to request ranking matches between members.
+### 🏛️ Organization & Club Management
+- **Complete club administration** - Create organizations with branding, location, and contact information
+- **Member management system** - Add, remove, and organize club members with role assignments
+- **Staff role setup** - Define roles (Admin, Coach, Finance Officer, Organizer, Referee) with specific permissions
+- **Real-time activity monitoring** - Dashboard showing all player actions (bookings, registrations, payments)
+- **Organization ratings** - Community ratings by facilities, coaching quality, community atmosphere, and value
+- **Reputation tracking** - Activity scores, player development scores, tournament engagement metrics
+- **Audit logs** - Complete history of all administrative changes
 
-### 🏆 Events & Tournaments
-- Support for club events: tournaments, clinics, trainings, social matches.
-- Registration, waitlists, reminders, brackets and match scheduling.
-- Bracket types: single elimination, double elimination, round robin, etc.
-- Tournament matches with score tracking, court assignment and status.
+### 🏌️ Court & Booking Management
+- **Court creation and management** - Define surface types (clay, hard, grass, carpet, artificial), indoor/outdoor status, lighting
+- **Court details** - Set amenities, rules, maximum capacity, maintenance schedules
+- **Multi-photo uploads** - Add multiple court images with positioning and scaling controls
+- **Real-time availability** - Browse 1-hour time slots with live status updates
+- **Advanced court search** - Filter by surface, location, indoor/outdoor, lighting, city
+- **Dynamic pricing system** - Peak vs. off-peak pricing with adjustable premiums (25-50% increase during 5-9 PM)
+- **Multiple booking types** - Regular play, tournaments, maintenance, guest bookings
+- **Guest management** - Track group bookings and guest counts
+- **Instant booking confirmation** - Immediate confirmation with receipts and details
+- **Cancellation management** - Cancel with reason tracking and status updates
+- **Court feedback system** - 1-5 star ratings and detailed reviews from players
+- **Complaint tracking** - Report issues with severity levels (low/medium/high) and resolution status
 
-### 🎾 Matches & Officials
-- Record individual matches with players, scores and winners.
-- Assign referees and ball crews to matches; track their statistics.
-- Referee profiles include certifications, experience and ratings.
+### 🏆 Tournament & Event Management
+- **Multiple event types** - Tournaments, clinics, social matches, training sessions, coaching sessions
+- **Tournament creation** - Define event details, dates, entry fees, prize pools
+- **Registration management** - Control capacity, set registration deadlines, manage confirmations
+- **Automatic waitlisting** - Players queue when event reaches capacity
+- **Bracket types** - Single elimination, double elimination, round-robin, or pool play
+- **Auto-bracket generation** - Seed players based on rankings
+- **Match scheduling** - Assign specific courts and times to matches
+- **Set-by-set score recording** - Best-of-3 match tracking
+- **Match status tracking** - Pending, scheduled, in-progress, completed, or walked-over
+- **Referee assignment** - Assign officials and ball crew to matches
+- **Announcements & notifications**:
+  - General, schedule, results, or important announcements
+  - Targeted distribution by member roles
+  - Read receipt tracking
+  - Scheduled/future publishing
+- **Event reminders** - Automated reminders before tournaments
+- **Tournament analytics** - Registration vs. capacity, revenue calculation, attendance tracking, results
 
-### 👨‍🏫 Coaching & Staff
-- Staff profiles include roles, expertise, availability, languages and more.
-- Coach marketplace with pricing, packages, discounts and commission.
-- Reviews and ratings from players; audit logs for administrative changes.
+### 💰 Payment & Financial Management
+- **Triple payment integration**:
+  - M-Pesa (mobile money for Kenya)
+  - PayPal (credit card and PayPal)
+  - Stripe (comprehensive card payments)
+- **Automatic payment confirmation** via webhooks
+- **Financial dashboard** - Monthly revenue overview with category breakdown
+- **Revenue tracking by category**:
+  - Membership fees
+  - Court booking revenue
+  - Tournament entry fees
+  - Coach commissions
+  - Event revenue
+- **Transaction management** - Detailed transaction log with provider tracking
+- **Member balance tracking** - Outstanding balances and payment status
+- **Payment reminders** - Automatic reminders for due payments with read tracking
+- **Monthly reports** - Automated financial summaries with profit/loss calculations
+- **Expense tracking** - Record club expenses by category
 
-### 📊 Analytics & Performance
-- Attendance logging for players with present/absent status.
-- Performance points and rating data over time.
-- Dashboard charts for attendance, performance, finances, etc.
+### 👨‍🏫 Coaching & Staff Management
+- **Coach profiles** with expertise areas, experience level, certifications, and languages spoken
+- **Coaching services** - Define session types (individual, group, clinic), durations, age groups, skill levels
+- **Dynamic pricing** - Base pricing with package discounts and junior rates
+- **Availability management** - Set weekly schedules with student capacity limits
+- **Coach ratings** - 1-5 star player reviews with verification badges
+- **Staff assignment** - Assign coaches/staff to tournaments and events with specific roles
+- **Task management** - Create tasks with priority levels and status tracking
+- **Commission tracking** - Calculate and manage coach earnings
+- **Audit logs** - Track all coaching record changes
 
-### 💬 Communication
-- Real‑time chat rooms, messages and participant presence tracking.
-- Club announcements, alerts and read‑status tracking.
-- Event reminders sent according to schedule.
+### 🏅 Ranking & Challenge System
+- **Weekly rankings** - Updated automatically based on win/loss records
+- **Ranking calculations** - Weighted by wins, losses, and rating points
+- **Historical tracking** - Compare current rank to previous rankings
+- **Challenge system** - Players can challenge others to ranking matches
+- **Automatic rank adjustments** - Standings update after challenge completion
+- **Performance trends** - Visualize ranking changes over time
 
-### 🏟 Court & Booking System
-- Define courts with surface, lighting and availability status.
-- Bookings for members, guests, tournaments and maintenance.
-- Peak‑hour pricing, cancellation handling and guest management.
+### 💬 Communication & Messaging
+- **Real-time chat system** - Direct messages and group chat rooms
+- **Message features**:
+  - Read receipts and delivery tracking
+  - Emoji reactions
+  - Reply/quote functionality
+  - Soft delete capability
+  - Online status indicators
+- **Club announcements** - Broadcast to specific member roles
+- **Announcement types** - General, schedule, results, important notices
+- **Read tracking** - See which members read announcements
+- **Event reminders** - Customizable reminder timing
+- **WebSocket integration** - Real-time message delivery and notifications
 
-### 💰 Inventory & Finance
-- Inventory items owned by clubs or organizations with condition and counts.
-- Financial accounting with monthly revenues, expenses and transactions.
-- Categories for memberships, bookings, events and coach commissions.
+### 📊 Analytics & Reporting
+- **Attendance analytics** - Track present/absent status with engagement reports
+- **Performance analytics** - Performance points, trends, and player comparisons
+- **Dashboard visualizations** - Charts for revenue, attendance, expenses, performance
+- **Organization activity feed** - Real-time log of:
+  - Court bookings
+  - Tournament registrations
+  - Ranking challenges
+  - Payments received
+  - Member joinings
+- **Reports & export** - Automated monthly summaries, member reports, revenue breakdowns
+- **PDF generation** - Export reports for sharing and archival
 
-### 🔒 Security & Permissions
-- Granular RBAC through `OrganizationRole` and `RolePermission` models.
-- Roles such as Admin, Coach, Member, Finance Officer, Guest, etc.
-- Permissions like manage_bookings, view_revenue, manage_rankings, etc.
+### 🎮 Community & Social Features
+- **Post creation** - Share updates, photos, achievements
+- **Commenting system** - Reply to posts with nested threads
+- **Reactions & engagement** - Like posts and comments with emoji reactions
+- **User network** - Follow players, build connections, see follower lists
+- **Feed types** - Personal feed, explore/discover, tournament discussions, activity feeds
+- **Share counter** - Track how many times posts are shared
 
-### ⭐ Gamification & Reputation
-- Badges for players (`Badge`, `PlayerBadge`) and organizations (`OrganizationBadge`).
-- Club ratings with categories (facilities, coaching, community, value).
+### 🏅 Referee & Match Management
+- **Referee profiles** - Track experience, certifications, expiration dates
+- **Referee assignment** - Assign officials to matches
+- **Ball crew management** - Assign and track ball crew assignments
+- **Match records** - Complete match information and results
+- **Score recording** - Set-by-set scores with official results
+- **Match status** - Pending, completed, or walked-over matches
+- **Referee statistics** - Total matches refereed and ratings
 
-### 📚 Rules & Reference Data
-- Standard tennis rules captured in `TennisRule` model for easy lookup.
+### 👑 Membership & Tiers
+- **Custom membership tiers** - Create levels (Gold, Silver, Junior, etc.)
+- **Tier benefits** - Define benefits and privileges per tier
+- **Flexible pricing** - Monthly or annual pricing with auto-renewal
+- **Court allocations** - Monthly court hours included per tier
+- **Booking limits** - Set concurrent bookings per tier
+- **Discount rates** - Percentage discounts for each membership level
+- **Member onboarding** - Add members, send invitations, bulk imports
+- **Member directories** - Search, view profiles, and access member history
+- **Outstanding balance tracking** - Monitor unpaid memberships
+
+### 🔧 Advanced Features
+- **Inventory management** - Track equipment (rackets, balls, nets) with condition status and stock counts
+- **Tennis rules database** - Standard rules reference with custom organization rules
+- **Rule appeals** - Players can appeal decisions with management response tracking
+- **Service marketplace** - Coaches and trainers offering services with pricing
+- **Amenity bookings** - Reserve event amenities (food, lodging, parking) with capacity management
+- **Customizable organizations** - Multiple levels of operation within single platform
+- **Full audit trails** - Complete history of administrative actions for compliance
+
+### 📱 Mobile App Features (Flutter)
+- **Native iOS & Android apps** - Full-featured companion applications
+- **User authentication** - Secure login on mobile devices
+- **Profile management** - View and edit profiles from mobile
+- **Push notifications** - Real-time alerts for tournaments, messages, and updates
+- **Match management** - View upcoming matches, enter scores, check results
+- **Court booking** - Browse and reserve courts from mobile app
+- **Real-time chat** - Message conversations and room participation
+- **Announcements** - Receive and view club announcements
+- **Player dashboard** - Personal statistics, leaderboard, quick actions
+- **Responsive design** - Optimized for mobile screens with single-hand usability
+- **Offline support** - Some features available without internet connection
+
+### 🔌 Technical Capabilities
+- **Real-time infrastructure** - WebSocket server with live chat and notifications
+- **Multi-tenant architecture** - Support for unlimited organizations
+- **Scalable database** - PostgreSQL with Prisma ORM
+- **gRPC support** - Efficient service-to-service communication
+- **API-first design** - Comprehensive RESTful APIs
+- **Security features** - JWT authentication, role-based authorization, data encryption
+- **Comprehensive testing data** - Pre-seeded with realistic scenarios:
+  - 3 organizations with 6 admin accounts
+  - 18 courts across organizations
+  - 493+ realistic court bookings
+  - 18+ tournaments and events
+  - Complete member and transaction history
 
 ---
 

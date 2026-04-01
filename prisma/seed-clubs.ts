@@ -280,6 +280,58 @@ async function main() {
     }),
   ]);
 
+  // ==================== CREATE FACILITY SERVICES (all orgs) ====================
+  console.log('🏗️ Creating facility services for each organization...');
+  for (const org of orgs) {
+    const facilityServices = [
+      {
+        name: 'Restroom Access',
+        description: 'Clean and fully equipped restrooms with showers and changing rooms.',
+        category: 'facility',
+        price: 0,
+        location: 'Clubhouse',
+      },
+      {
+        name: 'Food Lounge',
+        description: 'Comfortable food lounge with healthy meals, coffee bar, and snacks.',
+        category: 'facility',
+        price: 0,
+        location: 'Main Hall',
+      },
+      {
+        name: 'Locker Room',
+        description: 'Secure locker room storage with towels and hygiene kits.',
+        category: 'facility',
+        price: 0,
+        location: 'Basement',
+      },
+    ];
+
+    for (const svc of facilityServices) {
+      const exists = await prisma.service.findFirst({
+        where: {
+          organizationId: org.id,
+          name: svc.name,
+        },
+      });
+      if (!exists) {
+        await prisma.service.create({
+          data: {
+            organizationId: org.id,
+            name: svc.name,
+            description: svc.description,
+            category: svc.category,
+            sourceType: 'internal',
+            contextType: 'both',
+            price: svc.price,
+            location: svc.location,
+            externalLink: 'https://tennistracker.com',
+          },
+        });
+      }
+    }
+  }
+
   // ==================== CREATE CLUB MEMBERS ====================
   console.log('👥 Creating club members...');
   const members = await Promise.all([

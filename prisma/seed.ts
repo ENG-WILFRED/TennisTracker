@@ -10,6 +10,7 @@ import { seedCommunity } from './seeds/community.js';
 import { seedTournaments } from './seeds/tournaments.js';
 import { seedStats } from './seeds/stats.js';
 import { seedTournamentComments } from './seeds/tournament-comments.js';
+import { seedStaffForAllOrgs } from './seeds/staff.js';
 
 async function main() {
   try {
@@ -78,6 +79,11 @@ async function main() {
     console.log('───────────────────────────────────────────────────────────────');
     await seedStats();
 
+    // 11. Seed staff members
+    console.log('📍 STEP 11: Staff Members');
+    console.log('───────────────────────────────────────────────────────────────');
+    await seedStaffForAllOrgs();
+
     console.log('═══════════════════════════════════════════════════════════════');
     console.log('✨ SEEDING COMPLETED SUCCESSFULLY!\n');
     console.log('📊 SUMMARY:');
@@ -97,6 +103,7 @@ async function main() {
     console.log(`  • Tournaments: 5 (1 completed, 1 in progress, 1 ongoing, 2 upcoming)`);
     console.log(`  • Tournament Comments: ${tournamentComments}`);
     console.log(`  • Player Rankings: Created for ${members.length} players (current + historical)`);
+    console.log(`  • Staff Members: Created across all organizations`);
     console.log('═══════════════════════════════════════════════════════════════\n');
 
     console.log('🔐 TEST ACCOUNT CREDENTIALS (password: tennis123):');

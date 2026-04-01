@@ -26,7 +26,14 @@ export async function GET(req: Request) {
 
     const players = await prisma.player.findMany({
       where: whereClause,
-      include: { user: true },
+      select: {
+        userId: true,
+        matchesWon: true,
+        matchesPlayed: true,
+        user: {
+          select: { firstName: true, lastName: true, username: true, nationality: true, photo: true },
+        },
+      },
       orderBy: { matchesWon: 'desc' },
       take: q ? 20 : 8,
     });

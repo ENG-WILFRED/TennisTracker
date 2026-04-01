@@ -4,14 +4,17 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import Link from 'next/link';
+import toast from 'react-hot-toast';
+import EditProfileModal from '@/app/dashboard/components/EditProfileModal';
 import OrganizationOverviewSection from '@/components/organization/dashboard-sections/OrganizationOverviewSection';
 import OrganizationMembersSection from '@/components/organization/dashboard-sections/OrganizationMembersSection';
-import OrganizationScheduleSection from '@/components/organization/dashboard-sections/OrganizationScheduleSection';
 import OrganizationStaffSection from '@/components/organization/dashboard-sections/OrganizationStaffSection';
+import OrganizationCourtsSection from '@/components/organization/dashboard-sections/OrganizationCourtsSection';
 import OrganizationEventsSection from '@/components/organization/dashboard-sections/OrganizationEventsSection';
 import OrganizationTournamentsSection from '@/components/organization/dashboard-sections/OrganizationTournamentsSection';
-import OrganizationTasksSection from '@/components/organization/dashboard-sections/OrganizationTasksSection';
 import OrganizationReportsSection from '@/components/organization/dashboard-sections/OrganizationReportsSection';
+import OrganizationBookingsSection from '@/components/organization/dashboard-sections/OrganizationBookingsSection';
+import { authenticatedFetch } from '@/lib/authenticatedFetch';
 
 const G = {
   dark: '#0f1f0f', sidebar: '#152515', card: '#1a3020', cardBorder: '#2d5a35',
@@ -29,6 +32,21 @@ export const OrganizationDashboard: React.FC = () => {
   const [membersLoading, setMembersLoading] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [activities, setActivities] = useState<any[]>([]);
+  const userData = user as any;
+  const [editForm, setEditForm] = useState<any>({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    gender: '',
+    dateOfBirth: '',
+    nationality: '',
+    bio: '',
+    photo: '',
+  });
 
   useEffect(() => {
     if (!user?.id) return;
@@ -36,7 +54,7 @@ export const OrganizationDashboard: React.FC = () => {
     const fetchDashboard = async () => {
       setIsLoading(true);
       try {
-        const res = await fetch(`/api/dashboard/role?role=organization&userId=${user.id}`);
+        const res = await authenticatedFetch(`/api/dashboard/role?role=organization&userId=${user.id}`);
         const json = await res.json();
 
         if (!res.ok) {
@@ -44,6 +62,21 @@ export const OrganizationDashboard: React.FC = () => {
         }
 
         setDashboardData(json);
+
+        // Sync manager data with user in auth context
+        if (json.manager && user) {
+          Object.assign(user, {
+            firstName: json.manager.firstName,
+            lastName: json.manager.lastName,
+            email: json.manager.email,
+            phone: json.manager.phone,
+            photo: json.manager.photo,
+            nationality: json.manager.nationality,
+            gender: json.manager.gender,
+            bio: json.manager.bio,
+            dateOfBirth: json.manager.dateOfBirth,
+          });
+        }
 
         // Set members from dashboard data
         if (json.members) {
@@ -68,6 +101,33 @@ export const OrganizationDashboard: React.FC = () => {
           setMembers(normalized);
           setMembersLoading(false);
         }
+
+        // Fetch activities
+        if (json && user?.id) {
+          try {
+            const actRes = await authenticatedFetch(`/api/organization/activities?userId=${user.id}`);
+            if (actRes.ok) {
+              const actData = await actRes.json();
+              setActivities(Array.isArray(actData.activities) ? actData.activities.slice(0, 5) : []);
+            }
+          } catch (err) {
+            console.error('Failed to fetch activities:', err);
+          }
+        }
+
+        // Initialize edit form with user data (including synced data)
+        const userData = user as any;
+        setEditForm({
+          firstName: userData?.firstName || '',
+          lastName: userData?.lastName || '',
+          email: userData?.email || '',
+          phone: userData?.phone || '',
+          gender: userData?.gender || '',
+          dateOfBirth: userData?.dateOfBirth || '',
+          nationality: userData?.nationality || '',
+          bio: userData?.bio || '',
+          photo: userData?.photo || '',
+        });
       } catch (err: any) {
         setError(err?.message || 'Unknown error');
       } finally {
@@ -77,6 +137,77 @@ export const OrganizationDashboard: React.FC = () => {
     fetchDashboard();
   }, [user?.id]);
 
+  const fetchActivities = async () => {
+    try {
+      const res = await authenticatedFetch(`/api/organization/activities?userId=${user?.id}`);
+      if (res.ok) {
+        const data = await res.json();
+        setActivities(Array.isArray(data.activities) ? data.activities.slice(0, 5) : []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch activities:', err);
+    }
+  };
+
+  const handleEditFormChange = (e: any) => {
+    const { name, value } = e.target;
+    setEditForm((prev: any) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSaveProfile = async (e: any) => {
+    e.preventDefault();
+    setProfileSaving(true);
+    try {
+      const res = await authenticatedFetch(`/api/user/profile/${user?.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user?.id,
+          ...editForm,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to update profile');
+      }
+
+      const updatedUserData = await res.json();
+
+      // Update the auth context with the new user data (including phone, nationality, etc.)
+      if (user) {
+        Object.assign(user, updatedUserData);
+      }
+
+      // Log the activity
+      await authenticatedFetch(`/api/organization/activities`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user?.id,
+          type: 'profile_updated',
+          description: `Updated organization profile`,
+          metadata: { fields: Object.keys(editForm) },
+        }),
+      });
+
+      setShowEditModal(false);
+      fetchActivities();
+      toast.success('Profile updated successfully!');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to save profile');
+    } finally {
+      setProfileSaving(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await authenticatedFetch('/api/auth/logout', { method: 'POST' });
+      router.push('/');
+    } catch (err) {
+      console.error('Logout error:', err);
+    }
+  };
 
   useEffect(() => {
     const section = new URLSearchParams(window.location.search).get('section');
@@ -94,11 +225,11 @@ export const OrganizationDashboard: React.FC = () => {
 
   const navItems = [
     { label: 'Overview', icon: '🏢', section: 'overview' },
-    { label: 'Schedule', icon: '📅', section: 'schedule' },
     { label: 'Staff', icon: '👥', section: 'staff' },
+    { label: 'Courts', icon: '🎾', section: 'courts' },
+    { label: 'Bookings', icon: '📅', section: 'bookings' },
     { label: 'Events', icon: '🎾', section: 'events' },
     { label: 'Tournaments', icon: '🏆', section: 'tournaments' },
-    { label: 'Tasks', icon: '✓', section: 'tasks' },
     { label: 'Members', icon: '🎖️', section: 'members' },
     { label: 'Reports', icon: '📊', section: 'reports' },
   ];
@@ -192,8 +323,10 @@ export const OrganizationDashboard: React.FC = () => {
           ))}
         </nav>
         <div style={{ padding: '10px 12px 14px' }}>
-          <button style={{ width: '100%', background: G.lime, color: '#0f1f0f', border: 'none', borderRadius: 8, padding: '9px 0', fontWeight: 800, fontSize: 12, cursor: 'pointer' }}>
-            ✓ Complete Task
+          <button 
+            onClick={() => navigateToSidebar({ label: 'Events', section: 'events' })}
+            style={{ width: '100%', background: G.lime, color: '#0f1f0f', border: 'none', borderRadius: 8, padding: '9px 0', fontWeight: 800, fontSize: 12, cursor: 'pointer' }}>
+            🎾 View Events
           </button>
         </div>
       </aside>
@@ -231,24 +364,24 @@ export const OrganizationDashboard: React.FC = () => {
           />
         )}
 
-        {activeNav === 'Schedule' && (
-          <OrganizationScheduleSection scheduleItems={scheduleItems} />
+        {activeNav === 'Staff' && (
+          <OrganizationStaffSection orgId={dashboardData?.organizationId} />
         )}
 
-        {activeNav === 'Staff' && (
-          <OrganizationStaffSection staffRoles={staffRoles} />
+        {activeNav === 'Courts' && (
+          <OrganizationCourtsSection orgId={dashboardData?.organizationId} />
+        )}
+
+        {activeNav === 'Bookings' && (
+          <OrganizationBookingsSection orgId={dashboardData?.organizationId} />
         )}
 
         {activeNav === 'Events' && (
-          <OrganizationEventsSection />
+          <OrganizationEventsSection orgId={dashboardData?.organizationId} />
         )}
 
         {activeNav === 'Tournaments' && (
           <OrganizationTournamentsSection organizationId={dashboardData?.organizationId} />
-        )}
-
-        {activeNav === 'Tasks' && (
-          <OrganizationTasksSection pendingTasks={pendingTasks} />
         )}
 
         {activeNav === 'Reports' && (
@@ -262,14 +395,37 @@ export const OrganizationDashboard: React.FC = () => {
           {user?.photo
             ? <img src={user.photo} alt={user.firstName} style={{ width: 52, height: 52, borderRadius: '50%', border: `2.5px solid ${G.lime}`, objectFit: 'cover', marginBottom: 6 }} />
             : <div style={{ width: 52, height: 52, borderRadius: '50%', background: G.bright, margin: '0 auto 6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26 }}>🏢</div>}
-          <div style={{ fontWeight: 800, fontSize: 13 }}>{user?.firstName ?? 'Organization'}</div>
+          <div style={{ fontWeight: 800, fontSize: 13 }}>{user?.firstName ?? 'Organization'} {user?.lastName || ''}</div>
           <div style={{ color: G.muted, fontSize: 10, marginTop: 2 }}>Manager</div>
+          {user?.email && <div style={{ color: G.muted, fontSize: 9, marginTop: 1 }}>📧 {user.email}</div>}
+          {(user as any)?.phone && <div style={{ color: G.muted, fontSize: 9 }}>📱 {(user as any).phone}</div>}
+          {(user as any)?.nationality && <div style={{ color: G.muted, fontSize: 9 }}>🌍 {(user as any).nationality}</div>}
           <div style={{ marginTop: 6, display: 'flex', gap: 6 }}>
-            <button style={{ flex: 1, background: G.dark, color: G.lime, border: `1px solid ${G.lime}`, borderRadius: 6, padding: '4px 0', fontSize: 10, fontWeight: 700, cursor: 'pointer' }}>
+            <button 
+              onClick={() => {
+                const userData = user as any;
+                setEditForm({
+                  firstName: user?.firstName || '',
+                  lastName: user?.lastName || '',
+                  email: user?.email || '',
+                  phone: userData?.phone || '',
+                  gender: userData?.gender || '',
+                  dateOfBirth: userData?.dateOfBirth || '',
+                  nationality: userData?.nationality || '',
+                  bio: userData?.bio || '',
+                  photo: user?.photo || '',
+                });
+                setShowEditModal(true);
+              }}
+              style={{ flex: 1, background: G.dark, color: G.lime, border: `1px solid ${G.lime}`, borderRadius: 6, padding: '4px 0', fontSize: 10, fontWeight: 700, cursor: 'pointer' }}
+            >
               Edit
             </button>
-            <button style={{ flex: 1, background: G.lime, color: '#0f1f0f', border: 'none', borderRadius: 6, padding: '4px 0', fontSize: 10, fontWeight: 700, cursor: 'pointer' }}>
-              Settings
+            <button 
+              onClick={handleLogout}
+              style={{ flex: 1, background: '#ff6b6b', color: '#fff', border: 'none', borderRadius: 6, padding: '4px 0', fontSize: 10, fontWeight: 700, cursor: 'pointer' }}
+            >
+              Logout
             </button>
           </div>
         </div>
@@ -277,10 +433,10 @@ export const OrganizationDashboard: React.FC = () => {
         <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 9, padding: 12 }}>
           <div style={{ fontWeight: 800, fontSize: 12, marginBottom: 8 }}>📊 Stats</div>
           {[
-            { label: 'Members Active', value: '142' },
-            { label: 'Events Created', value: '24' },
-            { label: 'Revenue Y-T-D', value: '$87.2k' },
-            { label: 'Avg Rating', value: '4.8★' },
+            { label: 'Members Active', value: dashboardData?.kpi?.[0]?.value || members.length || '0' },
+            { label: 'Events Created', value: dashboardData?.kpi?.[1]?.value || '0' },
+            { label: 'Courts Available', value: dashboardData?.kpi?.[2]?.value || '0' },
+            { label: 'Avg Rating', value: (dashboardData?.kpi?.[3]?.value || 4.8) + '★' },
           ].map((s: any, i: number) => (
             <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: i < 3 ? `1px solid ${G.cardBorder}33` : 'none' }}>
               <span style={{ fontSize: 10, color: G.muted }}>{s.label}</span>
@@ -289,21 +445,31 @@ export const OrganizationDashboard: React.FC = () => {
           ))}
         </div>
 
-        <div>
-          <div style={{ fontWeight: 800, fontSize: 12, marginBottom: 8 }}>⚡ Quick Links</div>
-          {[
-            { l: 'Members', i: '👥' }, { l: 'Events', i: '🎾' },
-            { l: 'Analytics', i: '📊' }, { l: 'Documents', i: '📄' },
-            { l: 'Support', i: '💬' }, { l: 'Settings', i: '⚙️' },
-          ].map((item: any, i: number) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 9px', background: G.card, borderRadius: 7, border: `1px solid ${G.cardBorder}`, marginBottom: 5, cursor: 'pointer' }}>
-              <span>{item.i}</span>
-              <span style={{ fontSize: 11.5 }}>{item.l}</span>
-              <span style={{ marginLeft: 'auto', color: G.muted, fontSize: 10 }}>›</span>
+
+        {activities.length > 0 && (
+          <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 9, padding: 12 }}>
+            <div style={{ fontWeight: 800, fontSize: 12, marginBottom: 8 }}>📝 Recent Activity</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 120, overflowY: 'auto' }}>
+              {activities.map((activity: any, i: number) => (
+                <div key={i} style={{ fontSize: 9, color: G.muted, paddingBottom: 6, borderBottom: i < activities.length - 1 ? `1px solid ${G.cardBorder}33` : 'none' }}>
+                  <div style={{ color: G.accent, fontWeight: 600, marginBottom: 2 }}>{activity.type?.replace(/_/g, ' ').toUpperCase()}</div>
+                  <div>{activity.description}</div>
+                  <div style={{ fontSize: 8, marginTop: 2 }}>{new Date(activity.createdAt).toLocaleDateString()}</div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          </div>
+        )}
       </aside>
+
+      <EditProfileModal
+        show={showEditModal}
+        editForm={editForm}
+        onChange={handleEditFormChange}
+        onClose={() => setShowEditModal(false)}
+        onSubmit={handleSaveProfile}
+        saving={profileSaving}
+      />
     </div>
   );
 };

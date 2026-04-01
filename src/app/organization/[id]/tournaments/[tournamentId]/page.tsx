@@ -35,8 +35,11 @@ export default function OrganizationTournamentManagementPage({
   const [pendingRegistrations, setPendingRegistrations] = useState<any[]>([]);
   const [approvedRegistrations, setApprovedRegistrations] = useState<any[]>([]);
   const [rejectedRegistrations, setRejectedRegistrations] = useState<any[]>([]);
+  const [announcements, setAnnouncements] = useState<any[]>([]);
   const [managementLoading, setManagementLoading] = useState(false);
   const [updateLoading, setUpdateLoading] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
 
   // Wrapper for setActiveTab that also updates URL
   const setActiveTab = (tab: 'overview' | 'registrations' | 'settings' | 'rules' | 'facilities' | 'schedule' | 'analytics' | 'announcements' | 'appeals') => {
@@ -57,10 +60,16 @@ export default function OrganizationTournamentManagementPage({
     }
 
     try {
-      const [tournamentData, leaderboardData] = await Promise.all([
+      const [tournamentData, leaderboardData, announcementsData] = await Promise.all([
         getTournamentDetails(tournamentId),
-        getTournamentLeaderboard(tournamentId)
+        getTournamentLeaderboard(tournamentId),
+        authenticatedFetch(`/api/tournaments/${tournamentId}/announcements`),
       ]);
+
+      let parsedAnnouncements: any[] = [];
+      if (announcementsData?.ok) {
+        parsedAnnouncements = await announcementsData.json().catch(() => []);
+      }
 
       if (tournamentData) {
         setTournament(tournamentData);
@@ -70,6 +79,8 @@ export default function OrganizationTournamentManagementPage({
           router.push('/dashboard/organization/' + orgId);
           return;
         }
+
+        setAnnouncements(parsedAnnouncements);
 
         // Process management data from the fetched tournament
         if (tournamentData?.registrations) {
@@ -117,6 +128,9 @@ export default function OrganizationTournamentManagementPage({
 
   const handleSaveTournament = async (updates: any) => {
     setUpdateLoading(true);
+    setSaveError(null);
+    setSaveSuccess(null);
+
     try {
       const response = await authenticatedFetch(`/api/tournaments/${tournamentId}`, {
         method: 'PATCH',
@@ -126,12 +140,18 @@ export default function OrganizationTournamentManagementPage({
 
       if (!response.ok) {
         const payload = await response.json().catch(() => ({}));
-        throw new Error(payload?.error || 'Failed to save tournament');
+        const errMsg = payload?.error || 'Failed to save tournament';
+        setSaveError(errMsg);
+        throw new Error(errMsg);
       }
 
       await fetchTournamentData();
+      setSaveSuccess('Tournament updated successfully.');
     } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to save tournament';
+      setSaveError(message);
       console.error('Error saving tournament:', error);
+      throw new Error(message);
     } finally {
       setUpdateLoading(false);
     }
@@ -180,6 +200,7 @@ export default function OrganizationTournamentManagementPage({
       pendingRegistrations={pendingRegistrations}
       approvedRegistrations={approvedRegistrations}
       rejectedRegistrations={rejectedRegistrations}
+      announcements={announcements}
       onRegistrationAction={handleRegistrationAction}
       managementLoading={managementLoading}
       fetchTournamentData={fetchTournamentData}

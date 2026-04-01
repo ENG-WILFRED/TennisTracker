@@ -191,8 +191,8 @@ export default function CourtsPage() {
         selectedCourt.organization.id
       );
 
-      setBookingId(booking.id);
-      setPlayerBookings((prev) => [booking, ...prev]);
+      setBookingId(booking.booking.id);
+      setPlayerBookings((prev) => [booking.booking, ...prev]);
       setCheckoutStage('receipt');
 
       // keep display values and totalPrice from selected slot

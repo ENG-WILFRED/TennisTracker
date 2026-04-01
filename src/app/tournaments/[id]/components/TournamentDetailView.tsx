@@ -120,6 +120,37 @@ export function TournamentDetailView({
   const [rejectingRegistrationId, setRejectingRegistrationId] = useState<string | null>(null);
   const [rejectionLoading, setRejectionLoading] = useState(false);
 
+  const [appeals, setAppeals] = useState<any[]>([]);
+  const [appealsLoading, setAppealsLoading] = useState(false);
+  const [appealsError, setAppealsError] = useState<string | null>(null);
+  const [appealFilter, setAppealFilter] = useState<'all' | 'pending' | 'approved' | 'denied'>('all');
+
+  const fetchUserAppeals = async () => {
+    if (!tournament?.id) return;
+    setAppealsLoading(true);
+    setAppealsError(null);
+    try {
+      const res = await authenticatedFetch(`/api/tournaments/${tournament.id}/appeals`, { method: 'GET' });
+      if (!res.ok) {
+        const payload = await res.json().catch(() => ({}));
+        throw new Error(payload.error || 'Failed to load appeals');
+      }
+      const data = await res.json();
+      setAppeals(data);
+    } catch (err) {
+      console.error('Error fetching appeals:', err);
+      setAppealsError(err instanceof Error ? err.message : 'Failed to load appeals');
+    } finally {
+      setAppealsLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    if (tournament?.id) {
+      fetchUserAppeals();
+    }
+  }, [tournament?.id]);
+
   // Calculate confirmed participants (approved + registered, excluding pending)
   const confirmedParticipants = tournament.registrations?.filter((reg: any) => 
     ['approved', 'registered'].includes(reg.status)
@@ -405,6 +436,50 @@ export function TournamentDetailView({
                 >
                   Submit Appeal
                 </button>
+              </div>
+
+              <div className="bg-[#0a1510] border border-[rgba(99,153,34,0.12)] rounded-[14px] p-6">
+                <h3 className="text-2xl font-semibold text-[#e8f8d8] mb-4">📄 Your Appeals</h3>
+
+                {appealsLoading ? (
+                  <div className="text-[#5a7242] text-center py-8">Loading your appeals...</div>
+                ) : appealsError ? (
+                  <div className="text-[#f59e0b] text-center py-8">{appealsError}</div>
+                ) : appeals.length === 0 ? (
+                  <div className="text-[#5a7242] text-center py-8">No appeals submitted yet.</div>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-2 mb-4">
+                      <label className="text-sm text-[#4a6335]">Filter:</label>
+                      <select
+                        value={appealFilter}
+                        onChange={(e) => setAppealFilter(e.target.value as 'all' | 'pending' | 'approved' | 'denied')}
+                        className="bg-[rgba(99,153,34,0.05)] border border-[rgba(99,153,34,0.12)] rounded px-2 py-1 text-sm text-[#dde8d4]"
+                      >
+                        <option value="all">All Appeals</option>
+                        <option value="pending">Pending</option>
+                        <option value="approved">Approved</option>
+                        <option value="denied">Denied</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-3">
+                      {appeals.filter(appeal => appealFilter === 'all' || appeal.status === appealFilter).map((appeal) => (
+                        <div key={appeal.id} className="bg-[rgba(99,153,34,0.05)] border border-[rgba(99,153,34,0.1)] rounded-lg p-4">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="text-base font-semibold text-[#c8e0a8]">{appeal.ruleCategory || 'General Rule'}{appeal.ruleLabel ? ` • ${appeal.ruleLabel}` : ''}</div>
+                            <div className="text-sm font-semibold text-[#8dc843]">{appeal.status?.toUpperCase()}</div>
+                          </div>
+                          <p className="text-[#dde8d4] leading-relaxed mb-2">{appeal.appealText}</p>
+                          {appeal.responseText && (
+                            <div className="text-sm text-[#a8d84e]">Organizer response: {appeal.responseText}</div>
+                          )}
+                          <div className="text-xs text-[#5a7242] mt-2">Submitted: {new Date(appeal.createdAt).toLocaleDateString()}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           )}
@@ -1109,9 +1184,9 @@ export function TournamentDetailView({
           isOpen={true}
           onClose={onCloseModal}
           tournamentId={tournament.id}
-          onAppealSubmitted={() => {
-            // Could refresh appeals or show success message
+          onAppealSubmitted={async () => {
             onCloseModal();
+            await fetchUserAppeals();
           }}
         />
       )}

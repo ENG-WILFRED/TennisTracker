@@ -5,7 +5,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useSearchParams, useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { ProfileView } from '@/components/profile/ProfileView';
-import { BookingView } from '@/components/booking/BookingView';
+import { BookingView } from '@/components/booking/BookingViewNew';
 import { CommunityView } from '@/components/community/CommunityView';
 import { TournamentsView } from '@/components/tournaments/TournamentsView';
 import { StatsView } from '@/components/stats/StatsView';

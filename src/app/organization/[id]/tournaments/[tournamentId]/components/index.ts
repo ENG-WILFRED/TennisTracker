@@ -6,3 +6,4 @@ export { TournamentRegistrationsSection } from './TournamentRegistrationsSection
 export { TournamentRulesSection } from './TournamentRulesSection';
 export { TournamentFacilitiesSection } from './TournamentFacilitiesSection';
 export { TournamentSettingsSection } from './TournamentSettingsSection';
+export { TournamentAppealsSection } from './TournamentAppealsSection';

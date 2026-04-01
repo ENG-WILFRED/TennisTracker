@@ -10,7 +10,11 @@ import {
   createCourtBooking,
   getPlayerBookings,
   cancelCourtBooking,
+  getPlayerOrganizations,
+  getAllAvailableOrganizations,
 } from '@/actions/bookings';
+import { BookingConfirmation } from './BookingConfirmation';
+import { CourtDetailModal } from './CourtDetailModal';
 
 // ─── Shared primitives ────────────────────────────────────────────────────────
 
@@ -20,8 +24,8 @@ const Card: React.FC<{ children: React.ReactNode; className?: string }> = ({ chi
   </div>
 );
 
-const Label: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div className="text-[10px] font-bold uppercase tracking-wider text-[#a8d84e] mb-2">{children}</div>
+const Label: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = '' }) => (
+  <div className={`text-[10px] font-bold uppercase tracking-wider text-[#a8d84e] mb-2 ${className}`}>{children}</div>
 );
 
 // ─── Static mock data for new sections ────────────────────────────────────────
@@ -191,34 +195,46 @@ export function BookingView({ onClose, isEmbedded = false, canBook = true, organ
 
   const [courts, setCourts] = useState<any[]>([]);
   const [existingBookings, setExistingBookings] = useState<any[]>([]);
+  const [organizations, setOrganizations] = useState<any[]>([]);
+  const [selectedOrgId, setSelectedOrgId] = useState<string>(organizationId || '');
   const [selectedCourt, setSelectedCourt] = useState<string>('');
-  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
-  const [timeSlots, setTimeSlots] = useState<any[]>([]);
-  const [selectedSlot, setSelectedSlot] = useState<string>('');
-  const [duration, setDuration] = useState<number>(1);
-  const [notes, setNotes] = useState('');
   const [matchType, setMatchType] = useState<'singles' | 'doubles' | 'practice'>('singles');
   const [loading, setLoading] = useState(true);
-  const [booking, setBooking] = useState(false);
   const [toast, setToast] = useState<{ type: string; message: string } | null>(null);
   const [activeTab, setActiveTab] = useState<'booking' | 'myBookings' | 'history'>('booking');
   const [hasClubMembership, setHasClubMembership] = useState(true);
   const [bookingFilter, setBookingFilter] = useState<'all' | 'upcoming' | 'past'>('upcoming');
+  const [showCourtModal, setShowCourtModal] = useState(false);
+  const [selectedCourtForModal, setSelectedCourtForModal] = useState<any>(null);
+  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [selectedSlot, setSelectedSlot] = useState<string>('');
+  const [duration, setDuration] = useState<number>(1);
+  const [notes, setNotes] = useState<string>('');
+  const [mobileNumber, setMobileNumber] = useState<string>('');
+  const [paymentMethod, setPaymentMethod] = useState<'mpesa' | 'stripe' | 'paypal'>('mpesa');
+  const [booking, setBooking] = useState<boolean>(false);
+  const [lastBooking, setLastBooking] = useState<any>(null);
+  const [lastBookingIsMember, setLastBookingIsMember] = useState<boolean>(false);
+  const [lastBookingStatus, setLastBookingStatus] = useState<string>('');
+  const [showBookingConfirmation, setShowBookingConfirmation] = useState<boolean>(false);
+  const [timeSlots, setTimeSlots] = useState<any[]>([]);
 
   useEffect(() => {
     const loadData = async () => {
       if (!userIdFromURL) return;
       try {
-        const courtsData = await getAvailableCourts(userIdFromURL);
-        setCourts(courtsData);
+        // Fetch all available organizations in the database
+        const orgsData = await getAllAvailableOrganizations();
+        setOrganizations(orgsData);
+
+        // Set the selected organization
         if (organizationId) {
-          const bookingsData = await getPlayerBookings(userIdFromURL, organizationId);
-          setExistingBookings(bookingsData);
+          setSelectedOrgId(organizationId);
+        } else if (orgsData.length > 0) {
+          setSelectedOrgId(orgsData[0].id);
         }
-        if (courtsData.length > 0) setSelectedCourt(courtsData[0].id);
       } catch (error: any) {
-        if (error.message?.includes('not a member')) setHasClubMembership(false);
-        else showToast('error', error.message);
+        showToast('error', error.message);
       } finally {
         setLoading(false);
       }
@@ -226,47 +242,143 @@ export function BookingView({ onClose, isEmbedded = false, canBook = true, organ
     loadData();
   }, [userIdFromURL, organizationId]);
 
+  // Load courts when selected organization changes
   useEffect(() => {
-    const loadSlots = async () => {
-      if (!selectedCourt || !organizationId) return;
+    const loadCourts = async () => {
+      if (!userIdFromURL || !selectedOrgId) return;
       try {
-        const slots = await getAvailableTimeSlots(selectedCourt, selectedDate, organizationId);
-        setTimeSlots(slots);
-        setSelectedSlot('');
+        const courtsData = await getAvailableCourts(userIdFromURL, selectedOrgId);
+        setCourts(courtsData);
+
+        // Load bookings for this organization
+        const bookingsData = await getPlayerBookings(userIdFromURL, selectedOrgId);
+        setExistingBookings(bookingsData);
       } catch (error: any) {
         showToast('error', error.message);
       }
     };
-    loadSlots();
-  }, [selectedCourt, selectedDate, organizationId]);
+    loadCourts();
+  }, [userIdFromURL, selectedOrgId]);
+
+  // Load time slots when court or date changes
+  useEffect(() => {
+    const loadTimeSlots = async () => {
+      if (!selectedCourt || !selectedDate) {
+        setTimeSlots([]);
+        return;
+      }
+      try {
+        const slots = await getAvailableTimeSlots(selectedCourt, selectedDate, selectedOrgId);
+        setTimeSlots(slots || []);
+      } catch (error: any) {
+        console.error('Failed to load time slots:', error);
+        setTimeSlots([]);
+      }
+    };
+    loadTimeSlots();
+  }, [selectedCourt, selectedDate, selectedOrgId]);
 
   const showToast = (type: string, message: string) => {
     setToast({ type, message });
     setTimeout(() => setToast(null), 3500);
   };
 
+  const handleCourtSelect = (court: any) => {
+    setSelectedCourtForModal(court);
+    setShowCourtModal(true);
+  };
+
+  const handleConfirmCourt = () => {
+    // Navigate to detailed booking page with court info
+    if (selectedCourtForModal && selectedOrgId) {
+      router.push(`/player/booking/details?court=${selectedCourtForModal.id}&org=${selectedOrgId}&type=${matchType}`);
+      setShowCourtModal(false);
+    }
+  };
+
+  const handleViewBooking = (bookingId: string) => {
+    if (selectedOrgId) {
+      router.push(`/player/booking/${bookingId}?org=${selectedOrgId}`);
+    }
+  };
+
   const handleBooking = async () => {
-    if (!selectedCourt || !selectedSlot || !userIdFromURL || !organizationId) {
-      return showToast('error', 'Please select a court and time slot');
+    if (!userIdFromURL || !selectedOrgId) {
+      showToast('error', 'Missing user or organization information');
+      return;
     }
     setBooking(true);
     try {
-      const [hour] = selectedSlot.split(':');
+      // Get time slot date and time
+      const [hours, minutes] = selectedSlot.split(':').map(Number);
       const startTime = new Date(selectedDate);
-      startTime.setHours(parseInt(hour), 0, 0, 0);
+      startTime.setHours(hours, minutes, 0, 0);
       const endTime = new Date(startTime);
-      endTime.setHours(startTime.getHours() + duration, 0, 0, 0);
+      endTime.setHours(endTime.getHours() + duration);
 
-      await createCourtBooking(userIdFromURL, selectedCourt, startTime.toISOString(), endTime.toISOString(), organizationId);
-      showToast('success', '🎾 Booking confirmed!');
-      const bookingsData = await getPlayerBookings(userIdFromURL, organizationId);
-      setExistingBookings(bookingsData);
+      const bookingResult = await createCourtBooking(
+        userIdFromURL,
+        selectedCourt,
+        startTime.toISOString(),
+        endTime.toISOString(),
+        selectedOrgId
+      );
+
+      // Store booking info for confirmation modal
+      setLastBooking(bookingResult.booking);
+      setLastBookingIsMember(bookingResult.isMember);
+      setLastBookingStatus(bookingResult.membershipStatus);
+      setShowBookingConfirmation(true);
+
+      // Call payment endpoint for payment processing
+      const paymentRes = await fetch('/api/bookings/court-booking-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          playerId: userIdFromURL,
+          courtId: selectedCourt,
+          startTime: startTime.toISOString(),
+          endTime: endTime.toISOString(),
+          organizationId: selectedOrgId,
+          amount: bookingResult.booking.price,
+          paymentMethod,
+          mobileNumber: paymentMethod === 'mpesa' ? mobileNumber : undefined,
+          bookingId: bookingResult.booking.id,
+        }),
+      });
+
+      if (!paymentRes.ok) {
+        const errorData = await paymentRes.json();
+        // Booking created but payment failed - user will see in confirmation modal
+        console.warn('Payment processing started:', errorData);
+      }
+
+      const paymentData = await paymentRes.json();
+
+      if (paymentMethod === 'mpesa') {
+        // M-Pesa: Show STK push notification
+        showToast('success', '📱 STK push sent! Enter your PIN on your phone');
+      } else if (paymentMethod === 'stripe' || paymentMethod === 'paypal') {
+        // Redirect to payment gateway
+        if (paymentData.checkoutUrl) {
+          window.location.href = paymentData.checkoutUrl;
+          return;
+        }
+      }
+
+      // Reset form
       setSelectedSlot('');
       setDuration(1);
       setNotes('');
-      setActiveTab('myBookings');
+      setMobileNumber('');
+
+      // Reload bookings after short delay
+      setTimeout(async () => {
+        const bookingsData = await getPlayerBookings(userIdFromURL, selectedOrgId);
+        setExistingBookings(bookingsData);
+      }, 2000);
     } catch (error: any) {
-      showToast('error', error.message);
+      showToast('error', error.message || 'Booking failed');
     } finally {
       setBooking(false);
     }
@@ -276,7 +388,7 @@ export function BookingView({ onClose, isEmbedded = false, canBook = true, organ
     try {
       await cancelCourtBooking(bookingId, userIdFromURL!);
       showToast('success', 'Booking cancelled');
-      const bookingsData = await getPlayerBookings(userIdFromURL!, organizationId!);
+      const bookingsData = await getPlayerBookings(userIdFromURL!, selectedOrgId!);
       setExistingBookings(bookingsData);
     } catch (error: any) {
       showToast('error', error.message);
@@ -381,12 +493,46 @@ export function BookingView({ onClose, isEmbedded = false, canBook = true, organ
           NEW BOOKING TAB
       ══════════════════════════════════════════════════════════════════════ */}
       {activeTab === 'booking' && canBook && (
-        <div className="grid grid-cols-3 gap-4">
+        <div className="scrollable-booking flex flex-col gap-4 max-h-[calc(100vh-280px)] overflow-y-auto pr-2" style={{ scrollbarWidth: 'thin', scrollbarColor: '#7dc142 #152515' }}>
+          <style>{`
+            .scrollable-booking::-webkit-scrollbar {
+              width: 6px;
+            }
+            .scrollable-booking::-webkit-scrollbar-track {
+              background: #152515;
+              border-radius: 10px;
+            }
+            .scrollable-booking::-webkit-scrollbar-thumb {
+              background: #7dc142;
+              border-radius: 10px;
+            }
+            .scrollable-booking::-webkit-scrollbar-thumb:hover {
+              background: #a8d84e;
+            }
+          `}</style>
 
-          {/* ── Left col: Form ────────────────────────────────────────────── */}
-          <div className="col-span-2 space-y-5">
+          {/* ── FORM SECTIONS (Top to Bottom) in Specified Order ──────────────────── */}
+          <div className="space-y-4">
 
-            {/* Match type */}
+            {/* 1. Select Organization */}
+            {organizations.length > 1 && (
+              <Card>
+                <Label>Select Organization</Label>
+                <select
+                  value={selectedOrgId}
+                  onChange={(e) => setSelectedOrgId(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-[#2d5a35] bg-[#152515] text-[#e8f5e0] text-sm focus:outline-none focus:border-[#7dc142]"
+                >
+                  {organizations.map((org) => (
+                    <option key={org.id} value={org.id}>
+                      {org.name}
+                    </option>
+                  ))}
+                </select>
+              </Card>
+            )}
+
+            {/* 2. Match Type */}
             <Card>
               <Label>Match Type</Label>
               <div className="flex gap-2">
@@ -406,9 +552,9 @@ export function BookingView({ onClose, isEmbedded = false, canBook = true, organ
               </div>
             </Card>
 
-            {/* Court selection */}
+            {/* 3. Select Court */}
             <Card>
-              <Label>Select Court</Label>
+              <Label>Court</Label>
               <div className="grid grid-cols-2 gap-2">
                 {courts.map(court => (
                   <CourtCard
@@ -421,41 +567,60 @@ export function BookingView({ onClose, isEmbedded = false, canBook = true, organ
               </div>
             </Card>
 
-            {/* Date + Duration row */}
-            <div className="grid grid-cols-2 gap-4">
+            {/* 4. Court Details */}
+            {selectedCourtData && (
               <Card>
-                <Label>Date</Label>
-                <input
-                  type="date"
-                  value={selectedDate}
-                  min={new Date().toISOString().split('T')[0]}
-                  onChange={e => setSelectedDate(e.target.value)}
-                  className="w-full bg-[#2d5a27] border border-[#2d5a35] text-[#e8f5e0] rounded-lg px-3 py-2 text-sm outline-none focus:border-[#7dc142] transition-colors"
-                />
-              </Card>
-              <Card>
-                <Label>Duration</Label>
-                <div className="flex gap-2">
-                  {[1, 2, 3].map(h => (
-                    <button
-                      key={h}
-                      onClick={() => setDuration(h)}
-                      className={`flex-1 py-2 rounded-lg border text-xs font-bold transition-all ${
-                        duration === h
-                          ? 'bg-[#7dc142] border-[#7dc142] text-[#0f1f0f]'
-                          : 'bg-[#152515] border-[#2d5a35] text-[#7aaa6a] hover:border-[#7dc142]/60'
-                      }`}
-                    >
-                      {h}h
-                    </button>
+                <Label>Court Detail</Label>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-xl bg-[#2d5a27] flex items-center justify-center text-xl">🎾</div>
+                  <div>
+                    <div className="text-sm font-bold text-[#e8f5e0]">{selectedCourtData.name}</div>
+                    <div className="text-[10px] text-[#7aaa6a]">{selectedCourtData.surface || 'Hard Court'}</div>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {(COURT_FEATURES[selectedCourtData.id] || COURT_FEATURES.default).map(f => (
+                    <span key={f} className="text-[9px] bg-[#0f1f0f] text-[#7aaa6a] px-2 py-1 rounded-lg">{f}</span>
                   ))}
                 </div>
               </Card>
-            </div>
+            )}
 
-            {/* Popularity heatmap */}
+            {/* 5. Recently Active Players */}
             <Card>
-              <Label>Peak Hours Today</Label>
+              <Label>Recent Played</Label>
+              <div className="space-y-2">
+                {RECENT_PLAYERS.map(p => (
+                  <div key={p.name} className="flex items-center gap-2 px-2 py-1.5 bg-[#152515] rounded-lg">
+                    <span className="text-lg">{p.avatar}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-semibold text-[#e8f5e0] truncate">{p.name}</div>
+                      <div className="text-[9px] text-[#7aaa6a]">{p.level}</div>
+                    </div>
+                    <div className="text-[9px] font-bold text-[#f0c040]">⭐ {p.rating}</div>
+                  </div>
+                ))}
+                <button className="w-full py-1.5 text-[10px] font-bold text-[#7dc142] hover:text-[#a8d84e] transition-colors">
+                  Find a partner →
+                </button>
+              </div>
+            </Card>
+
+            {/* 6. Date */}
+            <Card>
+              <Label>Date</Label>
+              <input
+                type="date"
+                value={selectedDate}
+                min={new Date().toISOString().split('T')[0]}
+                onChange={e => setSelectedDate(e.target.value)}
+                className="w-full bg-[#2d5a27] border border-[#2d5a35] text-[#e8f5e0] rounded-lg px-3 py-2 text-sm outline-none focus:border-[#7dc142] transition-colors"
+              />
+            </Card>
+
+            {/* 7. Peak Hours */}
+            <Card>
+              <Label>Peak Hours</Label>
               <div className="flex items-end gap-1 justify-between px-1">
                 {POPULAR_TIMES.map((h, i) => (
                   <PopularityBar
@@ -474,9 +639,9 @@ export function BookingView({ onClose, isEmbedded = false, canBook = true, organ
               </div>
             </Card>
 
-            {/* Time slots */}
+            {/* 8. Time Slot */}
             <Card>
-              <Label>Available Time Slots</Label>
+              <Label>Time Slot</Label>
               {timeSlots.length === 0 ? (
                 <div className="text-center py-6 text-[#7aaa6a] text-sm">No slots loaded — select a court and date above</div>
               ) : (
@@ -493,23 +658,23 @@ export function BookingView({ onClose, isEmbedded = false, canBook = true, organ
               )}
             </Card>
 
-            {/* Notes */}
+            {/* 9. Notes */}
             <Card>
-              <Label>Session Notes (Optional)</Label>
+              <Label>Notes</Label>
               <textarea
                 value={notes}
                 onChange={e => setNotes(e.target.value)}
-                rows={2}
+                rows={4}
                 placeholder="e.g. Bringing my own equipment, practising serve…"
                 className="w-full bg-[#2d5a27] border border-[#2d5a35] text-[#e8f5e0] rounded-lg px-3 py-2 text-xs outline-none focus:border-[#7dc142] resize-none placeholder-[#7aaa6a] transition-colors"
               />
             </Card>
           </div>
 
-          {/* ── Right col: Sidebar ────────────────────────────────────────── */}
-          <div className="space-y-4">
-
-            {/* Booking summary */}
+          {/* ── BOTTOM SECTION: 2-Column (Booking Summary + Policies) ────────── */}
+          <div className="grid grid-cols-2 gap-4">
+            
+            {/* Left: Booking Summary + Payment */}
             <Card className={`transition-all ${selectedSlot ? 'border-[#7dc142]' : ''}`}>
               <Label>Booking Summary</Label>
               <div className="space-y-2 mb-4">
@@ -532,12 +697,50 @@ export function BookingView({ onClose, isEmbedded = false, canBook = true, organ
                 </div>
               </div>
 
+              {/* Payment method selector */}
+              <div className="space-y-2 mb-4 pb-4 border-b border-[#2d5a35]">
+                <Label className="text-xs font-bold">Payment Method</Label>
+                <div className="grid grid-cols-3 gap-2">
+                  {['mpesa', 'stripe', 'paypal'].map(method => (
+                    <button
+                      key={method}
+                      onClick={() => setPaymentMethod(method as 'mpesa' | 'stripe' | 'paypal')}
+                      className={`py-2 rounded-lg border text-xs font-bold transition-all ${
+                        paymentMethod === method
+                          ? 'bg-[#7dc142] border-[#7dc142] text-[#0f1f0f]'
+                          : 'bg-[#152515] border-[#2d5a35] text-[#7aaa6a] hover:border-[#7dc142]/60'
+                      }`}
+                    >
+                      {method === 'mpesa' && 'M-Pesa'}
+                      {method === 'stripe' && 'Stripe'}
+                      {method === 'paypal' && 'PayPal'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Mobile number input for M-Pesa */}
+              {paymentMethod === 'mpesa' && (
+                <div className="space-y-2 mb-4 pb-4 border-b border-[#2d5a35]">
+                  <Label className="text-xs font-bold">M-Pesa Number</Label>
+                  <input
+                    type="tel"
+                    value={mobileNumber}
+                    onChange={e => setMobileNumber(e.target.value.replace(/\D/g, ''))}
+                    placeholder="254712345678"
+                    maxLength={12}
+                    className="w-full bg-[#2d5a27] border border-[#2d5a35] text-[#e8f5e0] rounded-lg px-3 py-2 text-sm outline-none focus:border-[#7dc142] placeholder-[#7aaa6a] transition-colors"
+                  />
+                  <p className="text-[10px] text-[#7aaa6a]">Format: 254712345678 (12 digits)</p>
+                </div>
+              )}
+
               <button
                 onClick={handleBooking}
-                disabled={!selectedSlot || booking}
+                disabled={!selectedSlot || booking || (paymentMethod === 'mpesa' && mobileNumber.length < 12)}
                 className="w-full py-3 bg-[#7dc142] hover:bg-[#a8d84e] disabled:bg-[#2d5a27] disabled:text-[#7aaa6a] text-[#0f1f0f] font-black text-sm rounded-xl transition-all disabled:cursor-not-allowed"
               >
-                {booking ? '⏳ Confirming…' : selectedSlot ? '✓ Confirm Booking' : 'Select a time slot'}
+                {booking ? '⏳ Processing…' : selectedSlot ? `✓ Confirm & Pay via ${paymentMethod === 'mpesa' ? 'M-Pesa' : paymentMethod === 'stripe' ? 'Stripe' : 'PayPal'}` : 'Select a time slot'}
               </button>
 
               {selectedSlot && (
@@ -547,46 +750,7 @@ export function BookingView({ onClose, isEmbedded = false, canBook = true, organ
               )}
             </Card>
 
-            {/* Court info */}
-            {selectedCourtData && (
-              <Card>
-                <Label>Court Details</Label>
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-xl bg-[#2d5a27] flex items-center justify-center text-xl">🎾</div>
-                  <div>
-                    <div className="text-sm font-bold text-[#e8f5e0]">{selectedCourtData.name}</div>
-                    <div className="text-[10px] text-[#7aaa6a]">{selectedCourtData.surface || 'Hard Court'}</div>
-                  </div>
-                </div>
-                <div className="flex flex-wrap gap-1">
-                  {(COURT_FEATURES[selectedCourtData.id] || COURT_FEATURES.default).map(f => (
-                    <span key={f} className="text-[9px] bg-[#0f1f0f] text-[#7aaa6a] px-2 py-1 rounded-lg">{f}</span>
-                  ))}
-                </div>
-              </Card>
-            )}
-
-            {/* Who's playing */}
-            <Card>
-              <Label>Recently Active Players</Label>
-              <div className="space-y-2">
-                {RECENT_PLAYERS.map(p => (
-                  <div key={p.name} className="flex items-center gap-2 px-2 py-1.5 bg-[#152515] rounded-lg">
-                    <span className="text-lg">{p.avatar}</span>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-xs font-semibold text-[#e8f5e0] truncate">{p.name}</div>
-                      <div className="text-[9px] text-[#7aaa6a]">{p.level}</div>
-                    </div>
-                    <div className="text-[9px] font-bold text-[#f0c040]">⭐ {p.rating}</div>
-                  </div>
-                ))}
-                <button className="w-full py-1.5 text-[10px] font-bold text-[#7dc142] hover:text-[#a8d84e] transition-colors">
-                  Find a partner →
-                </button>
-              </div>
-            </Card>
-
-            {/* Policies */}
+            {/* Right: Booking Policies */}
             <Card>
               <Label>Booking Policies</Label>
               <div className="space-y-2 text-[10px] text-[#7aaa6a]">
@@ -604,6 +768,7 @@ export function BookingView({ onClose, isEmbedded = false, canBook = true, organ
                 ))}
               </div>
             </Card>
+
           </div>
         </div>
       )}
@@ -612,7 +777,23 @@ export function BookingView({ onClose, isEmbedded = false, canBook = true, organ
           MY BOOKINGS TAB
       ══════════════════════════════════════════════════════════════════════ */}
       {activeTab === 'myBookings' && (
-        <div className="space-y-4">
+        <div className="scrollable-mybookings space-y-4 max-h-[calc(100vh-280px)] overflow-y-auto pr-2" style={{ scrollbarWidth: 'thin', scrollbarColor: '#7dc142 #152515' }}>
+          <style>{`
+            .scrollable-mybookings::-webkit-scrollbar {
+              width: 6px;
+            }
+            .scrollable-mybookings::-webkit-scrollbar-track {
+              background: #152515;
+              border-radius: 10px;
+            }
+            .scrollable-mybookings::-webkit-scrollbar-thumb {
+              background: #7dc142;
+              border-radius: 10px;
+            }
+            .scrollable-mybookings::-webkit-scrollbar-thumb:hover {
+              background: #a8d84e;
+            }
+          `}</style>
           {/* Filter pills */}
           <div className="flex gap-2">
             {(['all', 'upcoming', 'past'] as const).map(f => (
@@ -653,7 +834,23 @@ export function BookingView({ onClose, isEmbedded = false, canBook = true, organ
           HISTORY TAB
       ══════════════════════════════════════════════════════════════════════ */}
       {activeTab === 'history' && (
-        <div className="space-y-4">
+        <div className="scrollable-history space-y-4 max-h-[calc(100vh-280px)] overflow-y-auto pr-2" style={{ scrollbarWidth: 'thin', scrollbarColor: '#7dc142 #152515' }}>
+          <style>{`
+            .scrollable-history::-webkit-scrollbar {
+              width: 6px;
+            }
+            .scrollable-history::-webkit-scrollbar-track {
+              background: #152515;
+              border-radius: 10px;
+            }
+            .scrollable-history::-webkit-scrollbar-thumb {
+              background: #7dc142;
+              border-radius: 10px;
+            }
+            .scrollable-history::-webkit-scrollbar-thumb:hover {
+              background: #a8d84e;
+            }
+          `}</style>
           {/* Summary stats */}
           <div className="grid grid-cols-4 gap-3">
             {[
@@ -697,6 +894,27 @@ export function BookingView({ onClose, isEmbedded = false, canBook = true, organ
         }`}>
           {toast.message}
         </div>
+      )}
+
+      {/* ── Booking Confirmation Modal ──────────────────────────────────────── */}
+      {showBookingConfirmation && lastBooking && selectedOrgId && (
+        <BookingConfirmation
+          booking={lastBooking}
+          playerId={userIdFromURL || ''}
+          organizationId={selectedOrgId}
+          organization={organizations.find((org) => org.id === selectedOrgId)}
+          isMember={lastBookingIsMember}
+          membershipStatus={lastBookingStatus}
+          onClose={() => {
+            setShowBookingConfirmation(false);
+            setActiveTab('myBookings');
+          }}
+          onMembershipPurchased={() => {
+            setShowBookingConfirmation(false);
+            setActiveTab('myBookings');
+            showToast('success', '🎉 Welcome to your membership!');
+          }}
+        />
       )}
     </div>
   );

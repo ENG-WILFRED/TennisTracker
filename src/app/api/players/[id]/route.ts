@@ -10,7 +10,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     const { id } = await params;
     const p = await prisma.player.findUnique({
       where: { userId: id },
-      include: { user: true },
+      select: {
+        userId: true,
+        user: {
+          select: { email: true, firstName: true, lastName: true },
+        },
+      },
     });
     if (!p) return NextResponse.json({ error: 'Not found' }, { status: 404 });
     return NextResponse.json(

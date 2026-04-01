@@ -23,11 +23,6 @@ const MOCK_LEADERBOARD = [
   { rank: 4, name: 'Tom Nakamura', wins: 3, losses: 2, points: 1200, trend: '-' },
 ];
 
-const MOCK_ANNOUNCEMENTS = [
-  { id: 'a1', title: 'Schedule Update', body: 'Quarter-final matches on Court A have been moved 30 minutes earlier.', time: '2h ago', type: 'warning' },
-  { id: 'a2', title: 'Welcome Players!', body: 'Registration check-in opens at 8 AM on July 10th.', time: '1d ago', type: 'info' },
-];
-
 const fillRate = (tournament: any, approvedRegistrations: any[]) =>
   tournament?.registrationCap
     ? Math.round((approvedRegistrations.length / tournament.registrationCap) * 100)
@@ -145,30 +140,7 @@ export function TournamentOverviewSection({
           }}>
             🔴 Live Matches
           </div>
-          {MOCK_SCHEDULE.filter(m => m.status === 'live').length === 0 ? (
-            <p style={{ color: '#4a6a3a', fontSize: 13 }}>No live matches right now.</p>
-          ) : (
-            MOCK_SCHEDULE.filter(m => m.status === 'live').map(m => (
-              <div
-                key={m.id}
-                style={{
-                  padding: '12px 16px',
-                  borderRadius: 10,
-                  background: 'rgba(60,10,10,0.4)',
-                  border: '1px solid rgba(240,80,80,0.35)',
-                  marginBottom: 8,
-                }}
-              >
-                <div style={{ fontSize: 11, color: '#c06060', fontWeight: 700, marginBottom: 4, letterSpacing: '.06em' }}>
-                  ● LIVE · {m.court}
-                </div>
-                <div style={{ fontWeight: 600, color: '#dff0d0' }}>
-                  {m.player1} <span style={{ color: '#4a6a3a' }}>vs</span> {m.player2}
-                </div>
-                <div style={{ fontSize: 12, color: '#a8d84e', marginTop: 4 }}>{m.score}</div>
-              </div>
-            ))
-          )}
+          <p style={{ color: '#c8f07a', fontSize: 13 }}>Live matches and tracking are being implemented soon.</p>
         </div>
 
         {/* Upcoming */}
@@ -192,34 +164,7 @@ export function TournamentOverviewSection({
           }}>
             ⏳ Upcoming Matches
           </div>
-          {MOCK_SCHEDULE.filter(m => m.status === 'upcoming')
-            .slice(0, 3)
-            .map(m => (
-              <div
-                key={m.id}
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  padding: '10px 0',
-                  borderBottom: '1px solid rgba(125,193,66,0.08)',
-                  fontSize: 13,
-                }}
-              >
-                <div>
-                  <div style={{ fontWeight: 500, color: '#dff0d0' }}>
-                    {m.player1} vs {m.player2}
-                  </div>
-                  <div style={{ color: '#4a6a3a', fontSize: 11, marginTop: 2 }}>
-                    {m.round} · {m.court}
-                  </div>
-                </div>
-                <div style={{ color: '#6a9058', fontSize: 12, textAlign: 'right' }}>
-                  <div>{m.date}</div>
-                  <div>{m.time}</div>
-                </div>
-              </div>
-            ))}
+          <p style={{ color: '#c8f07a', fontSize: 13 }}>Matches schedule is being implemented soon.</p>
         </div>
 
         {/* Announcements preview */}
@@ -243,10 +188,13 @@ export function TournamentOverviewSection({
           }}>
             📢 Recent Announcements
           </div>
-          {(announcements.length ? announcements : MOCK_ANNOUNCEMENTS).slice(0, 2).map(a => (
+          {(announcements.length ? announcements : []).slice(0, 3).map(a => (
             <div key={a.id} style={{ marginBottom: 8 }}>
               <div style={{ fontWeight: 600, color: '#dff0d0', fontSize: 14, marginBottom: 4 }}>
                 {a.title}
+              </div>
+              <div style={{ fontWeight: 400, color:'GrayText', fontSize: 12, marginBottom: 4 }}>
+                {a.message}
               </div>
               <div
                 style={{
@@ -304,52 +252,7 @@ export function TournamentOverviewSection({
           }}>
             🏅 Top Players
           </div>
-          {data.slice(0, 4).map((p, index) => (
-            <div
-              key={`${index}-${p.name}`}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12,
-                padding: '8px 0',
-                borderBottom: '1px solid rgba(125,193,66,0.08)',
-              }}
-            >
-              <span
-                style={{
-                  fontFamily: 'Syne, sans-serif',
-                  fontWeight: 800,
-                  color: p.rank === 1 ? '#ffd700' : p.rank === 2 ? '#c0c0c0' : p.rank === 3 ? '#cd7f32' : '#4a6a3a',
-                  width: 24,
-                  textAlign: 'center',
-                }}
-              >
-                {p.rank}
-              </span>
-              <span style={{ flex: 1, color: '#dff0d0', fontSize: 14 }}>{p.name}</span>
-              <span style={{ fontFamily: 'Syne, sans-serif', color: '#a8d84e', fontWeight: 700 }}>
-                {p.points}
-              </span>
-            </div>
-          ))}
-          <button
-            onClick={() => setActiveTab('analytics')}
-            style={{
-              marginTop: 12,
-              width: '100%',
-              padding: '10px 24px',
-              background: 'linear-gradient(135deg,#5aa820,#7dc142,#a8d84e)',
-              color: '#0a160a',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontSize: 13,
-              fontWeight: 700,
-              fontFamily: 'DM Sans, sans-serif',
-            }}
-          >
-            Full Leaderboard →
-          </button>
+          <p style={{ color: '#c8f07a', fontSize: 13 }}>Top player and leaderboard details are being implemented soon.</p>
         </div>
       </div>
     </div>

@@ -6,29 +6,27 @@ import prisma from '@/lib/prisma';
 /**
  * POST /api/bookings/court-booking-payment
  * 
- * Handles payment processing for court bookings
- * Supports MPesa, PayPal, and Stripe
+ * Webhook/Callback handler for payment confirmations
+ * Creates court booking when payment is confirmed
+ * Called after payment provider (PayPal, Stripe) confirms payment
  * 
  * Request body:
  * {
- *   playerId: string,
+ *   transactionId: string (payment record ID),
+ *   status: 'success' | 'failed',
  *   courtId: string,
+ *   organizationId: string,
+ *   playerId: string,
  *   startTime: string (ISO),
  *   endTime: string (ISO),
- *   organizationId: string,
- *   amount: number,
- *   paymentMethod: 'mpesa' | 'paypal' | 'stripe',
- *   mobileNumber?: string (for M-Pesa),
- *   email?: string (for PayPal/Stripe)
+ *   matchType?: string,
+ *   amount: number
  * }
  * 
  * Response:
  * {
  *   success: boolean,
  *   bookingId?: string,
- *   paymentRecordId?: string,
- *   transactionId?: string,
- *   checkoutUrl?: string,
  *   message?: string,
  *   error?: string
  * }
@@ -38,21 +36,49 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const {
-      playerId,
+      transactionId,
+      status,
       courtId,
+      organizationId,
+      playerId,
       startTime,
       endTime,
-      organizationId,
+      matchType = 'singles',
       amount,
-      paymentMethod,
-      mobileNumber,
-      email,
     } = body;
 
     // Validation
-    if (!playerId || !courtId || !startTime || !endTime || !organizationId || !amount || !paymentMethod) {
+    if (!transactionId || !status || !courtId || !organizationId || !playerId || !startTime || !endTime) {
       return NextResponse.json(
         { success: false, error: 'Missing required fields' },
+        { status: 400 }
+      );
+    }
+
+    // Get payment record
+    const paymentRecord = await prisma.paymentRecord.findUnique({
+      where: { id: transactionId },
+    });
+
+    if (!paymentRecord) {
+      return NextResponse.json(
+        { success: false, error: 'Payment record not found' },
+        { status: 404 }
+      );
+    }
+
+    // Update payment record status
+    await prisma.paymentRecord.update({
+      where: { id: transactionId },
+      data: {
+        providerStatus: status === 'success' ? 'completed' : 'failed',
+      },
+    });
+
+    // If payment failed, return error
+    if (status !== 'success') {
+      return NextResponse.json(
+        { success: false, error: 'Payment was not successful', message: 'Booking was not created' },
         { status: 400 }
       );
     }
@@ -74,7 +100,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    //  Check if slot is available
+    // Check if slot is available
     const conflictingBooking = await prisma.courtBooking.findFirst({
       where: {
         courtId,
@@ -91,7 +117,7 @@ export async function POST(request: NextRequest) {
 
     if (conflictingBooking) {
       return NextResponse.json(
-        { success: false, error: 'This time slot is already booked' },
+        { success: false, error: 'This time slot is no longer available - it was booked by another user during payment' },
         { status: 409 }
       );
     }
@@ -101,7 +127,7 @@ export async function POST(request: NextRequest) {
     const hour = start.getHours();
     const isPeak = hour >= 17 && hour < 21;
 
-    // 1. Create booking in PENDING status
+    // Create confirmed booking
     const booking = await prisma.courtBooking.create({
       data: {
         courtId,
@@ -110,9 +136,9 @@ export async function POST(request: NextRequest) {
         startTime: new Date(startTime),
         endTime: new Date(endTime),
         bookingType: 'regular',
-        status: 'pending', // Will move to 'confirmed' after payment success
+        status: 'confirmed',
         isPeak,
-        price: amount,
+        price: amount || 45, // Use passed amount or default
       },
       include: {
         court: true,
@@ -128,241 +154,16 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // 2. Create payment record
-    const paymentRecord = await prisma.paymentRecord.create({
-      data: {
-        userId: playerId,
-        eventId: booking.id,
-        bookingType: 'court_booking',
-        amount,
-        currency: 'KES',
-        provider: paymentMethod,
-        providerStatus: 'pending',
-        metadata: JSON.stringify({
-          courtId,
-          organizationId,
-          bookingId: booking.id,
-          mobileNumber: paymentMethod === 'mpesa' ? mobileNumber : null,
-          email: paymentMethod !== 'mpesa' ? email : null,
-        }),
-      },
-    });
-
-    // 3. Process payment based on method
-    let paymentResult: any = {};
-
-    if (paymentMethod === 'mpesa') {
-      if (!mobileNumber || !mobileNumber.match(/^254\d{9}$/)) {
-        throw new Error('Invalid M-Pesa mobile number. Format: 254XXXXXXXXX');
-      }
-
-      paymentResult = await processMPesaPayment(mobileNumber, amount, playerId, paymentRecord.id);
-    } else if (paymentMethod === 'paypal') {
-      if (!email || !email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
-        throw new Error('Invalid email address for PayPal');
-      }
-
-      paymentResult = await processPayPalPayment(amount, playerId, paymentRecord.id);
-    } else if (paymentMethod === 'stripe') {
-      paymentResult = await processStripePayment(amount, playerId, paymentRecord.id);
-    } else {
-      throw new Error('Unsupported payment method');
-    }
-
-    if (!paymentResult.success) {
-      // Update payment record and booking on failure
-      await prisma.paymentRecord.update({
-        where: { id: paymentRecord.id },
-        data: { providerStatus: 'failed' },
-      });
-
-      await prisma.courtBooking.update({
-        where: { id: booking.id },
-        data: { status: 'cancelled' },
-      });
-
-      return NextResponse.json(
-        { success: false, error: paymentResult.error || 'Payment processing failed' },
-        { status: 400 }
-      );
-    }
-
-    // For M-Pesa STK push, booking stays pending until payment is confirmed via polling
-    // For PayPal/Stripe, redirect URL is returned
     return NextResponse.json({
       success: true,
       bookingId: booking.id,
-      paymentRecordId: paymentRecord.id,
-      transactionId: paymentResult.transactionId || paymentResult.checkoutRequestId,
-      checkoutUrl: paymentResult.checkoutUrl || null,
-      message: paymentResult.message || 'Payment initiated',
+      message: 'Booking confirmed with successful payment',
     });
   } catch (error: any) {
-    console.error('Court booking payment error:', error);
+    console.error('Court booking payment callback error:', error);
     return NextResponse.json(
-      { success: false, error: error.message || 'Payment processing failed' },
+      { success: false, error: error.message || 'Failed to process booking confirmation' },
       { status: 500 }
     );
-  }
-}
-
-/**
- * M-Pesa STK Push Payment
- */
-async function processMPesaPayment(
-  mobileNumber: string,
-  amount: number,
-  userId: string,
-  paymentRecordId: string
-) {
-  try {
-    const response = await fetch('https://mpesa-integration-worker.kimaniwilfred95.workers.dev/api/stk/push', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
-      body: JSON.stringify({
-        mobileNumber,
-        amount: Math.round(amount),
-        accountReference: `BOOKING-${paymentRecordId.slice(0, 8)}`,
-        transactionDesc: 'Court Booking Payment',
-        transactionId: paymentRecordId,
-      }),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error?.message || 'M-Pesa request failed');
-    }
-
-    const data = await response.json();
-
-    // Update payment record with M-Pesa transaction details
-    await prisma.paymentRecord.update({
-      where: { id: paymentRecordId },
-      data: {
-        providerTransactionId: data.checkoutRequestId || data.requestId,
-        providerStatus: 'pending',
-      },
-    });
-
-    return {
-      success: true,
-      transactionId: paymentRecordId,
-      checkoutRequestId: data.checkoutRequestId,
-      message: 'M-Pesa STK push sent. Please complete payment on your phone.',
-    };
-  } catch (error: any) {
-    return {
-      success: false,
-      error: error.message,
-    };
-  }
-}
-
-/**
- * PayPal Payment
- */
-async function processPayPalPayment(
-  amount: number,
-  userId: string,
-  paymentRecordId: string
-) {
-  try {
-    const response = await fetch('https://payment-gateway.kimaniwilfred95.workers.dev/api/payments/paypal', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        amount,
-        currency: 'KES',
-        description: 'Court Booking Payment',
-        transactionId: paymentRecordId,
-      }),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error?.message || 'PayPal request failed');
-    }
-
-    const data = await response.json();
-
-    // Update payment record with PayPal checkout URL
-    await prisma.paymentRecord.update({
-      where: { id: paymentRecordId },
-      data: {
-        checkoutUrl: data.approvalUrl || data.checkoutUrl,
-        providerTransactionId: data.id || data.orderId,
-        providerStatus: 'pending',
-      },
-    });
-
-    return {
-      success: true,
-      transactionId: paymentRecordId,
-      checkoutUrl: data.approvalUrl || data.checkoutUrl,
-      message: 'Redirecting to PayPal...',
-    };
-  } catch (error: any) {
-    return {
-      success: false,
-      error: error.message,
-    };
-  }
-}
-
-/**
- * Stripe Payment
- */
-async function processStripePayment(
-  amount: number,
-  userId: string,
-  paymentRecordId: string
-) {
-  try {
-    const response = await fetch('https://payment-gateway.kimaniwilfred95.workers.dev/api/payments/stripe', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        amount: Math.round(amount * 100), // Stripe uses cents
-        currency: 'KES',
-        description: 'Court Booking Payment',
-        transactionId: paymentRecordId,
-      }),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error?.message || 'Stripe request failed');
-    }
-
-    const data = await response.json();
-
-    // Update payment record with Stripe session
-    await prisma.paymentRecord.update({
-      where: { id: paymentRecordId },
-      data: {
-        checkoutUrl: data.url,
-        providerTransactionId: data.sessionId,
-        providerStatus: 'pending',
-      },
-    });
-
-    return {
-      success: true,
-      transactionId: paymentRecordId,
-      checkoutUrl: data.url,
-      message: 'Redirecting to Stripe...',
-    };
-  } catch (error: any) {
-    return {
-      success: false,
-      error: error.message,
-    };
   }
 }

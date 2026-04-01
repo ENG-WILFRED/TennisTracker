@@ -3,6 +3,12 @@ import { useEffect, useState } from 'react';
 import { Gavel, Award, Users, Globe, TrendingUp, ArrowLeft, Star, Trophy, Shield, Loader, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 
+const G = {
+  dark: '#0f1f0f', sidebar: '#152515', card: '#1a3020', cardBorder: '#2d5a35',
+  mid: '#2d5a27', bright: '#3d7a32', lime: '#7dc142', accent: '#a8d84e',
+  text: '#e8f5e0', muted: '#7aaa6a', yellow: '#f0c040',
+};
+
 interface Referee {
     id: string;
     firstName: string;
@@ -51,205 +57,181 @@ export default function RefereesPage() {
     });
 
     return (
-        <main className="min-h-screen bg-gradient-to-br from-pink-100 via-pink-50 to-fuchsia-100 relative overflow-hidden">
-            {/* Decorative Background Elements */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute top-0 right-0 w-96 h-96 bg-pink-300 rounded-full blur-3xl opacity-20 -translate-y-1/2 translate-x-1/2"></div>
-                <div className="absolute bottom-0 left-0 w-96 h-96 bg-fuchsia-300 rounded-full blur-3xl opacity-20 translate-y-1/2 -translate-x-1/2"></div>
-                <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-rose-300 rounded-full blur-3xl opacity-10"></div>
-            </div>
-
-            <div className="relative w-full mx-auto py-12 px-4">
+        <main style={{ background: G.dark, minHeight: '100vh', color: G.text, padding: '20px' }}>
+            <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
                 {/* Header */}
-                <div className="mb-12">
-                    <div className="bg-white/60 backdrop-blur-xl rounded-3xl p-8 md:p-12 shadow-2xl border border-pink-200">
-                        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+                <div style={{ marginBottom: '30px' }}>
+                    <div style={{ background: G.card, border: `2px solid ${G.cardBorder}`, borderRadius: '12px', padding: '24px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                             <div>
-                                <div className="inline-flex items-center gap-3 bg-gradient-to-r from-pink-500 to-fuchsia-600 text-white px-6 py-3 rounded-full text-sm font-bold mb-6 shadow-lg">
-                                    <Gavel className="w-5 h-5" />
-                                    Official Referees & Ball Crew
-                                </div>
-                                <h1 className="text-5xl md:text-7xl font-black bg-gradient-to-r from-pink-600 via-fuchsia-600 to-pink-700 bg-clip-text text-transparent mb-4 leading-tight">
-                                    Referees & Ball Crew
+                                <h1 style={{ fontSize: '32px', fontWeight: 900, color: G.lime, marginBottom: '12px' }}>
+                                    🏆 Official Referees & Ball Crew
                                 </h1>
-                                <p className="text-xl md:text-2xl text-slate-700 font-medium">
-                                    Meet the certified professionals ensuring fair play and smooth match operations
+                                <p style={{ fontSize: '14px', color: G.muted, marginBottom: '8px' }}>
+                                    Certified professionals ensuring fair play and smooth match operations
                                 </p>
                             </div>
 
-                            {/* Stats Cards */}
-                            <div className="flex gap-4">
-                                <div className="bg-gradient-to-br from-pink-500 to-fuchsia-600 text-white rounded-2xl p-6 shadow-xl min-w-[120px]">
-                                    <Trophy className="w-8 h-8 mb-2" />
-                                    <p className="text-3xl font-black">{referees.length}</p>
-                                    <p className="text-sm font-semibold opacity-90">Total Staff</p>
+                            {/* Stats Grid */}
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px' }}>
+                                <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: '8px', padding: '16px' }}>
+                                    <div style={{ fontSize: '12px', color: G.muted, marginBottom: '8px' }}>Total Referees</div>
+                                    <div style={{ fontSize: '24px', fontWeight: 900, color: G.lime }}>{referees.length}</div>
+                                </div>
+                                <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: '8px', padding: '16px' }}>
+                                    <div style={{ fontSize: '12px', color: G.muted, marginBottom: '8px' }}>Referees Matches</div>
+                                    <div style={{ fontSize: '24px', fontWeight: 900, color: G.accent }}>
+                                        {referees.reduce((sum, r) => sum + (r.matchesRefereed || 0), 0)}
+                                    </div>
+                                </div>
+                                <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: '8px', padding: '16px' }}>
+                                    <div style={{ fontSize: '12px', color: G.muted, marginBottom: '8px' }}>Ball Crew Matches</div>
+                                    <div style={{ fontSize: '24px', fontWeight: 900, color: G.bright }}>
+                                        {referees.reduce((sum, r) => sum + (r.ballCrewMatches || 0), 0)}
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-                    {/* Section anchors for referee-specific header navigation */}
-                    <div id="overview" />
-                    <div id="matches" />
-                    <div id="ballcrew" />
-                    <div id="stats" />
 
                 {/* Filter Tabs */}
-                <div className="mb-8 flex gap-4 flex-wrap">
-                    <button
-                        onClick={() => setFilter('all')}
-                        className={`px-8 py-4 rounded-2xl font-bold transition-all transform hover:scale-105 ${filter === 'all'
-                                ? 'bg-gradient-to-r from-pink-500 to-fuchsia-600 text-white shadow-2xl shadow-pink-300/50'
-                                : 'bg-white/80 backdrop-blur text-slate-700 border-2 border-pink-200 hover:border-pink-400 shadow-lg'
-                            }`}
-                    >
-                        <Shield className="w-5 h-5 inline mr-2" />
-                        All Staff ({referees.length})
-                    </button>
-                    <button
-                        onClick={() => setFilter('referees')}
-                        className={`px-8 py-4 rounded-2xl font-bold transition-all transform hover:scale-105 ${filter === 'referees'
-                                ? 'bg-gradient-to-r from-pink-500 to-fuchsia-600 text-white shadow-2xl shadow-pink-300/50'
-                                : 'bg-white/80 backdrop-blur text-slate-700 border-2 border-pink-200 hover:border-pink-400 shadow-lg'
-                            }`}
-                    >
-                        <Gavel className="w-5 h-5 inline mr-2" />
-                        Referees
-                    </button>
-                    <button
-                        onClick={() => setFilter('ballcrew')}
-                        className={`px-8 py-4 rounded-2xl font-bold transition-all transform hover:scale-105 ${filter === 'ballcrew'
-                                ? 'bg-gradient-to-r from-pink-500 to-fuchsia-600 text-white shadow-2xl shadow-pink-300/50'
-                                : 'bg-white/80 backdrop-blur text-slate-700 border-2 border-pink-200 hover:border-pink-400 shadow-lg'
-                            }`}
-                    >
-                        <Users className="w-5 h-5 inline mr-2" />
-                        Ball Crew
-                    </button>
+                <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
+                    {[
+                        { label: 'All Staff', value: 'all', count: referees.length },
+                        { label: 'Referees', value: 'referees', count: referees.filter(r => r.matchesRefereed > 0).length },
+                        { label: 'Ball Crew', value: 'ballcrew', count: referees.filter(r => r.ballCrewMatches > 0).length }
+                    ].map(btn => (
+                        <button
+                            key={btn.value}
+                            onClick={() => setFilter(btn.value as any)}
+                            style={{
+                                padding: '12px 20px',
+                                background: filter === btn.value ? G.lime : G.card,
+                                color: filter === btn.value ? G.dark : G.text,
+                                border: `2px solid ${G.cardBorder}`,
+                                borderRadius: '8px',
+                                fontSize: '13px',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                transition: 'all 0.3s ease'
+                            }}
+                        >
+                            {btn.label} ({btn.count})
+                        </button>
+                    ))}
                 </div>
 
                 {/* Content */}
                 {loading ? (
-                    <div className="text-center py-24">
-                        <div className="inline-block animate-spin rounded-full h-16 w-16 border-4 border-pink-500 border-t-transparent shadow-lg"></div>
-                        <p className="text-xl text-slate-700 mt-6 font-semibold">Loading referees...</p>
+                    <div style={{ textAlign: 'center', padding: '60px 20px', color: G.muted }}>
+                        <div style={{ fontSize: '14px' }}>Loading referees...</div>
                     </div>
                 ) : filteredReferees.length === 0 ? (
-                    <div className="text-center py-24 bg-white/70 backdrop-blur-xl rounded-3xl border-2 border-dashed border-pink-300 shadow-xl">
-                        <Gavel className="w-20 h-20 text-pink-400 mx-auto mb-6" />
-                        <p className="text-2xl text-slate-700 font-bold">No referees found</p>
-                        <p className="text-lg text-slate-500 mt-2">Try adjusting your filters</p>
+                    <div style={{ textAlign: 'center', padding: '60px 20px', background: G.card, border: `2px solid ${G.cardBorder}`, borderRadius: '8px', color: G.muted }}>
+                        <Gavel size={40} style={{ margin: '0 auto 16px', opacity: 0.5 }} />
+                        <div style={{ fontSize: '16px', fontWeight: 600 }}>No referees found</div>
+                        <div style={{ fontSize: '13px', marginTop: '8px' }}>Try adjusting your filters</div>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
                         {filteredReferees.map((referee) => (
                             <div
                                 key={referee.id}
-                                className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden border-2 border-pink-200 group hover:border-pink-400 transform hover:-translate-y-2"
+                                style={{
+                                    background: G.card,
+                                    border: `1px solid ${G.cardBorder}`,
+                                    borderRadius: '8px',
+                                    overflow: 'hidden',
+                                    transition: 'all 0.3s ease'
+                                }}
                             >
-                                {/* Top Section with Photo */}
-                                <div className="relative h-48 bg-gradient-to-br from-pink-500 via-fuchsia-500 to-pink-600 overflow-hidden">
-                                    <div className="absolute inset-0 bg-gradient-to-br from-pink-400/30 to-fuchsia-600/30 mix-blend-overlay"></div>
+                                {/* Profile Image */}
+                                <div style={{ height: '160px', background: G.mid, overflow: 'hidden' }}>
                                     <img
-                                        src={referee.photo ?? 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&q=80'}
-                                        alt={`${referee.firstName} ${referee.lastName}`}
-                                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                        src={referee.photo || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&q=80'}
+                                        alt={referee.firstName}
+                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                     />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
-
-                                    {/* Floating Badge */}
-                                    <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-sm rounded-full px-4 py-2 shadow-lg">
-                                        <div className="flex items-center gap-2">
-                                            <Star className="w-4 h-4 text-pink-600 fill-pink-600" />
-                                            <span className="text-xs font-bold text-pink-600">Certified</span>
-                                        </div>
-                                    </div>
                                 </div>
 
                                 {/* Content */}
-                                <div className="p-6">
-                                    {/* Name & Role */}
-                                    <h3 className="text-2xl font-black text-slate-900 mb-2">
+                                <div style={{ padding: '16px' }}>
+                                    <div style={{ fontSize: '14px', fontWeight: 700, color: G.lime, marginBottom: '4px' }}>
                                         {referee.firstName} {referee.lastName}
-                                    </h3>
-                                    <div className="flex items-center gap-2 text-pink-600 font-bold text-sm mb-4 bg-pink-50 rounded-full px-3 py-1 inline-flex">
-                                        <Globe className="w-4 h-4" />
-                                        {referee.nationality || 'Unknown'}
+                                    </div>
+                                    <div style={{ fontSize: '12px', color: G.muted, marginBottom: '12px' }}>
+                                        🌍 {referee.nationality || 'Unknown'}
                                     </div>
 
                                     {/* Bio */}
-                                    <p className="text-slate-600 text-sm leading-relaxed mb-5 line-clamp-2">
-                                        {referee.bio || 'Experienced referee dedicated to maintaining the highest standards of fairness and professionalism in every match.'}
+                                    <p style={{ fontSize: '12px', color: G.text, marginBottom: '12px', lineHeight: '1.4', opacity: 0.8 }}>
+                                        {referee.bio || 'Experienced referee dedicated to maintaining the highest standards of fairness.'}
                                     </p>
 
-                                    {/* Experience */}
-                                    <div className="bg-gradient-to-br from-pink-100 to-fuchsia-100 rounded-2xl p-4 mb-4 border-2 border-pink-200 shadow-md">
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <Award className="w-5 h-5 text-pink-600" />
-                                            <p className="text-xs font-bold text-slate-700 uppercase tracking-wide">Experience</p>
+                                    {/* Stats */}
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
+                                        <div style={{ background: G.mid, padding: '12px', borderRadius: '6px', textAlign: 'center' }}>
+                                            <div style={{ fontSize: '11px', color: G.muted, marginBottom: '4px' }}>Matches</div>
+                                            <div style={{ fontSize: '18px', fontWeight: 900, color: G.lime }}>
+                                                {referee.matchesRefereed || 0}
+                                            </div>
                                         </div>
-                                        <p className="text-base font-black text-pink-700">
-                                            {referee.experience || '5+ years'}
-                                        </p>
+                                        <div style={{ background: G.mid, padding: '12px', borderRadius: '6px', textAlign: 'center' }}>
+                                            <div style={{ fontSize: '11px', color: G.muted, marginBottom: '4px' }}>Ball Crew</div>
+                                            <div style={{ fontSize: '18px', fontWeight: 900, color: G.accent }}>
+                                                {referee.ballCrewMatches || 0}
+                                            </div>
+                                        </div>
                                     </div>
 
                                     {/* Certifications */}
                                     {referee.certifications && referee.certifications.length > 0 && (
-                                        <div className="mb-5">
-                                            <p className="text-xs font-bold text-slate-700 mb-3 uppercase tracking-wide">Certifications</p>
-                                            <div className="flex flex-wrap gap-2">
-                                                {referee.certifications.map((cert, idx) => (
+                                        <div style={{ marginBottom: '12px' }}>
+                                            <div style={{ fontSize: '11px', color: G.muted, marginBottom: '6px', textTransform: 'uppercase', fontWeight: 700 }}>
+                                                Certifications
+                                            </div>
+                                            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                                                {referee.certifications.slice(0, 2).map((cert, idx) => (
                                                     <span
                                                         key={idx}
-                                                        className="px-3 py-1.5 bg-gradient-to-r from-pink-200 to-fuchsia-200 text-pink-800 text-xs font-bold rounded-full border-2 border-pink-300 shadow-sm"
+                                                        style={{
+                                                            fontSize: '11px',
+                                                            padding: '4px 10px',
+                                                            background: G.mid,
+                                                            border: `1px solid ${G.cardBorder}`,
+                                                            borderRadius: '4px',
+                                                            color: G.lime
+                                                        }}
                                                     >
-                                                        {cert}
+                                                        ✓ {cert}
                                                     </span>
                                                 ))}
                                             </div>
                                         </div>
                                     )}
 
-                                    {/* Stats Grid */}
-                                    <div className="grid grid-cols-2 gap-4 mb-6">
-                                        <div className="bg-gradient-to-br from-pink-500 to-pink-600 rounded-2xl p-4 border-2 border-pink-400 shadow-lg text-white">
-                                            <div className="flex items-center gap-2 mb-2">
-                                                <Gavel className="w-4 h-4" />
-                                                <p className="text-xs font-bold uppercase tracking-wide opacity-90">Matches</p>
-                                            </div>
-                                            <p className="text-3xl font-black">
-                                                {referee.matchesRefereed || 0}
-                                            </p>
-                                        </div>
-
-                                        <div className="bg-gradient-to-br from-fuchsia-500 to-fuchsia-600 rounded-2xl p-4 border-2 border-fuchsia-400 shadow-lg text-white">
-                                            <div className="flex items-center gap-2 mb-2">
-                                                <Users className="w-4 h-4" />
-                                                <p className="text-xs font-bold uppercase tracking-wide opacity-90">Ball Crew</p>
-                                            </div>
-                                            <p className="text-3xl font-black">
-                                                {referee.ballCrewMatches || 0}
-                                            </p>
-                                        </div>
-                                    </div>
-
                                     {/* Action Button */}
                                     <Link
                                         href={`/referees/${referee.id}`}
-                                        className="w-full bg-gradient-to-r from-pink-500 via-fuchsia-500 to-pink-600 hover:from-pink-600 hover:via-fuchsia-600 hover:to-pink-700 text-white font-black py-4 rounded-2xl transition-all duration-200 shadow-lg hover:shadow-2xl transform hover:scale-105 border-2 border-pink-400 flex items-center justify-center"
+                                        style={{
+                                            display: 'block',
+                                            width: '100%',
+                                            padding: '10px',
+                                            background: G.bright,
+                                            color: '#fff',
+                                            border: 'none',
+                                            borderRadius: '6px',
+                                            fontSize: '12px',
+                                            fontWeight: 700,
+                                            cursor: 'pointer',
+                                            textDecoration: 'none',
+                                            textAlign: 'center',
+                                            transition: 'all 0.3s ease'
+                                        }}
                                         onClick={() => setLoadingRefereeId(referee.id)}
                                     >
-                                        {loadingRefereeId === referee.id ? (
-                                            <>
-                                                <Loader className="w-4 h-4 animate-spin" />
-                                                <span className="ml-2">Loading...</span>
-                                            </>
-                                        ) : (
-                                            <>
-                                                View Profile
-                                                <ArrowRight className="w-4 h-4 ml-2" />
-                                            </>
-                                        )}
+                                        {loadingRefereeId === referee.id ? 'Loading...' : 'View Profile →'}
                                     </Link>
                                 </div>
                             </div>

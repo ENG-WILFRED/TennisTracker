@@ -25,15 +25,16 @@ import {
 import { PrismaClient } from '@/generated/prisma';
 
 interface Props {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export default async function RefereeProfilePage({ params }: Props) {
+  const resolvedParams = await params;
   const prisma = new PrismaClient();
   const referee = await prisma.referee.findUnique({
-    where: { userId: params.id },
+    where: { userId: resolvedParams.id },
     select: {
       userId: true,
       user: true,

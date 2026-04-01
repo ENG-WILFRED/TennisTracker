@@ -169,18 +169,13 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     setLoading(prev => ({ ...prev, contacts: true }));
 
     try {
-      const [playersRes, coachesRes, roomsRes] = await Promise.all([
-        authenticatedFetch('/api/players'),
-        authenticatedFetch('/api/coaches'),
-        authenticatedFetch('/api/chat/rooms'),
-      ]);
+      // Only fetch chat rooms - don't fetch all players/coaches as it's inefficient
+      const roomsRes = await authenticatedFetch('/api/chat/rooms');
 
-      const players = playersRes.ok ? await playersRes.json() : [];
-      const coaches = coachesRes.ok ? await coachesRes.json() : [];
       const rooms = roomsRes.ok ? await roomsRes.json() : [];
 
       const allContacts: Contact[] = [
-        // Add chat rooms/groups first
+        // Add chat rooms/groups - these are the actual contacts
         ...rooms.map((room: any) => ({
           id: room.id,
           fullName: room.name,
@@ -197,31 +192,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           onlineCount: room.onlineCount,
           isDM: room.isDM,
           dmParticipant: room.dmParticipant,
-        })),
-        // Then individual contacts (exclude current user)
-        ...players.filter((p: any) => p.id !== playerId).map((p: any) => ({
-          id: p.id,
-          fullName: p.fullName || p.name,
-          name: p.fullName || p.name,
-          photo: p.profilePhoto || p.photo,
-          profilePhoto: p.profilePhoto || p.photo,
-          role: 'player' as const,
-          isOnline: p.isOnline ?? false,
-          lastMessage: p.lastMessage,
-          lastMessageTime: p.lastMessageTime,
-          unreadCount: p.unreadCount ?? 0,
-        })),
-        ...coaches.filter((c: any) => c.id !== playerId).map((c: any) => ({
-          id: c.id,
-          fullName: c.fullName || c.name,
-          name: c.fullName || c.name,
-          photo: c.profilePhoto || c.photo,
-          profilePhoto: c.profilePhoto || c.photo,
-          role: 'coach' as const,
-          isOnline: c.isOnline ?? false,
-          lastMessage: c.lastMessage,
-          lastMessageTime: c.lastMessageTime,
-          unreadCount: c.unreadCount ?? 0,
         })),
       ];
 

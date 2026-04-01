@@ -505,8 +505,16 @@ export async function getOrganizationDashboard(orgManagerId: string, orgId?: str
     organizationId: resolvedOrgId,
     manager: {
       id: manager.id,
-      name: `${manager.firstName} ${manager.lastName}`,
+      firstName: manager.firstName,
+      lastName: manager.lastName,
+      email: manager.email,
+      phone: manager.phone,
       photo: manager.photo,
+      nationality: manager.nationality,
+      gender: manager.gender,
+      bio: manager.bio,
+      dateOfBirth: manager.dateOfBirth,
+      name: `${manager.firstName} ${manager.lastName}`,
       role: "Organization Manager",
     },
     kpi: [

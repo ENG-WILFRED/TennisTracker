@@ -12,6 +12,7 @@ import { TournamentAnnouncementsSection } from './TournamentAnnouncementsSection
 import { TournamentRulesSection } from './TournamentRulesSection';
 import { TournamentFacilitiesSection } from './TournamentFacilitiesSection';
 import { TournamentSettingsSection } from './TournamentSettingsSection';
+import { TournamentAppealsSection } from './TournamentAppealsSection';
 
 interface TournamentManagementViewProps {
   tournament: any;
@@ -21,6 +22,7 @@ interface TournamentManagementViewProps {
   pendingRegistrations: any[];
   approvedRegistrations: any[];
   rejectedRegistrations?: any[];
+  announcements: any[];
   onRegistrationAction: (registrationId: string, action: 'approve' | 'reject') => void;
   managementLoading: boolean;
   fetchTournamentData: () => void;
@@ -34,6 +36,7 @@ export function TournamentManagementView({
   leaderboard,
   activeTab,
   setActiveTab,
+  announcements,
   pendingRegistrations,
   approvedRegistrations,
   rejectedRegistrations = [],
@@ -110,7 +113,7 @@ export function TournamentManagementView({
               leaderboard={leaderboard}
               pendingRegistrations={pendingRegistrations}
               approvedRegistrations={approvedRegistrations}
-              announcements={[]}
+              announcements={announcements}
               setActiveTab={setActiveTab}
             />
           )}
@@ -149,6 +152,10 @@ export function TournamentManagementView({
               fetchTournamentData={fetchTournamentData}
               onSaveTournament={onSaveTournament}
             />
+          )}
+
+          {activeTab === 'appeals' && (
+            <TournamentAppealsSection tournamentId={tournament.id} />
           )}
 
           {activeTab === 'facilities' && (

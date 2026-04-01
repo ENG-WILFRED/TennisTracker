@@ -9,7 +9,15 @@ export async function GET() {
   try {
     const coaches = await prisma.staff.findMany({
       where: { role: { contains: 'Coach' } },
-      include: { user: true },
+      select: {
+        userId: true,
+        role: true,
+        expertise: true,
+        studentCount: true,
+        user: {
+          select: { firstName: true, lastName: true, photo: true },
+        },
+      },
       orderBy: { user: { firstName: 'asc' } },
     });
 

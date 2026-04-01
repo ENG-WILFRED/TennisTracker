@@ -26,13 +26,14 @@ export function TournamentFacilitiesSection({
 
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))',
+        gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))',
         gap: '18px',
         marginBottom: 20,
       }}>
         {[
           { icon: '🏸', title: 'Courts', desc: tournament?.courtInfo || 'No court info added yet.' },
-          { icon: '🍽️', title: 'Eating Areas', desc: tournament?.eatingAreas || 'No eating area info added yet.' },
+          { icon: '🍽️', title: 'Food Lounge', desc: tournament?.eatingAreas || 'No food lounge details available yet.' },
+          { icon: '🚻', title: 'Restrooms', desc: 'Clean, 24/7 restroom access (showers & changing rooms) included with event admission.' },
           { icon: '🛏️', title: 'Sleeping Areas', desc: tournament?.sleepingAreas || 'No sleeping area info added yet.' },
         ].map(f => (
           <div
@@ -84,7 +85,7 @@ export function TournamentFacilitiesSection({
         <p style={{ color: '#7a9c6a', fontSize: 14, marginBottom: 16 }}>
           Update court assignments, eating, and sleeping area details in tournament settings, or manage organization courts below.
         </p>
-        <div style={{ display: 'flex', gap: 12 }}>
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
           <Link
             href={`/organization/${orgId}/courts`}
             style={{
@@ -103,6 +104,19 @@ export function TournamentFacilitiesSection({
           >
             Manage Courts →
           </Link>
+          <a
+            href="https://tennistracker.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              color: '#7dc142',
+              fontWeight: 700,
+              fontSize: '13px',
+              textDecoration: 'underline',
+            }}
+          >
+            🌐 Visit TennisTracker Site
+          </a>
         </div>
       </div>
     </div>

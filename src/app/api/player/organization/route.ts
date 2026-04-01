@@ -5,7 +5,7 @@ const prisma = new PrismaClient();
 
 /**
  * GET /api/player/organization
- * Get the player's organization (club membership)
+ * Get all organizations the player belongs to (as member and as owner)
  */
 export async function GET(request: NextRequest) {
   try {
@@ -19,20 +19,42 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Find player's club membership
-    const clubMember = await prisma.clubMember.findFirst({
+    // Get player details to check if they own an organization
+    const player = await prisma.player.findUnique({
+      where: { userId: playerId },
+      select: { organizationId: true },
+    });
+
+    // Find player's club memberships
+    const clubMemberships = await prisma.clubMember.findMany({
       where: { playerId },
       select: { organizationId: true },
     });
 
-    if (!clubMember) {
+    const organizationIds = new Set<string>();
+    
+    // Add club membership organization IDs
+    clubMemberships.forEach((member) => {
+      organizationIds.add(member.organizationId);
+    });
+
+    // Add owned organization if player owns one
+    if (player?.organizationId) {
+      organizationIds.add(player.organizationId);
+    }
+
+    // If no organizations found, return error
+    if (organizationIds.size === 0) {
       return NextResponse.json(
-        { error: "Player is not a member of any club" },
+        { error: "Player is not a member of any club and does not own any organization" },
         { status: 404 }
       );
     }
 
-    return NextResponse.json({ organizationId: clubMember.organizationId });
+    return NextResponse.json({ 
+      organizationIds: Array.from(organizationIds),
+      primaryOrganizationId: player?.organizationId || clubMemberships[0]?.organizationId
+    });
   } catch (error: any) {
     console.error("Error fetching organization:", error);
     return NextResponse.json(

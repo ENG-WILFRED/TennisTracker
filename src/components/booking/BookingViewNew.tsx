@@ -1,0 +1,351 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
+import { getAvailableCourts, getPlayerBookings, getAllAvailableOrganizations } from '@/actions/bookings';
+import { BookingItem } from './BookingItem';
+import { CourtDetailModal } from './CourtDetailModal';
+
+const Card: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = '' }) => (
+  <div className={`bg-[#1a3020] border border-[#2d5a35] rounded-xl p-4 ${className}`}>
+    {children}
+  </div>
+);
+
+const Label: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <div className="text-[10px] font-bold uppercase tracking-wider text-[#a8d84e] mb-2">{children}</div>
+);
+
+interface BookingViewProps {
+  organizationId?: string;
+  onClose?: () => void;
+  isEmbedded?: boolean;
+  canBook?: boolean;
+}
+
+export function BookingView({ organizationId, onClose, isEmbedded, canBook }: BookingViewProps) {
+  const { user: authUser } = useAuth();
+  const router = useRouter();
+  const userId = authUser?.id;
+
+  const [courts, setCourts] = useState<any[]>([]);
+  const [organizations, setOrganizations] = useState<any[]>([]);
+  const [bookings, setBookings] = useState<any[]>([]);
+  const [selectedOrgId, setSelectedOrgId] = useState(organizationId || '');
+  const [matchType, setMatchType] = useState<'singles' | 'doubles' | 'practice'>('singles');
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'booking' | 'myBookings' | 'history'>('booking');
+  const [showCourtModal, setShowCourtModal] = useState(false);
+  const [selectedCourt, setSelectedCourt] = useState<any>(null);
+  const [loadingCourtId, setLoadingCourtId] = useState<string | null>(null);
+
+  // Load organizations on mount
+  useEffect(() => {
+    const loadOrgs = async () => {
+      if (!userId) return;
+      try {
+        const orgsData = await getAllAvailableOrganizations();
+        setOrganizations(orgsData);
+        if (organizationId) {
+          setSelectedOrgId(organizationId);
+        } else if (orgsData.length > 0) {
+          setSelectedOrgId(orgsData[0].id);
+        }
+      } catch (error) {
+        console.error('Failed to load organizations', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadOrgs();
+  }, [userId, organizationId]);
+
+  // Load courts and bookings when org changes
+  useEffect(() => {
+    const loadData = async () => {
+      if (!userId || !selectedOrgId) return;
+      try {
+        const courtsData = await getAvailableCourts(userId, selectedOrgId);
+        setCourts(courtsData);
+
+        const bookingsData = await getPlayerBookings(userId, selectedOrgId);
+        setBookings(bookingsData);
+      } catch (error) {
+        console.error('Failed to load courts', error);
+      }
+    };
+    loadData();
+  }, [userId, selectedOrgId]);
+
+  const handleCourtSelect = (court: any) => {
+    setLoadingCourtId(court.id);
+    // Show loading spinner briefly for better UX
+    setTimeout(() => {
+      setSelectedCourt(court);
+      setShowCourtModal(true);
+      setLoadingCourtId(null);
+    }, 300);
+  };
+
+  const handleConfirmCourt = () => {
+    if (selectedCourt && selectedOrgId) {
+      router.push(`/player/booking/details?court=${selectedCourt.id}&org=${selectedOrgId}&type=${matchType}`);
+      setShowCourtModal(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <Card className="text-center py-12">
+        <div className="text-3xl animate-spin">⏳</div>
+        <div className="text-sm text-[#7aaa6a] mt-3">Loading booking dashboard…</div>
+      </Card>
+    );
+  }
+
+  const upcomingCount = bookings.filter(b => new Date(b.startTime) >= new Date() && b.status !== 'cancelled').length;
+
+  return (
+    <div className="w-full space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-black text-[#7dc142] tracking-tight">🎾 Court Booking</h1>
+        <p className="text-sm text-[#7aaa6a] mt-1">Reserve a court for your next session</p>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-4 gap-3">
+        {[
+          { icon: '📅', label: 'My Bookings', value: bookings.filter(b => b.status !== 'cancelled').length },
+          { icon: '🎾', label: 'Courts Open', value: courts.length },
+          { icon: '⏰', label: 'Upcoming', value: upcomingCount },
+          { icon: '💰', label: 'Avg. Price', value: '$45/hr' },
+        ].map(s => (
+          <Card key={s.label} className="flex items-center gap-3 py-3">
+            <span className="text-xl">{s.icon}</span>
+            <div>
+              <div className="text-[9px] text-[#7aaa6a] font-medium">{s.label}</div>
+              <div className="text-lg font-black text-[#a8d84e]">{s.value}</div>
+            </div>
+          </Card>
+        ))}
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-1 bg-[#152515] p-1 rounded-xl">
+        {[
+          { id: 'booking', label: '+ New Booking' },
+          { id: 'myBookings', label: `📋 My Bookings (${upcomingCount})` },
+          { id: 'history', label: '🕑 History' },
+        ].map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id as any)}
+            className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${
+              activeTab === tab.id
+                ? 'bg-[#2d5a27] text-[#7dc142] border border-[#7dc142]/40'
+                : 'text-[#7aaa6a] hover:text-[#e8f5e0]'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* BOOKING TAB */}
+      {activeTab === 'booking' && (
+        <div className="space-y-6">
+          {/* Select Organization */}
+          {organizations.length > 1 && (
+            <Card>
+              <Label>Select Organization</Label>
+              <select
+                value={selectedOrgId}
+                onChange={(e) => setSelectedOrgId(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border border-[#2d5a35] bg-[#152515] text-[#e8f5e0] text-sm focus:outline-none focus:border-[#7dc142]"
+              >
+                {organizations.map(org => (
+                  <option key={org.id} value={org.id}>{org.name}</option>
+                ))}
+              </select>
+            </Card>
+          )}
+
+          {/* Match Type */}
+          <Card>
+            <Label>Match Type</Label>
+            <div className="flex gap-2">
+              {(['singles', 'doubles', 'practice'] as const).map(t => (
+                <button
+                  key={t}
+                  onClick={() => setMatchType(t)}
+                  className={`flex-1 py-3 rounded-lg border text-xs font-bold capitalize transition-all ${
+                    matchType === t
+                      ? 'bg-[#7dc142] border-[#7dc142] text-[#0f1f0f]'
+                      : 'bg-[#152515] border-[#2d5a35] text-[#7aaa6a] hover:border-[#7dc142]/60'
+                  }`}
+                >
+                  {t === 'singles' ? '🎾' : t === 'doubles' ? '👥' : '🏋️'} {t.charAt(0).toUpperCase() + t.slice(1)}
+                </button>
+              ))}
+            </div>
+          </Card>
+
+          {/* Court Selection - Scrollable */}
+          <Card>
+            <Label>Select Court</Label>
+            <div style={{ maxHeight: 'calc(100vh - 400px)', overflowY: 'auto', scrollbarWidth: 'thin', scrollbarColor: '#7dc142 #152515' }}>
+              <style>{`
+                div[style*="calc(100vh - 400px)"]::-webkit-scrollbar {
+                  width: 8px;
+                }
+                div[style*="calc(100vh - 400px)"]::-webkit-scrollbar-track {
+                  background: #152515;
+                  border-radius: 10px;
+                }
+                div[style*="calc(100vh - 400px)"]::-webkit-scrollbar-thumb {
+                  background: #7dc142;
+                  border-radius: 10px;
+                }
+                div[style*="calc(100vh - 400px)"]::-webkit-scrollbar-thumb:hover {
+                  background: #a8d84e;
+                }
+              `}</style>
+              {courts.length === 0 ? (
+                <div className="text-center py-8 text-[#7aaa6a]">
+                  <div className="text-3xl mb-2">🎾</div>
+                  <div className="text-sm">No courts available in this organization</div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-3 pr-2">
+                  {courts.map(court => (
+                    <button
+                      key={court.id}
+                      onClick={() => handleCourtSelect(court)}
+                      className="text-left p-4 rounded-xl border-2 border-[#2d5a35] bg-[#152515] hover:border-[#7dc142]/50 hover:bg-[#2d5a27]/30 transition-all"
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <div>
+                          <div className="text-sm font-bold text-[#e8f5e0]">🎾 {court.name}</div>
+                          <div className="text-[10px] text-[#7aaa6a] mt-0.5">{court.surface || 'Hard Court'}</div>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-1 mb-3">
+                        {['🌞 Outdoor', '💡 Floodlit', '🔒 Access'].map(f => (
+                          <span key={f} className="text-[9px] bg-[#0f1f0f] text-[#7aaa6a] px-1.5 py-0.5 rounded">{f}</span>
+                        ))}
+                      </div>
+                      <div className={`w-full py-2 text-xs font-bold rounded-lg transition-colors text-center pointer-events-none ${
+                        loadingCourtId === court.id
+                          ? 'bg-[#a8d84e] text-[#0f1f0f] opacity-75'
+                          : 'bg-[#7dc142] text-[#0f1f0f] hover:bg-[#a8d84e]'
+                      }`}>
+                        {loadingCourtId === court.id ? (
+                          <span className="inline-block animate-spin mr-1">⏳</span>
+                        ) : (
+                          <span>View Details →</span>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* MY BOOKINGS TAB */}
+      {activeTab === 'myBookings' && (
+        <div style={{ maxHeight: 'calc(100vh - 280px)', overflowY: 'auto', scrollbarWidth: 'thin', scrollbarColor: '#7dc142 #152515' }}>
+          <style>{`
+            .bookings-scrollable::-webkit-scrollbar {
+              width: 8px;
+            }
+            .bookings-scrollable::-webkit-scrollbar-track {
+              background: #152515;
+              border-radius: 10px;
+            }
+            .bookings-scrollable::-webkit-scrollbar-thumb {
+              background: #7dc142;
+              border-radius: 10px;
+            }
+            .bookings-scrollable::-webkit-scrollbar-thumb:hover {
+              background: #a8d84e;
+            }
+          `}</style>
+          <div className="bookings-scrollable pr-2">
+            {bookings.filter(b => new Date(b.startTime) >= new Date() && b.status !== 'cancelled').length === 0 ? (
+              <Card className="text-center py-12">
+                <div className="text-4xl mb-3">📅</div>
+                <div className="text-sm font-bold text-[#e8f5e0] mb-1">No upcoming bookings</div>
+                <div className="text-xs text-[#7aaa6a]">Book your first court session</div>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-2 gap-3">
+                {bookings
+                  .filter(b => new Date(b.startTime) >= new Date() && b.status !== 'cancelled')
+                  .map(booking => (
+                    <div
+                      key={booking.id}
+                      onClick={() => router.push(`/player/booking/${booking.id}?org=${selectedOrgId}`)}
+                      className="cursor-pointer"
+                    >
+                      <BookingItem booking={booking} canView />
+                    </div>
+                  ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* HISTORY TAB */}
+      {activeTab === 'history' && (
+        <div style={{ maxHeight: 'calc(100vh - 280px)', overflowY: 'auto', scrollbarWidth: 'thin', scrollbarColor: '#7dc142 #152515' }}>
+          <style>{`
+            .history-scrollable::-webkit-scrollbar {
+              width: 8px;
+            }
+            .history-scrollable::-webkit-scrollbar-track {
+              background: #152515;
+              border-radius: 10px;
+            }
+            .history-scrollable::-webkit-scrollbar-thumb {
+              background: #7dc142;
+              border-radius: 10px;
+            }
+            .history-scrollable::-webkit-scrollbar-thumb:hover {
+              background: #a8d84e;
+            }
+          `}</style>
+          <div className="history-scrollable pr-2">
+            {bookings.filter(b => new Date(b.startTime) < new Date() || b.status === 'cancelled').length === 0 ? (
+              <Card className="text-center py-12">
+                <div className="text-4xl mb-3">🕑</div>
+                <div className="text-sm text-[#7aaa6a]">No past sessions yet</div>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-2 gap-3">
+                {bookings
+                  .filter(b => new Date(b.startTime) < new Date() || b.status === 'cancelled')
+                  .map(booking => (
+                    <BookingItem key={booking.id} booking={booking} />
+                  ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Court Detail Modal */}
+      <CourtDetailModal
+        court={selectedCourt}
+        isOpen={showCourtModal}
+        onConfirm={handleConfirmCourt}
+        onCancel={() => setShowCourtModal(false)}
+      />
+    </div>
+  );
+}

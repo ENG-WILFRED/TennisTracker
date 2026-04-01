@@ -3,11 +3,12 @@ import { PrismaClient } from '@/generated/prisma';
 
 const prisma = new PrismaClient();
 
-export async function GET(request: NextRequest, context: any) {
-  const tournamentId = context?.params?.id || null;
-  if (!tournamentId) {
-    return NextResponse.json({ error: 'Tournament id missing from route' }, { status: 400 });
-  }
+export async function GET(request: NextRequest,{ params }: { params: Promise<{ id: string }> }) {
+    const resolvedParams = await params;
+    const tournamentId = resolvedParams.id;
+    if (!tournamentId) {
+      return NextResponse.json({ error: 'Tournament id missing from route' }, { status: 400 });
+    }
   try {
     const tournament = await prisma.clubEvent.findUnique({
       where: { id: tournamentId },
@@ -45,12 +46,12 @@ export async function GET(request: NextRequest, context: any) {
   }
 }
 
-export async function PATCH(request: NextRequest, context: any) {
-  const tournamentId = context?.params?.id || null;
-  if (!tournamentId) {
-    return NextResponse.json({ error: 'Tournament id missing from route' }, { status: 400 });
-  }
-
+export async function PATCH(request: NextRequest,{ params }: { params: Promise<{ id: string }> }) {
+    const resolvedParams = await params;
+    const tournamentId = resolvedParams.id;
+    if (!tournamentId) {
+      return NextResponse.json({ error: 'Tournament id missing from route' }, { status: 400 });
+    }
   try {
     const body = await request.json();
     const updatedFields: any = {};

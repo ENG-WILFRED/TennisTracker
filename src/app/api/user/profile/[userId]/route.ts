@@ -91,3 +91,60 @@ export async function GET(
     return NextResponse.json({ error: 'Server error' }, { status: 500 });
   }
 }
+
+export async function PUT(request: NextRequest) {
+  try {
+    const auth = verifyApiAuth(request);
+    if (!auth) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { userId } = body;
+
+    if (!userId) {
+      return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
+    }
+
+    // Build update object with only provided fields
+    const updateData: any = {};
+    const allowedFields = ['firstName', 'lastName', 'email', 'phone', 'gender', 'dateOfBirth', 'nationality', 'bio', 'photo'];
+    const dateFields = ['dateOfBirth'];
+    
+    for (const field of allowedFields) {
+      if (field in body) {
+        let value = body[field];
+        
+        // Convert empty strings to null for date fields
+        if (dateFields.includes(field) && (value === '' || value === null)) {
+          value = null;
+        }
+        
+        updateData[field] = value;
+      }
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: updateData,
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        photo: true,
+        gender: true,
+        dateOfBirth: true,
+        nationality: true,
+        bio: true,
+        phone: true,
+      },
+    });
+
+    return NextResponse.json(updatedUser);
+  } catch (error) {
+    console.error('PUT /api/user/profile error:', error);
+    return NextResponse.json({ error: 'Failed to update profile' }, { status: 500 });
+  }
+}

@@ -21,10 +21,14 @@ import {
   Image as ImageIcon
 } from 'lucide-react';
 
-export default function EditRefereePage({ params }: { params: { id: string } }) {
-  const { id } = params as { id: string };
+export default function EditRefereePage(props: { params: Promise<{ id: string }> }) {
+  const [id, setId] = useState<string>("");
   const { user } = useAuth();
   const router = useRouter();
+
+  useEffect(() => {
+    props.params.then(params => setId(params.id));
+  }, [props.params]);
 
   const [form, setForm] = useState({ 
     bio: '', 

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useParams } from 'next/navigation';
-import { BookingView } from '@/components/booking/BookingView';
+import { BookingView } from '@/components/booking/BookingViewNew';
 import Link from 'next/link';
 
 const G = {

@@ -93,6 +93,32 @@ export async function seedTournaments() {
       },
     });
 
+    await prisma.eventAmenity.create({
+      data: {
+        eventId: tournament1.id,
+        name: 'Restroom Facilities',
+        type: 'restroom',
+        description: 'Modern restrooms and shower facilities available 24/7 for athletes and visitors.',
+        capacity: 30,
+        price: 0,
+        availableFrom: new Date('2026-03-01T06:00:00'),
+        availableUntil: new Date('2026-03-15T23:59:00'),
+      },
+    });
+
+    await prisma.eventAmenity.create({
+      data: {
+        eventId: tournament1.id,
+        name: 'Food Lounge',
+        type: 'eating',
+        description: 'Relaxing lounge with coffee, smoothies, and light meals for all participants.',
+        capacity: 40,
+        price: 5,
+        availableFrom: new Date('2026-03-01T07:00:00'),
+        availableUntil: new Date('2026-03-15T21:00:00'),
+      },
+    });
+
     // Register players for tournament 1
     for (let i = 0; i < Math.min(8, clubMembers.length); i++) {
       await prisma.eventRegistration.create({
@@ -274,6 +300,33 @@ export async function seedTournaments() {
       },
     });
 
+    // Create tournament 2 facility amenities
+    await prisma.eventAmenity.create({
+      data: {
+        eventId: tournament2.id,
+        name: 'Restroom Facilities',
+        type: 'restroom',
+        description: 'Spacious restrooms with full hygiene and towel services.',
+        capacity: 35,
+        price: 0,
+        availableFrom: new Date('2026-06-15T06:00:00'),
+        availableUntil: new Date('2026-07-01T23:59:00'),
+      },
+    });
+
+    await prisma.eventAmenity.create({
+      data: {
+        eventId: tournament2.id,
+        name: 'Food Lounge',
+        type: 'eating',
+        description: 'Executive food lounge with international cuisine and nutrition stations.',
+        capacity: 45,
+        price: 10,
+        availableFrom: new Date('2026-06-15T07:00:00'),
+        availableUntil: new Date('2026-07-01T21:00:00'),
+      },
+    });
+
     // Register players for tournament 2
     for (let i = 0; i < Math.min(8, clubMembers.length); i++) {
       await prisma.eventRegistration.create({
@@ -383,6 +436,33 @@ export async function seedTournaments() {
       },
     });
 
+    // Create tournament 3 facility amenities
+    await prisma.eventAmenity.create({
+      data: {
+        eventId: tournament3.id,
+        name: 'Restroom Facilities',
+        type: 'restroom',
+        description: 'Fully accessible restrooms with fresh water stations.',
+        capacity: 40,
+        price: 0,
+        availableFrom: new Date('2026-09-15T06:00:00'),
+        availableUntil: new Date('2026-10-01T23:59:00'),
+      },
+    });
+
+    await prisma.eventAmenity.create({
+      data: {
+        eventId: tournament3.id,
+        name: 'Food Lounge',
+        type: 'eating',
+        description: 'Relaxed food lounge offering healthy snack bars and local dishes.',
+        capacity: 50,
+        price: 12,
+        availableFrom: new Date('2026-09-15T07:00:00'),
+        availableUntil: new Date('2026-10-01T20:00:00'),
+      },
+    });
+
     // Register players for tournament 3
     for (let i = 0; i < Math.min(8, clubMembers.length); i++) {
       await prisma.eventRegistration.create({
@@ -423,6 +503,33 @@ export async function seedTournaments() {
         eventId: tournament4.id,
         bracketType: 'round_robin',
         totalRounds: 3,
+      },
+    });
+
+    // Create tournament 4 facility amenities
+    await prisma.eventAmenity.create({
+      data: {
+        eventId: tournament4.id,
+        name: 'Restroom Facilities',
+        type: 'restroom',
+        description: 'Clean restrooms with dedicated athlete hygiene zone.',
+        capacity: 25,
+        price: 0,
+        availableFrom: new Date('2026-03-14T06:00:00'),
+        availableUntil: new Date('2026-03-21T23:59:00'),
+      },
+    });
+
+    await prisma.eventAmenity.create({
+      data: {
+        eventId: tournament4.id,
+        name: 'Food Lounge',
+        type: 'eating',
+        description: 'Community food lounge with quick bites and drink stations.',
+        capacity: 35,
+        price: 8,
+        availableFrom: new Date('2026-03-14T07:00:00'),
+        availableUntil: new Date('2026-03-21T20:00:00'),
       },
     });
 
@@ -517,6 +624,33 @@ export async function seedTournaments() {
         eventId: tournament5.id,
         bracketType: 'single_elimination',
         totalRounds: 3,
+      },
+    });
+
+    // Create tournament 5 facility amenities
+    await prisma.eventAmenity.create({
+      data: {
+        eventId: tournament5.id,
+        name: 'Restroom Facilities',
+        type: 'restroom',
+        description: 'Convenient restroom facilities with hygiene stations and ambient lighting.',
+        capacity: 30,
+        price: 0,
+        availableFrom: new Date('2026-04-01T06:00:00'),
+        availableUntil: new Date('2026-04-15T23:59:00'),
+      },
+    });
+
+    await prisma.eventAmenity.create({
+      data: {
+        eventId: tournament5.id,
+        name: 'Food Lounge',
+        type: 'eating',
+        description: 'Lounge kitchen with power bowls, sandwiches, and hydration stations.',
+        capacity: 40,
+        price: 10,
+        availableFrom: new Date('2026-04-01T07:00:00'),
+        availableUntil: new Date('2026-04-15T21:00:00'),
       },
     });
 

@@ -16,26 +16,37 @@ export async function GET(request: Request) {
       return new Response(JSON.stringify({ error: 'User not found' }), { status: 404 });
     }
 
-    const roomsBase = await prisma.chatRoom.findMany({
-      select: { id: true, name: true, description: true },
+    // Use single query with _count and lastMessage as relation
+    const rooms = await prisma.chatRoom.findMany({
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        _count: {
+          select: {
+            participants: true,
+          },
+        },
+        participants: {
+          select: { isOnline: true },
+        },
+        messages: {
+          select: { content: true },
+          orderBy: { createdAt: 'desc' as const },
+          take: 1,
+        },
+      },
     });
 
-    const formattedRooms = await Promise.all(
-      roomsBase.map(async (room: any) => {
-        const participantCount = await prisma.chatParticipant.count({ where: { roomId: room.id } });
-        const onlineCount = await prisma.chatParticipant.count({ where: { roomId: room.id, isOnline: true } });
-        const lastMsg = await prisma.chatMessage.findFirst({ where: { roomId: room.id }, orderBy: { createdAt: 'desc' }, select: { content: true } });
-
-        return {
-          id: room.id,
-          name: room.name,
-          description: room.description,
-          participantCount,
-          onlineCount,
-          lastMessage: lastMsg?.content || '',
-        };
-      })
-    );
+    // Format and count online
+    const formattedRooms = rooms.map((room: any) => ({
+      id: room.id,
+      name: room.name,
+      description: room.description,
+      participantCount: room._count.participants,
+      onlineCount: room.participants?.filter((p: any) => p.isOnline)?.length || 0,
+      lastMessage: room.messages?.[0]?.content || '',
+    }));
 
     return new Response(JSON.stringify(formattedRooms), {
       status: 200,
