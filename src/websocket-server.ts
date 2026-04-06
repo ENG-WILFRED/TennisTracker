@@ -226,9 +226,8 @@ server.on('upgrade', (request, socket, head) => {
 
 wss.on('connection', (ws: WebSocket, request) => {
   let userId: string | null = null;
-  let connectedAt = new Date();
 
-  console.log(`📡 New WebSocket connection from ${request.socket?.remoteAddress || 'unknown'}`);
+  console.log(`📡 New WebSocket connection from ${request.socket?.remoteAddress || 'unknown'}`, new Date().toISOString());
 
   // Handle incoming messages
   ws.on('message', (data: Buffer) => {

@@ -6,7 +6,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ orgI
     const { searchParams } = new URL(request.url);
     const date = searchParams.get('date');
 
-    let whereClause: any = { organizationId: orgId };
+    const whereClause: any = { organizationId: orgId };
 
     if (date) {
       const startOfDay = new Date(`${date}T00:00:00.000Z`);

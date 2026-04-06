@@ -9,7 +9,7 @@ export async function testAnnouncementSystem() {
   try {
     // 1. Check if TournamentAnnouncement model exists
     console.log('1️⃣ Testing TournamentAnnouncement model...');
-    const announcements = await prisma.tournamentAnnouncement.findMany({
+    const _announcements = await prisma.tournamentAnnouncement.findMany({
       take: 1,
     });
     console.log('✅ Model exists and is accessible\n');

@@ -16,12 +16,12 @@ const packageDefinition = loadSync(PROTO_PATH, {
   oneofs: true,
 });
 
-const protoDescriptor: any = loadPackageDefinition(packageDefinition);
+const protoDescriptor: Record<string, unknown> = loadPackageDefinition(packageDefinition);
 const tennis = protoDescriptor.tennis;
 
 // Implement service
 const analyticsService = {
-  GetPlayerStats: async (call: any, callback: any) => {
+  GetPlayerStats: async (call: unknown, callback: unknown) => {
     try {
       const { playerId } = call.request;
       const player = await prisma.player.findUnique({

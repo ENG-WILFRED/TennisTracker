@@ -4,8 +4,8 @@ export interface ActivityData {
   organizationId: string;
   playerId: string;
   action: string;
-  details: Record<string, any>;
-  metadata?: Record<string, any>;
+  details: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
 }
 
 export class OrganizationActivityTracker {

@@ -41,7 +41,7 @@ export function cleanupExpired() {
 // some runtimes (like the browser or Turbopack tooling) return a numeric
 // id from setInterval instead of a Timer object with `unref`. Guard against
 // calling unref in those environments so we don't crash during development.
-const _cleanupInterval: any = setInterval(cleanupExpired, 30_000);
+const _cleanupInterval: ReturnType<typeof setInterval> | NodeJS.Timeout = setInterval(cleanupExpired, 30_000);
 if (_cleanupInterval && typeof _cleanupInterval.unref === 'function') {
   _cleanupInterval.unref();
 }

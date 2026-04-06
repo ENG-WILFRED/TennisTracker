@@ -6,7 +6,7 @@ if (process.env.NODE_ENV === 'production') {
   prisma = new PrismaClient();
 } else {
   // In development, use a global instance to avoid creating multiple instances
-  let globalWithPrisma = global as typeof globalThis & {
+  const globalWithPrisma = global as typeof globalThis & {
     prisma: PrismaClient;
   };
 

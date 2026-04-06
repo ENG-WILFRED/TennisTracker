@@ -25,7 +25,7 @@ export async function PATCH(request: NextRequest, context: any) {
       );
     }
 
-    let newStatus = action === 'approve' ? 'approved' : action === 'undo' ? 'pending' : 'rejected';
+    const newStatus = action === 'approve' ? 'approved' : action === 'undo' ? 'pending' : 'rejected';
 
     // If rejecting, rejectionReason is optional but recommended
     const updateData: any = { status: newStatus };

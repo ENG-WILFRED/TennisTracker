@@ -4,7 +4,7 @@ import React, { useEffect, ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useRole } from '@/context/RoleContext';
 import { useAuth } from '@/context/AuthContext';
-import { UserRole, hasPermission, getRoleConfig } from '@/config/roles';
+import { UserRole, getRoleConfig } from '@/config/roles';
 import { hasRouteAccess, getRouteConfig } from '@/lib/route-protection';
 
 export interface ProtectedRouteProps {

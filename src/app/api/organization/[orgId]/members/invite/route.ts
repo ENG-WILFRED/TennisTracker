@@ -44,7 +44,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ org
     }
 
     // Check if user already exists
-    let existingUser = await prisma.user.findUnique({
+    const existingUser = await prisma.user.findUnique({
       where: { email: email.toLowerCase() },
       include: { player: true },
     });

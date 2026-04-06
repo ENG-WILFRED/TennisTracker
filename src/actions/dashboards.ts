@@ -414,7 +414,7 @@ export async function getOrganizationDashboard(orgManagerId: string, orgId?: str
     });
   } else {
     // Try to find an organization where this user is a staff member (manager)
-    let orgStaff = await prisma.staff.findFirst({
+    const orgStaff = await prisma.staff.findFirst({
       where: {
         userId: orgManagerId,
         role: { in: ['Manager', 'Admin', 'Owner'] },

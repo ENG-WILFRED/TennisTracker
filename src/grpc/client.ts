@@ -10,7 +10,7 @@ const packageDefinition = loadSync(PROTO_PATH, {
   defaults: true,
   oneofs: true,
 });
-const protoDescriptor: any = grpc.loadPackageDefinition(packageDefinition);
+const protoDescriptor: Record<string, unknown> = grpc.loadPackageDefinition(packageDefinition);
 const tennis = protoDescriptor.tennis;
 
 export function getPlayerStats(playerId: string) {
@@ -19,7 +19,7 @@ export function getPlayerStats(playerId: string) {
     grpc.credentials.createInsecure()
   );
   return new Promise((resolve, reject) => {
-    client.GetPlayerStats({ playerId }, (err: any, response: any) => {
+    client.GetPlayerStats({ playerId }, (err: unknown, response: unknown) => {
       if (err) return reject(err);
       resolve(response);
     });

@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status');
     const asProvider = searchParams.get('asProvider') === 'true';
 
-    let whereClause: any = {};
+    const whereClause: any = {};
 
     if (asProvider) {
       // Get bookings for services provided by this user

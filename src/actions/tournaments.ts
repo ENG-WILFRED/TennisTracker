@@ -341,7 +341,7 @@ export async function getTournamentComments(tournamentId: string) {
     return comments.map((comment: any) => {
       // Count reactions by type
       const reactionCounts: { [key: string]: number } = {};
-      let userReacted = false;
+      const userReacted = false;
       
       comment.reactions.forEach((reaction: any) => {
         reactionCounts[reaction.type] = (reactionCounts[reaction.type] || 0) + 1;

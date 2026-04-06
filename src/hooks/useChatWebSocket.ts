@@ -1,27 +1,13 @@
 // WebSocket hook for real-time messaging
 import { useEffect, useState, useCallback, useRef } from 'react';
 
-type ChatMessage = {
-  id: string;
-  content: string;
-  createdAt: string;
-  senderId: string;
-  senderName: string;
-  read: boolean;
-};
-
-type UserStatus = {
-  userId: string;
-  isOnline: boolean;
-};
-
 class ChatWebSocketManager {
   private ws: WebSocket | null = null;
   private url: string;
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private baseReconnectDelay = 3000;
-  private listeners: Map<string, Set<(data: any) => void>> = new Map();
+  private listeners: Map<string, Set<(data: unknown) => void>> = new Map();
   private isConnecting = false;
   private userId: string | null = null;
   private authSent = false;
@@ -159,7 +145,7 @@ class ChatWebSocketManager {
     }
   }
 
-  private handleMessage(message: any) {
+  private handleMessage(message: unknown) {
     if (!message || !message.type) return;
 
     try {
@@ -184,7 +170,7 @@ class ChatWebSocketManager {
     }
   }
 
-  subscribe(eventType: string, callback: (data: any) => void) {
+  subscribe(eventType: string, callback: (data: unknown) => void) {
     if (!this.listeners.has(eventType)) {
       this.listeners.set(eventType, new Set());
     }
@@ -198,7 +184,7 @@ class ChatWebSocketManager {
     };
   }
 
-  send(message: any) {
+  send(message: unknown) {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify(message));
     } else {
@@ -258,12 +244,12 @@ export function useChatWebSocket(userId: string | null) {
     };
   }, [userId]);
 
-  const subscribe = useCallback((eventType: string, callback: (data: any) => void) => {
+  const subscribe = useCallback((eventType: string, callback: (data: unknown) => void) => {
     const ws = getChatWsManager();
     return ws.subscribe(eventType, callback);
   }, []);
 
-  const send = useCallback((message: any) => {
+  const send = useCallback((message: unknown) => {
     const ws = getChatWsManager();
     ws.send(message);
   }, []);

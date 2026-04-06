@@ -1,10 +1,10 @@
 // WebSocket connection manager for real-time community updates
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useAuth } from '@/context/AuthContext';
 
 type WebSocketMessage = {
   type: 'post-created' | 'comment-added' | 'comment-reply-added' | 'comment-reaction-added' | 'comment-reaction-removed' | 'post-liked' | 'user-followed' | 'feed-update' | 'auth' | 'auth-confirmed' | 'error';
-  data?: any;
+  data?: unknown;
   timestamp?: string;
   userId?: string;
 };
@@ -15,7 +15,7 @@ class WebSocketManager {
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private baseReconnectDelay = 3000;
-  private listeners: Map<string, Set<(data: any) => void>> = new Map();
+  private listeners: Map<string, Set<(data: unknown) => void>> = new Map();
   private isConnecting = false;
   private userId: string | null = null;
   private authSent = false;
@@ -165,7 +165,7 @@ class WebSocketManager {
     }
   }
 
-  subscribe(eventType: string, callback: (data: any) => void) {
+  subscribe(eventType: string, callback: (data: unknown) => void) {
     if (!this.listeners.has(eventType)) {
       this.listeners.set(eventType, new Set());
     }
@@ -214,14 +214,14 @@ export function getWebSocketManager(): WebSocketManager {
 
 // Enhanced hook for subscribing to community updates
 export function useCommunityUpdates(
-  onPostCreated?: (post: any) => void,
-  onCommentAdded?: (comment: any) => void,
-  onCommentReplyAdded?: (reply: any) => void,
-  onCommentReactionAdded?: (reaction: any) => void,
-  onCommentReactionRemoved?: (reaction: any) => void,
-  onPostLiked?: (data: any) => void,
-  onUserFollowed?: (data: any) => void,
-  onFeedUpdate?: (data: any) => void
+  onPostCreated?: (post: unknown) => void,
+  onCommentAdded?: (comment: unknown) => void,
+  onCommentReplyAdded?: (reply: unknown) => void,
+  onCommentReactionAdded?: (reaction: unknown) => void,
+  onCommentReactionRemoved?: (reaction: unknown) => void,
+  onPostLiked?: (data: unknown) => void,
+  onUserFollowed?: (data: unknown) => void,
+  onFeedUpdate?: (data: unknown) => void
 ) {
   const { user } = useAuth();
   const [isConnected, setIsConnected] = useState(false);
@@ -246,7 +246,7 @@ export function useCommunityUpdates(
     }
 
     // Subscribe to events
-    const callbacks: [string, (data: any) => void][] = [];
+    const callbacks: [string, (data: unknown) => void][] = [];
     
     if (onPostCreated) {
       callbacks.push(['post-created', onPostCreated]);
@@ -333,7 +333,7 @@ export function useCommunityWebSocket(userId?: string) {
     eventTypes.forEach((eventType) => {
       const unsubscribe = wsManager.subscribe(eventType, (data) => {
         setUpdates({
-          type: eventType as any,
+          type: eventType as const,
           data,
           timestamp: new Date().toISOString(),
         });

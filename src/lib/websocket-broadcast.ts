@@ -21,7 +21,7 @@ const WS_SERVER_URL = process.env.WS_SERVER_URL || 'http://localhost:3001';
  */
 async function sendToWSServer(
   action: 'broadcast-all' | 'broadcast-user' | 'broadcast-except' | 'broadcast-match',
-  payload: any
+  payload: unknown
 ) {
   try {
     // Only broadcast in production or if WS server is configured
@@ -53,10 +53,10 @@ async function sendToWSServer(
  * Broadcast message to all connected clients
  * Use for: global notifications, public events
  */
-export function broadcastToClients(message: any) {
+export function broadcastToClients(message: unknown) {
   sendToWSServer('broadcast-all', {
-    type: message.type || 'generic',
-    data: message.data || message,
+    type: (message as Record<string, unknown>)?.type || 'generic',
+    data: (message as Record<string, unknown>)?.data || message,
   });
 }
 
@@ -64,11 +64,11 @@ export function broadcastToClients(message: any) {
  * Broadcast message to specific user
  * Use for: personal notifications, direct updates
  */
-export function broadcastToUser(userId: string, message: any) {
+export function broadcastToUser(userId: string, message: unknown) {
   sendToWSServer('broadcast-user', {
     userId,
-    type: message.type || 'generic',
-    data: message.data || message,
+    type: (message as Record<string, unknown>)?.type || 'generic',
+    data: (message as Record<string, unknown>)?.data || message,
   });
 }
 
@@ -76,11 +76,11 @@ export function broadcastToUser(userId: string, message: any) {
  * Broadcast to all except the sender
  * Use for: social updates, activity feeds
  */
-export function broadcastExcept(senderId: string, message: any) {
+export function broadcastExcept(senderId: string, message: unknown) {
   sendToWSServer('broadcast-except', {
     senderId,
-    type: message.type || 'generic',
-    data: message.data || message,
+    type: (message as Record<string, unknown>)?.type || 'generic',
+    data: (message as Record<string, unknown>)?.data || message,
   });
 }
 
@@ -88,11 +88,11 @@ export function broadcastExcept(senderId: string, message: any) {
  * Broadcast to users watching a specific match
  * Use for: live score updates, match events
  */
-export function broadcastToMatch(matchId: string, message: any) {
+export function broadcastToMatch(matchId: string, message: unknown) {
   sendToWSServer('broadcast-match', {
     matchId,
-    type: message.type || 'generic',
-    data: message.data || message,
+    type: (message as Record<string, unknown>)?.type || 'generic',
+    data: (message as Record<string, unknown>)?.data || message,
   });
 }
 

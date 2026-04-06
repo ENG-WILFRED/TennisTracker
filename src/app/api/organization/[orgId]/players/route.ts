@@ -9,7 +9,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ orgI
 
     console.log('🔍 Players API called:', { orgId, filterType, coachId });
 
-    let whereClause: any = { organizationId: orgId };
+    const whereClause: any = { organizationId: orgId };
 
     // If filtering by coach's managed players
     if (filterType === 'managed' && coachId) {

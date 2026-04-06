@@ -104,7 +104,7 @@ export async function PATCH(
         });
 
         if (event) {
-          let updatedRules = event.rules || '';
+          const updatedRules = event.rules || '';
           const lines = updatedRules
             .split('\n')
             .map((ln) => ln.trim())

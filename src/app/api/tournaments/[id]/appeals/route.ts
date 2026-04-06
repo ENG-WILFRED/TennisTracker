@@ -52,7 +52,7 @@ export async function GET(
 
     const isOrganizer = !!ownedOrg || !!memberRole;
 
-    let whereClause: any = { eventId: tournamentId };
+    const whereClause: any = { eventId: tournamentId };
 
     if (status) {
       whereClause.status = status;

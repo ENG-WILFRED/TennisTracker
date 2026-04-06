@@ -29,7 +29,7 @@ export async function uploadToR2(
       'Content-Type': contentType,
       Authorization: `Bearer ${R2_API_TOKEN}`,
     },
-    body: data as any,
+    body: data as BodyInit,
   });
   if (!res.ok) {
     const text = await res.text();

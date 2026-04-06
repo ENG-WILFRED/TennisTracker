@@ -4,10 +4,10 @@
 
 export class ChatRoom {
   state: DurableObjectState;
-  env: any;
+  env: Record<string, unknown>;
   sockets: Set<WebSocket>;
 
-  constructor(state: DurableObjectState, env: any) {
+  constructor(state: DurableObjectState, env: Record<string, unknown>) {
     this.state = state;
     this.env = env;
     this.sockets = new Set();

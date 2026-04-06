@@ -20,7 +20,7 @@ export function removeSocket(roomId: string, socket: WebSocket) {
   }
 }
 
-export function broadcastToRoom(roomId: string, data: any) {
+export function broadcastToRoom(roomId: string, data: unknown) {
   const set = rooms.get(roomId);
   if (!set) return;
   const msg = typeof data === 'string' ? data : JSON.stringify(data);

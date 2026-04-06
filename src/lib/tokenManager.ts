@@ -108,11 +108,11 @@ export async function refreshAccessToken(): Promise<boolean> {
       return false;
     }
 
-    const data = await response.json();
+    const data = await response.json() as Record<string, unknown>;
     // Ensure the response conforms to our AuthTokens interface
     if (typeof data === 'object' && data !== null &&
-        typeof (data as any).accessToken === 'string' &&
-        typeof (data as any).refreshToken === 'string') {
+        typeof data.accessToken === 'string' &&
+        typeof data.refreshToken === 'string') {
       storeTokens(data as AuthTokens);
       return true;
     } else {

@@ -106,7 +106,7 @@ export default function CommunityPanel({ userId }: { userId: string }) {
 
         if (res.ok) {
           const data = await res.json();
-          let postsList: any[] = Array.isArray(data) ? data : data?.posts || [];
+          const postsList: any[] = Array.isArray(data) ? data : data?.posts || [];
           setPosts(postsList);
         }
       } catch (error) {

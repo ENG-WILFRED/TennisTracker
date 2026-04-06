@@ -36,7 +36,7 @@ export const usePDFDownload = () => {
     safeProperties.forEach(prop => {
       const value = computed.getPropertyValue(prop);
       if (value && (value.includes('lab(') || value.includes('oklch(') || value.includes('lch(') || value.includes('hwb('))) {
-        element.style[prop as any] = '#333333';
+        element.style[prop as keyof CSSStyleDeclaration] = '#333333';
       }
     });
   };
@@ -52,7 +52,7 @@ export const usePDFDownload = () => {
     // Also clean computed styles to catch any CSS-generated lab() colors
     try {
       cleanComputedColors(element);
-    } catch (e) {
+    } catch (_e) {
       // Ignore errors from computed style access
     }
   };
@@ -467,7 +467,7 @@ export const usePDFDownload = () => {
           setDownloadProgress(100);
           showToast('PDF downloaded successfully!', 'success');
         })
-        .catch((error: any) => {
+        .catch((error: unknown) => {
           console.error('PDF generation error:', error);
           showToast('Failed to generate PDF', 'error');
         })

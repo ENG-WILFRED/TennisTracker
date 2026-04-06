@@ -38,7 +38,7 @@ export default function useKnockout() {
   function handlePointCheckbox(matchId: string, who: "a" | "b", point: number, checked: boolean) {
     setScores((prev) => {
       const prevScore = prev[matchId] || { a: 0, b: 0 };
-      let newScore = { ...prevScore };
+      const newScore = { ...prevScore };
       if (checked) {
         if (newScore[who] < point) newScore[who] = point;
       } else {

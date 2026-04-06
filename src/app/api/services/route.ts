@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
 
     // Validate user has access to this context
     // For now, just check if user is logged in. Could add more granular checks later.
-    let hasAccess = true; // Authenticated users can access services
+    const hasAccess = true; // Authenticated users can access services
 
     if (!hasAccess) {
       return NextResponse.json({ error: 'Access denied to this context' }, { status: 403 });

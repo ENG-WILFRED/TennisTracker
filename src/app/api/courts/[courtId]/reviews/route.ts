@@ -16,7 +16,7 @@ export async function GET(
     const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100);
     const skip = parseInt(searchParams.get('skip') || '0');
 
-    let whereClause: any = { courtId };
+    const whereClause: any = { courtId };
     if (rating) {
       whereClause.rating = parseInt(rating);
     }
