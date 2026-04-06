@@ -71,6 +71,10 @@ model Player {
   serviceBookings            ServiceBooking[]
   courtComments              CourtComment[]
   courtComplaints            CourtComplaint[]
+  coachSessions              CoachSession[]             @relation("CoachSessionsAsPlayer")
+  sessionBookings            SessionBooking[]           @relation("SessionBookings")
+  coachRelationships         CoachPlayerRelationship[]  @relation("CoachPlayers")
+  coachSessionReviews        CoachSessionReview[]       @relation("CoachSessionReviews")
 
   @@index([organizationId])
 }
@@ -138,6 +142,13 @@ model Staff {
   organization           Organization?    @relation(fields: [organizationId], references: [id])
   user                   User             @relation(fields: [userId], references: [id])
   tasks                  EventTask[]
+  sessions               CoachSession[]   @relation("CoachSessions")
+  players                CoachPlayerRelationship[] @relation("CoachPlayers")
+  wallet                 CoachWallet?     @relation("CoachWallet")
+  payouts                CoachPayout[]    @relation("CoachPayouts")
+  stats                  CoachStats?      @relation("CoachStats")
+  dailyStats             CoachDailyStats[] @relation("CoachDailyStats")
+  sessionReviews         CoachSessionReview[] @relation("CoachSessionReviews")
 
   @@index([organizationId])
   @@index([employedById])
@@ -197,6 +208,7 @@ model Organization {
   services                Service[]
   providerProfiles        ProviderProfile[]
   tasks                   EventTask[]
+  coachSessions           CoachSession[]           @relation("CoachSessions")
 
   @@index([createdAt])
   @@index([slug])
@@ -532,6 +544,7 @@ model Court {
   complaints            CourtComplaint[]
   tournamentMatches     TournamentMatch[]
   images                CourtImage[]
+  coachSessions         CoachSession[]     @relation("CoachSessions")
 
   @@unique([organizationId, courtNumber])
   @@index([organizationId])
@@ -571,6 +584,9 @@ model CourtBooking {
   isPeak             Boolean      @default(false)
   cancellationReason String?
   cancelledAt        DateTime?
+  rejectionReason    String?
+  rejectedAt         DateTime?
+  notes              String?      @default("No additional notes")
   createdAt          DateTime     @default(now())
   updatedAt          DateTime     @updatedAt
   court              Court        @relation(fields: [courtId], references: [id], onDelete: Cascade)
@@ -1218,5 +1234,225 @@ model EventTask {
   @@index([serviceId])
   @@index([staffUserId])
   @@index([status])
+  @@index([createdAt])
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// COACH SESSION & BOOKING SYSTEM
+// ────────────────────────────────────────────────────────────────────────────
+
+model CoachSession {
+  id             String              @id @default(uuid())
+  coachId        String              // Staff user ID
+  organizationId String?
+  playerId       String?             // Optional, for 1-on-1
+  sessionType    String              @default("1-on-1") // "1-on-1", "group"
+  title          String
+  description    String?
+  startTime      DateTime
+  endTime        DateTime
+  timezone       String              @default("UTC")
+  courtId        String?
+  maxParticipants Int                @default(1)
+  price          Float?
+  status         String              @default("scheduled") // "scheduled", "in-progress", "completed", "cancelled"
+  cancellationReason String?
+  cancelledAt    DateTime?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  
+  coach          Staff               @relation("CoachSessions", fields: [coachId], references: [userId], onDelete: Cascade)
+  organization   Organization?       @relation("CoachSessions", fields: [organizationId], references: [id], onDelete: SetNull)
+  player         Player?             @relation("CoachSessionsAsPlayer", fields: [playerId], references: [userId], onDelete: SetNull)
+  court          Court?              @relation("CoachSessions", fields: [courtId], references: [id], onDelete: SetNull)
+  bookings       SessionBooking[]
+  
+  @@index([coachId, startTime])
+  @@index([organizationId, startTime])
+  @@index([playerId, startTime])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model SessionBooking {
+  id             String              @id @default(uuid())
+  sessionId      String
+  playerId       String
+  status         String              @default("pending") // "pending", "confirmed", "cancelled", "completed"
+  attendanceStatus String?           @default("pending") // "pending", "attended", "absent", "late"
+  notes          String?
+  feedbackRating Float?              @default(0)
+  feedbackText   String?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  completedAt    DateTime?
+  
+  session        CoachSession        @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  player         Player              @relation("SessionBookings", fields: [playerId], references: [userId], onDelete: Cascade)
+  
+  @@unique([sessionId, playerId])
+  @@index([sessionId])
+  @@index([playerId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// EARNINGS & WALLET SYSTEM
+// ────────────────────────────────────────────────────────────────────────────
+
+model CoachWallet {
+  id             String              @id @default(uuid())
+  coachId        String              @unique
+  balance        Float               @default(0)
+  currency       String              @default("USD")
+  totalEarned    Float               @default(0)
+  totalWithdrawn Float               @default(0)
+  pendingBalance Float               @default(0)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  
+  coach          Staff               @relation("CoachWallet", fields: [coachId], references: [userId], onDelete: Cascade)
+  transactions   WalletTransaction[]
+  
+  @@index([coachId])
+}
+
+model WalletTransaction {
+  id             String              @id @default(uuid())
+  walletId       String
+  type           String              // "credit", "debit", "withdrawal"
+  amount         Float
+  description    String
+  reference      String?             // sessionId or payoutId
+  balanceBefore  Float
+  balanceAfter   Float
+  platformFee    Float               @default(0)
+  createdAt      DateTime            @default(now())
+  
+  wallet         CoachWallet         @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  
+  @@index([walletId, createdAt])
+  @@index([type])
+}
+
+model CoachPayout {
+  id             String              @id @default(uuid())
+  coachId        String
+  amount         Float
+  status         String              @default("pending") // "pending", "processing", "completed", "failed"
+  paymentMethod  String              // "bank_transfer", "mpesa", etc.
+  bankDetails    String?
+  transactionRef String?
+  notes          String?
+  requestedAt    DateTime            @default(now())
+  processedAt    DateTime?
+  completedAt    DateTime?
+  
+  coach          Staff               @relation("CoachPayouts", fields: [coachId], references: [userId], onDelete: Cascade)
+  
+  @@index([coachId])
+  @@index([status])
+  @@index([requestedAt])
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// PLAYER MANAGEMENT
+// ────────────────────────────────────────────────────────────────────────────
+
+model CoachPlayerRelationship {
+  id             String              @id @default(uuid())
+  coachId        String
+  playerId       String
+  status         String              @default("active") // "active", "inactive", "archived"
+  joinedAt       DateTime            @default(now())
+  lastSessionAt  DateTime?
+  sessionsCount  Int                 @default(0)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  
+  coach          Staff               @relation("CoachPlayers", fields: [coachId], references: [userId], onDelete: Cascade)
+  player         Player              @relation("CoachPlayers", fields: [playerId], references: [userId], onDelete: Cascade)
+  notes          CoachPlayerNote[]
+  
+  @@unique([coachId, playerId])
+  @@index([coachId])
+  @@index([playerId])
+  @@index([status])
+}
+
+model CoachPlayerNote {
+  id             String              @id @default(uuid())
+  relationshipId String
+  title          String
+  content        String
+  category       String?             // "performance", "injury", "progress", "general"
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  
+  relationship   CoachPlayerRelationship @relation(fields: [relationshipId], references: [id], onDelete: Cascade)
+  
+  @@index([relationshipId])
+  @@index([createdAt])
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// ANALYTICS & STATISTICS
+// ────────────────────────────────────────────────────────────────────────────
+
+model CoachStats {
+  id             String              @id @default(uuid())
+  coachId        String              @unique
+  totalSessions  Int                 @default(0)
+  completedSessions Int              @default(0)
+  totalPlayers   Int                 @default(0)
+  activePlayers  Int                 @default(0)
+  totalRevenue   Float               @default(0)
+  avgRating      Float               @default(0)
+  ratingCount    Int                 @default(0)
+  responseRate   Float               @default(0)
+  cancellationRate Float             @default(0)
+  updatedAt      DateTime            @updatedAt
+  
+  coach          Staff               @relation("CoachStats", fields: [coachId], references: [userId], onDelete: Cascade)
+  
+  @@index([coachId])
+}
+
+model CoachDailyStats {
+  id             String              @id @default(uuid())
+  coachId        String
+  date           DateTime
+  sessionsCount  Int                 @default(0)
+  revenue        Float               @default(0)
+  newPlayers     Int                 @default(0)
+  createdAt      DateTime            @default(now())
+  
+  coach          Staff               @relation("CoachDailyStats", fields: [coachId], references: [userId], onDelete: Cascade)
+  
+  @@unique([coachId, date])
+  @@index([coachId, date])
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// REVIEWS & FEEDBACK EXTENSIONS
+// ────────────────────────────────────────────────────────────────────────────
+
+model CoachSessionReview {
+  id             String              @id @default(uuid())
+  coachId        String
+  playerId       String
+  sessionId      String
+  rating         Float              // 1-5
+  comment        String?
+  isAnonymous    Boolean            @default(false)
+  createdAt      DateTime           @default(now())
+  
+  coach          Staff              @relation("CoachSessionReviews", fields: [coachId], references: [userId], onDelete: Cascade)
+  player         Player             @relation("CoachSessionReviews", fields: [playerId], references: [userId], onDelete: Cascade)
+  
+  @@unique([sessionId, playerId])
+  @@index([coachId])
+  @@index([playerId])
   @@index([createdAt])
 }

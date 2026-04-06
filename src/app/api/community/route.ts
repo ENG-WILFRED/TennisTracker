@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
       const page = parseInt(searchParams.get('page') || '1');
       const pageSize = 10;
       const skip = (page - 1) * pageSize;
-
+      
       const followedUserIds = await prisma.userFollower
         .findMany({
           where: { followerId: userId },
@@ -76,6 +76,8 @@ export async function GET(request: NextRequest) {
 
       const feedWithMeta = feedPosts.map((post: typeof feedPosts[number]) => ({
         ...post,
+        comments: post.comments,
+        reactions: post.likes,
         commentCount: post.comments.length,
         reactionCount: post.likes.length,
         userHasLiked: post.likes.some((r: typeof post.likes[number]) => r.userId === userId),

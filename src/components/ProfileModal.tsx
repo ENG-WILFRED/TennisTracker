@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Trophy, MapPin, Calendar, Mail, Phone, Users, X } from 'lucide-react';
+import { authenticatedFetch } from '@/lib/authenticatedFetch';
 
 interface UserProfile {
   id: string;
@@ -48,7 +49,7 @@ export function ProfileModal({ isOpen, onClose, userId }: ProfileModalProps) {
       setError(null);
 
       try {
-        const response = await fetch(`/api/user/profile/${userId}`);
+        const response = await authenticatedFetch(`/api/user/profile/${userId}`);
 
         if (!response.ok) {
           throw new Error('Failed to fetch profile');

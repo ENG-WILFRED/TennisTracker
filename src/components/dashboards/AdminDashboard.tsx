@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import Link from 'next/link';
 
@@ -14,8 +14,39 @@ const G = {
 export const AdminDashboard: React.FC = () => {
   const { user } = useAuth();
   const router = useRouter();
-  const [activeNav, setActiveNav] = useState('Home');
-  const [activeTab, setActiveTab] = useState('Overview');
+  const searchParams = useSearchParams();
+
+  // Define nav items
+  const navItems = [
+    { label: 'Home', icon: '🏠', section: 'home' },
+    { label: 'Platform', icon: '🛠️', section: 'platform' },
+    { label: 'Logs', icon: '📑', section: 'logs' },
+    { label: 'System', icon: '🖥️', section: 'system' },
+    { label: 'Settings', icon: '⚙️', section: 'settings' },
+  ];
+
+  // Map section URL param to label
+  const sectionParam = searchParams.get('section') || 'home';
+  const activeNav = navItems.find(item => item.section === sectionParam)?.label || 'Home';
+
+  // Handle navigation to a new section
+  const handleNavigation = (section: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('section', section);
+    params.delete('tab');
+    router.push(`?${params.toString()}`, { scroll: false });
+  };
+
+  // Read active tab from URL, default to 'Overview'
+  const activeTab = (searchParams.get('tab') as string) || 'Overview';
+  
+  // Handle tab change
+  const handleTabChange = (tab: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('tab', tab);
+    router.push(`?${params.toString()}`, { scroll: false });
+  };
+
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,31 +73,6 @@ export const AdminDashboard: React.FC = () => {
     };
     fetchDashboard();
   }, [user?.id]);
-
-  useEffect(() => {
-    const section = new URLSearchParams(window.location.search).get('section');
-    if (section) {
-      const label = section
-        .split('_')
-        .map((p) => p[0]?.toUpperCase() + p.slice(1))
-        .join(' ');
-      setActiveNav(label);
-      setActiveTab(label === 'Home' ? 'Overview' : activeTab);
-    }
-  }, []);
-
-  const navigateToSidebar = (item: { label: string; section: string }) => {
-    setActiveNav(item.label);
-    router.replace(`${window.location.pathname}?section=${item.section}`);
-  };
-
-  const navItems = [
-    { label: 'Home', icon: '🏠', section: 'home' },
-    { label: 'Platform', icon: '🛠️', section: 'platform' },
-    { label: 'Logs', icon: '📑', section: 'logs' },
-    { label: 'System', icon: '🖥️', section: 'system' },
-    { label: 'Settings', icon: '⚙️', section: 'settings' },
-  ];
 
   const tabs = ['Overview', 'Services', 'Alerts', 'Incidents'];
 
@@ -131,7 +137,7 @@ export const AdminDashboard: React.FC = () => {
         </div>
         <nav style={{ flex: 1, paddingTop: 8 }}>
           {navItems.map(item => (
-            <button key={item.label} onClick={() => navigateToSidebar(item)} style={{
+            <button key={item.label} onClick={() => handleNavigation(item.section)} style={{
               width: '100%', display: 'flex', alignItems: 'center', gap: 9, padding: '9px 13px',
               background: activeNav === item.label ? G.mid : 'transparent',
               color: activeNav === item.label ? '#fff' : G.muted,

@@ -1,6 +1,6 @@
 // WebSocket connection manager for real-time community updates
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { useSession } from 'next-auth/react';
+import { useAuth } from '@/context/AuthContext';
 
 type WebSocketMessage = {
   type: 'post-created' | 'comment-added' | 'comment-reply-added' | 'comment-reaction-added' | 'comment-reaction-removed' | 'post-liked' | 'user-followed' | 'feed-update' | 'auth' | 'auth-confirmed' | 'error';
@@ -19,17 +19,24 @@ class WebSocketManager {
   private isConnecting = false;
   private userId: string | null = null;
   private authSent = false;
+  private pendingConnection: Promise<void> | null = null;
 
   constructor(url: string) {
     this.url = url;
   }
 
   connect(userId?: string): Promise<void> {
-    return new Promise((resolve, reject) => {
-      if (this.isConnecting) {
-        reject(new Error('Already connecting'));
-        return;
-      }
+    // If already connected, resolve immediately
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      return Promise.resolve();
+    }
+
+    // If already connecting, return the pending connection promise
+    if (this.isConnecting && this.pendingConnection) {
+      return this.pendingConnection;
+    }
+
+    this.pendingConnection = new Promise((resolve, reject) => {
 
       if (userId) {
         this.userId = userId;
@@ -65,14 +72,12 @@ class WebSocketManager {
           }
         }
 
-        console.log(`🔌 Connecting to WebSocket at ${wsUrl}`);
-        
         this.ws = new WebSocket(wsUrl);
 
         this.ws.onopen = () => {
-          console.log('✅ WebSocket connected');
           this.reconnectAttempts = 0;
           this.isConnecting = false;
+          this.pendingConnection = null;
 
           // Send auth message immediately after connection
           if (this.userId && !this.authSent) {
@@ -98,16 +103,19 @@ class WebSocketManager {
         };
 
         this.ws.onclose = () => {
-          console.log('🔌 WebSocket disconnected');
           this.isConnecting = false;
+          this.pendingConnection = null;
           this.authSent = false;
           this.attemptReconnect();
         };
       } catch (error) {
         this.isConnecting = false;
+        this.pendingConnection = null;
         reject(error);
       }
     });
+
+    return this.pendingConnection;
   }
 
   private sendAuth(userId: string) {
@@ -124,14 +132,12 @@ class WebSocketManager {
     );
 
     this.authSent = true;
-    console.log(`🔐 Auth sent for user: ${userId}`);
   }
 
   private attemptReconnect() {
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++;
       const delay = this.baseReconnectDelay * Math.pow(1.5, this.reconnectAttempts - 1);
-      console.log(`📡 Reconnecting in ${delay}ms... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
       
       setTimeout(() => {
         this.connect(this.userId || undefined).catch((error) => {
@@ -145,7 +151,6 @@ class WebSocketManager {
 
   private handleMessage(message: WebSocketMessage) {
     if (message.type === 'auth-confirmed') {
-      console.log('✅ Authentication confirmed:', message.userId);
       return;
     }
 
@@ -218,14 +223,14 @@ export function useCommunityUpdates(
   onUserFollowed?: (data: any) => void,
   onFeedUpdate?: (data: any) => void
 ) {
-  const { data: session } = useSession();
+  const { user } = useAuth();
   const [isConnected, setIsConnected] = useState(false);
   const unsubscribesRef = useRef<(() => void)[]>([]);
   const connectionCheckRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    if (!session?.user) {
-      console.warn('No session available for WebSocket connection');
+    if (!user) {
+      console.warn('No user available for WebSocket connection');
       return;
     }
 
@@ -233,8 +238,8 @@ export function useCommunityUpdates(
 
     // Connect if not already connected
     if (!wsManager.isConnected()) {
-      // Use email as unique identifier (always available in NextAuth session)
-      const userId = session.user.email || 'unknown-user';
+      // Use user ID as unique identifier
+      const userId = user.id;
       wsManager.connect(userId).catch((error) => {
         console.error('Failed to connect WebSocket:', error);
       });
@@ -291,20 +296,20 @@ export function useCommunityUpdates(
         clearInterval(connectionCheckRef.current);
       }
     };
-  }, [session?.user?.email, onPostCreated, onCommentAdded, onCommentReplyAdded, onCommentReactionAdded, onCommentReactionRemoved, onPostLiked, onUserFollowed, onFeedUpdate]);
+  }, [user?.id, onPostCreated, onCommentAdded, onCommentReplyAdded, onCommentReactionAdded, onCommentReactionRemoved, onPostLiked, onUserFollowed, onFeedUpdate]);
 
   return isConnected;
 }
 
 // Alternative hook that returns updates object instead of callbacks
 export function useCommunityWebSocket(userId?: string) {
-  const { data: session } = useSession();
+  const { user } = useAuth();
   const [isConnected, setIsConnected] = useState(false);
   const [updates, setUpdates] = useState<WebSocketMessage | null>(null);
   const unsubscribesRef = useRef<(() => void)[]>([]);
 
   useEffect(() => {
-    const effectUserId = userId || session?.user?.email;
+    const effectUserId = userId || user?.id;
 
     if (!effectUserId) {
       console.warn('No user ID available for WebSocket connection');

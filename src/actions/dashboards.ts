@@ -396,6 +396,8 @@ export async function getOrganizationDashboard(orgManagerId: string, orgId?: str
   });
   if (!manager) throw new Error("User not found");
 
+  console.log(`🔍 Getting dashboard for user ${manager.firstName} ${manager.lastName} (${orgManagerId}), provided orgId: ${orgId}`);
+
   // Get organization data - either from provided orgId or find the first organization managed by the user
   let organization = null;
   let resolvedOrgId = orgId;
@@ -431,6 +433,7 @@ export async function getOrganizationDashboard(orgManagerId: string, orgId?: str
     
     // If not found as staff, check if user is a club member with admin role
     if (!orgStaff) {
+      console.log(`⚠️  No staff found, checking club members for user ${orgManagerId}...`);
       const clubMember = await prisma.clubMember.findFirst({
         where: {
           playerId: orgManagerId,
@@ -449,14 +452,20 @@ export async function getOrganizationDashboard(orgManagerId: string, orgId?: str
       });
       
       if (clubMember) {
+        console.log(`✅ Club member found! Organization: ${clubMember.organization.name}`);
         organization = clubMember.organization;
         resolvedOrgId = organization.id;
+      } else {
+        console.log(`❌ No club member found with admin role`);
       }
     } else if (orgStaff?.organization) {
+      console.log(`✅ Staff found! Organization: ${orgStaff.organization.name}`);
       organization = orgStaff.organization;
       resolvedOrgId = organization.id;
     }
   }
+
+  console.log(`📍 Resolved org ID: ${resolvedOrgId}`);
 
   // Get all staff
   const allStaff = await prisma.staff.findMany({

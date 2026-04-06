@@ -4,6 +4,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { authenticatedFetch } from '@/lib/authenticatedFetch';
 
+// Declare google maps type
+declare global {
+  interface Window {
+    google: any;
+  }
+}
+
 const G = {
   dark: '#0f1f0f',
   sidebar: '#152515',
@@ -307,7 +314,7 @@ export default function CourtDetailPage() {
 
   // Action modals
   const [modal, setModal] = useState<
-    null | 'editCourt' | 'editStatus' | 'editPricing' | 'editSchedule' | 'editAmenities' | 'complaintResolve' | 'uploadImage'
+    null | 'editCourt' | 'editStatus' | 'editPricing' | 'editSchedule' | 'editAmenities' | 'complaintResolve' | 'uploadImage' | 'editLocation'
   >(null);
   const [errorMsg, setErrorMsg] = useState('');
   const [selectedComplaint, setSelectedComplaint] = useState<CourtComplaint | null>(null);
@@ -317,11 +324,17 @@ export default function CourtDetailPage() {
   const [editData, setEditData] = useState<Partial<Court>>({});
   const [actionLoading, setActionLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
+  
+  // Location map state
+  const [mapInstance, setMapInstance] = useState<any>(null);
+  const [locationLat, setLocationLat] = useState<number | string>(court?.latitude || '');
+  const [locationLng, setLocationLng] = useState<number | string>(court?.longitude || '');
+  const [googleMapsReady, setGoogleMapsReady] = useState(false);
+  const [googleMapsError, setGoogleMapsError] = useState<string | null>(null);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const markersRef = useRef<any[]>([]);
 
-  useEffect(() => {
-    if (orgId && courtId) fetchCourtDetails();
-  }, [orgId, courtId]);
-
+  // Fetch court details
   async function fetchCourtDetails() {
     try {
       setLoading(true);
@@ -333,6 +346,12 @@ export default function CourtDetailPage() {
       setComments(data.comments || []);
       setComplaints(data.complaints || []);
       setStats(data.stats);
+      
+      // Update location state
+      if (data.court) {
+        setLocationLat(data.court.latitude || '');
+        setLocationLng(data.court.longitude || '');
+      }
       
       // Fetch court images
       const imagesRes = await authenticatedFetch(`/api/organization/${orgId}/courts/${courtId}/images`);
@@ -348,6 +367,12 @@ export default function CourtDetailPage() {
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+    if (orgId && courtId) fetchCourtDetails();
+  }, [orgId, courtId]);
+
+  // Google Maps integration disabled - using static map placeholder
 
   async function handleBookingStatusChange(bookingId: string, newStatus: string) {
     try {
@@ -722,7 +747,7 @@ export default function CourtDetailPage() {
 
         {/* Back */}
         <button
-          onClick={() => window.history.back()}
+          onClick={() => router.push(`/dashboard/org/${orgId}?section=courts`)}
           style={{ background: 'transparent', color: G.lime, border: 'none', fontSize: 14, cursor: 'pointer', marginBottom: 16, fontWeight: 700 }}
         >
           ← Back to Courts
@@ -1086,7 +1111,7 @@ export default function CourtDetailPage() {
         {/* ── LOCATION ── */}
         {activeTab === 'location' && (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-            <Section title="📍 Address Details" action={{ label: 'Edit', onClick: () => openEdit('editCourt') }}>
+            <Section title="📍 Address Details" action={{ label: 'Edit', onClick: () => openEdit('editLocation') }}>
               {court.address && <InfoRow label="Street Address" value={court.address} />}
               {court.city && <InfoRow label="City" value={court.city} />}
               {court.country && <InfoRow label="Country" value={court.country} />}
@@ -1108,20 +1133,11 @@ export default function CourtDetailPage() {
 
             {/* Map placeholder */}
             <Section title="🗺️ Map">
-              {court.latitude && court.longitude ? (
-                <div style={{ position: 'relative', borderRadius: 10, overflow: 'hidden' }}>
-                  <iframe
-                    title="Court Location"
-                    width="100%"
-                    height="280"
-                    frameBorder="0"
-                    style={{ borderRadius: 10, border: `1px solid ${G.cardBorder}` }}
-                    src={`https://www.openstreetmap.org/export/embed.html?bbox=${court.longitude - 0.005},${court.latitude - 0.005},${court.longitude + 0.005},${court.latitude + 0.005}&layer=mapnik&marker=${court.latitude},${court.longitude}`}
-                  />
-                </div>
-              ) : (
-                <EmptyState icon="🗺️" message="No coordinates set. Add latitude & longitude to show map." />
-              )}
+              <div style={{ textAlign: 'center', padding: '40px 20px', color: G.muted }}>            
+                <div style={{ fontSize: 48, marginBottom: 16 }}>🗺️</div>
+                <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>Interactive Map</div>
+                <div style={{ fontSize: 12, color: G.muted }}>To be added soon</div>
+              </div>
             </Section>
           </div>
         )}
@@ -1695,6 +1711,85 @@ export default function CourtDetailPage() {
                 ❌ Dismiss
               </button>
             </div>
+          </div>
+        </Modal>
+      )}
+
+      {modal === 'editLocation' && (
+        <Modal title="📍 Edit Court Location" onClose={() => setModal(null)}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={{ fontSize: 12, color: G.muted, fontStyle: 'italic' }}>
+              Manually enter coordinates below. Interactive map coming soon!
+            </div>
+            
+            {/* Coordinates */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <FormField label="Latitude">
+                <input
+                  type="number"
+                  step="0.00001"
+                  style={inputStyle}
+                  value={locationLat}
+                  onChange={(e) => setLocationLat(e.target.value)}
+                  placeholder="-1.286389"
+                />
+              </FormField>
+              <FormField label="Longitude">
+                <input
+                  type="number"
+                  step="0.00001"
+                  style={inputStyle}
+                  value={locationLng}
+                  onChange={(e) => setLocationLng(e.target.value)}
+                  placeholder="36.817223"
+                />
+              </FormField>
+            </div>
+
+            {/* Address Info */}
+            <FormField label="Street Address">
+              <input
+                style={inputStyle}
+                value={editData.address || ''}
+                onChange={(e) => setEditData({ ...editData, address: e.target.value })}
+                placeholder="e.g., 123 Court Street"
+              />
+            </FormField>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <FormField label="City">
+                <input
+                  style={inputStyle}
+                  value={editData.city || ''}
+                  onChange={(e) => setEditData({ ...editData, city: e.target.value })}
+                  placeholder="e.g., Nairobi"
+                />
+              </FormField>
+              <FormField label="Country">
+                <input
+                  style={inputStyle}
+                  value={editData.country || ''}
+                  onChange={(e) => setEditData({ ...editData, country: e.target.value })}
+                  placeholder="e.g., Kenya"
+                />
+              </FormField>
+            </div>
+
+            {/* Save Button */}
+            <button
+              onClick={() => {
+                const updateData = {
+                  ...editData,
+                  latitude: locationLat ? Number(locationLat) : undefined,
+                  longitude: locationLng ? Number(locationLng) : undefined,
+                };
+                handleCourtUpdate(updateData);
+              }}
+              disabled={actionLoading}
+              style={{ ...btnStyle, background: G.lime, color: G.dark, fontWeight: 900 }}
+            >
+              {actionLoading ? 'Saving…' : '✅ Save Location'}
+            </button>
           </div>
         </Modal>
       )}

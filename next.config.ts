@@ -6,6 +6,7 @@ const nextConfig: NextConfig = {
     // Allow builds to succeed and address linting separately.
     ignoreDuringBuilds: true,
   },
+  skipTrailingSlashRedirect: true,
 };
 
 export default nextConfig;

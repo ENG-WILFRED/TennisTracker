@@ -12,6 +12,7 @@ import { StatsView } from '@/components/stats/StatsView';
 import { SettingsView } from '@/components/settings/SettingsView';
 import { DashboardHome, ProfileSnapshot, UpcomingEvents, FriendsOnline } from '@/components/dashboards/DashboardHome';
 import { PaymentRemindersWidget } from '@/components/dashboards/PaymentRemindersWidget';
+import MessagingPanel from '@/components/dashboards/MessagingPanel';
 
 const G = {
   dark: '#0f1f0f', sidebar: '#152515', card: '#1a3020', cardBorder: '#2d5a35',
@@ -29,6 +30,7 @@ export const PlayerDashboard: React.FC = () => {
   const showCommunity = searchParams.get('community') === 'true';
   const showTournaments = searchParams.get('tournaments') === 'true';
   const showStats = searchParams.get('stats') === 'true';
+  const showMessages = searchParams.get('messages') === 'true';
   const showSettings = searchParams.get('settings') === 'true';
   const [activeNav, setActiveNav] = useState('Home');
   const [feedPost, setFeedPost] = useState('');
@@ -48,12 +50,14 @@ export const PlayerDashboard: React.FC = () => {
       setActiveNav('Tournaments');
     } else if (showStats) {
       setActiveNav('Stats');
+    } else if (showMessages) {
+      setActiveNav('Messages');
     } else if (showSettings) {
       setActiveNav('Settings');
     } else {
       setActiveNav('Home');
     }
-  }, [showProfile, showBooking, showCommunity, showTournaments, showStats, showSettings]);
+  }, [showProfile, showBooking, showCommunity, showTournaments, showStats, showMessages, showSettings]);
 
   useEffect(() => {
     if (user?.id) {
@@ -85,6 +89,7 @@ export const PlayerDashboard: React.FC = () => {
     { label: 'Tournaments', icon: '🏆', href: '?tournaments=true' }, 
     { label: 'Court Booking', icon: '📅', href: '?booking=true' },
     { label: 'Services', icon: '🛠️', href: '/services' },
+    { label: 'Messages', icon: '💬', href: '?messages=true' },
     { label: 'Stats', icon: '📊', href: '?stats=true' }, 
     { label: 'Community', icon: '👥', href: '?community=true' },
     { label: 'Settings', icon: '⚙️', href: '?settings=true' },
@@ -147,6 +152,8 @@ export const PlayerDashboard: React.FC = () => {
                   router.push(`/dashboard/${params.role}/${params.id}`);
                 } else if (item.label === 'Court Booking' && params?.role && params?.id) {
                   router.push(`/dashboard/${params.role}/${params.id}?booking=true`);
+                } else if (item.label === 'Messages' && params?.role && params?.id) {
+                  router.push(`/dashboard/${params.role}/${params.id}?messages=true`);
                 } else if (item.label === 'Community' && params?.role && params?.id) {
                   router.push(`/dashboard/${params.role}/${params.id}?community=true`);
                 } else if (item.label === 'Tournaments' && params?.role && params?.id) {
@@ -188,6 +195,8 @@ export const PlayerDashboard: React.FC = () => {
           <ProfileView isEmbedded={true} canEdit={true} />
         ) : showBooking ? (
           <BookingView isEmbedded={true} canBook={true} organizationId={organizationId} />
+        ) : showMessages ? (
+          <MessagingPanel userId={user?.id || ''} userType="player" />
         ) : showCommunity ? (
           <CommunityView isEmbedded={true} />
         ) : showTournaments ? (

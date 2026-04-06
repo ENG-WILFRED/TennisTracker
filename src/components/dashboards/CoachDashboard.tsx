@@ -1,259 +1,772 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, Suspense, lazy, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { authenticatedFetch } from '@/lib/authenticatedFetch';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import SessionManagement from './coach/SessionManagement';
+import PlayerManagement from './coach/PlayerManagement';
+import EarningsAndWallet from './coach/EarningsAndWallet';
+import AnalyticsSection from './coach/AnalyticsSection';
+import CalendarView from './coach/CalendarView';
+import MessagingPanel from '@/components/dashboards/MessagingPanel';
+import CommunityPanel from './coach/CommunityPanel';
 
 const G = {
-  dark: '#0f1f0f', sidebar: '#152515', card: '#1a3020', cardBorder: '#2d5a35',
-  mid: '#2d5a27', bright: '#3d7a32', lime: '#7dc142', accent: '#a8d84e',
-  text: '#e8f5e0', muted: '#7aaa6a', yellow: '#f0c040',
+  dark: '#0a180a',
+  sidebar: '#0f1e0f',
+  card: '#162616',
+  card2: '#1b2f1b',
+  card3: '#203520',
+  border: '#243e24',
+  border2: '#326832',
+  mid: '#2a5224',
+  bright: '#3a7230',
+  lime: '#79bf3e',
+  lime2: '#a8d84e',
+  text: '#e4f2da',
+  text2: '#c2dbb0',
+  muted: '#5e8e50',
+  muted2: '#7aaa68',
+  yellow: '#efc040',
+  red: '#d94f4f',
 };
 
+/* ── tiny shared components ── */
+
 const ProgressBar: React.FC<{ value: number; color?: string }> = ({ value, color = G.lime }) => (
-  <div style={{ height: 6, background: G.dark, borderRadius: 3, overflow: 'hidden', marginTop: 4 }}>
-    <div style={{ height: '100%', width: `${value}%`, background: color, borderRadius: 3, transition: 'width 0.5s' }} />
+  <div style={{ height: 4, background: G.dark, borderRadius: 3, overflow: 'hidden', marginTop: 4 }}>
+    <div style={{ height: '100%', width: `${value}%`, background: color, borderRadius: 3, transition: 'width 0.7s cubic-bezier(.4,0,.2,1)' }} />
   </div>
 );
+
+const Tag: React.FC<{ children: React.ReactNode; yellow?: boolean }> = ({ children, yellow }) => (
+  <span style={{
+    fontSize: 8.5, fontWeight: 700, borderRadius: 4, padding: '2px 7px',
+    background: yellow ? 'rgba(239,192,64,.1)' : 'rgba(121,191,62,.12)',
+    border: `1px solid ${yellow ? 'rgba(239,192,64,.3)' : 'rgba(121,191,62,.28)'}`,
+    color: yellow ? G.yellow : G.lime,
+    display: 'inline-block',
+  }}>{children}</span>
+);
+
+const SectionLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <div style={{ fontSize: 8.5, color: G.lime2, fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 7 }}>
+    {children}
+  </div>
+);
+
+const BtnPrimary: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement>> = ({ style, ...props }) => (
+  <button {...props} style={{
+    background: G.lime, color: '#0a180a', border: 'none', borderRadius: 7,
+    padding: '8px 0', fontWeight: 800, fontSize: 10.5, cursor: 'pointer',
+    transition: 'filter .15s', ...style,
+  }} />
+);
+
+const BtnSecondary: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement>> = ({ style, ...props }) => (
+  <button {...props} style={{
+    background: 'transparent', color: G.text2, border: `1px solid ${G.border}`,
+    borderRadius: 7, padding: '8px 0', fontWeight: 600, fontSize: 10.5, cursor: 'pointer',
+    transition: 'all .15s', ...style,
+  }} />
+);
+
+/* ── data ── */
+
+const navItems = [
+  { label: 'Dashboard', icon: '🏠', pill: 0 },
+  { label: 'My Profile', icon: '👤' },
+  { label: 'Sessions', icon: '📅' },
+  { label: 'Players', icon: '👥' },
+  { label: 'Earnings', icon: '💰' },
+  { label: 'Analytics', icon: '📊' },
+  { label: 'Calendar', icon: '📆' },
+  { label: 'Messaging', icon: '💬' },
+  { label: 'Community', icon: '🌐' },
+];
+
+const profileTabs = ['personal', 'bio', 'certifications', 'availability'] as const;
+type ProfileTab = typeof profileTabs[number];
+const profileTabLabels: Record<ProfileTab, string> = { personal: 'Personal Info', bio: 'Biography', certifications: 'Certifications', availability: 'Availability' };
+
+/* ── component ── */
 
 export const CoachDashboard: React.FC = () => {
   const { user } = useAuth();
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState('My Team');
-  const [activeNav, setActiveNav] = useState('Home');
+  const searchParams = useSearchParams();
 
-  const navItems = [
-    { label: 'Home', icon: '🏠' }, { label: 'Upcoming Matches', icon: '📅' },
-    { label: 'Highlights', icon: '🎬' }, { label: 'My Favorites', icon: '⭐' },
-    { label: 'Stats', icon: '📊' }, { label: 'Referee Details', icon: '🏆' },
-    { label: 'My Favorites', icon: '❤️' },
-  ];
-
-  const tabs = ['My Team', 'Training Plans', 'Match Analysis', 'Reports'];
-
-  const students = [
-    { name: 'Michael', progress: 85, sessions: 12, nextSession: 'Tomorrow, 10:00 AM' },
-    { name: 'Eval', progress: 72, sessions: 9, nextSession: 'Wed, 2:00 PM' },
-    { name: 'Lisa', progress: 60, sessions: 7, nextSession: 'Thu, 11:00 AM' },
-    { name: 'Tom', progress: 55, sessions: 6, nextSession: 'Fri, 9:00 AM' },
-  ];
-
-  const upcomingSession = {
-    date: 'Tomorrow, 10:00 AM', court: 'Court 1',
-    drills: [
-      { name: 'Serve Technique', duration: '30 min', pct: 90, color: '#7dc142' },
-      { name: 'Net Volley Practice', duration: '25 min', pct: 75, color: '#5aa832' },
-      { name: 'Footwork Drills', duration: '20 min', pct: 60, color: '#3d7a32' },
-      { name: 'Intensive Training', duration: '15 min', pct: 45, color: '#2d5a27' },
-    ],
+  // Read active section from URL, default to 'Dashboard'
+  const activeNav = (searchParams.get('section') as string) || 'Dashboard';
+  
+  // Handle navigation to a new section
+  const handleNavigation = (section: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('section', section);
+    // Remove 'tab' param when switching sections (unless it's Profile)
+    if (section !== 'My Profile') {
+      params.delete('tab');
+    }
+    router.push(`?${params.toString()}`, { scroll: false });
   };
 
-  const nextMatch = { player: 'Carlos Alcaraz', date: 'Saturday, 2:00 PM', opp: 'Anderton Charter', court: 'Court 4', type: 'Open Tennis Cup' };
+  // Read profile tab from URL, default to 'personal'
+  const profileTab = (searchParams.get('tab') as ProfileTab) || 'personal';
 
-  const liveMatch = {
-    p1: 'Carlos Alcaraz', p2: 'Daniil Medvedev', court: 'Court 1',
-    sets: [[6, 3], [4, 6], [7, 6]],
+  const handleProfileTab = (tab: ProfileTab) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('section', 'My Profile');
+    params.set('tab', tab);
+    router.push(`?${params.toString()}`, { scroll: false });
   };
 
-  const earnings = { thisMonth: 2040, pending: 240, perSession: 60 };
+  // State for real data
+  const [players, setPlayers] = useState<any[]>([]);
+  const [schedule, setSchedule] = useState<any[]>([]);
+  const [coachData, setCoachData] = useState<any>(null);
+  const [earnings, setEarnings] = useState({ thisMonth: 0, pending: 0, perSession: 0 });
+  const [stats, setStats] = useState({ studentCount: 0, rating: 0 });
+  const [loading, setLoading] = useState(true);
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [profileData, setProfileData] = useState<any>(null);
+  const [personalForm, setPersonalForm] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    gender: '',
+    dateOfBirth: '',
+    nationality: '',
+    bio: '',
+    photo: '',
+  });
+
+  const isProfile = activeNav === 'My Profile';
+
+  // Fetch real data on mount
+  useEffect(() => {
+    const fetchCoachData = async () => {
+      try {
+        if (!user?.id) return;
+        const coachId = user.id;
+
+        // Fetch full user profile with additional fields
+        const userRes = await authenticatedFetch(`/api/user/profile/${coachId}`);
+        if (userRes.ok) {
+          const fullUserData = await userRes.json();
+          setProfileData(fullUserData);
+          setPersonalForm({
+            firstName: fullUserData.firstName || '',
+            lastName: fullUserData.lastName || '',
+            email: fullUserData.email || '',
+            phone: fullUserData.phone || '',
+            gender: fullUserData.gender || '',
+            dateOfBirth: fullUserData.dateOfBirth ? new Date(fullUserData.dateOfBirth).toISOString().split('T')[0] : '',
+            nationality: fullUserData.nationality || '',
+            bio: fullUserData.bio || '',
+            photo: fullUserData.photo || '',
+          });
+        }
+
+        // Fetch coach profile data
+        const profileRes = await fetch(`/api/coaches/${coachId}`);
+        if (profileRes.ok) {
+          const data = await profileRes.json();
+          setCoachData(data);
+        }
+
+        // Fetch players/students
+        const playersRes = await fetch(`/api/coaches/${coachId}/players`);
+        if (playersRes.ok) {
+          const data = await playersRes.json();
+          setPlayers(data);
+        }
+
+        // Fetch today's schedule
+        const scheduleRes = await fetch(`/api/coaches/${coachId}/schedule/today`);
+        if (scheduleRes.ok) {
+          const data = await scheduleRes.json();
+          setSchedule(data);
+        }
+
+        // Fetch earnings
+        const earningsRes = await fetch(`/api/coaches/${coachId}/earnings`);
+        if (earningsRes.ok) {
+          const data = await earningsRes.json();
+          setEarnings(data);
+        }
+
+        // Fetch coach stats
+        const statsRes = await fetch(`/api/coaches/${coachId}/stats`);
+        if (statsRes.ok) {
+          const data = await statsRes.json();
+          setStats(data);
+        }
+      } catch (error) {
+        console.error('Error fetching coach data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCoachData();
+  }, [user?.id]);
+
+  // Auto-follow players and organizations on mount
+  useEffect(() => {
+    const autoFollowContacts = async () => {
+      if (!user?.id) return;
+      try {
+        console.log('👥 Coach Dashboard: Triggering auto-follow for', user.id);
+        const res = await fetch(`/api/coaches/${user.id}/auto-follow-contacts`, {
+          method: 'POST',
+        });
+        
+        if (res.ok) {
+          const result = await res.json();
+          console.log('✅ Auto-follow result:', result);
+        } else {
+          console.warn('⚠️ Auto-follow failed:', res.status);
+        }
+      } catch (error) {
+        console.warn('⚠️ Auto-follow error:', error instanceof Error ? error.message : error);
+      }
+    };
+
+    autoFollowContacts();
+  }, [user?.id]);
+
+  const handleSaveProfile = async () => {
+    try {
+      const res = await authenticatedFetch(`/api/user/profile/${user?.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user?.id,
+          ...personalForm,
+        }),
+      });
+      if (res.ok) {
+        setEditingProfile(false);
+        alert('Profile updated successfully!');
+      } else {
+        alert('Failed to update profile');
+      }
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      alert('Error updating profile');
+    }
+  };
+
+  /* ── shared inline styles ── */
+  const card = { background: G.card, border: `1px solid ${G.border}`, borderRadius: 12, padding: 13 } as const;
+  const card2 = { background: G.card2, border: `1px solid ${G.border}`, borderRadius: 12, padding: 13 } as const;
+  const miniSt = { background: G.card, border: `1px solid ${G.border}`, borderRadius: 8, padding: '8px 10px', marginBottom: 5 } as const;
 
   return (
-    <div style={{ display: 'flex', height: '100vh', fontFamily: "'Segoe UI', system-ui, sans-serif", background: G.dark, color: G.text, overflow: 'hidden' }}>
+    <div style={{ display: 'flex', height: '100vh', fontFamily: "'Segoe UI', system-ui, sans-serif", background: G.dark, color: G.text, overflow: 'hidden', fontSize: 13 }}>
 
-      {/* LEFT SIDEBAR */}
-      <aside style={{ width: 180, background: G.sidebar, borderRight: `1px solid ${G.cardBorder}`, display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
-        <div style={{ padding: '15px 14px 10px', borderBottom: `1px solid ${G.cardBorder}`, display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 20 }}>🎾</span>
-          <div style={{ color: G.lime, fontWeight: 900, fontSize: 14 }}>Vico Sports</div>
+      {/* ═══════════════ LEFT NAV ═══════════════ */}
+      <aside style={{ width: 188, background: G.sidebar, borderRight: `1px solid ${G.border}`, display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
+
+        {/* Brand */}
+        <div style={{ padding: '14px 15px 13px', borderBottom: `1px solid ${G.border}`, display: 'flex', alignItems: 'center', gap: 9 }}>
+          <div style={{ width: 28, height: 28, background: G.lime, borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, flexShrink: 0 }}>🎾</div>
+          <div>
+            <div style={{ fontWeight: 900, fontSize: 13.5, color: G.lime, letterSpacing: -0.4, lineHeight: 1.1 }}>Vico Sports</div>
+            <div style={{ fontSize: 8.5, color: G.muted, letterSpacing: 1.1, textTransform: 'uppercase' }}>Coach Platform</div>
+          </div>
         </div>
-        <nav style={{ flex: 1, paddingTop: 8 }}>
-          {navItems.map(item => (
-            <button key={item.label + item.icon} onClick={() => {
-              setActiveNav(item.label);
-              if (item.label === 'Stats') {
-                router.push('/leaderboard');
-              }
-            }} style={{
-              width: '100%', display: 'flex', alignItems: 'center', gap: 9, padding: '8px 13px',
-              background: activeNav === item.label ? G.mid : 'transparent',
-              color: activeNav === item.label ? '#fff' : G.muted,
-              border: 'none', cursor: 'pointer', fontSize: 12, textAlign: 'left',
-              borderLeft: activeNav === item.label ? `3px solid ${G.lime}` : '3px solid transparent',
-            }}><span>{item.icon}</span>{item.label}</button>
-          ))}
+
+        {/* Coach mini-card */}
+        <div
+          onClick={() => handleNavigation('My Profile')}
+          style={{ margin: '10px 9px', background: G.card2, border: `1px solid ${G.border}`, borderRadius: 11, padding: '12px 11px', textAlign: 'center', cursor: 'pointer', transition: 'border-color .2s, background .2s' }}
+          onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = G.border2; (e.currentTarget as HTMLDivElement).style.background = G.card3; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = G.border; (e.currentTarget as HTMLDivElement).style.background = G.card2; }}
+        >
+          <div style={{ position: 'relative', display: 'inline-block', marginBottom: 7 }}>
+            {user?.photo
+              ? <img src={user.photo} alt={user.firstName} style={{ width: 44, height: 44, borderRadius: '50%', border: `2px solid ${G.lime}`, objectFit: 'cover' }} />
+              : <div style={{ width: 44, height: 44, borderRadius: '50%', background: G.mid, border: `2px solid ${G.lime}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>👨‍🏫</div>
+            }
+            <div style={{ position: 'absolute', bottom: 1, right: 1, width: 9, height: 9, background: '#4cd964', borderRadius: '50%', border: `2px solid ${G.sidebar}` }} />
+          </div>
+          <div style={{ fontWeight: 800, fontSize: 12.5, letterSpacing: -0.2 }}>Coach {user?.firstName ?? 'Maria'}</div>
+          <div style={{ fontSize: 9.5, color: G.muted2, marginTop: 1 }}>Head Tennis Coach</div>
+          <div style={{ color: G.yellow, fontSize: 10, marginTop: 5, letterSpacing: 1 }}>★★★★★ <span style={{ fontWeight: 700 }}>4.8</span></div>
+          <div style={{ display: 'flex', gap: 4, justifyContent: 'center', marginTop: 6, flexWrap: 'wrap' }}>
+            {['ITF L2', 'ATP', 'Active'].map(c => (
+              <span key={c} style={{ fontSize: 8.5, background: 'rgba(121,191,62,.12)', border: '1px solid rgba(121,191,62,.3)', color: G.lime, borderRadius: 4, padding: '2px 6px', fontWeight: 700 }}>{c}</span>
+            ))}
+          </div>
+        </div>
+
+        {/* Nav items */}
+        <nav style={{ flex: 1, padding: '6px 7px 0', overflowY: 'auto' }}>
+          {(['Main', 'Content', 'Analytics'] as const).map(section => {
+            const sectionItems = section === 'Main'
+              ? navItems.slice(0, 3)
+              : section === 'Content'
+                ? navItems.slice(3, 5)
+                : navItems.slice(5);
+            return (
+              <React.Fragment key={section}>
+                <div style={{ fontSize: 8.5, color: G.muted, letterSpacing: '1.2px', textTransform: 'uppercase', padding: '8px 5px 3px' }}>{section}</div>
+                {sectionItems.map(item => {
+                  const on = activeNav === item.label;
+                  return (
+                    <div
+                      key={item.label}
+                      onClick={() => { handleNavigation(item.label); if (item.label === 'Stats') router.push('/leaderboard'); }}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 8, padding: '7px 9px', borderRadius: 8,
+                        cursor: 'pointer', marginBottom: 1, border: `1px solid ${on ? G.border : 'transparent'}`,
+                        background: on ? G.card2 : 'transparent', color: on ? G.text : G.muted,
+                        transition: 'all .15s',
+                      }}
+                      onMouseEnter={e => { if (!on) { (e.currentTarget as HTMLDivElement).style.background = G.card; (e.currentTarget as HTMLDivElement).style.color = G.text2; } }}
+                      onMouseLeave={e => { if (!on) { (e.currentTarget as HTMLDivElement).style.background = 'transparent'; (e.currentTarget as HTMLDivElement).style.color = G.muted; } }}
+                    >
+                      <span style={{ fontSize: 13, width: 16, textAlign: 'center', color: on ? G.lime : 'inherit' }}>{item.icon}</span>
+                      <span style={{ fontSize: 11.5, fontWeight: 600 }}>{item.label}</span>
+                      {item.pill && <span style={{ marginLeft: 'auto', background: G.lime, color: '#0a180a', fontSize: 8.5, fontWeight: 800, borderRadius: 9, padding: '1px 6px' }}>{item.pill}</span>}
+                    </div>
+                  );
+                })}
+              </React.Fragment>
+            );
+          })}
         </nav>
-        <div style={{ padding: '10px 12px 14px' }}>
-          <button style={{ width: '100%', background: G.lime, color: '#0f1f0f', border: 'none', borderRadius: 8, padding: '9px 0', fontWeight: 800, fontSize: 12, cursor: 'pointer' }}>
+
+        {/* Referee CTA */}
+        <div style={{ padding: 9 }}>
+          <button style={{ width: '100%', background: G.lime, color: '#0a180a', border: 'none', borderRadius: 8, padding: '9px 0', fontWeight: 800, fontSize: 11.5, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
             🏆 Referee Details
           </button>
         </div>
       </aside>
 
-      {/* MAIN */}
-      <main style={{ flex: 1, overflowY: 'auto', padding: 14, display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
+      {/* ═══════════════ MAIN ═══════════════ */}
+      <main style={{ flex: 1, overflowY: activeNav === 'Calendar' ? 'hidden' : 'auto', padding: activeNav === 'Calendar' ? 0 : '14px 13px', display: 'flex', flexDirection: 'column', gap: activeNav === 'Calendar' ? 0 : 11, minWidth: 0 }}>
 
-        {/* Tabs */}
-        <div style={{ display: 'flex', gap: 0, background: G.card, borderRadius: 8, padding: 4, border: `1px solid ${G.cardBorder}` }}>
-          {tabs.map(t => (
-            <button key={t} onClick={() => setActiveTab(t)} style={{
-              flex: 1, padding: '7px 0', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700,
-              background: activeTab === t ? G.lime : 'transparent',
-              color: activeTab === t ? '#0f1f0f' : G.muted,
-            }}>{t}</button>
-          ))}
-        </div>
 
-        {/* Live Match Banner */}
-        <div style={{ background: `linear-gradient(135deg, ${G.mid}, #1d3d1d)`, borderRadius: 10, padding: '12px 16px', border: `1px solid ${G.cardBorder}` }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-            <span style={{ background: '#e53935', color: '#fff', fontSize: 9, fontWeight: 800, padding: '2px 7px', borderRadius: 3, letterSpacing: 1 }}>● LIVE MATCH</span>
-            <span style={{ fontSize: 11, color: G.muted }}>{liveMatch.court}</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 16, fontWeight: 800 }}>{liveMatch.p1}</div>
-              <div style={{ fontSize: 12, color: G.muted, marginTop: 2 }}>vs {liveMatch.p2}</div>
+        {isProfile ? (
+          /* ── PROFILE VIEW ── */
+          <div style={card}>
+            {/* Profile tab bar */}
+            <div style={{ display: 'flex', gap: 3, background: G.dark, borderRadius: 8, padding: 3, marginBottom: 16 }}>
+              {profileTabs.map(tab => (
+                <button
+                  key={tab}
+                  onClick={() => handleProfileTab(tab)}
+                  style={{
+                    flex: 1, padding: '8px 0', borderRadius: 6, border: 'none', cursor: 'pointer',
+                    fontSize: 11.5, fontWeight: 700,
+                    background: profileTab === tab ? G.lime : 'transparent',
+                    color: profileTab === tab ? '#0a180a' : G.muted,
+                    transition: 'all .15s',
+                  }}
+                >
+                  {profileTabLabels[tab]}
+                </button>
+              ))}
             </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              {liveMatch.sets.map((s, i) => (
-                <div key={i} style={{ textAlign: 'center', background: G.card, borderRadius: 6, padding: '6px 12px' }}>
-                  <div style={{ fontSize: 18, fontWeight: 900, color: G.accent }}>{s[0]}</div>
-                  <div style={{ fontSize: 12, color: G.muted }}>–</div>
-                  <div style={{ fontSize: 18, fontWeight: 900, color: G.muted }}>{s[1]}</div>
+
+            {profileTab === 'personal' && (
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                  <h3 style={{ fontSize: 13.5, fontWeight: 800 }}>Personal Information</h3>
+                  <BtnSecondary style={{ fontSize: 10, padding: '5px 12px' }} onClick={() => setEditingProfile(!editingProfile)}>
+                    {editingProfile ? '✕ Cancel' : '✎ Edit'}
+                  </BtnSecondary>
+                </div>
+                {editingProfile ? (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                    <div>
+                      <label style={{ fontSize: 9.5, color: G.muted2, display: 'block', marginBottom: 4, fontWeight: 600 }}>FIRST NAME</label>
+                      <input
+                        style={{ width: '100%', padding: '7px 9px', background: G.dark, border: `1px solid ${G.border}`, color: G.text, borderRadius: 6, fontSize: 11 }}
+                        value={personalForm.firstName}
+                        onChange={e => setPersonalForm({ ...personalForm, firstName: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 9.5, color: G.muted2, display: 'block', marginBottom: 4, fontWeight: 600 }}>LAST NAME</label>
+                      <input
+                        style={{ width: '100%', padding: '7px 9px', background: G.dark, border: `1px solid ${G.border}`, color: G.text, borderRadius: 6, fontSize: 11 }}
+                        value={personalForm.lastName}
+                        onChange={e => setPersonalForm({ ...personalForm, lastName: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 9.5, color: G.muted2, display: 'block', marginBottom: 4, fontWeight: 600 }}>EMAIL</label>
+                      <input
+                        style={{ width: '100%', padding: '7px 9px', background: G.dark, border: `1px solid ${G.border}`, color: G.text, borderRadius: 6, fontSize: 11 }}
+                        type="email"
+                        value={personalForm.email}
+                        onChange={e => setPersonalForm({ ...personalForm, email: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 9.5, color: G.muted2, display: 'block', marginBottom: 4, fontWeight: 600 }}>PHONE</label>
+                      <input
+                        style={{ width: '100%', padding: '7px 9px', background: G.dark, border: `1px solid ${G.border}`, color: G.text, borderRadius: 6, fontSize: 11 }}
+                        value={personalForm.phone}
+                        onChange={e => setPersonalForm({ ...personalForm, phone: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 9.5, color: G.muted2, display: 'block', marginBottom: 4, fontWeight: 600 }}>GENDER</label>
+                      <input
+                        style={{ width: '100%', padding: '7px 9px', background: G.dark, border: `1px solid ${G.border}`, color: G.text, borderRadius: 6, fontSize: 11 }}
+                        value={personalForm.gender}
+                        onChange={e => setPersonalForm({ ...personalForm, gender: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 9.5, color: G.muted2, display: 'block', marginBottom: 4, fontWeight: 600 }}>DATE OF BIRTH</label>
+                      <input
+                        style={{ width: '100%', padding: '7px 9px', background: G.dark, border: `1px solid ${G.border}`, color: G.text, borderRadius: 6, fontSize: 11 }}
+                        type="date"
+                        value={personalForm.dateOfBirth}
+                        onChange={e => setPersonalForm({ ...personalForm, dateOfBirth: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 9.5, color: G.muted2, display: 'block', marginBottom: 4, fontWeight: 600 }}>NATIONALITY</label>
+                      <input
+                        style={{ width: '100%', padding: '7px 9px', background: G.dark, border: `1px solid ${G.border}`, color: G.text, borderRadius: 6, fontSize: 11 }}
+                        value={personalForm.nationality}
+                        onChange={e => setPersonalForm({ ...personalForm, nationality: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 9.5, color: G.muted2, display: 'block', marginBottom: 4, fontWeight: 600 }}>PHOTO URL</label>
+                      <input
+                        style={{ width: '100%', padding: '7px 9px', background: G.dark, border: `1px solid ${G.border}`, color: G.text, borderRadius: 6, fontSize: 11 }}
+                        value={personalForm.photo}
+                        onChange={e => setPersonalForm({ ...personalForm, photo: e.target.value })}
+                      />
+                    </div>
+                    <div style={{ gridColumn: '1 / -1' }}>
+                      <label style={{ fontSize: 9.5, color: G.muted2, display: 'block', marginBottom: 4, fontWeight: 600 }}>BIOGRAPHY</label>
+                      <textarea
+                        style={{ width: '100%', padding: '7px 9px', background: G.dark, border: `1px solid ${G.border}`, color: G.text, borderRadius: 6, fontSize: 11, fontFamily: 'inherit', resize: 'none' }}
+                        rows={3}
+                        value={personalForm.bio}
+                        onChange={e => setPersonalForm({ ...personalForm, bio: e.target.value })}
+                      />
+                    </div>
+                    <button
+                      onClick={handleSaveProfile}
+                      style={{ gridColumn: '1 / -1', background: G.lime, color: '#0a180a', border: 'none', borderRadius: 7, padding: '9px 0', fontWeight: 800, fontSize: 11.5, cursor: 'pointer', marginTop: 8 }}
+                    >
+                      ✓ Save Changes
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                    {[
+                      { label: 'First Name', value: profileData?.firstName || user?.firstName },
+                      { label: 'Last Name', value: profileData?.lastName || user?.lastName },
+                      { label: 'Email', value: profileData?.email || user?.email },
+                      { label: 'Phone', value: profileData?.phone || 'N/A' },
+                      { label: 'Gender', value: profileData?.gender || 'N/A' },
+                      { label: 'Date of Birth', value: profileData?.dateOfBirth ? new Date(profileData.dateOfBirth).toLocaleDateString() : 'N/A' },
+                      { label: 'Nationality', value: profileData?.nationality || 'N/A' },
+                    ].map((item, i) => (
+                      <div key={i} style={{ background: G.dark, borderRadius: 7, padding: 10 }}>
+                        <div style={{ fontSize: 9.5, color: G.muted, fontWeight: 600, marginBottom: 3 }}>{item.label}</div>
+                        <div style={{ fontSize: 11.5, color: G.text }}>{item.value}</div>
+                      </div>
+                    ))}
+                    <div style={{ gridColumn: '1 / -1', background: G.dark, borderRadius: 7, padding: 10 }}>
+                      <div style={{ fontSize: 9.5, color: G.muted, fontWeight: 600, marginBottom: 3 }}>Biography</div>
+                      <div style={{ fontSize: 11.5, color: G.text, lineHeight: 1.5 }}>{profileData?.bio || 'No biography added yet.'}</div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {profileTab === 'bio' && (
+              <div>
+                <h3 style={{ fontSize: 13.5, fontWeight: 800, marginBottom: 10 }}>About the Coach</h3>
+                {loading ? (
+                  <p style={{ fontSize: 12.5, lineHeight: 1.65, color: G.muted }}>Loading...</p>
+                ) : (
+                  <>
+                    <p style={{ fontSize: 12.5, lineHeight: 1.65, color: G.text2, marginBottom: 16 }}>
+                      {coachData?.bio || 'No biography added yet.'}
+                    </p>
+                    <div style={{ background: G.dark, borderRadius: 8, padding: 12 }}>
+                      <SectionLabel>Specializations</SectionLabel>
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                        {(coachData?.specializations || []).length > 0 ? (
+                          coachData.specializations.map((spec: string, i: number) => (
+                            <span key={i} style={{ background: G.mid, color: G.text2, padding: '4px 10px', borderRadius: 6, fontSize: 11 }}>{spec}</span>
+                          ))
+                        ) : (
+                          <span style={{ color: G.muted, fontSize: 11 }}>No specializations added yet.</span>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {profileTab === 'certifications' && (
+              <div>
+                <h3 style={{ fontSize: 13.5, fontWeight: 800, marginBottom: 12 }}>Certifications & Credentials</h3>
+                {loading ? (
+                  <p style={{ fontSize: 12.5, color: G.muted }}>Loading...</p>
+                ) : (coachData?.certifications || []).length > 0 ? (
+                  (coachData.certifications as any[]).map((cert, i) => (
+                    <div key={i} style={{ background: G.dark, borderRadius: 8, padding: 12, marginBottom: 9, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: 12.5 }}>{cert.name}</div>
+                        <div style={{ color: G.muted, fontSize: 11, marginTop: 3 }}>Since {cert.year || 'N/A'}</div>
+                      </div>
+                      <Tag>{cert.status || 'Active'}</Tag>
+                    </div>
+                  ))
+                ) : (
+                  <p style={{ fontSize: 12.5, color: G.muted }}>No certifications added yet.</p>
+                )}
+              </div>
+            )}
+
+            {profileTab === 'availability' && (
+              <div>
+                <h3 style={{ fontSize: 13.5, fontWeight: 800, marginBottom: 12 }}>Coaching Availability</h3>
+                {loading ? (
+                  <p style={{ fontSize: 12.5, color: G.muted }}>Loading...</p>
+                ) : (coachData?.availability || []).length > 0 ? (
+                  (coachData.availability as any[]).map((avail, i) => (
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 10, background: G.dark, borderRadius: 8, marginBottom: 7 }}>
+                      <span style={{ fontWeight: 600, fontSize: 12 }}>{avail.day}</span>
+                      <span style={{ color: G.lime2, fontSize: 12, fontWeight: 700 }}>{avail.time}</span>
+                    </div>
+                  ))
+                ) : (
+                  <p style={{ fontSize: 12.5, color: G.muted }}>No availability schedule set yet.</p>
+                )}
+              </div>
+            )}
+          </div>
+
+        ) : activeNav === 'Dashboard' ? (
+          <>
+            {/* ── 2-COL GRID ── */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 11, marginBottom: 11 }}>
+
+              {/* Student Progress */}
+              <div style={card}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 11 }}>
+                  <div style={{ fontSize: 12, fontWeight: 800 }}>👥 Student Progress</div>
+                  <Link href="/staff/manage" style={{ fontSize: 10, color: G.lime, textDecoration: 'none', fontWeight: 600 }}>Manage →</Link>
+                </div>
+
+                {loading ? (
+                  <div style={{ color: G.muted, fontSize: 11, textAlign: 'center', padding: '20px 0' }}>Loading players...</div>
+                ) : players.length > 0 ? (
+                  <>
+                    {players.slice(0, 4).map((p, i) => {
+                      const colors = ['#79bf3e', '#5aa832', '#3d7a32', '#2d5a27'];
+                      const initial = p.user?.firstName?.[0] || 'P';
+                      return (
+                        <div key={p.id || i} style={{ marginBottom: 10 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                              <div style={{ width: 23, height: 23, borderRadius: '50%', background: G.mid, border: `1px solid ${G.border2}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9.5, fontWeight: 800, color: G.lime, flexShrink: 0 }}>
+                                {initial}
+                              </div>
+                              <div>
+                                <div style={{ fontSize: 11.5, fontWeight: 700 }}>{p.user?.firstName} {p.user?.lastName}</div>
+                                <div style={{ fontSize: 9, color: G.muted }}>{p.sessionsCompleted || 0} sessions</div>
+                              </div>
+                            </div>
+                            <span style={{ fontSize: 10.5, fontWeight: 800, color: G.lime2 }}>{Math.round((p.sessionsCompleted || 0) * 10)}%</span>
+                          </div>
+                          <ProgressBar value={Math.round((p.sessionsCompleted || 0) * 10)} color={colors[i % colors.length]} />
+                          <div style={{ fontSize: 9, color: G.muted, marginTop: 3 }}>Progress tracked</div>
+                        </div>
+                      );
+                    })}
+                  </>
+                ) : (
+                  <div style={{ color: G.muted, fontSize: 11, textAlign: 'center', padding: '20px 0' }}>No players yet. Start coaching!</div>
+                )}
+
+                <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
+                  <BtnPrimary style={{ flex: 1 }} onClick={() => handleNavigation('Players')}>Manage Session</BtnPrimary>
+                  <BtnSecondary style={{ flex: 1 }}>📋 Attendance</BtnSecondary>
+                </div>
+              </div>
+
+              {/* Upcoming Training Session */}
+              <div style={card}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                  <div style={{ fontSize: 12, fontWeight: 800 }}>📅 Upcoming Session</div>
+                  <Tag>{schedule.length > 0 ? 'Scheduled' : 'None'}</Tag>
+                </div>
+                {schedule.length > 0 ? (
+                  <>
+                    <div style={{ fontSize: 10, color: G.muted, marginBottom: 11 }}>
+                      {schedule[0]?.time || 'TBD'} &nbsp;·&nbsp; {schedule[0]?.court || 'Court TBD'} &nbsp;·&nbsp; {schedule[0]?.duration || '60'} min
+                    </div>
+
+                    <SectionLabel>Session Details</SectionLabel>
+                    <div style={{ marginBottom: 8 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+                        <span style={{ fontSize: 11, fontWeight: 600 }}>Participant</span>
+                        <span style={{ fontSize: 9.5, color: G.muted }}>{schedule[0]?.participantName || 'TBD'}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+                        <span style={{ fontSize: 11, fontWeight: 600 }}>Type</span>
+                        <span style={{ fontSize: 9.5, color: G.muted }}>{schedule[0]?.sessionType || 'Coaching'}</span>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div style={{ color: G.muted, fontSize: 10, padding: '20px 0', textAlign: 'center' }}>No upcoming sessions</div>
+                )}
+
+                <div style={{ borderTop: `1px solid ${G.border}`, margin: '11px 0' }} />
+
+                <SectionLabel>Quick Actions</SectionLabel>
+                <div style={{ display: 'flex', gap: 5 }}>
+                  <BtnPrimary style={{ flex: 1, padding: '6px 11px', fontSize: 10, borderRadius: 6 }} onClick={() => handleNavigation('Calendar')}>View Calendar</BtnPrimary>
+                  <BtnSecondary style={{ flex: 1, padding: '6px 11px', fontSize: 10, borderRadius: 6 }} onClick={() => handleNavigation('Sessions')}>New Session</BtnSecondary>
+                </div>
+              </div>
+            </div>
+
+            {/* ── STAT CARDS ── */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 9 }}>
+              {[
+                { label: 'This Month', value: `$${earnings.thisMonth.toLocaleString()}`, delta: '↑ 12% vs last mo' },
+                { label: 'Per Session', value: `$${earnings.perSession}`, delta: `${players.length} players` },
+                { label: 'Pending Payout', value: `$${earnings.pending}`, delta: 'Available', yellow: true },
+                { label: 'Active Students', value: stats.studentCount.toString(), delta: `${stats.studentCount} managed` },
+              ].map((s, i) => (
+                <div key={i} style={{ background: G.card, border: `1px solid ${G.border}`, borderRadius: 10, padding: '11px 12px' }}>
+                  <div style={{ fontSize: 8.5, color: G.muted, textTransform: 'uppercase', letterSpacing: 0.8 }}>{s.label}</div>
+                  <div style={{ fontSize: 20, fontWeight: 900, color: s.yellow ? G.yellow : G.lime2, marginTop: 5, lineHeight: 1 }}>{s.value}</div>
+                  <Tag yellow={s.yellow}>{s.delta}</Tag>
                 </div>
               ))}
             </div>
-            <button style={{ background: G.lime, color: '#0f1f0f', border: 'none', borderRadius: 8, padding: '9px 16px', fontWeight: 800, fontSize: 12, cursor: 'pointer' }}>▶ Watch Live</button>
-          </div>
-        </div>
+          </>
 
-        {/* Students + Drills */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        ) : activeNav === 'Sessions' ? (
+          <SessionManagement coachId={user?.id || ''} />
 
-          {/* Student Progress */}
-          <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 14 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <div style={{ fontWeight: 800, fontSize: 13 }}>👥 Student Progress</div>
-              <Link href="/staff/manage"><span style={{ color: G.lime, fontSize: 11, cursor: 'pointer' }}>Manage Session →</span></Link>
-            </div>
-            {students.map((s, i) => (
-              <div key={i} style={{ marginBottom: 12 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
-                  <span style={{ fontSize: 12.5, fontWeight: 600 }}>{s.name}</span>
-                  <span style={{ fontSize: 11, color: G.accent, fontWeight: 700 }}>{s.progress}%</span>
-                </div>
-                <ProgressBar value={s.progress} />
-                <div style={{ fontSize: 9.5, color: G.muted, marginTop: 3 }}>Next: {s.nextSession} · {s.sessions} sessions</div>
-              </div>
-            ))}
-            <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-              <button style={{ flex: 1, background: G.lime, color: '#0f1f0f', border: 'none', borderRadius: 6, padding: '8px 0', fontWeight: 700, fontSize: 11.5, cursor: 'pointer' }}>Manage Session</button>
-              <button style={{ flex: 1, background: G.mid, color: G.text, border: 'none', borderRadius: 6, padding: '8px 0', fontWeight: 600, fontSize: 11.5, cursor: 'pointer' }}>📋 Attendance</button>
+        ) : activeNav === 'Players' ? (
+          <PlayerManagement coachId={user?.id || ''} />
+
+        ) : activeNav === 'Earnings' ? (
+          <EarningsAndWallet coachId={user?.id || ''} />
+
+        ) : activeNav === 'Analytics' ? (
+          <AnalyticsSection coachId={user?.id || ''} />
+
+        ) : activeNav === 'Calendar' ? (
+          <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '14px 13px' }}>
+              <CalendarView coachId={user?.id || ''} />
             </div>
           </div>
 
-          {/* Upcoming Training Session */}
-          <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 14 }}>
-            <div style={{ fontWeight: 800, fontSize: 13, marginBottom: 4 }}>📅 Upcoming Training Session</div>
-            <div style={{ fontSize: 10.5, color: G.muted, marginBottom: 12 }}>{upcomingSession.date} · {upcomingSession.court}</div>
-            <div style={{ display: 'flex', gap: 12 }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 10, color: G.accent, fontWeight: 700, marginBottom: 6 }}>DRILLS FOCUS</div>
-                {upcomingSession.drills.map((d, i) => (
-                  <div key={i} style={{ marginBottom: 8 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
-                      <span style={{ fontSize: 11.5 }}>{d.name}</span>
-                      <span style={{ fontSize: 10, color: G.muted }}>{d.pct}%</span>
-                    </div>
-                    <div style={{ height: 5, background: G.dark, borderRadius: 3 }}>
-                      <div style={{ height: '100%', width: `${d.pct}%`, background: d.color, borderRadius: 3 }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div style={{ width: 80, display: 'flex', flexDirection: 'column', gap: 4, justifyContent: 'flex-start', paddingTop: 20 }}>
-                {['Badminton', 'Stretchy', 'Squiggle', 'Orange'].map((c, i) => (
-                  <div key={i} style={{ fontSize: 9, color: G.muted, display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <span style={{ width: 8, height: 8, borderRadius: 2, background: upcomingSession.drills[i]?.color, display: 'inline-block' }} />
-                    {upcomingSession.drills[i]?.name.split(' ')[0]}
-                  </div>
-                ))}
-              </div>
-            </div>
+        ) : activeNav === 'Messaging' ? (
+          <MessagingPanel userId={user?.id || ''} userType="coach" />
 
-            {/* Next Match */}
-            <div style={{ marginTop: 12, borderTop: `1px solid ${G.cardBorder}`, paddingTop: 10 }}>
-              <div style={{ fontSize: 10, color: G.accent, fontWeight: 700, marginBottom: 6 }}>NEXT MATCH</div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <div style={{ fontSize: 12.5, fontWeight: 700 }}>{nextMatch.player}</div>
-                  <div style={{ fontSize: 10.5, color: G.muted }}>{nextMatch.type}</div>
-                  <div style={{ fontSize: 10, color: G.muted }}>{nextMatch.date} · {nextMatch.court}</div>
-                </div>
-                <div style={{ display: 'flex', gap: 6 }}>
-                  <button style={{ background: G.lime, color: '#0f1f0f', border: 'none', borderRadius: 5, padding: '5px 10px', fontSize: 10.5, fontWeight: 700, cursor: 'pointer' }}>Coach</button>
-                  <button style={{ background: G.mid, color: G.text, border: 'none', borderRadius: 5, padding: '5px 10px', fontSize: 10.5, cursor: 'pointer' }}>Details</button>
-                </div>
-              </div>
-            </div>
+        ) : activeNav === 'Community' ? (
+          <CommunityPanel userId={user?.id || ''} />
+
+        ) : (
+          <div style={card}>
+            <div style={{ color: G.muted, fontSize: 12 }}>This section is coming soon.</div>
           </div>
-        </div>
-
-        {/* Earnings + Achievements */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10 }}>
-          {[
-            { label: 'This Month', value: `$${earnings.thisMonth.toLocaleString()}`, icon: '💰' },
-            { label: 'Per Session', value: `$${earnings.perSession}`, icon: '📈' },
-            { label: 'Pending Payout', value: `$${earnings.pending}`, icon: '⏳' },
-            { label: 'Students', value: 18, icon: '👥' },
-          ].map((s, i) => (
-            <div key={i} style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 8, padding: '11px 13px' }}>
-              <div style={{ color: G.muted, fontSize: 10 }}>{s.label}</div>
-              <div style={{ color: G.accent, fontSize: 20, fontWeight: 900, marginTop: 4 }}>{s.icon} {s.value}</div>
-            </div>
-          ))}
-        </div>
+        )}
       </main>
 
-      {/* RIGHT SIDEBAR */}
-      <aside style={{ width: 200, background: G.sidebar, borderLeft: `1px solid ${G.cardBorder}`, padding: '14px 12px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 14, flexShrink: 0 }}>
-        {/* Coach profile */}
-        <div style={{ background: G.mid, borderRadius: 10, padding: 12, textAlign: 'center' }}>
-          {user?.photo
-            ? <img src={user.photo} alt={user.firstName} style={{ width: 52, height: 52, borderRadius: '50%', border: `2.5px solid ${G.lime}`, objectFit: 'cover', marginBottom: 6 }} />
-            : <div style={{ width: 52, height: 52, borderRadius: '50%', background: G.bright, margin: '0 auto 6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26 }}>👨‍🏫</div>}
-          <div style={{ fontWeight: 800, fontSize: 13 }}>Coach {user?.firstName ?? 'Maria'}</div>
-          <div style={{ color: G.muted, fontSize: 10, marginTop: 2 }}>⭐ 4.8 · 18 students</div>
-          <div style={{ display: 'flex', gap: 5, marginTop: 8, justifyContent: 'center' }}>
-            <span style={{ background: G.lime, color: '#0f1f0f', borderRadius: 4, padding: '2px 7px', fontSize: 10, fontWeight: 700 }}>ITF L2</span>
-            <span style={{ background: G.card, borderRadius: 4, padding: '2px 7px', fontSize: 10 }}>ATP</span>
-          </div>
-        </div>
+      {/* ═══════════════ RIGHT SIDEBAR ═══════════════ */}
+      <aside style={{ width: 190, background: G.sidebar, borderLeft: `1px solid ${G.border}`, padding: '13px 10px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 13, flexShrink: 0 }}>
 
-        {/* Match Stats quick */}
-        <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 9, padding: 12 }}>
-          <div style={{ fontWeight: 800, fontSize: 12, marginBottom: 8 }}>📊 Live Match Stats</div>
-          {[['1st Serve %', '68%'], ['Aces', '4'], ['Winners', '12'], ['Unforced Err.', '8']].map(([l, v], i) => (
-            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5, padding: '4px 0', borderBottom: i < 3 ? `1px solid ${G.cardBorder}33` : 'none' }}>
-              <span style={{ color: G.muted }}>{l}</span>
-              <span style={{ fontWeight: 700, color: G.accent }}>{v}</span>
+        {/* Quick Stats */}
+        <div>
+          <div style={{ fontSize: 10, fontWeight: 800, color: G.text2, marginBottom: 7 }}>📊 Quick Stats</div>
+          {[
+            { label: 'Students', value: stats.studentCount.toString(), color: G.lime2 },
+            { label: 'This Month', value: `$${earnings.thisMonth.toLocaleString()}`, color: G.lime2 },
+            { label: 'Rating', value: (stats.rating || 0).toFixed(1) + ' ★', color: G.yellow },
+          ].map((s, i) => (
+            <div key={i} style={{ ...miniSt }}>
+              <div style={{ fontSize: 8, color: G.muted, textTransform: 'uppercase', letterSpacing: 1 }}>{s.label}</div>
+              <div style={{ fontSize: 16, fontWeight: 900, color: s.color, marginTop: 2 }}>{s.value}</div>
             </div>
           ))}
         </div>
 
-        {/* Leaderboards & Tabs link */}
+        {/* Today's Schedule */}
         <div>
-          <div style={{ fontWeight: 800, fontSize: 12, marginBottom: 8 }}>🏆 Quick Links</div>
-          {[{ l: 'Live Scores', i: '🔴' }, { l: 'Match Schedule', i: '📅' }, { l: 'Player Profiles', i: '👤' }, { l: 'Training Plans', i: '📋' }].map((item, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 9px', background: G.card, borderRadius: 7, border: `1px solid ${G.cardBorder}`, marginBottom: 5, cursor: 'pointer' }}>
-              <span>{item.i}</span>
-              <span style={{ fontSize: 11.5 }}>{item.l}</span>
-              <span style={{ marginLeft: 'auto', color: G.muted, fontSize: 10 }}>›</span>
+          <div style={{ fontSize: 10, fontWeight: 800, color: G.text2, marginBottom: 7 }}>📆 Today's Schedule</div>
+          {loading ? (
+            <div style={{ fontSize: 10, color: G.muted, padding: '10px 0' }}>Loading...</div>
+          ) : schedule.length > 0 ? (
+            schedule.map((s, i) => {
+              const time = s.time || '00:00';
+              const [hours, mins] = time.split(':');
+              const period = parseInt(hours) >= 12 ? 'PM' : 'AM';
+              return (
+                <div key={s.id || i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', paddingBottom: 9, marginBottom: 9, borderBottom: i < schedule.length - 1 ? `1px solid ${G.border}` : 'none' }}>
+                  <div style={{ fontSize: 9, color: G.muted, minWidth: 26, lineHeight: 1.4 }}>
+                    <div style={{ fontSize: 7, textTransform: 'uppercase' }}>{period}</div>
+                    {time}
+                  </div>
+                  <div style={{ width: 7, height: 7, borderRadius: '50%', background: G.lime, marginTop: 3, flexShrink: 0 }} />
+                  <div>
+                    <div style={{ fontSize: 10.5, fontWeight: 700 }}>{s.participantName || 'Session'}</div>
+                    <div style={{ fontSize: 9, color: G.muted, marginTop: 1, lineHeight: 1.4 }}>{s.court || 'Court TBD'}</div>
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div style={{ fontSize: 10, color: G.muted, padding: '10px 0' }}>No sessions today</div>
+          )}
+        </div>
+
+        {/* Quick Links */}
+        <div>
+          <div style={{ fontSize: 10, fontWeight: 800, color: G.text2, marginBottom: 7 }}>🔗 Quick Links</div>
+          {[
+            { label: 'View Players', icon: '👥', nav: 'Players' },
+            { label: 'Sessions', icon: '📅', nav: 'Sessions' },
+            { label: 'Earnings', icon: '💰', nav: 'Earnings' },
+          ].map((item, i) => (
+            <div
+              key={i}
+              onClick={() => handleNavigation(item.nav)}
+              style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '7px 9px', background: G.card, border: `1px solid ${G.border}`, borderRadius: 8, marginBottom: 4, cursor: 'pointer', transition: 'all .15s' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = G.border2; (e.currentTarget as HTMLDivElement).style.background = G.card2; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = G.border; (e.currentTarget as HTMLDivElement).style.background = G.card; }}
+            >
+              <span style={{ fontSize: 12 }}>{item.icon}</span>
+              <span style={{ fontSize: 10.5, fontWeight: 600, flex: 1 }}>{item.label}</span>
+              <span style={{ color: G.muted, fontSize: 11 }}>›</span>
             </div>
           ))}
         </div>
       </aside>
+
+      {/* Blink keyframe injected via style tag */}
+      <style>{`@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }`}</style>
     </div>
   );
 };

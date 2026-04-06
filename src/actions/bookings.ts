@@ -163,14 +163,23 @@ export async function getAvailableTimeSlots(
   organizationId: string
 ) {
   try {
-    const startOfDay = new Date(date);
-    startOfDay.setHours(0, 0, 0, 0);
+    // Validate date string
+    if (!date || typeof date !== 'string') {
+      throw new Error('Invalid date provided');
+    }
 
-    const endOfDay = new Date(date);
-    endOfDay.setHours(23, 59, 59, 999);
+    // Parse date string (format: YYYY-MM-DD)
+    const [year, month, day] = date.split('-').map(Number);
+    const startOfDay = new Date(year, month - 1, day, 0, 0, 0, 0);
+    const endOfDay = new Date(year, month - 1, day, 23, 59, 59, 999);
 
-    // Get existing bookings for this court on this date
-    const existingBookings = await prisma.courtBooking.findMany({
+    // Check if date is valid
+    if (isNaN(startOfDay.getTime())) {
+      throw new Error(`Invalid date format: ${date}. Expected YYYY-MM-DD format`);
+    }
+
+    // Get confirmed/no-show bookings (these slots are fully booked/disabled)
+    const confirmedBookings = await prisma.courtBooking.findMany({
       where: {
         courtId,
         organizationId,
@@ -187,27 +196,60 @@ export async function getAvailableTimeSlots(
       },
     });
 
+    // Get pending bookings (show count on slots, can be cancelled/rejected)
+    const pendingBookings = await prisma.courtBooking.findMany({
+      where: {
+        courtId,
+        organizationId,
+        startTime: {
+          gte: startOfDay,
+          lte: endOfDay,
+        },
+        status: "pending",
+      },
+      select: {
+        startTime: true,
+        endTime: true,
+      },
+    });
+
+    // Convert bookings to comparable times
+    const confirmedTimes = confirmedBookings.map(b => ({
+      start: new Date(b.startTime).getTime(),
+      end: new Date(b.endTime).getTime(),
+    }));
+
+    const pendingTimes = pendingBookings.map(b => ({
+      start: new Date(b.startTime).getTime(),
+      end: new Date(b.endTime).getTime(),
+    }));
+
     // Generate time slots (6 AM to 10 PM, 1-hour slots)
     const slots = [];
     const hoursStart = 6;
     const hoursEnd = 22;
-    const slotDate = new Date(date);
 
     // Define peak hours (typically 5 PM - 9 PM)
     const peakHourStart = 17;
     const peakHourEnd = 21;
 
     for (let hour = hoursStart; hour < hoursEnd; hour++) {
-      const slotStart = new Date(slotDate);
-      slotStart.setHours(hour, 0, 0, 0);
+      const slotStart = new Date(year, month - 1, day, hour, 0, 0, 0);
+      const slotEnd = new Date(year, month - 1, day, hour + 1, 0, 0, 0);
 
-      const slotEnd = new Date(slotDate);
-      slotEnd.setHours(hour + 1, 0, 0, 0);
+      const slotStartTime = slotStart.getTime();
+      const slotEndTime = slotEnd.getTime();
 
-      // Check if slot is booked
-      const isBooked = existingBookings.some(
-        (booking) => booking.startTime < slotEnd && booking.endTime > slotStart
+      // Check if slot is booked (confirmed/no-show)
+      // Overlap when: booking.start < slot.end AND booking.end > slot.start
+      const isBooked = confirmedTimes.some(
+        (booking) => booking.start < slotEndTime && booking.end > slotStartTime
       );
+
+      // Count pending bookings for this slot
+      const pendingCount = pendingTimes.filter(
+        (booking) => booking.start < slotEndTime && booking.end > slotStartTime
+      ).length;
 
       const isPeak = hour >= peakHourStart && hour < peakHourEnd;
 
@@ -215,6 +257,7 @@ export async function getAvailableTimeSlots(
         hour,
         time: `${String(hour).padStart(2, "0")}:00`,
         available: !isBooked,
+        pendingCount,
         isPeak,
         price: isPeak ? 80 : 50, // Default pricing - can be customized per organization
       });

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import Link from 'next/link';
 
@@ -24,8 +25,29 @@ const LineChart: React.FC<{ data: number[]; color?: string; height?: number }> =
 
 export const FinanceDashboard: React.FC = () => {
   const { user } = useAuth();
-  const [activeNav, setActiveNav] = useState('Overview');
-  const [activeTab, setActiveTab] = useState('Overview');
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Read active section from URL, default to 'Overview'
+  const activeNav = (searchParams.get('section') as string) || 'Overview';
+  
+  // Handle navigation to a new section
+  const handleNavigation = (section: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('section', section);
+    params.delete('tab');
+    router.push(`?${params.toString()}`, { scroll: false });
+  };
+
+  // Read active tab from URL, default to 'Overview'
+  const activeTab = (searchParams.get('tab') as string) || 'Overview';
+  
+  // Handle tab change
+  const handleTabChange = (tab: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('tab', tab);
+    router.push(`?${params.toString()}`, { scroll: false });
+  };
 
   const navItems = [
     { label: 'Overview', icon: '📊' }, { label: 'Revenue', icon: '💵' },
@@ -84,7 +106,7 @@ export const FinanceDashboard: React.FC = () => {
         </div>
         <nav style={{ flex: 1, paddingTop: 8 }}>
           {navItems.map(item => (
-            <button key={item.label} onClick={() => setActiveNav(item.label)} style={{
+            <button key={item.label} onClick={() => handleNavigation(item.label)} style={{
               width: '100%', display: 'flex', alignItems: 'center', gap: 9, padding: '9px 13px',
               background: activeNav === item.label ? G.mid : 'transparent',
               color: activeNav === item.label ? '#fff' : G.muted,
@@ -106,7 +128,7 @@ export const FinanceDashboard: React.FC = () => {
         {/* Tabs */}
         <div style={{ display: 'flex', gap: 0, background: G.card, borderRadius: 8, padding: 4, border: `1px solid ${G.cardBorder}` }}>
           {tabs.map(t => (
-            <button key={t} onClick={() => setActiveTab(t)} style={{
+            <button key={t} onClick={() => handleTabChange(t)} style={{
               flex: 1, padding: '7px 0', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700,
               background: activeTab === t ? G.lime : 'transparent',
               color: activeTab === t ? '#0f1f0f' : G.muted,

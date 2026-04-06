@@ -13,35 +13,76 @@ export async function PUT(
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
     }
 
-    const { status } = await request.json();
+    const { status, rejectionReason } = await request.json();
 
-    if (!['pending', 'confirmed', 'cancelled'].includes(status)) {
+    if (!['pending', 'confirmed', 'cancelled', 'rejected'].includes(status)) {
       return new Response(
-        JSON.stringify({ error: 'Invalid status. Must be one of: pending, confirmed, cancelled' }),
+        JSON.stringify({ error: 'Invalid status. Must be one of: pending, confirmed, cancelled, rejected' }),
         { status: 400 }
       );
     }
 
-    // Verify that the user is a manager/staff of the organization
+    // Verify the booking belongs to this organization
+    const booking = await prisma.courtBooking.findUnique({
+      where: { id: bookingId },
+    });
+
+    if (!booking || booking.organizationId !== orgId) {
+      return new Response(
+        JSON.stringify({ error: 'Booking not found' }),
+        { status: 404 }
+      );
+    }
+
+    // Check if organization exists
+    const organization = await prisma.organization.findUnique({
+      where: { id: orgId },
+    });
+
+    if (!organization) {
+      return new Response(
+        JSON.stringify({ error: 'Organization not found' }),
+        { status: 404 }
+      );
+    }
+
+    // Verify that the user has permission to manage bookings for this organization
+    // Check if user is a manager/staff of the organization
     const member = await prisma.clubMember.findFirst({
       where: {
         organizationId: orgId,
         player: { userId: auth.playerId },
-        role: { in: ['officer', 'manager'] },
+        role: { in: ['officer', 'manager', 'admin'] },
       },
     });
 
-    if (!member) {
+    // Also check if user is the organization owner
+    const user = await prisma.user.findUnique({
+      where: { id: auth.playerId },
+    });
+
+    const isOwner = user?.email === organization.email;
+
+    if (!member && !isOwner) {
       return new Response(
         JSON.stringify({ error: 'You do not have permission to manage bookings for this organization' }),
         { status: 403 }
       );
     }
 
+    // Prepare update data
+    const updateData: any = { status };
+    
+    // If rejecting, include rejection reason and timestamp
+    if (status === 'rejected' && rejectionReason) {
+      updateData.rejectionReason = rejectionReason;
+      updateData.rejectedAt = new Date();
+    }
+
     // Update the booking status
     const updatedBooking = await prisma.courtBooking.update({
       where: { id: bookingId },
-      data: { status },
+      data: updateData,
       include: {
         court: true,
         member: {

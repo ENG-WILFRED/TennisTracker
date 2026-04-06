@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useSession } from 'next-auth/react';
+import { useAuth } from '@/context/AuthContext';
 import { useCommunityUpdates } from '@/hooks/useCommunityWebSocket';
 
 interface Comment {
@@ -31,7 +31,7 @@ interface CommentThreadProps {
 }
 
 export function CommentThread({ postId, initialComments }: CommentThreadProps) {
-  const { data: session } = useSession();
+  const { user } = useAuth();
   const [comments, setComments] = useState<Comment[]>(initialComments);
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyContent, setReplyContent] = useState('');

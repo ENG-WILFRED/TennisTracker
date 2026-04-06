@@ -90,17 +90,42 @@ const CourtCard: React.FC<{ court: any; selected: boolean; onClick: () => void }
 
 const SlotButton: React.FC<{ slot: any; selected: boolean; onClick: () => void }> = ({ slot, selected, onClick }) => {
   if (!slot.available) {
+    // Slot is booked and confirmed/no-show (disabled)
     return (
-      <div className="flex flex-col items-center py-2 px-1 rounded-lg bg-[#0f1f0f] border border-[#1a1a1a] opacity-40 cursor-not-allowed">
+      <div 
+        className="flex flex-col items-center py-2 px-1 rounded-lg bg-[#3a2d2d] border border-[#5a2d2d] opacity-60 cursor-not-allowed relative group"
+        title={slot.pendingCount > 0 ? `${slot.pendingCount} pending booking(s) - will notify if available` : 'Fully booked'}
+      >
         <span className="text-xs font-bold text-[#7aaa6a]">{slot.time}</span>
         <span className="text-[8px] text-red-500 mt-0.5">Taken</span>
+        
+        {/* Pending count badge */}
+        {slot.pendingCount > 0 && (
+          <span 
+            className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-[9px] font-bold flex items-center justify-center"
+            style={{ backgroundColor: '#f0c040', color: '#000' }}
+          >
+            {slot.pendingCount}
+          </span>
+        )}
+        
+        {/* Hover tooltip for pending slots */}
+        {slot.pendingCount > 0 && (
+          <div 
+            className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 rounded text-[10px] whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 w-max"
+            style={{ backgroundColor: '#f0c040', color: '#000' }}
+          >
+            <div className="font-bold">{slot.pendingCount} pending</div>
+            <div className="text-[9px]">We'll notify you if available</div>
+          </div>
+        )}
       </div>
     );
   }
   return (
     <button
       onClick={onClick}
-      className={`flex flex-col items-center py-2 px-1 rounded-lg border-2 transition-all ${
+      className={`flex flex-col items-center py-2 px-1 rounded-lg border-2 transition-all relative ${
         selected
           ? 'bg-[#7dc142] border-[#7dc142] text-[#0f1f0f]'
           : 'bg-[#152515] border-[#2d5a35] text-[#e8f5e0] hover:border-[#7dc142]/60 hover:bg-[#2d5a27]/40'
@@ -112,6 +137,16 @@ const SlotButton: React.FC<{ slot: any; selected: boolean; onClick: () => void }
       </span>
       {slot.isPeak && !selected && (
         <span className="text-[7px] text-[#f0c040]">Peak</span>
+      )}
+      
+      {/* Pending count badge for available slots */}
+      {slot.pendingCount > 0 && (
+        <span 
+          className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-[9px] font-bold flex items-center justify-center"
+          style={{ backgroundColor: '#f0c040', color: '#000' }}
+        >
+          {slot.pendingCount}
+        </span>
       )}
     </button>
   );
@@ -330,8 +365,8 @@ export function BookingView({ onClose, isEmbedded = false, canBook = true, organ
       setLastBookingStatus(bookingResult.membershipStatus);
       setShowBookingConfirmation(true);
 
-      // Call payment endpoint for payment processing
-      const paymentRes = await fetch('/api/bookings/court-booking-payment', {
+      // Call simulated payment endpoint for development/testing
+      const paymentRes = await fetch('/api/bookings/simulate-payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -341,42 +376,34 @@ export function BookingView({ onClose, isEmbedded = false, canBook = true, organ
           endTime: endTime.toISOString(),
           organizationId: selectedOrgId,
           amount: bookingResult.booking.price,
-          paymentMethod,
-          mobileNumber: paymentMethod === 'mpesa' ? mobileNumber : undefined,
           bookingId: bookingResult.booking.id,
         }),
       });
 
       if (!paymentRes.ok) {
         const errorData = await paymentRes.json();
-        // Booking created but payment failed - user will see in confirmation modal
-        console.warn('Payment processing started:', errorData);
+        showToast('error', `❌ Booking failed: ${errorData.error}`);
+        console.error('Simulated payment failed:', errorData);
+        return;
       }
 
       const paymentData = await paymentRes.json();
 
-      if (paymentMethod === 'mpesa') {
-        // M-Pesa: Show STK push notification
-        showToast('success', '📱 STK push sent! Enter your PIN on your phone');
-      } else if (paymentMethod === 'stripe' || paymentMethod === 'paypal') {
-        // Redirect to payment gateway
-        if (paymentData.checkoutUrl) {
-          window.location.href = paymentData.checkoutUrl;
-          return;
-        }
+      if (paymentData.success) {
+        showToast('success', '✅ Booking confirmed! Your court is reserved.');
+
+        // Reset form
+        setSelectedSlot('');
+        setDuration(1);
+        setNotes('');
+        setMobileNumber('');
+
+        // Reload bookings after short delay
+        setTimeout(async () => {
+          const bookingsData = await getPlayerBookings(userIdFromURL, selectedOrgId);
+          setExistingBookings(bookingsData);
+        }, 2000);
       }
-
-      // Reset form
-      setSelectedSlot('');
-      setDuration(1);
-      setNotes('');
-      setMobileNumber('');
-
-      // Reload bookings after short delay
-      setTimeout(async () => {
-        const bookingsData = await getPlayerBookings(userIdFromURL, selectedOrgId);
-        setExistingBookings(bookingsData);
-      }, 2000);
     } catch (error: any) {
       showToast('error', error.message || 'Booking failed');
     } finally {

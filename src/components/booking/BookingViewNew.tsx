@@ -39,6 +39,8 @@ export function BookingView({ organizationId, onClose, isEmbedded, canBook }: Bo
   const [showCourtModal, setShowCourtModal] = useState(false);
   const [selectedCourt, setSelectedCourt] = useState<any>(null);
   const [loadingCourtId, setLoadingCourtId] = useState<string | null>(null);
+  const [filterStatus, setFilterStatus] = useState<'all' | 'confirmed' | 'pending' | 'rejected' | 'cancelled' | 'completed'>('all');
+  const [filterTime, setFilterTime] = useState<'all' | 'today' | 'week' | 'upcoming' | 'past'>('upcoming');
 
   // Load organizations on mount
   useEffect(() => {
@@ -93,6 +95,49 @@ export function BookingView({ organizationId, onClose, isEmbedded, canBook }: Bo
       router.push(`/player/booking/details?court=${selectedCourt.id}&org=${selectedOrgId}&type=${matchType}`);
       setShowCourtModal(false);
     }
+  };
+
+  // Filter functions
+  const getFilteredBookings = (bookingsToFilter: any[]) => {
+    let filtered = bookingsToFilter;
+
+    // Apply status filter
+    if (filterStatus !== 'all') {
+      filtered = filtered.filter(b => b.status === filterStatus);
+    }
+
+    // Apply time filter
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const endOfToday = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+    const endOfWeek = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+    switch (filterTime) {
+      case 'today':
+        filtered = filtered.filter(b => {
+          const bookingDate = new Date(b.startTime);
+          return bookingDate >= today && bookingDate < endOfToday;
+        });
+        break;
+      case 'week':
+        filtered = filtered.filter(b => {
+          const bookingDate = new Date(b.startTime);
+          return bookingDate >= today && bookingDate < endOfWeek;
+        });
+        break;
+      case 'upcoming':
+        filtered = filtered.filter(b => new Date(b.startTime) >= now);
+        break;
+      case 'past':
+        filtered = filtered.filter(b => new Date(b.startTime) < now);
+        break;
+      case 'all':
+      default:
+        // No time filter
+        break;
+    }
+
+    return filtered;
   };
 
   if (loading) {
@@ -258,83 +303,147 @@ export function BookingView({ organizationId, onClose, isEmbedded, canBook }: Bo
 
       {/* MY BOOKINGS TAB */}
       {activeTab === 'myBookings' && (
-        <div style={{ maxHeight: 'calc(100vh - 280px)', overflowY: 'auto', scrollbarWidth: 'thin', scrollbarColor: '#7dc142 #152515' }}>
-          <style>{`
-            .bookings-scrollable::-webkit-scrollbar {
-              width: 8px;
-            }
-            .bookings-scrollable::-webkit-scrollbar-track {
-              background: #152515;
-              border-radius: 10px;
-            }
-            .bookings-scrollable::-webkit-scrollbar-thumb {
-              background: #7dc142;
-              border-radius: 10px;
-            }
-            .bookings-scrollable::-webkit-scrollbar-thumb:hover {
-              background: #a8d84e;
-            }
-          `}</style>
-          <div className="bookings-scrollable pr-2">
-            {bookings.filter(b => new Date(b.startTime) >= new Date() && b.status !== 'cancelled').length === 0 ? (
-              <Card className="text-center py-12">
-                <div className="text-4xl mb-3">📅</div>
-                <div className="text-sm font-bold text-[#e8f5e0] mb-1">No upcoming bookings</div>
-                <div className="text-xs text-[#7aaa6a]">Book your first court session</div>
-              </Card>
-            ) : (
-              <div className="grid grid-cols-2 gap-3">
-                {bookings
-                  .filter(b => new Date(b.startTime) >= new Date() && b.status !== 'cancelled')
-                  .map(booking => (
+        <div>
+          {/* Filters */}
+          <Card className="mb-4">
+            <div>
+              <Label>🔍 Filter by Status</Label>
+              <div className="flex gap-2 flex-wrap mb-4">
+                {['all', 'confirmed', 'pending', 'rejected', 'cancelled', 'completed'].map(status => (
+                  <button
+                    key={status}
+                    onClick={() => setFilterStatus(status as any)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                      filterStatus === status
+                        ? 'bg-[#7dc142] text-[#0f1f0f]'
+                        : 'bg-[#152515] text-[#7aaa6a] border border-[#2d5a35] hover:border-[#7dc142]'
+                    }`}
+                  >
+                    {status.charAt(0).toUpperCase() + status.slice(1)}
+                  </button>
+                ))}
+              </div>
+
+              <Label>⏰ Filter by Time</Label>
+              <div className="flex gap-2 flex-wrap">
+                {(['all', 'today', 'week', 'upcoming', 'past'] as const).map(time => (
+                  <button
+                    key={time}
+                    onClick={() => setFilterTime(time)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                      filterTime === time
+                        ? 'bg-[#7dc142] text-[#0f1f0f]'
+                        : 'bg-[#152515] text-[#7aaa6a] border border-[#2d5a35] hover:border-[#7dc142]'
+                    }`}
+                  >
+                    {time === 'all' ? 'All Time' : time.charAt(0).toUpperCase() + time.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </Card>
+
+          {/* Bookings List */}
+          <div style={{ maxHeight: 'calc(100vh - 400px)', overflowY: 'auto', scrollbarWidth: 'thin', scrollbarColor: '#7dc142 #152515' }}>
+            <style>{`
+              .bookings-scrollable::-webkit-scrollbar {
+                width: 8px;
+              }
+              .bookings-scrollable::-webkit-scrollbar-track {
+                background: #152515;
+                border-radius: 10px;
+              }
+              .bookings-scrollable::-webkit-scrollbar-thumb {
+                background: #7dc142;
+                border-radius: 10px;
+              }
+              .bookings-scrollable::-webkit-scrollbar-thumb:hover {
+                background: #a8d84e;
+              }
+            `}</style>
+            <div className="bookings-scrollable pr-2">
+              {getFilteredBookings(bookings).length === 0 ? (
+                <Card className="text-center py-12">
+                  <div className="text-4xl mb-3">📅</div>
+                  <div className="text-sm font-bold text-[#e8f5e0] mb-1">No bookings found</div>
+                  <div className="text-xs text-[#7aaa6a]">Try adjusting your filters</div>
+                </Card>
+              ) : (
+                <div className="grid grid-cols-2 gap-3">
+                  {getFilteredBookings(bookings).map(booking => (
                     <div
                       key={booking.id}
-                      onClick={() => router.push(`/player/booking/${booking.id}?org=${selectedOrgId}`)}
+                      onClick={() => router.push(`/player/booking/${booking.id}?org=${selectedOrgId}&tab=myBookings`)}
                       className="cursor-pointer"
                     >
                       <BookingItem booking={booking} canView />
                     </div>
                   ))}
-              </div>
-            )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
 
       {/* HISTORY TAB */}
       {activeTab === 'history' && (
-        <div style={{ maxHeight: 'calc(100vh - 280px)', overflowY: 'auto', scrollbarWidth: 'thin', scrollbarColor: '#7dc142 #152515' }}>
-          <style>{`
-            .history-scrollable::-webkit-scrollbar {
-              width: 8px;
-            }
-            .history-scrollable::-webkit-scrollbar-track {
-              background: #152515;
-              border-radius: 10px;
-            }
-            .history-scrollable::-webkit-scrollbar-thumb {
-              background: #7dc142;
-              border-radius: 10px;
-            }
-            .history-scrollable::-webkit-scrollbar-thumb:hover {
-              background: #a8d84e;
-            }
-          `}</style>
-          <div className="history-scrollable pr-2">
-            {bookings.filter(b => new Date(b.startTime) < new Date() || b.status === 'cancelled').length === 0 ? (
-              <Card className="text-center py-12">
-                <div className="text-4xl mb-3">🕑</div>
-                <div className="text-sm text-[#7aaa6a]">No past sessions yet</div>
-              </Card>
-            ) : (
-              <div className="grid grid-cols-2 gap-3">
-                {bookings
-                  .filter(b => new Date(b.startTime) < new Date() || b.status === 'cancelled')
-                  .map(booking => (
-                    <BookingItem key={booking.id} booking={booking} />
-                  ))}
-              </div>
-            )}
+        <div>
+          {/* Filters */}
+          <Card className="mb-4">
+            <Label>🔍 Filter by Status</Label>
+            <div className="flex gap-2 flex-wrap">
+              {['all', 'confirmed', 'pending', 'rejected', 'cancelled', 'completed'].map(status => (
+                <button
+                  key={status}
+                  onClick={() => setFilterStatus(status as any)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    filterStatus === status
+                      ? 'bg-[#7dc142] text-[#0f1f0f]'
+                      : 'bg-[#152515] text-[#7aaa6a] border border-[#2d5a35] hover:border-[#7dc142]'
+                  }`}
+                >
+                  {status.charAt(0).toUpperCase() + status.slice(1)}
+                </button>
+              ))}
+            </div>
+          </Card>
+
+          {/* History List */}
+          <div style={{ maxHeight: 'calc(100vh - 350px)', overflowY: 'auto', scrollbarWidth: 'thin', scrollbarColor: '#7dc142 #152515' }}>
+            <style>{`
+              .history-scrollable::-webkit-scrollbar {
+                width: 8px;
+              }
+              .history-scrollable::-webkit-scrollbar-track {
+                background: #152515;
+                border-radius: 10px;
+              }
+              .history-scrollable::-webkit-scrollbar-thumb {
+                background: #7dc142;
+                border-radius: 10px;
+              }
+              .history-scrollable::-webkit-scrollbar-thumb:hover {
+                background: #a8d84e;
+              }
+            `}</style>
+            <div className="history-scrollable pr-2">
+              {bookings.filter(b => (new Date(b.startTime) < new Date() || b.status === 'cancelled') && (filterStatus === 'all' || b.status === filterStatus)).length === 0 ? (
+                <Card className="text-center py-12">
+                  <div className="text-4xl mb-3">🕑</div>
+                  <div className="text-sm text-[#7aaa6a]">No past sessions found</div>
+                </Card>
+              ) : (
+                <div className="grid grid-cols-2 gap-3">
+                  {bookings
+                    .filter(b => new Date(b.startTime) < new Date() || b.status === 'cancelled')
+                    .filter(b => filterStatus === 'all' || b.status === filterStatus)
+                    .map(booking => (
+                      <BookingItem key={booking.id} booking={booking} />
+                    ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

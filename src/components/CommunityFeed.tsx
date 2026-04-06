@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useSession } from 'next-auth/react';
+import { useAuth } from '@/context/AuthContext';
 import { useCommunityUpdates, useAutoRefresh } from '@/hooks/useCommunityWebSocket';
 import { CommentThread } from './CommentThread';
 
@@ -41,18 +41,17 @@ interface Post {
 }
 
 export function CommunityFeed() {
-  const { data: session } = useSession();
+  const { user } = useAuth();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [newpostContent, setNewpostContent] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [wsConnected, setWsConnected] = useState(false);
-  const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
 
   // Load feed
   async function loadFeed() {
-    if (!session?.user) return;
+    if (!user) return;
 
     setLoading(true);
     try {
@@ -69,7 +68,7 @@ export function CommunityFeed() {
   // Fetch feed on mount and page change
   useEffect(() => {
     loadFeed();
-  }, [session, page]);
+  }, [user, page]);
 
   // Set up auto-refresh every 30 seconds
   useAutoRefresh(loadFeed, 30000);

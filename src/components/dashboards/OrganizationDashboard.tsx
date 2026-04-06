@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
@@ -14,6 +14,7 @@ import OrganizationEventsSection from '@/components/organization/dashboard-secti
 import OrganizationTournamentsSection from '@/components/organization/dashboard-sections/OrganizationTournamentsSection';
 import OrganizationReportsSection from '@/components/organization/dashboard-sections/OrganizationReportsSection';
 import OrganizationBookingsSection from '@/components/organization/dashboard-sections/OrganizationBookingsSection';
+import OrganizationPlayersSection from '@/components/organization/dashboard-sections/OrganizationPlayersSection';
 import { authenticatedFetch } from '@/lib/authenticatedFetch';
 
 const G = {
@@ -25,8 +26,43 @@ const G = {
 export const OrganizationDashboard: React.FC = () => {
   const { user } = useAuth();
   const router = useRouter();
-  const [activeNav, setActiveNav] = useState('Overview');
-  const [activeTab, setActiveTab] = useState('Overview');
+  const searchParams = useSearchParams();
+
+  // Define nav items at the top for easy access
+  const navItems = [
+    { label: 'Overview', icon: '🏢', section: 'overview' },
+    { label: 'My Players', icon: '👨‍🏫', section: 'players' },
+    { label: 'Staff', icon: '👥', section: 'staff' },
+    { label: 'Courts', icon: '🎾', section: 'courts' },
+    { label: 'Bookings', icon: '📅', section: 'bookings' },
+    { label: 'Events', icon: '🎾', section: 'events' },
+    { label: 'Tournaments', icon: '🏆', section: 'tournaments' },
+    { label: 'Members', icon: '🎖️', section: 'members' },
+    { label: 'Reports', icon: '📊', section: 'reports' },
+  ];
+
+  // Map section URL param to label
+  const sectionParam = searchParams.get('section') || 'overview';
+  const activeNav = navItems.find(item => item.section === sectionParam)?.label || 'Overview';
+
+  // Handle navigation to a new section
+  const handleNavigation = (section: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('section', section);
+    params.delete('tab');
+    router.push(`?${params.toString()}`, { scroll: false });
+  };
+
+  // Read active tab from URL, default to 'Overview'
+  const activeTab = (searchParams.get('tab') as string) || 'Overview';
+  
+  // Handle tab change
+  const handleTabChange = (tab: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('tab', tab);
+    router.push(`?${params.toString()}`, { scroll: false });
+  };
+
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [members, setMembers] = useState<any[]>([]);
   const [membersLoading, setMembersLoading] = useState(true);
@@ -209,30 +245,7 @@ export const OrganizationDashboard: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    const section = new URLSearchParams(window.location.search).get('section');
-    if (section) {
-      const label = section.split('_').map((p) => p[0]?.toUpperCase() + p.slice(1)).join(' ');
-      setActiveNav(label);
-      setActiveTab(label === 'Overview' ? 'Overview' : activeTab);
-    }
-  }, []);
-
-  const navigateToSidebar = (item: { label: string; section: string }) => {
-    setActiveNav(item.label);
-    router.replace(`${window.location.pathname}?section=${item.section}`);
-  };
-
-  const navItems = [
-    { label: 'Overview', icon: '🏢', section: 'overview' },
-    { label: 'Staff', icon: '👥', section: 'staff' },
-    { label: 'Courts', icon: '🎾', section: 'courts' },
-    { label: 'Bookings', icon: '📅', section: 'bookings' },
-    { label: 'Events', icon: '🎾', section: 'events' },
-    { label: 'Tournaments', icon: '🏆', section: 'tournaments' },
-    { label: 'Members', icon: '🎖️', section: 'members' },
-    { label: 'Reports', icon: '📊', section: 'reports' },
-  ];
+  // Rest of component body below
 
   const tabs = ['Overview', 'Team', 'Roadmap', 'Resources', 'Chat 💬'];
 
@@ -313,7 +326,7 @@ export const OrganizationDashboard: React.FC = () => {
         </div>
         <nav style={{ flex: 1, paddingTop: 8 }}>
           {navItems.map(item => (
-            <button key={item.label} onClick={() => navigateToSidebar(item)} style={{
+            <button key={item.label} onClick={() => handleNavigation(item.section)} style={{
               width: '100%', display: 'flex', alignItems: 'center', gap: 9, padding: '9px 13px',
               background: activeNav === item.label ? G.mid : 'transparent',
               color: activeNav === item.label ? '#fff' : G.muted,
@@ -324,7 +337,7 @@ export const OrganizationDashboard: React.FC = () => {
         </nav>
         <div style={{ padding: '10px 12px 14px' }}>
           <button 
-            onClick={() => navigateToSidebar({ label: 'Events', section: 'events' })}
+            onClick={() => handleNavigation('events')}
             style={{ width: '100%', background: G.lime, color: '#0f1f0f', border: 'none', borderRadius: 8, padding: '9px 0', fontWeight: 800, fontSize: 12, cursor: 'pointer' }}>
             🎾 View Events
           </button>
@@ -345,7 +358,7 @@ export const OrganizationDashboard: React.FC = () => {
           <OrganizationOverviewSection
             kpiData={kpiData}
             activeTab={activeTab}
-            setActiveTab={setActiveTab}
+            setActiveTab={handleTabChange}
             tabs={tabs}
             revenueTrend={revenueTrend}
             scheduleItems={scheduleItems}
@@ -361,6 +374,13 @@ export const OrganizationDashboard: React.FC = () => {
             organizationId={dashboardData?.organizationId}
             members={members}
             membersLoading={membersLoading}
+          />
+        )}
+
+        {activeNav === 'My Players' && (
+          <OrganizationPlayersSection
+            orgId={dashboardData?.organizationId}
+            coachUserId={user?.id}
           />
         )}
 

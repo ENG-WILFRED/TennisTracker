@@ -16,11 +16,13 @@ export function BookingItem({ booking, canView = false }: BookingItemProps) {
   const statusColors: Record<string, string> = {
     confirmed: 'bg-[#7dc142] text-[#0f1f0f]',
     cancelled: 'bg-red-900/60 text-red-400',
+    rejected: 'bg-red-900/60 text-red-400',
     completed: 'bg-[#2d5a35] text-[#7aaa6a]',
+    pending: 'bg-yellow-900/60 text-yellow-400',
   };
 
   return (
-    <div className={`p-4 rounded-xl border transition-all ${booking.status === 'cancelled' ? 'border-red-900/40 opacity-60' : 'border-[#2d5a35] hover:border-[#7dc142]/40'} bg-[#152515]`}>
+    <div className={`p-4 rounded-xl border transition-all ${['cancelled', 'rejected'].includes(booking.status) ? 'border-red-900/40 opacity-60' : 'border-[#2d5a35] hover:border-[#7dc142]/40'} bg-[#152515]`}>
       <div className="flex items-start justify-between mb-3">
         <div>
           <div className="text-sm font-bold text-[#e8f5e0]">🎾 {booking.court?.name || 'Court Booking'}</div>
@@ -47,6 +49,14 @@ export function BookingItem({ booking, canView = false }: BookingItemProps) {
           <div className="text-xs font-bold text-[#a8d84e]">{durationHrs}h</div>
         </div>
       </div>
+
+      {/* Display rejection reason if booking is rejected */}
+      {booking.status === 'rejected' && booking.rejectionReason && (
+        <div className="mt-3 p-2 bg-red-900/40 border border-red-900/60 rounded-lg">
+          <div className="text-[9px] font-bold text-red-400 uppercase mb-1">⚠️ Rejection Reason</div>
+          <div className="text-[10px] text-red-300">{booking.rejectionReason}</div>
+        </div>
+      )}
 
       {canView && (
         <button className="w-full mt-3 py-2 text-[10px] font-bold bg-[#2d5a27] hover:bg-[#3d7a32] text-[#7dc142] rounded-lg transition-colors">

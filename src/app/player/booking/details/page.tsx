@@ -87,7 +87,7 @@ function BookingDetailsContent() {
   // Fetch time slots
   useEffect(() => {
     const loadSlots = async () => {
-      if (!courtId || !orgId) return;
+      if (!courtId || !orgId || !selectedDate) return;
       setLoading(true);
       try {
         const slots = await getAvailableTimeSlots(courtId, selectedDate, orgId);
@@ -252,7 +252,12 @@ function BookingDetailsContent() {
                 type="date"
                 value={selectedDate}
                 min={new Date().toISOString().split('T')[0]}
-                onChange={e => setSelectedDate(e.target.value)}
+                onChange={e => {
+                  // Only update if a valid date is selected
+                  if (e.target.value) {
+                    setSelectedDate(e.target.value);
+                  }
+                }}
                 className="w-full px-4 py-3 rounded-lg border text-sm outline-none transition-colors"
                 style={{
                   backgroundColor: G.sidebar,
@@ -310,21 +315,51 @@ function BookingDetailsContent() {
               ) : (
                 <div className="grid grid-cols-6 md:grid-cols-8 gap-2">
                   {timeSlots.map(slot => (
-                    <button
-                      key={slot.hour}
-                      onClick={() => setSelectedSlot(slot.time)}
-                      className="flex flex-col items-center py-3 px-2 rounded-lg border-2 transition-all text-xs font-bold"
-                      style={{
-                        backgroundColor: selectedSlot === slot.time ? G.lime : G.sidebar,
-                        borderColor: selectedSlot === slot.time ? G.lime : G.cardBorder,
-                        color: selectedSlot === slot.time ? G.dark : G.text,
-                      }}
-                    >
-                      <span className="font-semibold">{slot.time}</span>
-                      <span className="text-[9px] mt-1" style={{ opacity: 0.8 }}>
-                        ${slot.price}
-                      </span>
-                    </button>
+                    <div key={slot.hour} className="relative group">
+                      <button
+                        onClick={() => {
+                          // Only allow selection if slot is available
+                          if (slot.available) {
+                            setSelectedSlot(slot.time);
+                          }
+                        }}
+                        disabled={!slot.available}
+                        className={`flex flex-col items-center py-3 px-2 rounded-lg border-2 transition-all text-xs font-bold w-full ${
+                          !slot.available ? 'cursor-not-allowed opacity-50' : ''
+                        }`}
+                        style={{
+                          backgroundColor: selectedSlot === slot.time && slot.available ? G.lime : slot.available ? G.sidebar : '#3a2d2d',
+                          borderColor: selectedSlot === slot.time && slot.available ? G.lime : slot.available ? G.cardBorder : '#5a2d2d',
+                          color: selectedSlot === slot.time && slot.available ? G.dark : slot.available ? G.text : G.muted,
+                        }}
+                        title={!slot.available && slot.pendingCount > 0 ? `${slot.pendingCount} pending booking(s) - will notify if available` : !slot.available ? 'Fully booked' : undefined}
+                      >
+                        <span className="font-semibold">{slot.time}</span>
+                        <span className="text-[9px] mt-1" style={{ opacity: 0.8 }}>
+                          ${slot.price}
+                        </span>
+                        {/* Pending count badge */}
+                        {slot.pendingCount > 0 && (
+                          <span 
+                            className="absolute -top-1 -right-1 w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center"
+                            style={{ backgroundColor: '#f0c040', color: '#000' }}
+                          >
+                            {slot.pendingCount}
+                          </span>
+                        )}
+                      </button>
+                      {/* Hover tooltip for pending slots */}
+                      {slot.pendingCount > 0 && !slot.available && (
+                        <div 
+                          className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 rounded-lg text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10"
+                          style={{ backgroundColor: '#f0c040', color: '#000' }}
+                        >
+                          <div className="font-bold">Pending Confirmation</div>
+                          <div>{slot.pendingCount} {slot.pendingCount === 1 ? 'person' : 'people'} waiting</div>
+                          <div className="text-[10px] mt-1">We'll notify you if this becomes available</div>
+                        </div>
+                      )}
+                    </div>
                   ))}
                 </div>
               )}

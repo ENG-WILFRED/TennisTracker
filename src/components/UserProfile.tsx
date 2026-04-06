@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useSession } from 'next-auth/react';
+import { useAuth } from '@/context/AuthContext';
 
 interface User {
   id: string;
@@ -23,7 +23,7 @@ interface UserProfileProps {
 }
 
 export function UserProfile({ userId }: UserProfileProps) {
-  const { data: session } = useSession();
+  const { user } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isFollowing, setIsFollowing] = useState(false);

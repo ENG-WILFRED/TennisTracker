@@ -1,144 +1,140 @@
 "use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-const prisma_1 = require("../src/generated/prisma");
-const bcryptjs_1 = require("bcryptjs");
-const prisma = new prisma_1.PrismaClient();
+import { PrismaClient } from "./src/generated/prisma/index.js";
+import bcrypt from "bcryptjs";
+const prisma = new PrismaClient();
 async function main() {
     // Password for all demo users (hashed)
-    const password = await bcryptjs_1.default.hash("tennis123", 10);
-    await prisma.player.createMany({
-        data: [
-            {
-                username: 'julius',
-                email: 'federer@pwani.ac.ke',
-                phone: '0700000001',
-                passwordHash: password,
-                firstName: 'julius',
-                lastName: 'nyerere',
-                photo: 'https://images.unsplash.com/photo-1505228395891-9a51e7e86e81?w=500&q=80',
-                gender: 'Male',
-                dateOfBirth: new Date('1981-08-08'),
-                nationality: 'Switzerland',
-                bio: '20-time Grand Slam champion.',
+    const password = await bcrypt.hash("tennis123", 10);
+
+    const usersData = [
+        {
+            username: 'julius',
+            email: 'federer@pwani.ac.ke',
+            phone: '0700000001',
+            passwordHash: password,
+            firstName: 'julius',
+            lastName: 'nyerere',
+            photo: 'https://images.unsplash.com/photo-1505228395891-9a51e7e86e81?w=500&q=80',
+            gender: 'Male',
+            dateOfBirth: new Date('1981-08-08'),
+            nationality: 'Switzerland',
+            bio: '20-time Grand Slam champion.',
+        },
+        {
+            username: 'joe',
+            email: 'nadal@pwani.ac.ke',
+            phone: '0700000002',
+            passwordHash: password,
+            firstName: 'joe',
+            lastName: 'kazungu',
+            photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&q=80',
+            gender: 'Male',
+            dateOfBirth: new Date('1986-06-03'),
+            nationality: 'Spain',
+            bio: 'King of Clay.',
+        },
+        {
+            username: 'leah',
+            email: 'djokovic@pwani.ac.ke',
+            phone: '0700000003',
+            passwordHash: password,
+            firstName: 'leah',
+            lastName: 'crush',
+            photo: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=500&q=80',
+            gender: 'female',
+            dateOfBirth: new Date('1987-05-22'),
+            nationality: 'Serbia',
+            bio: 'Serbian tennis legend.',
+        },
+        {
+            username: 'winnie',
+            email: 'serena@pwani.ac.ke',
+            phone: '0700000004',
+            passwordHash: password,
+            firstName: 'winnie',
+            lastName: 'mueni',
+            photo: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=500&q=80',
+            gender: 'Female',
+            dateOfBirth: new Date('1981-09-26'),
+            nationality: 'USA',
+            bio: 'Greatest women\'s player.',
+        },
+        {
+            username: 'wilfred',
+            email: 'sharapova@pwani.ac.ke',
+            phone: '0700000005',
+            passwordHash: password,
+            firstName: 'wilfred',
+            lastName: 'kimani',
+            photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&q=80',
+            gender: 'male',
+            dateOfBirth: new Date('1987-04-19'),
+            nationality: 'Russia',
+            bio: 'Siberian Siren.',
+        },
+        {
+            username: 'peter',
+            email: 'murray@pwani.ac.ke',
+            phone: '0700000006',
+            passwordHash: password,
+            firstName: 'peter',
+            lastName: 'mwangi',
+            photo: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=500&q=80',
+            gender: 'Male',
+            dateOfBirth: new Date('1987-05-15'),
+            nationality: 'UK',
+            bio: 'Scottish tennis star.',
+        },
+        {
+            username: 'morris',
+            email: 'murray1@pwani.ac.ke',
+            phone: '0700000007',
+            passwordHash: password,
+            firstName: 'morris',
+            lastName: 'morris',
+            photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&q=80',
+            gender: 'Male',
+            dateOfBirth: new Date('1987-05-15'),
+            nationality: 'UK',
+            bio: 'Scottish tennis star.',
+        },
+        {
+            username: 'jojo',
+            email: 'murray2@pwani.ac.ke',
+            phone: '0700000008',
+            passwordHash: password,
+            firstName: 'jojo',
+            lastName: 'jbouy',
+            photo: 'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=500&q=80',
+            gender: 'Male',
+            dateOfBirth: new Date('1987-05-15'),
+            nationality: 'UK',
+            bio: 'Scottish tennis star.',
+        },
+    ];
+
+    for (const userData of usersData) {
+        const user = await prisma.user.upsert({
+            where: { username: userData.username },
+            update: userData,
+            create: userData,
+        });
+        await prisma.player.upsert({
+            where: { userId: user.id },
+            update: {
                 matchesPlayed: 0,
                 matchesWon: 0,
                 matchesLost: 0,
             },
-            {
-                username: 'joe',
-                email: 'nadal@pwani.ac.ke',
-                phone: '0700000002',
-                passwordHash: password,
-                firstName: 'joe',
-                lastName: 'kazungu',
-                photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&q=80',
-                gender: 'Male',
-                dateOfBirth: new Date('1986-06-03'),
-                nationality: 'Spain',
-                bio: 'King of Clay.',
+            create: {
+                userId: user.id,
                 matchesPlayed: 0,
                 matchesWon: 0,
                 matchesLost: 0,
             },
-            {
-                username: 'leah',
-                email: 'djokovic@pwani.ac.ke',
-                phone: '0700000003',
-                passwordHash: password,
-                firstName: 'leah',
-                lastName: 'crush',
-                photo: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=500&q=80',
-                gender: 'female',
-                dateOfBirth: new Date('1987-05-22'),
-                nationality: 'Serbia',
-                bio: 'Serbian tennis legend.',
-                matchesPlayed: 0,
-                matchesWon: 0,
-                matchesLost: 0,
-            },
-            {
-                username: 'winnie',
-                email: 'serena@pwani.ac.ke',
-                phone: '0700000004',
-                passwordHash: password,
-                firstName: 'winnie',
-                lastName: 'mueni',
-                photo: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=500&q=80',
-                gender: 'Female',
-                dateOfBirth: new Date('1981-09-26'),
-                nationality: 'USA',
-                bio: 'Greatest women\'s player.',
-                matchesPlayed: 0,
-                matchesWon: 0,
-                matchesLost: 0,
-            },
-            {
-                username: 'wilfred',
-                email: 'sharapova@pwani.ac.ke',
-                phone: '0700000005',
-                passwordHash: password,
-                firstName: 'wilfred',
-                lastName: 'kimani',
-                photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&q=80',
-                gender: 'male',
-                dateOfBirth: new Date('1987-04-19'),
-                nationality: 'Russia',
-                bio: 'Siberian Siren.',
-                matchesPlayed: 0,
-                matchesWon: 0,
-                matchesLost: 0,
-            },
-            {
-                username: 'peter',
-                email: 'murray@pwani.ac.ke',
-                phone: '0700000006',
-                passwordHash: password,
-                firstName: 'peter',
-                lastName: 'mwangi',
-                photo: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=500&q=80',
-                gender: 'Male',
-                dateOfBirth: new Date('1987-05-15'),
-                nationality: 'UK',
-                bio: 'Scottish tennis star.',
-                matchesPlayed: 0,
-                matchesWon: 0,
-                matchesLost: 0,
-            },
-            {
-                username: 'morris',
-                email: 'murray1@pwani.ac.ke',
-                phone: '0700000006',
-                passwordHash: password,
-                firstName: 'morris',
-                lastName: 'morris',
-                photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&q=80',
-                gender: 'Male',
-                dateOfBirth: new Date('1987-05-15'),
-                nationality: 'UK',
-                bio: 'Scottish tennis star.',
-                matchesPlayed: 0,
-                matchesWon: 0,
-                matchesLost: 0,
-            },
-            {
-                username: 'jojo',
-                email: 'murray2@pwani.ac.ke',
-                phone: '0700000006',
-                passwordHash: password,
-                firstName: 'jojo',
-                lastName: 'jbouy',
-                photo: 'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=500&q=80',
-                gender: 'Male',
-                dateOfBirth: new Date('1987-05-15'),
-                nationality: 'UK',
-                bio: 'Scottish tennis star.',
-                matchesPlayed: 0,
-                matchesWon: 0,
-                matchesLost: 0,
-            },
-        ],
-        skipDuplicates: true,
-    });
+        });
+    }
+
     console.log('Seeded 8 players with full details!');
     // mark 'peter' as club account
     const peter = await prisma.player.findUnique({ where: { username: 'peter' } });
@@ -181,7 +177,7 @@ async function main() {
         await prisma.inventoryItem.updateMany({ where: { clubId: peter.id }, data: { organizationId: org.id } });
         // Create an org admin user and attach to the organization (password: 123456)
         try {
-            const orgAdminPassword = await bcryptjs_1.default.hash('123456', 10);
+            const orgAdminPassword = await bcrypt.hash('123456', 10);
             const orgAdmin = await prisma.player.upsert({
                 where: { username: 'org_admin' },
                 update: { email: 'orgadmin@pwani.ac.ke', organizationId: org.id, passwordHash: orgAdminPassword },
@@ -215,7 +211,7 @@ async function main() {
                 username: 'ref_smith',
                 email: 'smith@referee.com',
                 phone: '+254722222001',
-                passwordHash: await bcryptjs_1.default.hash("tennis123", 10),
+                passwordHash: await bcrypt.hash("tennis123", 10),
                 firstName: 'John',
                 lastName: 'Smith',
                 photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&q=80',
@@ -232,7 +228,7 @@ async function main() {
                 username: 'ref_johnson',
                 email: 'johnson@referee.com',
                 phone: '+254722222002',
-                passwordHash: await bcryptjs_1.default.hash("tennis123", 10),
+                passwordHash: await bcrypt.hash("tennis123", 10),
                 firstName: 'Sarah',
                 lastName: 'Johnson',
                 photo: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=500&q=80',
@@ -249,7 +245,7 @@ async function main() {
                 username: 'ref_mueller',
                 email: 'mueller@referee.com',
                 phone: '+254722222003',
-                passwordHash: await bcryptjs_1.default.hash("tennis123", 10),
+                passwordHash: await bcrypt.hash("tennis123", 10),
                 firstName: 'Klaus',
                 lastName: 'Mueller',
                 photo: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=500&q=80',
@@ -266,7 +262,7 @@ async function main() {
                 username: 'ref_patel',
                 email: 'patel@referee.com',
                 phone: '+254722222004',
-                passwordHash: await bcryptjs_1.default.hash("tennis123", 10),
+                passwordHash: await bcrypt.hash("tennis123", 10),
                 firstName: 'Priya',
                 lastName: 'Patel',
                 photo: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=500&q=80',
@@ -283,7 +279,7 @@ async function main() {
                 username: 'ref_costa',
                 email: 'costa@referee.com',
                 phone: '+254722222005',
-                passwordHash: await bcryptjs_1.default.hash("tennis123", 10),
+                passwordHash: await bcrypt.hash("tennis123", 10),
                 firstName: 'Marco',
                 lastName: 'Costa',
                 photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&q=80',
@@ -526,6 +522,87 @@ async function main() {
             }
         }
         console.log('Seeded coach certifications, specializations, availability, pricing, and reviews.');
+        
+        // Seed real CoachSessions for each coach
+        const org = await prisma.organization.findUnique({ where: { name: 'Pwani University Tennis Club' } });
+        const sessionTitles = {
+            'Head Coach': [
+                'Tactical Development',
+                'Match Preparation',
+                'Serve & Volley Clinic',
+                'Backhand Mastery',
+            ],
+            'Fitness Coach': [
+                'Tennis Fitness Bootcamp',
+                'Conditioning for Power',
+                'Endurance Training',
+            ],
+            'Junior Coach': [
+                'Junior Fundamentals',
+                'Fun Tennis Drills',
+                'Court Etiquette',
+            ],
+            'Assistant Coach': [
+                'Doubles Strategy',
+                'Mixed Doubles Clinic',
+                'Teamwork & Communication',
+            ],
+        };
+        
+        for (const coach of coaches) {
+            const coachTitles = sessionTitles[coach.role] || ['Coaching Session'];
+            const basePrice = coach.role.includes('Head') ? 120 : coach.role.includes('Fitness') ? 80 : 60;
+            
+            // Create 4-5 sessions per coach
+            for (let i = 0; i < 5; i++) {
+                const daysOffset = (i + 1) * 2; // Sessions 2, 4, 6, 8, 10 days from now
+                const startDate = new Date();
+                startDate.setDate(startDate.getDate() + daysOffset);
+                startDate.setHours(9 + (i % 3) * 2, 0, 0, 0); // 9am, 11am, 1pm
+                
+                const endDate = new Date(startDate);
+                endDate.setHours(startDate.getHours() + (coach.role.includes('Fitness') ? 1 : 1.5));
+                
+                const sessionType = i % 3 === 0 ? 'group' : '1-on-1';
+                const maxParticipants = sessionType === 'group' ? (coach.maxStudentsPerSession || 6) : 1;
+                
+                // Create the session
+                const session = await prisma.coachSession.create({
+                    data: {
+                        coachId: coach.userId,
+                        organizationId: org?.id,
+                        sessionType,
+                        title: coachTitles[i % coachTitles.length],
+                        description: `${coach.role} led ${sessionType === 'group' ? 'group' : 'private'} coaching session focused on improving your tennis skills.`,
+                        startTime: startDate,
+                        endTime: endDate,
+                        timezone: 'Africa/Nairobi',
+                        maxParticipants,
+                        price: basePrice * (sessionType === 'group' ? 0.5 : 1),
+                        status: 'scheduled',
+                    },
+                }).catch(() => null);
+                
+                // Add some bookings from existing players
+                if (session && allPlayers.length > 0) {
+                    const numBookings = Math.floor(Math.random() * (maxParticipants - 0.5)) + 1;
+                    const selectedPlayers = allPlayers.slice(0, numBookings);
+                    
+                    for (const player of selectedPlayers) {
+                        await prisma.sessionBooking.create({
+                            data: {
+                                sessionId: session.id,
+                                playerId: player.userId,
+                                status: 'confirmed',
+                                attendanceStatus: 'pending',
+                            },
+                        }).catch(() => null); // ignore if duplicate
+                    }
+                }
+            }
+        }
+        console.log('Seeded CoachSessions for all coaches.');
+
     }
     // Seed badges and assign some to players
     const badgeSeed = [

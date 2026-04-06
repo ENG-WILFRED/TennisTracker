@@ -1,9 +1,7 @@
 import "../styles/globals.css";
 import type { ReactNode } from "react";
-import FloatingMessagesPanel from "@/components/FloatingMessagesPanel";
-import { AuthProvider } from "@/context/AuthContext";
+import Providers from "@/components/Providers";
 import { RoleProvider } from "@/context/RoleContext";
-import { ChatProvider } from "@/context/chat/ChatContext";
 import { Metadata } from "next";
 import { Toaster } from "react-hot-toast";
 
@@ -21,15 +19,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <link href="https://fonts.googleapis.com/css2?family=Clash+Display:wght@400;500;600;700&family=Epilogue:wght@300;400;500;600&display=swap" rel="stylesheet" />
       </head>
       <body>
-        <AuthProvider>
-          <RoleProvider>
-            <ChatProvider>
-              {children}
-              <FloatingMessagesPanel />
-              <Toaster position="top-right" />
-            </ChatProvider>
-          </RoleProvider>
-        </AuthProvider>
+        <RoleProvider>
+          <Providers>
+            {children}
+            <Toaster position="top-right" />
+          </Providers>
+        </RoleProvider>
       </body>
     </html>
   );
