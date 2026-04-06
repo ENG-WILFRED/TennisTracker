@@ -17,8 +17,8 @@ export class OrganizationActivityTracker {
           organizationId: data.organizationId,
           playerId: data.playerId,
           action: data.action,
-          details: data.details,
-          metadata: data.metadata || {},
+          details: data.details as any,
+          metadata: (data.metadata || {}) as any,
         },
       });
 

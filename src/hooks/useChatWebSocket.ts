@@ -146,16 +146,16 @@ class ChatWebSocketManager {
   }
 
   private handleMessage(message: unknown) {
-    if (!message || !message.type) return;
+    if (!message || !(message as any).type) return;
 
     try {
-      if (message.type === 'auth-confirmed') {
-        console.log('🔐 Chat: Auth confirmed', message.userId);
+      if ((message as any).type === 'auth-confirmed') {
+        console.log('🔐 Chat: Auth confirmed', (message as any).userId);
         return;
       }
 
-      if (message.type === 'error') {
-        const errorMsg = typeof message.data === 'string' ? message.data : JSON.stringify(message.data);
+      if ((message as any).type === 'error') {
+        const errorMsg = typeof (message as any).data === 'string' ? (message as any).data : JSON.stringify((message as any).data);
         console.error('Chat WebSocket error:', errorMsg);
         return;
       }
@@ -164,7 +164,7 @@ class ChatWebSocketManager {
       return;
     }
 
-    const listeners = this.listeners.get(message.type);
+    const listeners = this.listeners.get((message as any).type);
     if (listeners) {
       listeners.forEach((listener) => listener(message));
     }

@@ -48,6 +48,7 @@ export function CommunityFeed() {
   const [newpostContent, setNewpostContent] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [wsConnected, setWsConnected] = useState(false);
+  const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
 
   // Load feed
   async function loadFeed() {
@@ -76,19 +77,21 @@ export function CommunityFeed() {
   // Subscribe to real-time updates
   const isConnected = useCommunityUpdates(
     // onPostCreated
-    (newPost) => {
+    (newPost: unknown) => {
       console.log('📝 New post received:', newPost);
-      setPosts((prev) => [newPost, ...prev]);
+      const typedPost = newPost as Post;
+      setPosts((prev) => [typedPost, ...prev]);
     },
     // onCommentAdded
-    (data) => {
+    (data: unknown) => {
       console.log('💬 New comment received:', data);
+      const typedData = data as { postId: string; comment: Post['comments'][0] };
       setPosts((prev) =>
         prev.map((post) => {
-          if (post.id === data.postId) {
+          if (post.id === typedData.postId) {
             return {
               ...post,
-              comments: [...post.comments, data.comment],
+              comments: [...post.comments, typedData.comment],
               commentCount: post.commentCount + 1,
             };
           }
@@ -97,18 +100,19 @@ export function CommunityFeed() {
       );
     },
     // onCommentReplyAdded (NEW)
-    (reply) => {
+    (reply: unknown) => {
       console.log('🔄 Comment reply received:', reply);
+      const typedReply = reply as { postId: string; parentCommentId: string; replies?: any[] };
       setPosts((prev) =>
         prev.map((post) => {
-          if (post.id === reply.postId) {
+          if (post.id === typedReply.postId) {
             return {
               ...post,
               comments: post.comments.map((comment) =>
-                comment.id === reply.parentCommentId
+                comment.id === typedReply.parentCommentId
                   ? {
                       ...comment,
-                      replies: [...(comment.replies || []), reply],
+                      replies: [...(comment.replies || []), typedReply],
                     }
                   : comment
               ),
@@ -119,18 +123,19 @@ export function CommunityFeed() {
       );
     },
     // onCommentReactionAdded (NEW)
-    (reaction) => {
+    (reaction: unknown) => {
       console.log('❤️ Comment reaction added:', reaction);
+      const typedReaction = reaction as { postId: string; commentId: string; reaction: any };
       setPosts((prev) =>
         prev.map((post) => {
-          if (post.id === reaction.postId) {
+          if (post.id === typedReaction.postId) {
             return {
               ...post,
               comments: post.comments.map((comment) =>
-                comment.id === reaction.commentId
+                comment.id === typedReaction.commentId
                   ? {
                       ...comment,
-                      reactions: [...(comment.reactions || []), reaction.reaction],
+                      reactions: [...(comment.reactions || []), typedReaction.reaction],
                     }
                   : comment
               ),
@@ -141,18 +146,19 @@ export function CommunityFeed() {
       );
     },
     // onCommentReactionRemoved (NEW)
-    (reaction) => {
+    (reaction: unknown) => {
       console.log('💔 Comment reaction removed:', reaction);
+      const typedReaction = reaction as { postId: string; commentId: string; userId: string; reactionType: string };
       setPosts((prev) =>
         prev.map((post) => {
           return {
             ...post,
             comments: post.comments.map((comment) =>
-              comment.id === reaction.commentId
+              comment.id === typedReaction.commentId
                 ? {
                     ...comment,
                     reactions: (comment.reactions || []).filter(
-                      (r) => !(r.userId === reaction.userId && r.type === reaction.reactionType)
+                      (r) => !(r.userId === typedReaction.userId && r.type === typedReaction.reactionType)
                     ),
                   }
                 : comment
@@ -162,12 +168,13 @@ export function CommunityFeed() {
       );
     },
     // onPostLiked
-    (data) => {
+    (data: unknown) => {
       console.log('👍 Post reaction:', data);
+      const typedData = data as { postId: string; action: string };
       setPosts((prev) =>
         prev.map((post) => {
-          if (post.id === data.postId) {
-            const isLiking = data.action === 'liked';
+          if (post.id === typedData.postId) {
+            const isLiking = typedData.action === 'liked';
             return {
               ...post,
               reactionCount: isLiking
@@ -196,7 +203,7 @@ export function CommunityFeed() {
   // Create post
   async function handleCreatePost(e: React.FormEvent) {
     e.preventDefault();
-    if (!newpostContent.trim() || !session?.user) return;
+    if (!newpostContent.trim() || !user) return;
 
     setSubmitting(true);
     try {
@@ -251,7 +258,7 @@ export function CommunityFeed() {
     }
   }
 
-  if (!session?.user) {
+  if (!user) {
     return <div>Please sign in to view the feed.</div>;
   }
 

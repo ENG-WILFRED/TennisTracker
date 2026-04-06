@@ -69,14 +69,15 @@ export default function CommunityPanel({ userId }: { userId: string }) {
   // WebSocket setup for real-time updates
   const isConnected = useCommunityUpdates(
     undefined, // onPostCreated
-    (comment) => {
+    (comment: unknown) => {
       // New comment added
+      const typedComment = comment as Comment & { postId: string };
       setPosts((prev) =>
         prev.map((post) =>
-          post.id === comment.postId
+          post.id === typedComment.postId
             ? {
                 ...post,
-                comments: [...post.comments, comment],
+                comments: [...post.comments, typedComment],
               }
             : post
         )
@@ -86,12 +87,13 @@ export default function CommunityPanel({ userId }: { userId: string }) {
     undefined, // onCommentReplyAdded
     undefined, // onCommentReactionAdded
     undefined, // onCommentReactionRemoved
-    (data) => {
+    (data: unknown) => {
       // Post liked
+      const typedData = data as { postId: string; likes: PostLike[] };
       setPosts((prev) =>
         prev.map((post) =>
-          post.id === data.postId
-            ? { ...post, likes: data.likes || post.likes }
+          post.id === typedData.postId
+            ? { ...post, likes: typedData.likes || post.likes }
             : post
         )
       );

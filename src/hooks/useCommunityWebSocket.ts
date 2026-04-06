@@ -328,12 +328,12 @@ export function useCommunityWebSocket(userId?: string) {
     setIsConnected(wsManager.isConnected());
 
     // Subscribe to all event types
-    const eventTypes = ['post-created', 'comment-added', 'post-liked', 'user-followed', 'feed-update'];
+    const eventTypes = ['post-created', 'comment-added', 'post-liked', 'user-followed', 'feed-update'] as const;
     
     eventTypes.forEach((eventType) => {
       const unsubscribe = wsManager.subscribe(eventType, (data) => {
         setUpdates({
-          type: eventType as const,
+          type: eventType,
           data,
           timestamp: new Date().toISOString(),
         });
@@ -353,7 +353,7 @@ export function useCommunityWebSocket(userId?: string) {
       unsubscribesRef.current = [];
       clearInterval(connectionCheckRef);
     };
-  }, [userId, session?.user?.email]);
+  }, [userId, user?.id]);
 
   return { isConnected, updates };
 }

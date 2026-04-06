@@ -61,11 +61,11 @@ export function UserProfile({ userId }: UserProfileProps) {
     }
 
     loadProfile();
-  }, [userId, session]);
+  }, [userId, user]);
 
   // Handle follow/unfollow
   async function handleFollow() {
-    if (!session?.user) return;
+    if (!user) return;
 
     setFollowLoading(true);
     try {
@@ -89,7 +89,7 @@ export function UserProfile({ userId }: UserProfileProps) {
             ...profile,
             isFollowing: newIsFollowing,
             followers: newIsFollowing
-              ? [...profile.followers, { id: userId, name: session.user.name || 'User', email: session.user.email || '' }]
+              ? [...profile.followers, { id: userId, name: `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'User', email: user?.email || '' }]
               : profile.followers.filter(f => f.id !== userId)
           });
         }
@@ -139,7 +139,7 @@ export function UserProfile({ userId }: UserProfileProps) {
       </div>
 
       {/* Follow Button */}
-      {!isOwnProfile && session?.user && (
+      {!isOwnProfile && user && (
         <button
           onClick={handleFollow}
           disabled={followLoading}

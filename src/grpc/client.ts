@@ -11,10 +11,10 @@ const packageDefinition = loadSync(PROTO_PATH, {
   oneofs: true,
 });
 const protoDescriptor: Record<string, unknown> = grpc.loadPackageDefinition(packageDefinition);
-const tennis = protoDescriptor.tennis;
+const tennis = protoDescriptor.tennis as any;
 
 export function getPlayerStats(playerId: string) {
-  const client = new tennis.Analytics(
+  const client = new (tennis.Analytics as any)(
     'localhost:50051',
     grpc.credentials.createInsecure()
   );

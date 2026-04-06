@@ -40,49 +40,53 @@ export function CommentThread({ postId, initialComments }: CommentThreadProps) {
   // Real-time updates via WebSocket
   const isConnected = useCommunityUpdates(
     undefined, // onPostCreated
-    (comment) => {
+    (comment: unknown) => {
       // New top-level comment added
-      if (comment.postId === postId && !comment.parentCommentId) {
-        setComments((prev) => [comment, ...prev]);
+      const typedComment = comment as Comment;
+      if (typedComment.postId === postId && !typedComment.parentCommentId) {
+        setComments((prev) => [typedComment, ...prev]);
       }
     },
-    (reply) => {
+    (reply: unknown) => {
       // New reply to a comment
-      if (reply.postId === postId && reply.parentCommentId) {
+      const typedReply = reply as Comment;
+      if (typedReply.postId === postId && typedReply.parentCommentId) {
         setComments((prev) =>
           prev.map((comment) =>
-            comment.id === reply.parentCommentId
+            comment.id === typedReply.parentCommentId
               ? {
                   ...comment,
-                  replies: [...(comment.replies || []), reply],
+                  replies: [...(comment.replies || []), typedReply],
                 }
               : comment
           )
         );
       }
     },
-    (reactionData) => {
+    (reactionData: unknown) => {
       // Reaction added to comment
+      const typedReaction = reactionData as { commentId: string; reaction: { id: string; userId: string; type: string } };
       setComments((prev) =>
         prev.map((comment) =>
-          comment.id === reactionData.commentId
+          comment.id === typedReaction.commentId
             ? {
                 ...comment,
-                reactions: [...(comment.reactions || []), reactionData.reaction],
+                reactions: [...(comment.reactions || []), typedReaction.reaction],
               }
             : comment
         )
       );
     },
-    (reactionData) => {
+    (reactionData: unknown) => {
       // Reaction removed from comment
+      const typedReaction = reactionData as { commentId: string; userId: string; reactionType: string };
       setComments((prev) =>
         prev.map((comment) =>
-          comment.id === reactionData.commentId
+          comment.id === typedReaction.commentId
             ? {
                 ...comment,
                 reactions: (comment.reactions || []).filter(
-                  (r) => !(r.userId === reactionData.userId && r.type === reactionData.reactionType)
+                  (r) => !(r.userId === typedReaction.userId && r.type === typedReaction.reactionType)
                 ),
               }
             : comment
@@ -101,7 +105,7 @@ export function CommentThread({ postId, initialComments }: CommentThreadProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'reply-to-comment',
-          userId: session?.user?.email || 'unknown-user',
+          userId: user?.email || 'unknown-user',
           data: {
             commentId: parentCommentId,
             content: replyContent,
@@ -127,7 +131,7 @@ export function CommentThread({ postId, initialComments }: CommentThreadProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'react-to-comment',
-          userId: session?.user?.email || 'unknown-user',
+          userId: user?.email || 'unknown-user',
           data: {
             commentId,
             reactionType,

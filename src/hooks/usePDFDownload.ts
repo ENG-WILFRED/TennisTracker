@@ -36,7 +36,7 @@ export const usePDFDownload = () => {
     safeProperties.forEach(prop => {
       const value = computed.getPropertyValue(prop);
       if (value && (value.includes('lab(') || value.includes('oklch(') || value.includes('lch(') || value.includes('hwb('))) {
-        element.style[prop as keyof CSSStyleDeclaration] = '#333333';
+        (element.style as any)[prop] = '#333333';
       }
     });
   };

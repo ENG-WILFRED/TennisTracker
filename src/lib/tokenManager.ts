@@ -113,7 +113,7 @@ export async function refreshAccessToken(): Promise<boolean> {
     if (typeof data === 'object' && data !== null &&
         typeof data.accessToken === 'string' &&
         typeof data.refreshToken === 'string') {
-      storeTokens(data as AuthTokens);
+      storeTokens(data as unknown as AuthTokens);
       return true;
     } else {
       console.error('Invalid tokens received from refresh endpoint:', data);
