@@ -53,6 +53,16 @@ export async function GET(
       },
     });
 
+    // Get referee info if applicable
+    const referee = await prisma.referee.findUnique({
+      where: { userId: userId },
+      select: {
+        certifications: true,
+        matchesRefereed: true,
+        ballCrewMatches: true,
+      },
+    });
+
     // Get current ranking if player exists
     let ranking = null;
     if (player) {
@@ -85,6 +95,11 @@ export async function GET(
       ...user,
       organization: player?.organization || null,
       ranking: ranking,
+      referee: referee ? {
+        certifications: referee.certifications,
+        matchesRefereed: referee.matchesRefereed,
+        ballCrewMatches: referee.ballCrewMatches,
+      } : null,
     });
   } catch (error) {
     console.error('GET /api/user/profile/[userId] error:', error);
@@ -141,6 +156,18 @@ export async function PUT(request: NextRequest) {
         phone: true,
       },
     });
+
+    // Handle certifications for referees
+    if ('certifications' in body && Array.isArray(body.certifications)) {
+      await prisma.referee.update({
+        where: { userId },
+        data: {
+          certifications: body.certifications,
+        },
+      }).catch(() => {
+        // Referee record might not exist, just continue
+      });
+    }
 
     return NextResponse.json(updatedUser);
   } catch (error) {

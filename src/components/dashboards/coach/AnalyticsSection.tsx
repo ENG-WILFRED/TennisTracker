@@ -105,6 +105,11 @@ export default function AnalyticsSection({ coachId }: { coachId: string }) {
 
   const [stats, setStats] = useState<CoachStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [wallet, setWallet] = useState<any | null>(null);
+  const [txFilter, setTxFilter] = useState<'all' | 'credit' | 'debit'>('all');
+  const [showPayoutModal, setShowPayoutModal] = useState(false);
+  const [payoutLoading, setPayoutLoading] = useState(false);
+  const [payoutForm, setPayoutForm] = useState({ amount: '', paymentMethod: 'bank_transfer', bankDetails: '' });
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -122,8 +127,68 @@ export default function AnalyticsSection({ coachId }: { coachId: string }) {
         setLoading(false);
       }
     };
+    
+    const fetchWallet = async () => {
+      try {
+        const res = await fetch(`/api/coaches/wallet?coachId=${coachId}`);
+        if (res.ok) {
+          const data = await res.json();
+          setWallet(data);
+        }
+      } catch (error) {
+        console.error('Error fetching wallet:', error);
+      }
+    };
+    
     fetchStats();
+    fetchWallet();
   }, [coachId]);
+
+  const handlePayout = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!payoutForm.amount || parseFloat(payoutForm.amount) <= 0) {
+      alert('Please enter a valid amount');
+      return;
+    }
+    if (parseFloat(payoutForm.amount) > (wallet?.balance || 0)) {
+      alert('Amount exceeds available balance');
+      return;
+    }
+    
+    setPayoutLoading(true);
+    try {
+      const res = await fetch('/api/coaches/payouts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          coachId,
+          amount: parseFloat(payoutForm.amount),
+          paymentMethod: payoutForm.paymentMethod,
+          bankDetails: payoutForm.bankDetails,
+        }),
+      });
+
+      if (res.ok) {
+        alert('Payout request submitted successfully!');
+        setPayoutForm({ amount: '', paymentMethod: 'bank_transfer', bankDetails: '' });
+        setShowPayoutModal(false);
+        // Refresh wallet data
+        const walletRes = await fetch(`/api/coaches/wallet?coachId=${coachId}`);
+        if (walletRes.ok) {
+          const data = await walletRes.json();
+          setWallet(data);
+        }
+      } else {
+        const err = await res.json();
+        alert(err.error || 'Failed to submit payout request');
+      }
+    } catch (error) {
+      console.error('Error submitting payout:', error);
+      alert('Error submitting payout request');
+    } finally {
+      setPayoutLoading(false);
+    }
+  };
 
   const card = { background: G.card, border: `1px solid ${G.border}`, borderRadius: 12, padding: 14 } as const;
   const card2 = { background: G.card2, border: `1px solid ${G.border}`, borderRadius: 10, padding: 12 } as const;
@@ -140,6 +205,9 @@ export default function AnalyticsSection({ coachId }: { coachId: string }) {
   const chartData = activeChart === 'revenue'
     ? (stats.monthlyRevenue || []).map(d => ({ label: d.month, value: d.revenue }))
     : (stats.weeklyStats || []).map(d => ({ label: d.day, value: d.sessions }));
+
+  const txCategoryIcon: Record<string, string> = { session: '🎾', payout: '💸', bonus: '🎁', refund: '↩️', default: '💳' };
+  const filteredTx = wallet?.transactions ? wallet.transactions.filter((t: any) => txFilter === 'all' || t.type === txFilter) : [];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
@@ -173,121 +241,84 @@ export default function AnalyticsSection({ coachId }: { coachId: string }) {
         ))}
       </div>
 
-      {/* Chart + Session Breakdown */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 11 }}>
-
-        {/* Revenue / Sessions Chart */}
-        <div style={card}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-            <SectionLabel>{activeChart === 'revenue' ? 'Monthly Revenue' : 'Weekly Sessions'}</SectionLabel>
-            <div style={{ display: 'flex', gap: 4, background: G.dark, borderRadius: 6, padding: 3 }}>
-              {(['revenue', 'sessions'] as const).map(tab => (
-                <button key={tab} onClick={() => setActiveChart(tab)} style={{
-                  padding: '3px 10px', borderRadius: 4, border: 'none', cursor: 'pointer', fontSize: 9, fontWeight: 700,
-                  background: activeChart === tab ? G.lime : 'transparent',
-                  color: activeChart === tab ? '#0a180a' : G.muted,
-                }}>
-                  {tab === 'revenue' ? '💰 Revenue' : '📅 Sessions'}
-                </button>
-              ))}
+      {/* Earnings & Payout Banner */}
+      <div style={{ ...card, background: `linear-gradient(135deg, ${G.card2}, ${G.card})`, borderLeft: `3px solid ${G.lime}` }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <div style={{ fontSize: 12, color: G.muted, marginBottom: 4 }}>💸 Total Earned (All Time)</div>
+            <div style={{ fontSize: 32, fontWeight: 900, color: G.lime2, lineHeight: 1 }}>${(wallet?.totalEarned || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+            <div style={{ fontSize: 9.5, color: G.muted2, marginTop: 6 }}>
+              Available to withdraw: <span style={{ color: G.lime, fontWeight: 800 }}>${(wallet?.balance || 0).toFixed(2)}</span>
             </div>
           </div>
-          <MiniBarChart data={chartData} color={activeChart === 'revenue' ? G.lime : G.blue} />
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 12, paddingTop: 10, borderTop: `1px solid ${G.border}` }}>
-            <div>
-              <div style={{ fontSize: 8, color: G.muted }}>PEAK</div>
-              <div style={{ fontSize: 13, fontWeight: 800, color: G.lime2 }}>
-                {activeChart === 'revenue'
-                  ? `$${((stats.monthlyRevenue || []).length ? Math.max(...stats.monthlyRevenue.map(d => d.revenue)).toLocaleString() : '0')}`
-                  : `${((stats.weeklyStats || []).length ? Math.max(...stats.weeklyStats.map(d => d.sessions)) : 0)} sessions`}
-              </div>
-            </div>
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: 8, color: G.muted }}>AVG</div>
-              <div style={{ fontSize: 13, fontWeight: 800, color: G.lime2 }}>
-                {activeChart === 'revenue'
-                  ? `$${Math.round(((stats.monthlyRevenue || []).reduce((a, d) => a + d.revenue, 0) / Math.max((stats.monthlyRevenue || []).length, 1))).toLocaleString()}`
-                  : `${(((stats.weeklyStats || []).reduce((a, d) => a + d.sessions, 0) / Math.max((stats.weeklyStats || []).length, 1))).toFixed(1)}/day`}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Session Type Breakdown */}
-        <div style={card}>
-          <SectionLabel>Sessions by Type</SectionLabel>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginTop: 4 }}>
-            {(stats.sessionsByType || []).length === 0 ? (
-              <div style={{ color: G.muted, fontSize: 11, textAlign: 'center', padding: '14px 0' }}>No session type data available.</div>
-            ) : (
-              (stats.sessionsByType || []).map((s, i) => {
-                const colors = [G.lime, G.blue, G.yellow];
-                const pct = stats.totalSessions > 0 ? Math.round((s.count / stats.totalSessions) * 100) : 0;
-                return (
-                  <div key={i}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
-                      <span style={{ fontSize: 11.5, fontWeight: 700 }}>{s.type}</span>
-                      <span style={{ fontSize: 10, color: colors[i] || G.lime, fontWeight: 700 }}>{s.count} <span style={{ color: G.muted, fontWeight: 400 }}>({pct}%)</span></span>
-                    </div>
-                    <ProgressBar value={pct} color={colors[i] || G.lime} height={5} />
-                  </div>
-                );
-              })
-            )}
-          </div>
-
-          <div style={{ borderTop: `1px solid ${G.border}`, marginTop: 14, paddingTop: 12 }}>
-            <SectionLabel>Performance Metrics</SectionLabel>
-            {[
-              { label: 'Completion Rate', value: stats.completionRate ?? 0, suffix: '%', color: G.lime },
-              { label: 'Player Retention', value: stats.retentionRate ?? 0, suffix: '%', color: G.blue },
-            ].map((m, i) => {
-              const value = Number.isFinite(m.value) ? m.value : 0;
-              return (
-                <div key={i} style={{ marginBottom: 8 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
-                    <span style={{ fontSize: 10.5, color: G.text2 }}>{m.label}</span>
-                    <span style={{ fontSize: 10.5, fontWeight: 800, color: m.color }}>{value.toFixed(1)}{m.suffix}</span>
-                  </div>
-                  <ProgressBar value={value} color={m.color} height={4} />
-                </div>
-              );
-            })}
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button
+              onClick={() => setShowPayoutModal(true)}
+              disabled={!wallet || wallet.balance <= 0 || payoutLoading}
+              style={{
+                background: wallet && wallet.balance > 0 ? G.lime : G.border,
+                color: wallet && wallet.balance > 0 ? '#0a180a' : G.muted,
+                border: 'none',
+                borderRadius: 8,
+                padding: '10px 16px',
+                fontWeight: 800,
+                fontSize: 11,
+                cursor: wallet && wallet.balance > 0 ? 'pointer' : 'not-allowed',
+                opacity: wallet && wallet.balance > 0 ? 1 : 0.5,
+                transition: 'all 0.2s',
+              }}
+            >
+              💸 {payoutLoading ? 'Processing...' : 'Request Payout'}
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Top Players + Recent Reviews */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 11 }}>
+      {/* Chart + Session Breakdown */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 11 }}>
 
-        {/* Top Players by Revenue */}
+        {/* Transactions */}
         <div style={card}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 11 }}>
-            <SectionLabel>Top Players by Revenue</SectionLabel>
-            <Tag>This month</Tag>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <SectionLabel>Transactions</SectionLabel>
+            <div style={{ display: 'flex', gap: 3, background: G.dark, borderRadius: 6, padding: 3 }}>
+              {(['all', 'credit', 'debit'] as const).map(f => (
+                <button key={f} onClick={() => setTxFilter(f)} style={{ padding: '3px 9px', borderRadius: 4, border: 'none', cursor: 'pointer', fontSize: 9, fontWeight: 700, background: txFilter === f ? G.lime : 'transparent', color: txFilter === f ? '#0a180a' : G.muted, textTransform: 'capitalize' }}>
+                  {f}
+                </button>
+              ))}
+            </div>
           </div>
-          {(stats.topPlayers || []).length === 0 ? (
-            <div style={{ color: G.muted, fontSize: 11, textAlign: 'center', padding: '14px 0' }}>No top players data available.</div>
-          ) : (
-            (stats.topPlayers || []).map((p, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '8px 0', borderBottom: i < (stats.topPlayers || []).length - 1 ? `1px solid ${G.border}` : 'none' }}>
-                <div style={{ width: 22, height: 22, borderRadius: '50%', background: i === 0 ? G.lime : G.mid, border: `1px solid ${G.border2}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 800, color: i === 0 ? '#0a180a' : G.lime, flexShrink: 0 }}>
-                  {i + 1}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 7, maxHeight: 400, overflowY: 'auto' }}>
+            {filteredTx.length === 0 ? (
+              <div style={{ textAlign: 'center', color: G.muted, fontSize: 10.5, padding: '20px 0' }}>No transactions</div>
+            ) : (
+              filteredTx.map((tx: any) => (
+                <div key={tx.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 11px', background: G.card2, borderRadius: 8, border: `1px solid ${G.border}` }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                    <div style={{ width: 30, height: 30, borderRadius: 7, background: tx.type === 'credit' ? 'rgba(121,191,62,.15)' : 'rgba(217,79,79,.1)', border: `1px solid ${tx.type === 'credit' ? G.lime : G.red}44`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 }}>
+                      {txCategoryIcon[tx.category || 'default']}
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 11, fontWeight: 700, maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tx.description}</div>
+                      <div style={{ fontSize: 8.5, color: G.muted, marginTop: 1 }}>{new Date(tx.createdAt).toLocaleDateString()}</div>
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                    <div style={{ fontSize: 12.5, fontWeight: 900, color: tx.type === 'credit' ? G.lime2 : G.red }}>
+                      {tx.type === 'credit' ? '+' : '–'}${tx.amount.toFixed(2)}
+                    </div>
+                    {tx.status && <div style={{ fontSize: 8, color: G.muted }}>{tx.status}</div>}
+                  </div>
                 </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 11.5, fontWeight: 700 }}>{p.name}</div>
-                  <div style={{ fontSize: 9, color: G.muted }}>{p.sessions || 0} sessions</div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: 12, fontWeight: 800, color: G.lime2 }}>${(p.revenue || 0).toLocaleString()}</div>
-                  <div style={{ fontSize: 8.5, color: G.muted }}>${((p.revenue || 0) / Math.max(p.sessions || 1, 1)).toFixed(0)}/session</div>
-                </div>
-              </div>
-            ))
-          )}
+              ))
+            )}
+          </div>
         </div>
+      </div>
 
-        {/* Recent Reviews */}
+      {/* Recent Reviews */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 11 }}>
         <div style={card}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 11 }}>
             <SectionLabel>Recent Reviews</SectionLabel>
@@ -342,6 +373,191 @@ export default function AnalyticsSection({ coachId }: { coachId: string }) {
           ))}
         </div>
       </div>
+
+      {/* Payout Request Modal */}
+      {showPayoutModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+        }}>
+          <div style={{
+            background: G.card,
+            border: `1px solid ${G.border}`,
+            borderRadius: 16,
+            padding: 24,
+            maxWidth: 500,
+            width: '90%',
+            maxHeight: '90vh',
+            overflowY: 'auto',
+          }}>
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <div>
+                <div style={{ fontSize: 16, fontWeight: 900, color: G.text }}>💸 Request Payout</div>
+                <div style={{ fontSize: 10, color: G.muted2, marginTop: 2 }}>Withdraw your earnings</div>
+              </div>
+              <button
+                onClick={() => setShowPayoutModal(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: 20,
+                  color: G.lime,
+                  cursor: 'pointer',
+                  padding: 0,
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Available Balance Info */}
+            <div style={{
+              background: G.card2,
+              border: `1px solid ${G.border}`,
+              borderRadius: 10,
+              padding: 12,
+              marginBottom: 16,
+            }}>
+              <div style={{ fontSize: 9, color: G.muted, marginBottom: 2 }}>Available Balance</div>
+              <div style={{ fontSize: 24, fontWeight: 900, color: G.lime2 }}>
+                ${(wallet?.balance || 0).toFixed(2)}
+              </div>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handlePayout} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {/* Amount */}
+              <div>
+                <label style={{ fontSize: 10, fontWeight: 700, color: G.text, textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>
+                  Withdrawal Amount *
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max={wallet?.balance || 0}
+                  value={payoutForm.amount}
+                  onChange={(e) => setPayoutForm({ ...payoutForm, amount: e.target.value })}
+                  placeholder="Enter amount"
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    background: G.dark,
+                    border: `1px solid ${G.border}`,
+                    color: G.text,
+                    borderRadius: 8,
+                    fontSize: 12,
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                  }}
+                />
+              </div>
+
+              {/* Payment Method */}
+              <div>
+                <label style={{ fontSize: 10, fontWeight: 700, color: G.text, textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>
+                  Payment Method *
+                </label>
+                <select
+                  value={payoutForm.paymentMethod}
+                  onChange={(e) => setPayoutForm({ ...payoutForm, paymentMethod: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    background: G.dark,
+                    border: `1px solid ${G.border}`,
+                    color: G.text,
+                    borderRadius: 8,
+                    fontSize: 12,
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                  }}
+                >
+                  <option value="bank_transfer">Bank Transfer</option>
+                  <option value="paypal">PayPal</option>
+                  <option value="stripe">Stripe</option>
+                </select>
+              </div>
+
+              {/* Bank Details */}
+              <div>
+                <label style={{ fontSize: 10, fontWeight: 700, color: G.text, textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>
+                  {payoutForm.paymentMethod === 'bank_transfer' ? 'Bank Account Details *' : 'Account Email *'}
+                </label>
+                <textarea
+                  value={payoutForm.bankDetails}
+                  onChange={(e) => setPayoutForm({ ...payoutForm, bankDetails: e.target.value })}
+                  placeholder={payoutForm.paymentMethod === 'bank_transfer' ? 'Enter your bank name, account number, and routing number' : 'Enter your PayPal or Stripe email'}
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    background: G.dark,
+                    border: `1px solid ${G.border}`,
+                    color: G.text,
+                    borderRadius: 8,
+                    fontSize: 12,
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                    minHeight: 80,
+                    fontFamily: 'inherit',
+                    resize: 'vertical',
+                  }}
+                />
+              </div>
+
+              {/* Actions */}
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  type="button"
+                  onClick={() => setShowPayoutModal(false)}
+                  style={{
+                    flex: 1,
+                    padding: '10px 0',
+                    background: G.card2,
+                    border: `1px solid ${G.border}`,
+                    color: G.text,
+                    borderRadius: 8,
+                    fontWeight: 700,
+                    fontSize: 11,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={payoutLoading || !payoutForm.amount}
+                  style={{
+                    flex: 1,
+                    padding: '10px 0',
+                    background: payoutLoading || !payoutForm.amount ? G.border : G.lime,
+                    border: 'none',
+                    color: payoutLoading || !payoutForm.amount ? G.muted : '#0a180a',
+                    borderRadius: 8,
+                    fontWeight: 700,
+                    fontSize: 11,
+                    cursor: payoutLoading || !payoutForm.amount ? 'not-allowed' : 'pointer',
+                    opacity: payoutLoading || !payoutForm.amount ? 0.6 : 1,
+                  }}
+                >
+                  {payoutLoading ? '⏳ Processing...' : '💸 Submit Request'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
     </div>
   );

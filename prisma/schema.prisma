@@ -101,6 +101,7 @@ model Referee {
   userId           String          @id
   refereedMatches  Match[]         @relation("Referee")
   ballCrewReferees MatchBallCrew[] @relation("BallCrewReferee")
+  matchReports     MatchReport[]
   user             User            @relation(fields: [userId], references: [id])
 }
 
@@ -149,6 +150,7 @@ model Staff {
   stats                  CoachStats?      @relation("CoachStats")
   dailyStats             CoachDailyStats[] @relation("CoachDailyStats")
   sessionReviews         CoachSessionReview[] @relation("CoachSessionReviews")
+  activities             Activity[]       @relation("Activities")
 
   @@index([organizationId])
   @@index([employedById])
@@ -376,6 +378,23 @@ model Match {
   referee   Referee?        @relation("Referee", fields: [refereeId], references: [userId])
   winner    Player?         @relation(fields: [winnerId], references: [userId])
   ballCrew  MatchBallCrew[]
+  report    MatchReport?
+}
+
+model MatchReport {
+  id            String   @id @default(uuid())
+  matchId       String   @unique
+  refereeId     String
+  pdfContent    String   @db.Text
+  fileName      String
+  generatedAt   DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  match         Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  referee       Referee  @relation(fields: [refereeId], references: [userId], onDelete: Cascade)
+
+  @@index([matchId])
+  @@index([refereeId])
+  @@index([generatedAt])
 }
 
 model MatchBallCrew {
@@ -1454,5 +1473,27 @@ model CoachSessionReview {
   @@unique([sessionId, playerId])
   @@index([coachId])
   @@index([playerId])
+  @@index([createdAt])
+}
+
+model Activity {
+  id             String              @id @default(uuid())
+  coachId        String              // Staff user ID
+  type           String              // 'session', 'tournament', 'restocking', 'player-reachout', 'email'
+  date           String              // YYYY-MM-DD format
+  startTime      String              // HH:MM format
+  endTime        String              // HH:MM format
+  title          String
+  description    String?
+  metadata       Json?               // Flexible storage for type-specific fields
+  completed      Boolean             @default(false)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  
+  coach          Staff               @relation("Activities", fields: [coachId], references: [userId], onDelete: Cascade)
+  
+  @@index([coachId])
+  @@index([date])
+  @@index([type])
   @@index([createdAt])
 }

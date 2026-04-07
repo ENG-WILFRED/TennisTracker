@@ -103,6 +103,40 @@ export async function seedCommunity(users: any[]) {
 
   console.log(`  ✓ Created ${follows.length} follow relationships\n`);
 
+  console.log('🎣 Creating referee follows...');
+
+  // Filter for referees
+  const referees = users.filter((u) => u.referee).map((u) => ({
+    userId: u.id,
+    refereeUserId: u.id,
+    email: u.email,
+    name: u.firstName + ' ' + u.lastName,
+  }));
+
+  // Have referees follow some players so they can see posts in feed
+  for (const referee of referees) {
+    const followCount = Math.min(3, players.length); // Follow up to 3 players
+    for (let i = 0; i < followCount; i++) {
+      const randomPlayerIndex = Math.floor(Math.random() * players.length);
+      const playerToFollow = players[randomPlayerIndex];
+
+      try {
+        const refFollow = await prisma.userFollower.create({
+          data: {
+            followerId: referee.refereeUserId,
+            followingId: playerToFollow.playerUserId,
+          },
+        });
+        follows.push(refFollow);
+      } catch (error) {
+        // Follow might already exist
+        continue;
+      }
+    }
+  }
+
+  console.log(`  ✓ Added ${referees.length} referees following players\n`);
+
   console.log('💬 Creating comments on posts...');
 
   // Add comments to posts

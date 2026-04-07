@@ -12,6 +12,46 @@
 	}
 }
 
+/* Greenish Scrollbar Styles */
+::-webkit-scrollbar {
+	width: 8px;
+	height: 8px;
+}
+
+::-webkit-scrollbar-track {
+	background: #162616;
+	border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+	background: #79bf3e;
+	border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+	background: #a8d84e;
+}
+
+/* Firefox Scrollbar */
+* {
+	scrollbar-color: #79bf3e #162616;
+	scrollbar-width: thin;
+}
+
+/* Animations */
+@keyframes pulse {
+	0%, 100% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0.5;
+	}
+}
+
+.live-badge {
+	animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
 @layer utilities {
 	.text-brand {
 		@apply text-green-800;

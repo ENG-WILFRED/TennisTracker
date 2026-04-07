@@ -7,7 +7,6 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import SessionManagement from './coach/SessionManagement';
 import PlayerManagement from './coach/PlayerManagement';
-import EarningsAndWallet from './coach/EarningsAndWallet';
 import AnalyticsSection from './coach/AnalyticsSection';
 import CalendarView from './coach/CalendarView';
 import MessagingPanel from '@/components/dashboards/MessagingPanel';
@@ -31,6 +30,7 @@ const G = {
   muted2: '#7aaa68',
   yellow: '#efc040',
   red: '#d94f4f',
+  blue: '#4a9eff',
 };
 
 /* ── tiny shared components ── */
@@ -41,15 +41,18 @@ const ProgressBar: React.FC<{ value: number; color?: string }> = ({ value, color
   </div>
 );
 
-const Tag: React.FC<{ children: React.ReactNode; yellow?: boolean }> = ({ children, yellow }) => (
+const Tag: React.FC<{ children: React.ReactNode; yellow?: boolean; color?: string }> = ({ children, yellow, color }) => {
+  const c = color || (yellow ? G.yellow : G.lime);
+  return (
   <span style={{
     fontSize: 8.5, fontWeight: 700, borderRadius: 4, padding: '2px 7px',
-    background: yellow ? 'rgba(239,192,64,.1)' : 'rgba(121,191,62,.12)',
-    border: `1px solid ${yellow ? 'rgba(239,192,64,.3)' : 'rgba(121,191,62,.28)'}`,
-    color: yellow ? G.yellow : G.lime,
+    background: `${c}22`,
+    border: `1px solid ${c}44`,
+    color: c,
     display: 'inline-block',
   }}>{children}</span>
 );
+};
 
 const SectionLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <div style={{ fontSize: 8.5, color: G.lime2, fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 7 }}>
@@ -80,8 +83,6 @@ const navItems = [
   { label: 'My Profile', icon: '👤' },
   { label: 'Sessions', icon: '📅' },
   { label: 'Players', icon: '👥' },
-  { label: 'Earnings', icon: '💰' },
-  { label: 'Analytics', icon: '📊' },
   { label: 'Calendar', icon: '📆' },
   { label: 'Messaging', icon: '💬' },
   { label: 'Community', icon: '🌐' },
@@ -128,6 +129,7 @@ export const CoachDashboard: React.FC = () => {
   const [coachData, setCoachData] = useState<any>(null);
   const [earnings, setEarnings] = useState({ thisMonth: 0, pending: 0, perSession: 0 });
   const [stats, setStats] = useState({ studentCount: 0, rating: 0 });
+  const [activities, setActivities] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingProfile, setEditingProfile] = useState(false);
   const [profileData, setProfileData] = useState<any>(null);
@@ -203,6 +205,23 @@ export const CoachDashboard: React.FC = () => {
         if (statsRes.ok) {
           const data = await statsRes.json();
           setStats(data);
+        }
+
+        // Fetch today's activities from the Activity table
+        const activitiesRes = await fetch(`/api/coaches/activities?coachId=${coachId}`);
+        if (activitiesRes.ok) {
+          const data = await activitiesRes.json();
+          const activitiesArray = Array.isArray(data.activities) ? data.activities : [];
+          // Filter for today's activities only (not completed, date = today)
+          const today = new Date();
+          const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`; // YYYY-MM-DD format
+          const todaysActivities = activitiesArray
+            .filter((a: any) => {
+              if (a.completed) return false;
+              return a.date === todayStr; // Only today's scheduled activities
+            })
+            .sort((a: any, b: any) => new Date(`${a.date}T${a.startTime}:00Z`).getTime() - new Date(`${b.date}T${b.startTime}:00Z`).getTime());
+          setActivities(todaysActivities);
         }
       } catch (error) {
         console.error('Error fetching coach data:', error);
@@ -306,12 +325,10 @@ export const CoachDashboard: React.FC = () => {
 
         {/* Nav items */}
         <nav style={{ flex: 1, padding: '6px 7px 0', overflowY: 'auto' }}>
-          {(['Main', 'Content', 'Analytics'] as const).map(section => {
+          {(['Main', 'Content'] as const).map(section => {
             const sectionItems = section === 'Main'
               ? navItems.slice(0, 3)
-              : section === 'Content'
-                ? navItems.slice(3, 5)
-                : navItems.slice(5);
+              : navItems.slice(3);
             return (
               <React.Fragment key={section}>
                 <div style={{ fontSize: 8.5, color: G.muted, letterSpacing: '1.2px', textTransform: 'uppercase', padding: '8px 5px 3px' }}>{section}</div>
@@ -350,7 +367,7 @@ export const CoachDashboard: React.FC = () => {
       </aside>
 
       {/* ═══════════════ MAIN ═══════════════ */}
-      <main style={{ flex: 1, overflowY: activeNav === 'Calendar' ? 'hidden' : 'auto', padding: activeNav === 'Calendar' ? 0 : '14px 13px', display: 'flex', flexDirection: 'column', gap: activeNav === 'Calendar' ? 0 : 11, minWidth: 0 }}>
+      <main style={{ flex: 1, overflowY: activeNav === 'Calendar' ? 'hidden' : 'auto', padding: activeNav === 'Calendar' ? 0 : '14px 18px', display: 'flex', flexDirection: 'column', gap: activeNav === 'Calendar' ? 0 : 11, minWidth: 0 }}>
 
 
         {isProfile ? (
@@ -561,93 +578,8 @@ export const CoachDashboard: React.FC = () => {
 
         ) : activeNav === 'Dashboard' ? (
           <>
-            {/* ── 2-COL GRID ── */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 11, marginBottom: 11 }}>
-
-              {/* Student Progress */}
-              <div style={card}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 11 }}>
-                  <div style={{ fontSize: 12, fontWeight: 800 }}>👥 Student Progress</div>
-                  <Link href="/staff/manage" style={{ fontSize: 10, color: G.lime, textDecoration: 'none', fontWeight: 600 }}>Manage →</Link>
-                </div>
-
-                {loading ? (
-                  <div style={{ color: G.muted, fontSize: 11, textAlign: 'center', padding: '20px 0' }}>Loading players...</div>
-                ) : players.length > 0 ? (
-                  <>
-                    {players.slice(0, 4).map((p, i) => {
-                      const colors = ['#79bf3e', '#5aa832', '#3d7a32', '#2d5a27'];
-                      const initial = p.user?.firstName?.[0] || 'P';
-                      return (
-                        <div key={p.id || i} style={{ marginBottom: 10 }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                              <div style={{ width: 23, height: 23, borderRadius: '50%', background: G.mid, border: `1px solid ${G.border2}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9.5, fontWeight: 800, color: G.lime, flexShrink: 0 }}>
-                                {initial}
-                              </div>
-                              <div>
-                                <div style={{ fontSize: 11.5, fontWeight: 700 }}>{p.user?.firstName} {p.user?.lastName}</div>
-                                <div style={{ fontSize: 9, color: G.muted }}>{p.sessionsCompleted || 0} sessions</div>
-                              </div>
-                            </div>
-                            <span style={{ fontSize: 10.5, fontWeight: 800, color: G.lime2 }}>{Math.round((p.sessionsCompleted || 0) * 10)}%</span>
-                          </div>
-                          <ProgressBar value={Math.round((p.sessionsCompleted || 0) * 10)} color={colors[i % colors.length]} />
-                          <div style={{ fontSize: 9, color: G.muted, marginTop: 3 }}>Progress tracked</div>
-                        </div>
-                      );
-                    })}
-                  </>
-                ) : (
-                  <div style={{ color: G.muted, fontSize: 11, textAlign: 'center', padding: '20px 0' }}>No players yet. Start coaching!</div>
-                )}
-
-                <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
-                  <BtnPrimary style={{ flex: 1 }} onClick={() => handleNavigation('Players')}>Manage Session</BtnPrimary>
-                  <BtnSecondary style={{ flex: 1 }}>📋 Attendance</BtnSecondary>
-                </div>
-              </div>
-
-              {/* Upcoming Training Session */}
-              <div style={card}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                  <div style={{ fontSize: 12, fontWeight: 800 }}>📅 Upcoming Session</div>
-                  <Tag>{schedule.length > 0 ? 'Scheduled' : 'None'}</Tag>
-                </div>
-                {schedule.length > 0 ? (
-                  <>
-                    <div style={{ fontSize: 10, color: G.muted, marginBottom: 11 }}>
-                      {schedule[0]?.time || 'TBD'} &nbsp;·&nbsp; {schedule[0]?.court || 'Court TBD'} &nbsp;·&nbsp; {schedule[0]?.duration || '60'} min
-                    </div>
-
-                    <SectionLabel>Session Details</SectionLabel>
-                    <div style={{ marginBottom: 8 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
-                        <span style={{ fontSize: 11, fontWeight: 600 }}>Participant</span>
-                        <span style={{ fontSize: 9.5, color: G.muted }}>{schedule[0]?.participantName || 'TBD'}</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
-                        <span style={{ fontSize: 11, fontWeight: 600 }}>Type</span>
-                        <span style={{ fontSize: 9.5, color: G.muted }}>{schedule[0]?.sessionType || 'Coaching'}</span>
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  <div style={{ color: G.muted, fontSize: 10, padding: '20px 0', textAlign: 'center' }}>No upcoming sessions</div>
-                )}
-
-                <div style={{ borderTop: `1px solid ${G.border}`, margin: '11px 0' }} />
-
-                <SectionLabel>Quick Actions</SectionLabel>
-                <div style={{ display: 'flex', gap: 5 }}>
-                  <BtnPrimary style={{ flex: 1, padding: '6px 11px', fontSize: 10, borderRadius: 6 }} onClick={() => handleNavigation('Calendar')}>View Calendar</BtnPrimary>
-                  <BtnSecondary style={{ flex: 1, padding: '6px 11px', fontSize: 10, borderRadius: 6 }} onClick={() => handleNavigation('Sessions')}>New Session</BtnSecondary>
-                </div>
-              </div>
-            </div>
-
-            {/* ── STAT CARDS ── */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 9 }}>
+            {/* ── STAT CARDS AT TOP ── */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 9, marginBottom: 16 }}>
               {[
                 { label: 'This Month', value: `$${earnings.thisMonth.toLocaleString()}`, delta: '↑ 12% vs last mo' },
                 { label: 'Per Session', value: `$${earnings.perSession}`, delta: `${players.length} players` },
@@ -661,6 +593,88 @@ export const CoachDashboard: React.FC = () => {
                 </div>
               ))}
             </div>
+
+            {/* ── INCOMING ACTIVITIES FROM DB ── */}
+            <div style={card}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 11 }}>
+                <div style={{ fontSize: 12, fontWeight: 800 }}>📌 Today's Activities</div>
+                <Tag>{activities.length}</Tag>
+              </div>
+
+              {loading ? (
+                <div style={{ color: G.muted, fontSize: 11, textAlign: 'center', padding: '20px 0' }}>Loading activities...</div>
+              ) : activities.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {activities.map((activity, i) => {
+                    const typeEmoji: Record<string, string> = {
+                      'session': '🎾',
+                      'tournament': '🏆',
+                      'restocking': '📦',
+                      'player-reachout': '📞',
+                      'email': '✉️',
+                    };
+                    const typeColors: Record<string, string> = {
+                      'session': G.lime,
+                      'tournament': G.yellow,
+                      'restocking': G.blue,
+                      'player-reachout': G.lime2,
+                      'email': G.muted2,
+                    };
+                    const emoji = typeEmoji[activity.type] || '📌';
+                    const color = typeColors[activity.type] || G.lime;
+                    const actDate = new Date(`${activity.date}T${activity.startTime}:00Z`);
+                    const dateStr = actDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+                    return (
+                      <div key={activity.id} style={{ background: G.card2, border: `1px solid ${G.border}`, borderRadius: 8, padding: 10, borderLeft: `3px solid ${color}` }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, flex: 1 }}>
+                            <div style={{ fontSize: 16 }}>{emoji}</div>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ fontSize: 11.5, fontWeight: 700, color: G.text }}>{activity.title}</div>
+                              <div style={{ fontSize: 9.5, color: G.muted, marginTop: 2 }}>{dateStr}</div>
+                              {activity.description && <div style={{ fontSize: 9, color: G.muted2, marginTop: 3, lineHeight: 1.4 }}>{activity.description}</div>}
+                            </div>
+                          </div>
+                          <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 8 }}>
+                            <Tag color={color}>{activity.type}</Tag>
+                          </div>
+                        </div>
+
+                        {/* Show type-specific info */}
+                        {activity.type === 'session' && activity.metadata && (
+                          <div style={{ fontSize: 9, color: G.muted2, marginTop: 6, paddingTop: 6, borderTop: `1px solid ${G.border}`, display: 'flex', gap: 12 }}>
+                            {activity.metadata.sessionType && <span>Type: {activity.metadata.sessionType}</span>}
+                            {activity.metadata.price && <span>Rate: ${activity.metadata.price}</span>}
+                            {activity.metadata.maxParticipants && <span>Max: {activity.metadata.maxParticipants}</span>}
+                          </div>
+                        )}
+                        {activity.type === 'tournament' && activity.metadata && (
+                          <div style={{ fontSize: 9, color: G.muted2, marginTop: 6, paddingTop: 6, borderTop: `1px solid ${G.border}` }}>
+                            Level: {activity.metadata.level} · Location: {activity.metadata.location}
+                          </div>
+                        )}
+                        {activity.type === 'restocking' && activity.metadata && (
+                          <div style={{ fontSize: 9, color: G.muted2, marginTop: 6, paddingTop: 6, borderTop: `1px solid ${G.border}` }}>
+                            {activity.metadata.quantity} × {activity.metadata.itemName} · ${activity.metadata.cost}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div style={{ color: G.muted, fontSize: 11, textAlign: 'center', padding: '20px 0' }}>No activities scheduled for today</div>
+              )}
+
+              <div style={{ marginTop: 12, display: 'flex', gap: 6 }}>
+                <BtnPrimary style={{ flex: 1 }} onClick={() => handleNavigation('Calendar')}>📆 View Calendar</BtnPrimary>
+                <BtnSecondary style={{ flex: 1 }} onClick={() => handleNavigation('Sessions')}>➕ Add Activity</BtnSecondary>
+              </div>
+            </div>
+
+            {/* ── ANALYTICS SECTION ── */}
+            <AnalyticsSection coachId={user?.id || ''} />
           </>
 
         ) : activeNav === 'Sessions' ? (
@@ -668,12 +682,6 @@ export const CoachDashboard: React.FC = () => {
 
         ) : activeNav === 'Players' ? (
           <PlayerManagement coachId={user?.id || ''} />
-
-        ) : activeNav === 'Earnings' ? (
-          <EarningsAndWallet coachId={user?.id || ''} />
-
-        ) : activeNav === 'Analytics' ? (
-          <AnalyticsSection coachId={user?.id || ''} />
 
         ) : activeNav === 'Calendar' ? (
           <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
@@ -694,76 +702,6 @@ export const CoachDashboard: React.FC = () => {
           </div>
         )}
       </main>
-
-      {/* ═══════════════ RIGHT SIDEBAR ═══════════════ */}
-      <aside style={{ width: 190, background: G.sidebar, borderLeft: `1px solid ${G.border}`, padding: '13px 10px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 13, flexShrink: 0 }}>
-
-        {/* Quick Stats */}
-        <div>
-          <div style={{ fontSize: 10, fontWeight: 800, color: G.text2, marginBottom: 7 }}>📊 Quick Stats</div>
-          {[
-            { label: 'Students', value: stats.studentCount.toString(), color: G.lime2 },
-            { label: 'This Month', value: `$${earnings.thisMonth.toLocaleString()}`, color: G.lime2 },
-            { label: 'Rating', value: (stats.rating || 0).toFixed(1) + ' ★', color: G.yellow },
-          ].map((s, i) => (
-            <div key={i} style={{ ...miniSt }}>
-              <div style={{ fontSize: 8, color: G.muted, textTransform: 'uppercase', letterSpacing: 1 }}>{s.label}</div>
-              <div style={{ fontSize: 16, fontWeight: 900, color: s.color, marginTop: 2 }}>{s.value}</div>
-            </div>
-          ))}
-        </div>
-
-        {/* Today's Schedule */}
-        <div>
-          <div style={{ fontSize: 10, fontWeight: 800, color: G.text2, marginBottom: 7 }}>📆 Today's Schedule</div>
-          {loading ? (
-            <div style={{ fontSize: 10, color: G.muted, padding: '10px 0' }}>Loading...</div>
-          ) : schedule.length > 0 ? (
-            schedule.map((s, i) => {
-              const time = s.time || '00:00';
-              const [hours, mins] = time.split(':');
-              const period = parseInt(hours) >= 12 ? 'PM' : 'AM';
-              return (
-                <div key={s.id || i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', paddingBottom: 9, marginBottom: 9, borderBottom: i < schedule.length - 1 ? `1px solid ${G.border}` : 'none' }}>
-                  <div style={{ fontSize: 9, color: G.muted, minWidth: 26, lineHeight: 1.4 }}>
-                    <div style={{ fontSize: 7, textTransform: 'uppercase' }}>{period}</div>
-                    {time}
-                  </div>
-                  <div style={{ width: 7, height: 7, borderRadius: '50%', background: G.lime, marginTop: 3, flexShrink: 0 }} />
-                  <div>
-                    <div style={{ fontSize: 10.5, fontWeight: 700 }}>{s.participantName || 'Session'}</div>
-                    <div style={{ fontSize: 9, color: G.muted, marginTop: 1, lineHeight: 1.4 }}>{s.court || 'Court TBD'}</div>
-                  </div>
-                </div>
-              );
-            })
-          ) : (
-            <div style={{ fontSize: 10, color: G.muted, padding: '10px 0' }}>No sessions today</div>
-          )}
-        </div>
-
-        {/* Quick Links */}
-        <div>
-          <div style={{ fontSize: 10, fontWeight: 800, color: G.text2, marginBottom: 7 }}>🔗 Quick Links</div>
-          {[
-            { label: 'View Players', icon: '👥', nav: 'Players' },
-            { label: 'Sessions', icon: '📅', nav: 'Sessions' },
-            { label: 'Earnings', icon: '💰', nav: 'Earnings' },
-          ].map((item, i) => (
-            <div
-              key={i}
-              onClick={() => handleNavigation(item.nav)}
-              style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '7px 9px', background: G.card, border: `1px solid ${G.border}`, borderRadius: 8, marginBottom: 4, cursor: 'pointer', transition: 'all .15s' }}
-              onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = G.border2; (e.currentTarget as HTMLDivElement).style.background = G.card2; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = G.border; (e.currentTarget as HTMLDivElement).style.background = G.card; }}
-            >
-              <span style={{ fontSize: 12 }}>{item.icon}</span>
-              <span style={{ fontSize: 10.5, fontWeight: 600, flex: 1 }}>{item.label}</span>
-              <span style={{ color: G.muted, fontSize: 11 }}>›</span>
-            </div>
-          ))}
-        </div>
-      </aside>
 
       {/* Blink keyframe injected via style tag */}
       <style>{`@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }`}</style>

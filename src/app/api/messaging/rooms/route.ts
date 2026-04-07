@@ -82,42 +82,87 @@ export async function GET(req: NextRequest) {
     if (!room) {
       console.log(`📨 Creating new DM room between ${player1Id} and ${player2Id}`);
       
-      room = await prisma.chatRoom.create({
-        data: {
-          name: 'Direct Message',
-          isDM: true,
-          isPrivate: true,
-          createdBy: player1Id,
-          participants: {
-            createMany: {
-              data: [
-                { playerId: player1Id, isOnline: false },
-                { playerId: player2Id, isOnline: false },
-              ],
+      try {
+        room = await prisma.chatRoom.create({
+          data: {
+            name: 'Direct Message',
+            isDM: true,
+            isPrivate: true,
+            createdBy: player1Id,
+            participants: {
+              createMany: {
+                data: [
+                  { playerId: player1Id, isOnline: false },
+                  { playerId: player2Id, isOnline: false },
+                ],
+              },
             },
           },
-        },
-        include: {
-          participants: true,
-          messages: {
-            take: 50,
-            orderBy: { createdAt: 'asc' },
-            include: {
-              player: {
-                include: {
-                  user: {
-                    select: {
-                      firstName: true,
-                      lastName: true,
-                      photo: true,
+          include: {
+            participants: true,
+            messages: {
+              take: 50,
+              orderBy: { createdAt: 'asc' },
+              include: {
+                player: {
+                  include: {
+                    user: {
+                      select: {
+                        firstName: true,
+                        lastName: true,
+                        photo: true,
+                      },
                     },
                   },
                 },
               },
             },
           },
-        },
-      });
+        });
+      } catch (error: any) {
+        // If unique constraint failed, the room probably exists. Try to find it again.
+        if (error.code === 'P2002') {
+          console.log('📨 Room or participants already exist, fetching existing room...');
+          
+          // Try simpler query to find the room
+          room = await prisma.chatRoom.findFirst({
+            where: {
+              isDM: true,
+              participants: {
+                some: {
+                  playerId: player1Id,
+                },
+              },
+            },
+            include: {
+              participants: true,
+              messages: {
+                take: 50,
+                orderBy: { createdAt: 'asc' },
+                include: {
+                  player: {
+                    include: {
+                      user: {
+                        select: {
+                          firstName: true,
+                          lastName: true,
+                          photo: true,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          });
+          
+          if (!room) {
+            throw new Error('Failed to create or find chat room');
+          }
+        } else {
+          throw error;
+        }
+      }
     }
 
     // Transform messages to expected format

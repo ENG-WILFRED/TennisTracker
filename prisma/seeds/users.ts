@@ -35,8 +35,10 @@ interface UserData {
   };
   refereeData?: {
     matchesRefereed?: number;
+    ballCrewMatches?: number;
     experience?: string;
     certifications?: string[];
+    organizationId?: string;
   };
 }
 
@@ -254,13 +256,94 @@ export async function seedUsers(organizations: any[]) {
       gender: 'Male',
       dateOfBirth: new Date('1978-10-28'),
       nationality: 'USA',
-      bio: 'Professional referee with ITF certification',
+      bio: 'Professional referee with ITF certification. Expert in singles and doubles matches.',
       photo: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=500&q=80',
       role: 'referee',
+      organizationId: organizations[0].id, // Central Tennis Club
       refereeData: {
-        matchesRefereed: 87,
-        experience: '15 years',
-        certifications: ['ITF', 'ATP', 'WTA'],
+        matchesRefereed: 127,
+        ballCrewMatches: 45,
+        experience: '18 years',
+        organizationId: organizations[0].id,
+        certifications: [
+          JSON.stringify({ name: 'ITF Level 2', issued: '2020-05-15', expires: '2027-05-15', status: 'Active' }),
+          JSON.stringify({ name: 'ATP Certified', issued: '2021-01-20', expires: '2028-01-20', status: 'Active' }),
+          JSON.stringify({ name: 'WTA Certified', issued: '2019-11-10', expires: '2026-11-10', status: 'Expiring Soon' }),
+        ],
+      },
+    },
+    {
+      username: 'referee_sarah',
+      email: 'sarah.referee@example.com',
+      firstName: 'Sarah',
+      lastName: 'Kipchoge',
+      phone: '+254702234567',
+      gender: 'Female',
+      dateOfBirth: new Date('1990-07-22'),
+      nationality: 'Kenya',
+      bio: 'Certified tennis referee specializing in women\'s tennis matches. Known for excellent sportsmanship.',
+      photo: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=500&q=80',
+      role: 'referee',
+      organizationId: organizations[0].id, // Central Tennis Club
+      refereeData: {
+        matchesRefereed: 89,
+        ballCrewMatches: 32,
+        experience: '12 years',
+        organizationId: organizations[0].id,
+        certifications: [
+          JSON.stringify({ name: 'ITF Level 2', issued: '2019-08-20', expires: '2026-08-20', status: 'Active' }),
+          JSON.stringify({ name: 'ATP Certified', issued: '2022-03-15', expires: '2029-03-15', status: 'Active' }),
+        ],
+      },
+    },
+    {
+      username: 'referee_michael',
+      email: 'michael.referee@example.com',
+      firstName: 'Michael',
+      lastName: 'Kimani',
+      phone: '+254703234567',
+      gender: 'Male',
+      dateOfBirth: new Date('1988-11-05'),
+      nationality: 'Kenya',
+      bio: 'Experienced line umpire and match referee. Certified for international tournaments.',
+      photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&q=80',
+      role: 'referee',
+      organizationId: organizations[1].id, // Elite Sports Academy
+      refereeData: {
+        matchesRefereed: 156,
+        ballCrewMatches: 67,
+        experience: '16 years',
+        organizationId: organizations[1].id,
+        certifications: [
+          JSON.stringify({ name: 'ITF Level 3', issued: '2018-06-10', expires: '2028-06-10', status: 'Active' }),
+          JSON.stringify({ name: 'ATP Certified', issued: '2020-09-01', expires: '2027-09-01', status: 'Active' }),
+          JSON.stringify({ name: 'WTA Certified', issued: '2021-02-14', expires: '2028-02-14', status: 'Active' }),
+          JSON.stringify({ name: 'Davis Cup Certified', issued: '2022-05-20', expires: '2029-05-20', status: 'Active' }),
+        ],
+      },
+    },
+    {
+      username: 'referee_elizabeth',
+      email: 'elizabeth.referee@example.com',
+      firstName: 'Elizabeth',
+      lastName: 'Mutua',
+      phone: '+254704234567',
+      gender: 'Female',
+      dateOfBirth: new Date('1992-02-28'),
+      nationality: 'Kenya',
+      bio: 'Professional tennis umpire with focus on doubles matches and mixed tournaments.',
+      photo: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=500&q=80',
+      role: 'referee',
+      organizationId: organizations[1].id, // Elite Sports Academy
+      refereeData: {
+        matchesRefereed: 76,
+        ballCrewMatches: 28,
+        experience: '10 years',
+        organizationId: organizations[1].id,
+        certifications: [
+          JSON.stringify({ name: 'ITF Level 2', issued: '2020-11-12', expires: '2027-11-12', status: 'Active' }),
+          JSON.stringify({ name: 'WTA Certified', issued: '2021-07-08', expires: '2028-07-08', status: 'Active' }),
+        ],
       },
     },
 
@@ -346,6 +429,7 @@ export async function seedUsers(organizations: any[]) {
               ? {
                   create: {
                     matchesRefereed: userData.refereeData?.matchesRefereed || 0,
+                    ballCrewMatches: userData.refereeData?.ballCrewMatches || 0,
                     experience: userData.refereeData?.experience,
                     certifications: userData.refereeData?.certifications || [],
                   },

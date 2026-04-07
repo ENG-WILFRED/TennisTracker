@@ -2,6 +2,7 @@ import "../styles/globals.css";
 import type { ReactNode } from "react";
 import Providers from "@/components/Providers";
 import { RoleProvider } from "@/context/RoleContext";
+import { ToastProvider, ToastContainer } from "@/components/ui/ToastContext";
 import { Metadata } from "next";
 import { Toaster } from "react-hot-toast";
 
@@ -19,12 +20,15 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <link href="https://fonts.googleapis.com/css2?family=Clash+Display:wght@400;500;600;700&family=Epilogue:wght@300;400;500;600&display=swap" rel="stylesheet" />
       </head>
       <body>
-        <RoleProvider>
-          <Providers>
-            {children}
-            <Toaster position="top-right" />
-          </Providers>
-        </RoleProvider>
+        <ToastProvider>
+          <RoleProvider>
+            <Providers>
+              {children}
+              <Toaster position="top-right" />
+              <ToastContainer />
+            </Providers>
+          </RoleProvider>
+        </ToastProvider>
       </body>
     </html>
   );
