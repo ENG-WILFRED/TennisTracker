@@ -110,6 +110,7 @@ export default function AnalyticsSection({ coachId }: { coachId: string }) {
   const [showPayoutModal, setShowPayoutModal] = useState(false);
   const [payoutLoading, setPayoutLoading] = useState(false);
   const [payoutForm, setPayoutForm] = useState({ amount: '', paymentMethod: 'bank_transfer', bankDetails: '' });
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -143,6 +144,32 @@ export default function AnalyticsSection({ coachId }: { coachId: string }) {
     fetchStats();
     fetchWallet();
   }, [coachId]);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      const [statsRes, walletRes] = await Promise.all([
+        fetch(`/api/coaches/stats?coachId=${coachId}`),
+        fetch(`/api/coaches/wallet?coachId=${coachId}`)
+      ]);
+
+      if (statsRes.ok) {
+        const data = await statsRes.json();
+        const completionRate = data.totalSessions > 0
+          ? (data.completedSessions / data.totalSessions) * 100 : 0;
+        setStats({ ...data, completionRate });
+      }
+
+      if (walletRes.ok) {
+        const data = await walletRes.json();
+        setWallet(data);
+      }
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   const handlePayout = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -241,6 +268,67 @@ export default function AnalyticsSection({ coachId }: { coachId: string }) {
         ))}
       </div>
 
+      {/* Filter Bar & Refresh */}
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'space-between', background: G.card, borderRadius: 8, padding: 11, border: `1px solid ${G.border}` }}>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', flex: 1 }}>
+          {(['revenue', 'sessions'] as const).map(tab => (
+            <button 
+              key={tab} 
+              onClick={() => setActiveChart(tab)} 
+              style={{ 
+                padding: '6px 12px', 
+                borderRadius: 6, 
+                border: `1px solid ${activeChart === tab ? G.lime : G.border}`,
+                background: activeChart === tab ? G.lime : 'transparent',
+                color: activeChart === tab ? '#0f1f0f' : G.muted,
+                fontSize: 11, 
+                fontWeight: 700, 
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                textTransform: 'capitalize'
+              }}
+            >
+              {tab === 'revenue' ? '💰 Revenue' : '🎾 Sessions'}
+            </button>
+          ))}
+          {(['all', 'credit', 'debit'] as const).map(f => (
+            <button key={f} onClick={() => setTxFilter(f)} style={{ padding: '6px 12px', borderRadius: 6, border: `1px solid ${txFilter === f ? G.lime : G.border}`, background: txFilter === f ? G.lime : 'transparent', cursor: 'pointer', fontSize: 11, fontWeight: 700, color: txFilter === f ? '#0a180a' : G.muted, textTransform: 'capitalize', transition: 'all 0.2s' }}>
+              {f}
+            </button>
+          ))}
+        </div>
+        <button 
+          onClick={handleRefresh}
+          disabled={isRefreshing}
+          style={{ 
+            padding: '6px 12px', 
+            borderRadius: 6, 
+            border: `1px solid ${G.lime}`,
+            background: isRefreshing ? G.border : G.lime,
+            color: isRefreshing ? G.muted : '#0f1f0f',
+            fontSize: 11, 
+            fontWeight: 700, 
+            cursor: isRefreshing ? 'not-allowed' : 'pointer',
+            transition: 'all 0.2s',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            whiteSpace: 'nowrap',
+            flexShrink: 0,
+          }}
+        >
+          <span style={{ display: 'inline-block', animation: isRefreshing ? 'spin 0.8s linear infinite' : 'none' }}>⟳</span>
+          {isRefreshing ? 'Refreshing...' : 'Refresh'}
+        </button>
+      </div>
+
+      <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
+
       {/* Earnings & Payout Banner */}
       <div style={{ ...card, background: `linear-gradient(135deg, ${G.card2}, ${G.card})`, borderLeft: `3px solid ${G.lime}` }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -274,26 +362,19 @@ export default function AnalyticsSection({ coachId }: { coachId: string }) {
         </div>
       </div>
 
-      {/* Chart + Session Breakdown */}
+      {/* Transactions + Recent Reviews */}
       <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 11 }}>
 
         {/* Transactions */}
         <div style={card}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
             <SectionLabel>Transactions</SectionLabel>
-            <div style={{ display: 'flex', gap: 3, background: G.dark, borderRadius: 6, padding: 3 }}>
-              {(['all', 'credit', 'debit'] as const).map(f => (
-                <button key={f} onClick={() => setTxFilter(f)} style={{ padding: '3px 9px', borderRadius: 4, border: 'none', cursor: 'pointer', fontSize: 9, fontWeight: 700, background: txFilter === f ? G.lime : 'transparent', color: txFilter === f ? '#0a180a' : G.muted, textTransform: 'capitalize' }}>
-                  {f}
-                </button>
-              ))}
-            </div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 7, maxHeight: 400, overflowY: 'auto' }}>
             {filteredTx.length === 0 ? (
               <div style={{ textAlign: 'center', color: G.muted, fontSize: 10.5, padding: '20px 0' }}>No transactions</div>
             ) : (
-              filteredTx.map((tx: any) => (
+              filteredTx.slice(0, 5).map((tx: any) => (
                 <div key={tx.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 11px', background: G.card2, borderRadius: 8, border: `1px solid ${G.border}` }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
                     <div style={{ width: 30, height: 30, borderRadius: 7, background: tx.type === 'credit' ? 'rgba(121,191,62,.15)' : 'rgba(217,79,79,.1)', border: `1px solid ${tx.type === 'credit' ? G.lime : G.red}44`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 }}>
@@ -315,10 +396,8 @@ export default function AnalyticsSection({ coachId }: { coachId: string }) {
             )}
           </div>
         </div>
-      </div>
 
-      {/* Recent Reviews */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 11 }}>
+        {/* Recent Reviews */}
         <div style={card}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 11 }}>
             <SectionLabel>Recent Reviews</SectionLabel>

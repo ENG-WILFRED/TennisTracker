@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, use, JSX } from 'react';
+import { useEffect, useState, use  } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { getTournamentDetails, getTournamentLeaderboard } from '@/actions/tournaments';

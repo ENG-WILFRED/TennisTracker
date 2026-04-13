@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 
 const G = {
   dark: '#0f1f0f', sidebar: '#152515', card: '#1a3020', cardBorder: '#2d5a35',
   mid: '#2d5a27', bright: '#3d7a32', lime: '#7dc142', accent: '#a8d84e',
-  text: '#e8f5e0', muted: '#7aaa6a', yellow: '#f0c040',
+  text: '#e8f5e0', muted: '#7aaa6a', yellow: '#f0c040', orange: '#e8944f', blue: '#4ab0d0',
 };
 
 interface Staff {
@@ -19,22 +20,33 @@ interface Staff {
   experience: number;
   status: string;
   sessions: number;
+  source: 'staff' | 'member';
 }
 
 interface StaffSectionProps {
   orgId?: string;
 }
 
+type RoleType = 'all' | 'coach' | 'referee' | 'admin';
+
+const roleConfig: Record<string, { icon: string; color: string; bgColor: string }> = {
+  coach: { icon: '🏆', color: G.blue, bgColor: 'rgba(74,176,208,0.12)' },
+  referee: { icon: '⚖️', color: G.yellow, bgColor: 'rgba(240,192,64,0.12)' },
+  admin: { icon: '⚙️', color: G.orange, bgColor: 'rgba(232,148,79,0.12)' },
+};
+
 export default function OrganizationStaffSection({ orgId }: StaffSectionProps) {
   const [staff, setStaff] = useState<Staff[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeRole, setActiveRole] = useState<RoleType>('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     if (orgId) {
       fetchStaff();
     }
-  }, [orgId]);
+  }, [orgId, activeRole]);
 
   async function fetchStaff() {
     if (!orgId) {
@@ -44,72 +56,232 @@ export default function OrganizationStaffSection({ orgId }: StaffSectionProps) {
     }
     try {
       setLoading(true);
-      const res = await fetch(`/api/organization/${orgId}/staff`);
+      const roleParam = activeRole !== 'all' ? `?role=${activeRole}` : '';
+      const res = await fetch(`/api/organization/${orgId}/staff${roleParam}`);
       if (!res.ok) throw new Error(`Failed to fetch staff: ${res.status}`);
       const data = await res.json();
       setStaff(data || []);
+      setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error fetching staff');
+      const message = err instanceof Error ? err.message : 'Error fetching staff';
+      setError(message);
       console.error('Error fetching staff:', err);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
   }
 
+  // Filter staff by search query
+  const filteredStaff = staff.filter(s =>
+    s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    s.email.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  // Calculate stats
+  const stats = {
+    total: staff.length,
+    coaches: staff.filter(s => s.role === 'coach').length,
+    referees: staff.filter(s => s.role === 'referee').length,
+    admins: staff.filter(s => s.role === 'admin').length,
+    active: staff.filter(s => s.status === 'Active').length,
+    totalSessions: staff.reduce((sum, s) => sum + (s.sessions || 0), 0),
+  };
+
+  const getRoleIcon = (role: string) => roleConfig[role.toLowerCase()]?.icon || '👤';
+  const getRoleColor = (role: string) => roleConfig[role.toLowerCase()]?.color || G.muted;
+  const getRoleBgColor = (role: string) => roleConfig[role.toLowerCase()]?.bgColor || 'rgba(122,170,106,0.12)';
+
   if (error) {
-    return <div style={{ color: 'red', padding: 12 }}>Error: {error}</div>;
+    return <div style={{ color: '#ff6b6b', padding: 12 }}>Error: {error}</div>;
   }
 
-  const activeCount = staff.filter(s => s.status === 'Active').length;
-  const totalSessions = staff.reduce((sum, s) => sum + (s.sessions || 0), 0);
-
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       {/* Staff Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 10 }}>
         <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 12 }}>
-          <div style={{ fontSize: 11, color: G.muted, marginBottom: 6 }}>Total Staff</div>
-          <div style={{ fontSize: 24, fontWeight: 900, color: G.lime, marginBottom: 6 }}>{loading ? '-' : staff.length}</div>
+          <div style={{ fontSize: 10, color: G.muted, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Staff</div>
+          <div style={{ fontSize: 24, fontWeight: 900, color: G.lime }}>{loading ? '-' : stats.total}</div>
         </div>
         <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 12 }}>
-          <div style={{ fontSize: 11, color: G.muted, marginBottom: 6 }}>Active</div>
-          <div style={{ fontSize: 24, fontWeight: 900, color: G.bright, marginBottom: 6 }}>{loading ? '-' : activeCount}</div>
+          <div style={{ fontSize: 10, color: G.muted, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Coaches</div>
+          <div style={{ fontSize: 24, fontWeight: 900, color: G.blue }}>{loading ? '-' : stats.coaches}</div>
         </div>
         <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 12 }}>
-          <div style={{ fontSize: 11, color: G.muted, marginBottom: 6 }}>Student Hours</div>
-          <div style={{ fontSize: 24, fontWeight: 900, color: G.accent, marginBottom: 6 }}>{loading ? '-' : totalSessions}h</div>
+          <div style={{ fontSize: 10, color: G.muted, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Referees</div>
+          <div style={{ fontSize: 24, fontWeight: 900, color: G.yellow }}>{loading ? '-' : stats.referees}</div>
         </div>
+        <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 12 }}>
+          <div style={{ fontSize: 10, color: G.muted, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Admins</div>
+          <div style={{ fontSize: 24, fontWeight: 900, color: G.orange }}>{loading ? '-' : stats.admins}</div>
+        </div>
+        <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 12 }}>
+          <div style={{ fontSize: 10, color: G.muted, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Active</div>
+          <div style={{ fontSize: 24, fontWeight: 900, color: G.bright }}>{loading ? '-' : stats.active}</div>
+        </div>
+        <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 12 }}>
+          <div style={{ fontSize: 10, color: G.muted, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Sessions</div>
+          <div style={{ fontSize: 24, fontWeight: 900, color: G.accent }}>{loading ? '-' : stats.totalSessions}h</div>
+        </div>
+      </div>
+
+      {/* Role Filter & Search */}
+      <div style={{ display: 'flex', gap: 12, justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          {(['all', 'coach', 'referee', 'admin'] as RoleType[]).map(role => (
+            <button
+              key={role}
+              onClick={() => {
+                setActiveRole(role);
+                setSearchQuery('');
+              }}
+              style={{
+                padding: '6px 14px',
+                borderRadius: 20,
+                fontSize: 11,
+                fontWeight: 700,
+                border: 'none',
+                cursor: 'pointer',
+                background: activeRole === role ? (role === 'all' ? G.lime : getRoleColor(role)) : G.mid,
+                color: activeRole === role ? (role === 'all' ? G.dark : '#fff') : G.muted,
+                textTransform: 'capitalize',
+                transition: 'all 0.2s',
+              }}
+            >
+              {role === 'all' ? 'All Staff' : `${getRoleIcon(role)} ${role}`}
+            </button>
+          ))}
+        </div>
+        <input
+          type="text"
+          placeholder="Search staff..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          style={{
+            padding: '8px 14px',
+            borderRadius: 8,
+            border: `1px solid ${G.cardBorder}`,
+            background: G.dark,
+            color: G.text,
+            fontSize: 11,
+            fontFamily: "'Raleway', sans-serif",
+            minWidth: 200,
+            outline: 'none',
+          }}
+        />
       </div>
 
       {/* Staff List */}
       <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 14 }}>
-        <div style={{ fontWeight: 800, fontSize: 13, marginBottom: 12 }}>👥 Team Members</div>
+        <div style={{ fontWeight: 800, fontSize: 13, marginBottom: 14 }}>👥 Team Members</div>
         {loading ? (
           <div style={{ textAlign: 'center', padding: 20, color: G.muted }}>Loading staff...</div>
-        ) : staff.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: 20, color: G.muted }}>No staff members found</div>
+        ) : filteredStaff.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: 20, color: G.muted }}>
+            {searchQuery ? 'No staff found matching your search' : 'No staff members found'}
+          </div>
         ) : (
-          staff.map((s, i) => (
-            <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', borderBottom: i < staff.length - 1 ? `1px solid ${G.cardBorder}33` : 'none' }}>
-              <div style={{ width: 40, height: 40, borderRadius: '50%', background: s.photo ? `url(${s.photo})` : G.dark, border: `2px solid ${G.mid}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, flexShrink: 0, backgroundSize: 'cover', backgroundPosition: 'center' }}>
-                {!s.photo && `${s.name.charAt(0)}${s.name.split(' ')[1]?.[0] || ''}`}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            {filteredStaff.map((s, i) => (
+              <div
+                key={s.id}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  padding: '14px 0',
+                  borderBottom: i < filteredStaff.length - 1 ? `1px solid ${G.cardBorder}33` : 'none',
+                }}
+              >
+                {/* Avatar */}
+                <div
+                  style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: '50%',
+                    background: s.photo ? `url(${s.photo})` : getRoleBgColor(s.role),
+                    border: `2px solid ${getRoleColor(s.role)}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 18,
+                    fontWeight: 700,
+                    flexShrink: 0,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    color: getRoleColor(s.role),
+                  }}
+                >
+                  {!s.photo && getRoleIcon(s.role)}
+                </div>
+
+                {/* Info */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 4 }}>{s.name}</div>
+                  <div style={{ fontSize: 10, color: G.muted, marginBottom: 2 }}>{s.email}</div>
+                  <div style={{ display: 'flex', gap: 10, fontSize: 9, color: G.muted }}>
+                    <span style={{ textTransform: 'capitalize', fontWeight: 600, color: getRoleColor(s.role) }}>
+                      {getRoleIcon(s.role)} {s.role}
+                    </span>
+                    {s.expertise && <span>• {s.expertise}</span>}
+                    {s.experience > 0 && <span>• {s.experience}yr exp</span>}
+                    {s.source === 'member' && <span style={{ color: G.bright }}>• org member</span>}
+                  </div>
+                </div>
+
+                {/* Status & Activity */}
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <span
+                    style={{
+                      fontSize: 9,
+                      padding: '4px 10px',
+                      background: s.status === 'Active' ? G.lime + '33' : G.yellow + '33',
+                      color: s.status === 'Active' ? G.lime : G.yellow,
+                      borderRadius: 6,
+                      fontWeight: 700,
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {s.status}
+                  </span>
+                  {s.sessions > 0 && (
+                    <span
+                      style={{
+                        fontSize: 9,
+                        padding: '4px 10px',
+                        background: G.dark,
+                        color: G.accent,
+                        borderRadius: 6,
+                        fontWeight: 700,
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {s.sessions}h
+                    </span>
+                  )}
+                </div>
               </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 12, fontWeight: 600 }}>{s.name}</div>
-                <div style={{ fontSize: 10, color: G.muted, marginTop: 2 }}>{s.role} {s.expertise && `• ${s.expertise}`}</div>
-              </div>
-              <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                <span style={{ fontSize: 9, padding: '4px 8px', background: s.status === 'Active' ? G.lime + '33' : G.bright + '33', color: s.status === 'Active' ? G.lime : G.bright, borderRadius: 4, fontWeight: 700 }}>
-                  {s.status}
-                </span>
-                <span style={{ fontSize: 9, padding: '4px 8px', background: G.dark, color: G.accent, borderRadius: 4, fontWeight: 600 }}>
-                  {s.sessions}h
-                </span>
-              </div>
-            </div>
-          ))
+            ))}
+          </div>
         )}
-        <button style={{ width: '100%', marginTop: 12, padding: '8px', background: G.bright, color: '#fff', border: 'none', borderRadius: 6, fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>
+        <button
+          style={{
+            width: '100%',
+            marginTop: 14,
+            padding: '10px',
+            background: G.bright,
+            color: '#fff',
+            border: 'none',
+            borderRadius: 8,
+            fontSize: 11,
+            fontWeight: 800,
+            cursor: 'pointer',
+            transition: 'background 0.2s',
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.background = G.lime)}
+          onMouseLeave={(e) => (e.currentTarget.style.background = G.bright)}
+        >
           + Add Staff Member
         </button>
       </div>

@@ -62,6 +62,7 @@ export async function GET(req: NextRequest) {
       lastMessageTime: Date | null;
       lastMessageContent: string;
       unreadCount: number;
+      isOnline: boolean;
     };
 
     const usersWithRoles: UserWithRole[] = allUsers.map((user) => {
@@ -82,6 +83,7 @@ export async function GET(req: NextRequest) {
         lastMessageTime: null,
         lastMessageContent: 'No messages yet',
         unreadCount: 0,
+        isOnline: false,
       };
     });
 
@@ -154,6 +156,23 @@ export async function GET(req: NextRequest) {
           unreadCount: messageData?.unreadCount || 0,
         };
       });
+    }
+
+    // Fetch online status for all users (single query instead of N queries)
+    if (filteredUsers.length > 0) {
+      const userIds = filteredUsers.map(u => u.id);
+      const latestStatuses = await prisma.chatParticipant.findMany({
+        where: { playerId: { in: userIds } },
+        select: { playerId: true, isOnline: true },
+        distinct: ['playerId'],
+        orderBy: { lastSeen: 'desc' },
+      });
+
+      const statusMap = new Map(latestStatuses.map(s => [s.playerId, s.isOnline]));
+      filteredUsers = filteredUsers.map(user => ({
+        ...user,
+        isOnline: statusMap.get(user.id) ?? false,
+      }));
     }
 
     // Sort by: unread count (desc), then by last message time (desc), then by name

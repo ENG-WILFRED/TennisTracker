@@ -17,6 +17,7 @@ export async function registerPlayer({
   nationality,
   bio,
   phone,
+  acceptedTerms,
 }: {
   username: string;
   email: string;
@@ -29,6 +30,7 @@ export async function registerPlayer({
   nationality?: string;
   bio?: string;
   phone?: string;
+  acceptedTerms?: boolean;
 }) {
   // Check required fields
   if (!username || !email || !password || !firstName || !lastName) {
@@ -86,6 +88,7 @@ export async function registerPlayer({
       dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
       nationality: nationality || null,
       bio: bio || null,
+      acceptedTermsAt: acceptedTerms ? new Date() : null,
       player: {
         create: {}
       }

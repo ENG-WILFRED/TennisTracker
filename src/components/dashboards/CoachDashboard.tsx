@@ -11,6 +11,7 @@ import AnalyticsSection from './coach/AnalyticsSection';
 import CalendarView from './coach/CalendarView';
 import MessagingPanel from '@/components/dashboards/MessagingPanel';
 import CommunityPanel from './coach/CommunityPanel';
+import AssignedTasksWidget from '@/components/AssignedTasksWidget';
 
 const G = {
   dark: '#0a180a',
@@ -84,6 +85,7 @@ const navItems = [
   { label: 'Sessions', icon: '📅' },
   { label: 'Players', icon: '👥' },
   { label: 'Calendar', icon: '📆' },
+  { label: 'Tasks', icon: '📋' },
   { label: 'Messaging', icon: '💬' },
   { label: 'Community', icon: '🌐' },
 ];
@@ -279,6 +281,15 @@ export const CoachDashboard: React.FC = () => {
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      await authenticatedFetch('/api/auth/logout', { method: 'POST' });
+      router.push('/');
+    } catch (err) {
+      console.error('Logout error:', err);
+    }
+  };
+
   /* ── shared inline styles ── */
   const card = { background: G.card, border: `1px solid ${G.border}`, borderRadius: 12, padding: 13 } as const;
   const card2 = { background: G.card2, border: `1px solid ${G.border}`, borderRadius: 12, padding: 13 } as const;
@@ -299,36 +310,12 @@ export const CoachDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Coach mini-card */}
-        <div
-          onClick={() => handleNavigation('My Profile')}
-          style={{ margin: '10px 9px', background: G.card2, border: `1px solid ${G.border}`, borderRadius: 11, padding: '12px 11px', textAlign: 'center', cursor: 'pointer', transition: 'border-color .2s, background .2s' }}
-          onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = G.border2; (e.currentTarget as HTMLDivElement).style.background = G.card3; }}
-          onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = G.border; (e.currentTarget as HTMLDivElement).style.background = G.card2; }}
-        >
-          <div style={{ position: 'relative', display: 'inline-block', marginBottom: 7 }}>
-            {user?.photo
-              ? <img src={user.photo} alt={user.firstName} style={{ width: 44, height: 44, borderRadius: '50%', border: `2px solid ${G.lime}`, objectFit: 'cover' }} />
-              : <div style={{ width: 44, height: 44, borderRadius: '50%', background: G.mid, border: `2px solid ${G.lime}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>👨‍🏫</div>
-            }
-            <div style={{ position: 'absolute', bottom: 1, right: 1, width: 9, height: 9, background: '#4cd964', borderRadius: '50%', border: `2px solid ${G.sidebar}` }} />
-          </div>
-          <div style={{ fontWeight: 800, fontSize: 12.5, letterSpacing: -0.2 }}>Coach {user?.firstName ?? 'Maria'}</div>
-          <div style={{ fontSize: 9.5, color: G.muted2, marginTop: 1 }}>Head Tennis Coach</div>
-          <div style={{ color: G.yellow, fontSize: 10, marginTop: 5, letterSpacing: 1 }}>★★★★★ <span style={{ fontWeight: 700 }}>4.8</span></div>
-          <div style={{ display: 'flex', gap: 4, justifyContent: 'center', marginTop: 6, flexWrap: 'wrap' }}>
-            {['ITF L2', 'ATP', 'Active'].map(c => (
-              <span key={c} style={{ fontSize: 8.5, background: 'rgba(121,191,62,.12)', border: '1px solid rgba(121,191,62,.3)', color: G.lime, borderRadius: 4, padding: '2px 6px', fontWeight: 700 }}>{c}</span>
-            ))}
-          </div>
-        </div>
-
         {/* Nav items */}
         <nav style={{ flex: 1, padding: '6px 7px 0', overflowY: 'auto' }}>
           {(['Main', 'Content'] as const).map(section => {
             const sectionItems = section === 'Main'
-              ? navItems.slice(0, 3)
-              : navItems.slice(3);
+              ? navItems.slice(0, 4)
+              : navItems.slice(4);
             return (
               <React.Fragment key={section}>
                 <div style={{ fontSize: 8.5, color: G.muted, letterSpacing: '1.2px', textTransform: 'uppercase', padding: '8px 5px 3px' }}>{section}</div>
@@ -358,11 +345,37 @@ export const CoachDashboard: React.FC = () => {
           })}
         </nav>
 
-        {/* Referee CTA */}
+        {/* Coach Profile Card at Bottom */}
         <div style={{ padding: 9 }}>
-          <button style={{ width: '100%', background: G.lime, color: '#0a180a', border: 'none', borderRadius: 8, padding: '9px 0', fontWeight: 800, fontSize: 11.5, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
-            🏆 Referee Details
-          </button>
+          <div style={{ background: G.card2, border: `1px solid ${G.border}`, borderRadius: 11, padding: '12px 11px', textAlign: 'center', cursor: 'pointer', transition: 'border-color .2s, background .2s' }}>
+            <div style={{ position: 'relative', display: 'inline-block', marginBottom: 7 }}>
+              {user?.photo
+                ? <img src={user.photo} alt={user.firstName} style={{ width: 44, height: 44, borderRadius: '50%', border: `2px solid ${G.lime}`, objectFit: 'cover' }} />
+                : <div style={{ width: 44, height: 44, borderRadius: '50%', background: G.mid, border: `2px solid ${G.lime}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>👨‍🏫</div>
+              }
+            </div>
+            <div style={{ fontWeight: 800, fontSize: 12.5, letterSpacing: -0.2 }}>Coach {user?.firstName ?? 'Maria'}</div>
+            <div style={{ fontSize: 9.5, color: G.muted2, marginTop: 1 }}>Head Tennis Coach</div>
+            <div style={{ display: 'flex', gap: 4, justifyContent: 'center', marginTop: 6, flexWrap: 'wrap' }}>
+              {['ITF L2', 'ATP', 'Active'].map(c => (
+                <span key={c} style={{ fontSize: 8.5, background: 'rgba(121,191,62,.12)', border: '1px solid rgba(121,191,62,.3)', color: G.lime, borderRadius: 4, padding: '2px 6px', fontWeight: 700 }}>{c}</span>
+              ))}
+            </div>
+            <div style={{ marginTop: 6, display: 'flex', gap: 6 }}>
+              <button 
+                onClick={() => setEditingProfile(true)}
+                style={{ flex: 1, background: G.dark, color: G.lime, border: `1px solid ${G.lime}`, borderRadius: 6, padding: '4px 0', fontSize: 9, fontWeight: 700, cursor: 'pointer' }}
+              >
+                Edit
+              </button>
+              <button 
+                onClick={handleLogout}
+                style={{ flex: 1, background: '#ff6b6b', color: '#fff', border: 'none', borderRadius: 6, padding: '4px 0', fontSize: 9, fontWeight: 700, cursor: 'pointer' }}
+              >
+                Logout
+              </button>
+            </div>
+          </div>
         </div>
       </aside>
 
@@ -688,6 +701,11 @@ export const CoachDashboard: React.FC = () => {
             <div style={{ flex: 1, overflowY: 'auto', padding: '14px 13px' }}>
               <CalendarView coachId={user?.id || ''} />
             </div>
+          </div>
+
+        ) : activeNav === 'Tasks' ? (
+          <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+            <AssignedTasksWidget userId={user?.id || ''} limit={20} />
           </div>
 
         ) : activeNav === 'Messaging' ? (

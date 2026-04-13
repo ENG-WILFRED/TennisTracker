@@ -9,12 +9,14 @@ import EditProfileModal from '@/app/dashboard/components/EditProfileModal';
 import OrganizationOverviewSection from '@/components/organization/dashboard-sections/OrganizationOverviewSection';
 import OrganizationMembersSection from '@/components/organization/dashboard-sections/OrganizationMembersSection';
 import OrganizationStaffSection from '@/components/organization/dashboard-sections/OrganizationStaffSection';
+import OrganizationTasksSection from '@/components/organization/dashboard-sections/OrganizationTasksSection';
 import OrganizationCourtsSection from '@/components/organization/dashboard-sections/OrganizationCourtsSection';
 import OrganizationEventsSection from '@/components/organization/dashboard-sections/OrganizationEventsSection';
 import OrganizationTournamentsSection from '@/components/organization/dashboard-sections/OrganizationTournamentsSection';
 import OrganizationReportsSection from '@/components/organization/dashboard-sections/OrganizationReportsSection';
 import OrganizationBookingsSection from '@/components/organization/dashboard-sections/OrganizationBookingsSection';
 import OrganizationPlayersSection from '@/components/organization/dashboard-sections/OrganizationPlayersSection';
+import MessagingPanel from '@/components/dashboards/MessagingPanel';
 import { authenticatedFetch } from '@/lib/authenticatedFetch';
 
 const G = {
@@ -33,11 +35,13 @@ export const OrganizationDashboard: React.FC = () => {
     { label: 'Overview', icon: '🏢', section: 'overview' },
     { label: 'My Players', icon: '👨‍🏫', section: 'players' },
     { label: 'Staff', icon: '👥', section: 'staff' },
+    { label: 'Tasks', icon: '📋', section: 'tasks' },
     { label: 'Courts', icon: '🎾', section: 'courts' },
     { label: 'Bookings', icon: '📅', section: 'bookings' },
     { label: 'Events', icon: '🎾', section: 'events' },
     { label: 'Tournaments', icon: '🏆', section: 'tournaments' },
     { label: 'Members', icon: '🎖️', section: 'members' },
+    { label: 'Messages', icon: '💬', section: 'messages' },
     { label: 'Reports', icon: '📊', section: 'reports' },
   ];
 
@@ -319,12 +323,14 @@ export const OrganizationDashboard: React.FC = () => {
     <div style={{ display: 'flex', height: '100vh', fontFamily: "'Segoe UI', system-ui, sans-serif", background: G.dark, color: G.text, overflow: 'hidden' }}>
 
       {/* LEFT SIDEBAR */}
-      <aside style={{ width: 180, background: G.sidebar, borderRight: `1px solid ${G.cardBorder}`, display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
-        <div style={{ padding: '15px 14px 10px', borderBottom: `1px solid ${G.cardBorder}`, display: 'flex', alignItems: 'center', gap: 8 }}>
+      <aside style={{ width: 200, background: G.sidebar, borderRight: `1px solid ${G.cardBorder}`, display: 'flex', flexDirection: 'column', flexShrink: 0, overflowY: 'auto', paddingBottom: 14 }}>
+        <div style={{ padding: '15px 14px 10px', borderBottom: `1px solid ${G.cardBorder}`, display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
           <span style={{ fontSize: 20 }}>🎾</span>
           <div style={{ color: G.lime, fontWeight: 900, fontSize: 14 }}>Vico Sports</div>
         </div>
-        <nav style={{ flex: 1, paddingTop: 8 }}>
+
+        {/* Navigation */}
+        <nav style={{ paddingTop: 8, flexShrink: 0 }}>
           {navItems.map(item => (
             <button key={item.label} onClick={() => handleNavigation(item.section)} style={{
               width: '100%', display: 'flex', alignItems: 'center', gap: 9, padding: '9px 13px',
@@ -335,12 +341,86 @@ export const OrganizationDashboard: React.FC = () => {
             }}><span>{item.icon}</span>{item.label}</button>
           ))}
         </nav>
-        <div style={{ padding: '10px 12px 14px' }}>
-          <button 
-            onClick={() => handleNavigation('events')}
-            style={{ width: '100%', background: G.lime, color: '#0f1f0f', border: 'none', borderRadius: 8, padding: '9px 0', fontWeight: 800, fontSize: 12, cursor: 'pointer' }}>
-            🎾 View Events
-          </button>
+
+        {/* Spacer */}
+        <div style={{ flex: 1, minHeight: 12, flexShrink: 0 }} />
+
+        {/* Stats Card */}
+        <div style={{ padding: '0 10px 14px', flexShrink: 0 }}>
+          <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 9, padding: 11 }}>
+            <div style={{ fontWeight: 800, fontSize: 11, marginBottom: 8 }}>📊 Stats</div>
+            {[
+              { label: 'Members', value: dashboardData?.kpi?.[0]?.value || members.length || '0' },
+              { label: 'Events', value: dashboardData?.kpi?.[1]?.value || '0' },
+              { label: 'Courts', value: dashboardData?.kpi?.[2]?.value || '0' },
+              { label: 'Rating', value: (dashboardData?.kpi?.[3]?.value || 4.8) + '★' },
+            ].map((s: any, i: number) => (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: i < 3 ? `1px solid ${G.cardBorder}33` : 'none' }}>
+                <span style={{ fontSize: 9, color: G.muted }}>{s.label}</span>
+                <span style={{ fontWeight: 800, color: G.accent, fontSize: 9 }}>{s.value}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Recent Activity Card */}
+        {activities.length > 0 && (
+          <div style={{ padding: '0 10px 14px', flexShrink: 0 }}>
+            <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 9, padding: 11 }}>
+              <div style={{ fontWeight: 800, fontSize: 11, marginBottom: 8 }}>📝 Activity</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 5, maxHeight: 100, overflowY: 'auto' }}>
+                {activities.slice(0, 5).map((activity: any, i: number) => (
+                  <div key={i} style={{ fontSize: 8, color: G.muted, paddingBottom: 5, borderBottom: i < 4 ? `1px solid ${G.cardBorder}33` : 'none' }}>
+                    <div style={{ color: G.accent, fontWeight: 600, marginBottom: 1, fontSize: 8 }}>{activity.type?.replace(/_/g, ' ').toUpperCase()}</div>
+                    <div style={{ fontSize: 8, lineHeight: 1.3 }}>{activity.description}</div>
+                    <div style={{ fontSize: 7, marginTop: 1 }}>{new Date(activity.createdAt).toLocaleDateString()}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Profile Card at Bottom */}
+        <div style={{ padding: '0 10px 14px', flexShrink: 0 }}>
+          <div style={{ background: G.mid, borderRadius: 10, padding: 12, textAlign: 'center' }}>
+            {user?.photo
+              ? <img src={user.photo} alt={user.firstName} style={{ width: 48, height: 48, borderRadius: '50%', border: `2.5px solid ${G.lime}`, objectFit: 'cover', marginBottom: 6 }} />
+              : <div style={{ width: 48, height: 48, borderRadius: '50%', background: G.bright, margin: '0 auto 6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>🏢</div>}
+            <div style={{ fontWeight: 800, fontSize: 12 }}>{user?.firstName ?? 'Organization'} {user?.lastName || ''}</div>
+            <div style={{ color: G.muted, fontSize: 9, marginTop: 2 }}>Manager</div>
+            {user?.email && <div style={{ color: G.muted, fontSize: 8, marginTop: 1, wordBreak: 'break-word' }}>📧 {user.email}</div>}
+            {(user as any)?.phone && <div style={{ color: G.muted, fontSize: 8 }}>📱 {(user as any).phone}</div>}
+            {(user as any)?.nationality && <div style={{ color: G.muted, fontSize: 8 }}>🌍 {(user as any).nationality}</div>}
+            <div style={{ marginTop: 6, display: 'flex', gap: 6 }}>
+              <button 
+                onClick={() => {
+                  const userData = user as any;
+                  setEditForm({
+                    firstName: user?.firstName || '',
+                    lastName: user?.lastName || '',
+                    email: user?.email || '',
+                    phone: userData?.phone || '',
+                    gender: userData?.gender || '',
+                    dateOfBirth: userData?.dateOfBirth || '',
+                    nationality: userData?.nationality || '',
+                    bio: userData?.bio || '',
+                    photo: user?.photo || '',
+                  });
+                  setShowEditModal(true);
+                }}
+                style={{ flex: 1, background: G.dark, color: G.lime, border: `1px solid ${G.lime}`, borderRadius: 6, padding: '4px 0', fontSize: 9, fontWeight: 700, cursor: 'pointer' }}
+              >
+                Edit
+              </button>
+              <button 
+                onClick={handleLogout}
+                style={{ flex: 1, background: '#ff6b6b', color: '#fff', border: 'none', borderRadius: 6, padding: '4px 0', fontSize: 9, fontWeight: 700, cursor: 'pointer' }}
+              >
+                Logout
+              </button>
+            </div>
+          </div>
         </div>
       </aside>
 
@@ -388,6 +468,10 @@ export const OrganizationDashboard: React.FC = () => {
           <OrganizationStaffSection orgId={dashboardData?.organizationId} />
         )}
 
+        {activeNav === 'Tasks' && (
+          <OrganizationTasksSection orgId={dashboardData?.organizationId} />
+        )}
+
         {activeNav === 'Courts' && (
           <OrganizationCourtsSection orgId={dashboardData?.organizationId} />
         )}
@@ -404,83 +488,14 @@ export const OrganizationDashboard: React.FC = () => {
           <OrganizationTournamentsSection organizationId={dashboardData?.organizationId} />
         )}
 
+        {activeNav === 'Messages' && (
+          <MessagingPanel userId={user?.id || ''} userType="admin" />
+        )}
+
         {activeNav === 'Reports' && (
           <OrganizationReportsSection />
         )}
       </main>
-
-      {/* RIGHT SIDEBAR */}
-      <aside style={{ width: 188, background: G.sidebar, borderLeft: `1px solid ${G.cardBorder}`, padding: '14px 12px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 14, flexShrink: 0 }}>
-        <div style={{ background: G.mid, borderRadius: 10, padding: 12, textAlign: 'center' }}>
-          {user?.photo
-            ? <img src={user.photo} alt={user.firstName} style={{ width: 52, height: 52, borderRadius: '50%', border: `2.5px solid ${G.lime}`, objectFit: 'cover', marginBottom: 6 }} />
-            : <div style={{ width: 52, height: 52, borderRadius: '50%', background: G.bright, margin: '0 auto 6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26 }}>🏢</div>}
-          <div style={{ fontWeight: 800, fontSize: 13 }}>{user?.firstName ?? 'Organization'} {user?.lastName || ''}</div>
-          <div style={{ color: G.muted, fontSize: 10, marginTop: 2 }}>Manager</div>
-          {user?.email && <div style={{ color: G.muted, fontSize: 9, marginTop: 1 }}>📧 {user.email}</div>}
-          {(user as any)?.phone && <div style={{ color: G.muted, fontSize: 9 }}>📱 {(user as any).phone}</div>}
-          {(user as any)?.nationality && <div style={{ color: G.muted, fontSize: 9 }}>🌍 {(user as any).nationality}</div>}
-          <div style={{ marginTop: 6, display: 'flex', gap: 6 }}>
-            <button 
-              onClick={() => {
-                const userData = user as any;
-                setEditForm({
-                  firstName: user?.firstName || '',
-                  lastName: user?.lastName || '',
-                  email: user?.email || '',
-                  phone: userData?.phone || '',
-                  gender: userData?.gender || '',
-                  dateOfBirth: userData?.dateOfBirth || '',
-                  nationality: userData?.nationality || '',
-                  bio: userData?.bio || '',
-                  photo: user?.photo || '',
-                });
-                setShowEditModal(true);
-              }}
-              style={{ flex: 1, background: G.dark, color: G.lime, border: `1px solid ${G.lime}`, borderRadius: 6, padding: '4px 0', fontSize: 10, fontWeight: 700, cursor: 'pointer' }}
-            >
-              Edit
-            </button>
-            <button 
-              onClick={handleLogout}
-              style={{ flex: 1, background: '#ff6b6b', color: '#fff', border: 'none', borderRadius: 6, padding: '4px 0', fontSize: 10, fontWeight: 700, cursor: 'pointer' }}
-            >
-              Logout
-            </button>
-          </div>
-        </div>
-
-        <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 9, padding: 12 }}>
-          <div style={{ fontWeight: 800, fontSize: 12, marginBottom: 8 }}>📊 Stats</div>
-          {[
-            { label: 'Members Active', value: dashboardData?.kpi?.[0]?.value || members.length || '0' },
-            { label: 'Events Created', value: dashboardData?.kpi?.[1]?.value || '0' },
-            { label: 'Courts Available', value: dashboardData?.kpi?.[2]?.value || '0' },
-            { label: 'Avg Rating', value: (dashboardData?.kpi?.[3]?.value || 4.8) + '★' },
-          ].map((s: any, i: number) => (
-            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: i < 3 ? `1px solid ${G.cardBorder}33` : 'none' }}>
-              <span style={{ fontSize: 10, color: G.muted }}>{s.label}</span>
-              <span style={{ fontWeight: 800, color: G.accent }}>{s.value}</span>
-            </div>
-          ))}
-        </div>
-
-
-        {activities.length > 0 && (
-          <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 9, padding: 12 }}>
-            <div style={{ fontWeight: 800, fontSize: 12, marginBottom: 8 }}>📝 Recent Activity</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 120, overflowY: 'auto' }}>
-              {activities.map((activity: any, i: number) => (
-                <div key={i} style={{ fontSize: 9, color: G.muted, paddingBottom: 6, borderBottom: i < activities.length - 1 ? `1px solid ${G.cardBorder}33` : 'none' }}>
-                  <div style={{ color: G.accent, fontWeight: 600, marginBottom: 2 }}>{activity.type?.replace(/_/g, ' ').toUpperCase()}</div>
-                  <div>{activity.description}</div>
-                  <div style={{ fontSize: 8, marginTop: 2 }}>{new Date(activity.createdAt).toLocaleDateString()}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </aside>
 
       <EditProfileModal
         show={showEditModal}

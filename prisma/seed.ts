@@ -11,6 +11,9 @@ import { seedTournaments } from './seeds/tournaments.js';
 import { seedStats } from './seeds/stats.js';
 import { seedTournamentComments } from './seeds/tournament-comments.js';
 import { seedStaffForAllOrgs } from './seeds/staff.js';
+import { seedTournamentTasks } from './seeds/tournament-tasks.js';
+import { seedTaskTemplates } from './seeds/task-templates-complete.js';
+import { seedTournamentPlayers } from './seeds/tournament-players-seeding.js';
 
 async function main() {
   try {
@@ -84,6 +87,21 @@ async function main() {
     console.log('───────────────────────────────────────────────────────────────');
     await seedStaffForAllOrgs();
 
+    // 12. Seed tournament tasks (referee assignments with matches)
+    console.log('📍 STEP 12: Tournament Tasks');
+    console.log('───────────────────────────────────────────────────────────────');
+    await seedTournamentTasks();
+
+    // 13. Seed task templates for referees and coaches
+    console.log('📍 STEP 13: Task Templates');
+    console.log('───────────────────────────────────────────────────────────────');
+    await seedTaskTemplates();
+
+    // 14. Seed players for tournaments (5 per tournament, marked as paid/confirmed)
+    console.log('📍 STEP 14: Tournament Players');
+    console.log('───────────────────────────────────────────────────────────────');
+    await seedTournamentPlayers();
+
     console.log('═══════════════════════════════════════════════════════════════');
     console.log('✨ SEEDING COMPLETED SUCCESSFULLY!\n');
     console.log('📊 SUMMARY:');
@@ -102,6 +120,9 @@ async function main() {
     console.log(`  • User Follows: ${follows.length}`);
     console.log(`  • Tournaments: 5 (1 completed, 1 in progress, 1 ongoing, 2 upcoming)`);
     console.log(`  • Tournament Comments: ${tournamentComments}`);
+    console.log(`  • Referee Task Assignments: 3 tournaments with referee management tasks`);
+    console.log(`  • Coach Tasks: 2 (1 completed with submission, 1 in-progress)`);
+    console.log(`  • Task Submissions: 2 (1 approved, 1 pending review)`);
     console.log(`  • Player Rankings: Created for ${members.length} players (current + historical)`);
     console.log(`  • Staff Members: Created across all organizations`);
     console.log('═══════════════════════════════════════════════════════════════\n');

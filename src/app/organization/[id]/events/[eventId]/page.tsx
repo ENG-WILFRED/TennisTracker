@@ -344,7 +344,7 @@ export default function EventDetailsPage() {
       if (!dmRes.ok) throw new Error('Failed to create DM');
       const dmRoom = await dmRes.json();
 
-      // Send reminder message
+      // Send reminder message to DM room (for record-keeping)
       const reminderMessage = `📌 Reminder: You have a pending task in "${event?.name}"\n\n📋 Task: ${task.role}\n📝 Details: ${task.responsibility || 'No additional details'}\n⚠️ Status: ${task.status === 'pending' ? 'Not started' : task.status.replace('_', ' ')}\n${task.dueDate ? `📅 Due: ${new Date(task.dueDate).toLocaleDateString()}` : ''}`;
       
       await authenticatedFetch(`/api/chat/rooms/${dmRoom.id}/messages`, {
@@ -352,6 +352,28 @@ export default function EventDetailsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content: reminderMessage })
       });
+
+      // 🔔 Send reminder via WebSocket in real-time to the specific user
+      const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:3001';
+      await fetch(`${wsUrl}/broadcast/broadcast-user`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: task.staffUserId,
+          type: 'task-reminder',
+          data: {
+            eventId,
+            eventName: event?.name,
+            staffId: task.staffUserId,
+            staffName: task.assignedTo.name,
+            taskRole: task.role,
+            taskStatus: task.status,
+            roomId: dmRoom.id,
+            reminderMessage: reminderMessage,
+            timestamp: new Date().toISOString(),
+          }
+        })
+      }).catch(err => console.warn('WebSocket broadcast failed:', err));
       
       toast.success(`Reminder sent to ${task.assignedTo.name}`);
     } catch (err) {

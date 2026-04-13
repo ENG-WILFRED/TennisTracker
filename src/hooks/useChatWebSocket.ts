@@ -1,5 +1,6 @@
 // WebSocket hook for real-time messaging
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { isAccessTokenExpired, getStoredTokens } from '@/lib/tokenManager';
 
 class ChatWebSocketManager {
   private ws: WebSocket | null = null;
@@ -13,12 +14,21 @@ class ChatWebSocketManager {
   private authSent = false;
   private connectPromise: Promise<void> | null = null;
   private connectResolve: (() => void) | null = null;
+  private tokenExpiryTimer: NodeJS.Timeout | null = null;
+  private shouldReconnect = true; // Only true if token is valid
 
   constructor(url: string) {
     this.url = url;
   }
 
   connect(userId?: string): Promise<void> {
+    // Check if token is expired - if so, don't connect
+    if (isAccessTokenExpired()) {
+      this.shouldReconnect = false;
+      console.warn('🔐 Chat WebSocket: Token expired, not connecting');
+      return Promise.reject(new Error('Token expired'));
+    }
+
     // If already connected, return immediately
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       console.log('✅ Chat WebSocket already connected');
@@ -72,10 +82,14 @@ class ChatWebSocketManager {
           console.log('✅ Chat WebSocket connected');
           this.reconnectAttempts = 0;
           this.isConnecting = false;
+          this.shouldReconnect = true; // Token is valid, allow reconnect if disconnected
 
           if (this.userId && !this.authSent) {
             this.sendAuth(this.userId);
           }
+
+          // Set up token expiry monitoring
+          this.startTokenExpiryMonitoring();
 
           if (this.connectResolve) {
             this.connectResolve();
@@ -108,7 +122,14 @@ class ChatWebSocketManager {
           this.authSent = false;
           this.connectPromise = null;
           this.connectResolve = null;
-          this.reconnect();
+          
+          // Only attempt reconnect if token is still valid
+          if (this.shouldReconnect && !isAccessTokenExpired()) {
+            this.reconnect();
+          } else if (isAccessTokenExpired()) {
+            console.log('🔐 Chat WebSocket: Token expired, stopping reconnection attempts');
+            this.shouldReconnect = false;
+          }
         };
       } catch (error) {
         this.isConnecting = false;
@@ -119,6 +140,27 @@ class ChatWebSocketManager {
     });
 
     return this.connectPromise;
+  }
+
+  private startTokenExpiryMonitoring() {
+    // Clear any existing timer
+    if (this.tokenExpiryTimer) {
+      clearTimeout(this.tokenExpiryTimer);
+    }
+
+    const tokens = getStoredTokens();
+    if (!tokens) return;
+
+    // Calculate time until token expires (minus 1 minute buffer)
+    const timeUntilExpiry = tokens.expiresAt - Date.now() - 60000;
+
+    if (timeUntilExpiry > 0) {
+      // Set timer to disconnect before token actually expires
+      this.tokenExpiryTimer = setTimeout(() => {
+        console.log('🔐 Chat WebSocket: Token expiring soon, will disconnect on next connection loss');
+        this.shouldReconnect = false;
+      }, timeUntilExpiry);
+    }
   }
 
   private sendAuth(userId: string) {
@@ -133,7 +175,14 @@ class ChatWebSocketManager {
   }
 
   private reconnect() {
-    if (this.reconnectAttempts < this.maxReconnectAttempts) {
+    // Don't reconnect if token is expired
+    if (isAccessTokenExpired()) {
+      console.log('🔐 Chat WebSocket: Token expired, not reconnecting');
+      this.shouldReconnect = false;
+      return;
+    }
+
+    if (this.shouldReconnect && this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++;
       const delay = this.baseReconnectDelay * Math.pow(2, this.reconnectAttempts - 1);
       console.log(`🔄 Chat: Attempting to reconnect in ${delay}ms...`);
@@ -141,7 +190,7 @@ class ChatWebSocketManager {
         this.connect(this.userId || undefined);
       }, delay);
     } else {
-      console.error('❌ Chat: Max reconnection attempts reached');
+      console.error('❌ Chat: Max reconnection attempts reached or token invalid');
     }
   }
 
@@ -193,6 +242,11 @@ class ChatWebSocketManager {
   }
 
   disconnect() {
+    this.shouldReconnect = false;
+    if (this.tokenExpiryTimer) {
+      clearTimeout(this.tokenExpiryTimer);
+      this.tokenExpiryTimer = null;
+    }
     if (this.ws) {
       this.ws.close();
       this.ws = null;

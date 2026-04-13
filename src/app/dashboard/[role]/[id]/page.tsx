@@ -8,7 +8,7 @@ import { PlayerDashboard } from '@/components/dashboards/PlayerDashboard';
 import { CoachDashboard } from '@/components/dashboards/CoachDashboard';
 import { AdminDashboard } from '@/components/dashboards/AdminDashboard';
 import { FinanceDashboard } from '@/components/dashboards/FinanceDashboard';
-import { RefereeDashboard } from '@/components/dashboards/RefereeDashboard';
+import { RefereeDashboard } from '@/components/dashboards/referee/RefereeDashboard';
 import { OrganizationDashboard } from '@/components/dashboards/OrganizationDashboard';
 import { UserRole } from '@/config/roles';
 

@@ -1,6 +1,7 @@
 // WebSocket connection manager for real-time community updates
 import { useEffect, useState, useRef } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { isAccessTokenExpired, getStoredTokens } from '@/lib/tokenManager';
 
 type WebSocketMessage = {
   type: 'post-created' | 'comment-added' | 'comment-reply-added' | 'comment-reaction-added' | 'comment-reaction-removed' | 'post-liked' | 'user-followed' | 'feed-update' | 'auth' | 'auth-confirmed' | 'error';
@@ -20,12 +21,21 @@ class WebSocketManager {
   private userId: string | null = null;
   private authSent = false;
   private pendingConnection: Promise<void> | null = null;
+  private tokenExpiryTimer: NodeJS.Timeout | null = null;
+  private shouldReconnect = true; // Only true if token is valid
 
   constructor(url: string) {
     this.url = url;
   }
 
   connect(userId?: string): Promise<void> {
+    // Check if token is expired - if so, don't connect
+    if (isAccessTokenExpired()) {
+      this.shouldReconnect = false;
+      console.warn('🔐 WebSocket: Token expired, not connecting');
+      return Promise.reject(new Error('Token expired'));
+    }
+
     // If already connected, resolve immediately
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       return Promise.resolve();
@@ -78,11 +88,15 @@ class WebSocketManager {
           this.reconnectAttempts = 0;
           this.isConnecting = false;
           this.pendingConnection = null;
+          this.shouldReconnect = true; // Token is valid, allow reconnect if disconnected
 
           // Send auth message immediately after connection
           if (this.userId && !this.authSent) {
             this.sendAuth(this.userId);
           }
+
+          // Set up token expiry monitoring
+          this.startTokenExpiryMonitoring();
 
           resolve();
         };
@@ -106,7 +120,14 @@ class WebSocketManager {
           this.isConnecting = false;
           this.pendingConnection = null;
           this.authSent = false;
-          this.attemptReconnect();
+          
+          // Only attempt reconnect if token is still valid
+          if (this.shouldReconnect && !isAccessTokenExpired()) {
+            this.attemptReconnect();
+          } else if (isAccessTokenExpired()) {
+            console.log('🔐 WebSocket: Token expired, stopping reconnection attempts');
+            this.shouldReconnect = false;
+          }
         };
       } catch (error) {
         this.isConnecting = false;
@@ -116,6 +137,27 @@ class WebSocketManager {
     });
 
     return this.pendingConnection;
+  }
+
+  private startTokenExpiryMonitoring() {
+    // Clear any existing timer
+    if (this.tokenExpiryTimer) {
+      clearTimeout(this.tokenExpiryTimer);
+    }
+
+    const tokens = getStoredTokens();
+    if (!tokens) return;
+
+    // Calculate time until token expires (minus 1 minute buffer)
+    const timeUntilExpiry = tokens.expiresAt - Date.now() - 60000;
+
+    if (timeUntilExpiry > 0) {
+      // Set timer to disconnect before token actually expires
+      this.tokenExpiryTimer = setTimeout(() => {
+        console.log('🔐 WebSocket: Token expiring soon, will disconnect on next connection loss');
+        this.shouldReconnect = false;
+      }, timeUntilExpiry);
+    }
   }
 
   private sendAuth(userId: string) {
@@ -135,7 +177,14 @@ class WebSocketManager {
   }
 
   private attemptReconnect() {
-    if (this.reconnectAttempts < this.maxReconnectAttempts) {
+    // Don't reconnect if token is expired
+    if (isAccessTokenExpired()) {
+      console.log('🔐 WebSocket: Token expired, not reconnecting');
+      this.shouldReconnect = false;
+      return;
+    }
+
+    if (this.shouldReconnect && this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++;
       const delay = this.baseReconnectDelay * Math.pow(1.5, this.reconnectAttempts - 1);
       
@@ -145,7 +194,7 @@ class WebSocketManager {
         });
       }, delay);
     } else {
-      console.error('❌ Max reconnection attempts reached');
+      console.error('❌ Max reconnection attempts reached or token invalid');
     }
   }
 
@@ -189,6 +238,11 @@ class WebSocketManager {
   }
 
   disconnect() {
+    this.shouldReconnect = false;
+    if (this.tokenExpiryTimer) {
+      clearTimeout(this.tokenExpiryTimer);
+      this.tokenExpiryTimer = null;
+    }
     if (this.ws) {
       this.ws.close();
       this.ws = null;

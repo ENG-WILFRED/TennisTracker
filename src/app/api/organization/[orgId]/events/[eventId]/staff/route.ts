@@ -1,5 +1,6 @@
 import prisma from '@/lib/prisma';
 import { verifyApiAuth } from '@/lib/authMiddleware';
+import { broadcastToClients } from '@/lib/websocket-broadcast';
 
 // GET - Get event staff/clients
 export async function GET(request: Request, { params }: { params: Promise<{ orgId: string; eventId: string }> }) {
@@ -68,6 +69,38 @@ export async function POST(request: Request, { params }: { params: Promise<{ org
       return new Response(JSON.stringify({ error: 'You do not have permission to assign staff' }), { status: 403 });
     }
 
+    // Find or create Staff record for this user (required for EventTask foreign key)
+    let staff = await prisma.staff.findFirst({
+      where: {
+        userId: staffId,
+        organizationId: orgId,
+      }
+    });
+
+    if (!staff) {
+      // Create Staff record if it doesn't exist
+      const user = await prisma.user.findUnique({
+        where: { id: staffId },
+        select: { firstName: true, lastName: true }
+      });
+
+      if (!user) {
+        return new Response(JSON.stringify({ error: 'User not found' }), { status: 404 });
+      }
+
+      staff = await prisma.staff.create({
+        data: {
+          userId: staffId,
+          organizationId: orgId,
+          role: role || 'Staff',
+          contact: '',
+          expertise: responsibility || null,
+          yearsOfExperience: 0,
+          isActive: true,
+        }
+      });
+    }
+
     // Find or create ProviderProfile for the staff member
     let provider = await prisma.providerProfile.findUnique({
       where: { userId: staffId }
@@ -115,6 +148,22 @@ export async function POST(request: Request, { params }: { params: Promise<{ org
         }
       }
     });
+
+    // 🔔 Broadcast staff assignment to all connected users in real-time
+    if (service.provider) {
+      broadcastToClients({
+        type: 'staff-assigned',
+        data: {
+          eventId,
+          organizationId: orgId,
+          staffId,
+          staffName: service.provider.businessName,
+          role: role || 'Event Staff',
+          responsibility: responsibility || '',
+          timestamp: new Date().toISOString(),
+        }
+      });
+    }
 
     return new Response(JSON.stringify(service), { status: 201, headers: { 'Content-Type': 'application/json' } });
   } catch (error: any) {

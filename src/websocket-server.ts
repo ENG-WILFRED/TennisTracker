@@ -217,11 +217,21 @@ app.get('/health', (req, res) => {
 
 // Handle WebSocket upgrade from HTTP
 server.on('upgrade', (request, socket, head) => {
-  // Simple auth: extract userId from query param or headers
-  // In production, validate the request properly
-  wss.handleUpgrade(request, socket, head, (ws) => {
-    wss.emit('connection', ws, request);
-  });
+  console.log(`🔗 WebSocket upgrade request from ${request.socket?.remoteAddress} to ${request.url}`);
+  console.log(`   Origin: ${request.headers.origin}`);
+  console.log(`   User-Agent: ${request.headers['user-agent']?.substring(0, 50)}...`);
+  
+  try {
+    // Simple auth: extract userId from query param or headers
+    // In production, validate the request properly
+    wss.handleUpgrade(request, socket, head, (ws) => {
+      console.log(`✅ WebSocket upgrade successful`);
+      wss.emit('connection', ws, request);
+    });
+  } catch (error) {
+    console.error(`❌ WebSocket upgrade failed:`, error);
+    socket.destroy();
+  }
 });
 
 wss.on('connection', (ws: WebSocket, request) => {

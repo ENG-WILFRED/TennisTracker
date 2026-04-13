@@ -116,6 +116,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Login failed' }, { status: 401 });
     }
 
+    const userRecord = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { acceptedTermsAt: true },
+    });
+    const termsAccepted = Boolean(userRecord?.acceptedTermsAt);
+
     // Organization owners are allowed to login even if they don't have club membership entries
     const isOrganizationOwner = Boolean(await prisma.organization.findFirst({ where: { createdBy: userId } }));
 
@@ -164,6 +170,7 @@ export async function POST(request: Request) {
       id: userId,
       role: roleToUse,
       availableRoles,
+      acceptedTerms: termsAccepted,
     };
 
     // Add organization ID if org role
@@ -172,6 +179,15 @@ export async function POST(request: Request) {
       if (org) {
         clientUser.organizationId = org.id;
       }
+    }
+
+    if (!termsAccepted) {
+      return NextResponse.json({
+        accessToken,
+        refreshToken,
+        requiresTermsAcceptance: true,
+        user: clientUser,
+      });
     }
 
     return NextResponse.json({ accessToken, refreshToken, user: clientUser });

@@ -85,6 +85,10 @@ export async function GET(req: Request) {
     const userId = url.searchParams.get('userId');
     const settingType = url.searchParams.get('settingType');
 
+    if (false) { // TODO: Implement auth check
+      return NextResponse.json({ error: 'Missing userId' }, { status: 400 });
+    }
+
     if (!userId) {
       return NextResponse.json({ error: 'Missing userId' }, { status: 400 });
     }

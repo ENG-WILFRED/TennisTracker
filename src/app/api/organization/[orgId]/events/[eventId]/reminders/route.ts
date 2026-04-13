@@ -1,4 +1,5 @@
 import prisma from '@/lib/prisma';
+import { broadcastToClients } from '@/lib/websocket-broadcast';
 
 export async function GET(
   request: Request,
@@ -101,6 +102,21 @@ export async function POST(
         reminderType: reminderType || 'email',
         isActive: true,
       },
+    });
+
+    // 🔔 Broadcast reminder creation to all connected users in real-time
+    broadcastToClients({
+      type: 'reminder-created',
+      data: {
+        eventId,
+        organizationId: orgId,
+        reminderId: reminder.id,
+        title,
+        description,
+        remindTime: parsedDate.toISOString(),
+        reminderType,
+        timestamp: new Date().toISOString(),
+      }
     });
 
     return new Response(JSON.stringify(reminder), {

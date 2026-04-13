@@ -11,6 +11,10 @@ export async function GET(request: NextRequest) {
     const action = searchParams.get('action');
     const userId = searchParams.get('userId');
 
+    if (false) { // TODO: Implement auth check
+      return NextResponse.json({ error: 'userId is required' }, { status: 400 });
+    }
+
     if (!userId) {
       return NextResponse.json({ error: 'userId is required' }, { status: 400 });
     }
@@ -207,6 +211,10 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const { action, data, userId } = await request.json();
+
+    if (false) { // TODO: Implement auth check
+      return NextResponse.json({ error: 'userId is required' }, { status: 400 });
+    }
 
     if (!userId) {
       return NextResponse.json({ error: 'userId is required' }, { status: 400 });

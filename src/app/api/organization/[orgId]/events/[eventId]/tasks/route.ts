@@ -136,6 +136,41 @@ export async function POST(
       return new Response(JSON.stringify({ error: 'Event not found' }), { status: 404 });
     }
 
+    // Validate staff member exists if staffUserId is provided
+    if (staffUserId) {
+      const staffExists = await prisma.staff.findFirst({
+        where: {
+          userId: staffUserId,
+          organizationId: orgId,
+        },
+        select: { userId: true }
+      });
+
+      if (!staffExists) {
+        return new Response(
+          JSON.stringify({ 
+            error: 'Staff member not found in this organization. Please add them to staff first.' 
+          }), 
+          { status: 400 }
+        );
+      }
+    }
+
+    // Validate service exists if serviceId is provided
+    if (serviceId) {
+      const serviceExists = await prisma.service.findUnique({
+        where: { id: serviceId },
+        select: { id: true }
+      });
+
+      if (!serviceExists) {
+        return new Response(
+          JSON.stringify({ error: 'Service not found' }), 
+          { status: 404 }
+        );
+      }
+    }
+
     const task = await prisma.eventTask.create({
       data: {
         eventId,
@@ -180,8 +215,19 @@ export async function POST(
       status: 201,
       headers: { 'Content-Type': 'application/json' }
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating task:', error);
+    
+    // Handle foreign key constraint violations
+    if (error.code === 'P2003') {
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid reference: The specified staff member or service does not exist in the organization.' 
+        }), 
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
     return new Response(JSON.stringify({ error: 'Failed to create task' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

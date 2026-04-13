@@ -51,6 +51,15 @@ export const AdminDashboard: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      router.push('/');
+    } catch (err) {
+      console.error('Logout error:', err);
+    }
+  };
+
   useEffect(() => {
     if (!user?.id) return;
 
@@ -146,10 +155,29 @@ export const AdminDashboard: React.FC = () => {
             }}><span>{item.icon}</span>{item.label}</button>
           ))}
         </nav>
-        <div style={{ margin: '0 10px 14px', background: G.mid, borderRadius: 8, padding: '10px 12px' }}>
-          <div style={{ fontSize: 9, color: G.accent, fontWeight: 700, letterSpacing: 1 }}>UPCOMING EVENT</div>
-          <div style={{ fontSize: 12, fontWeight: 700, marginTop: 4 }}>Club Spring Open</div>
-          <div style={{ fontSize: 10, color: G.muted, marginTop: 2 }}>March 25–28</div>
+
+        {/* Profile Card at Bottom */}
+        <div style={{ margin: '0 10px 14px', background: G.mid, borderRadius: 8, padding: '10px 12px', textAlign: 'center' }}>
+          {user?.photo
+            ? <img src={user.photo} alt={user.firstName} style={{ width: 40, height: 40, borderRadius: '50%', border: `2px solid ${G.lime}`, objectFit: 'cover', marginBottom: 6 }} />
+            : <div style={{ width: 40, height: 40, borderRadius: '50%', background: G.bright, margin: '0 auto 6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>🛡️</div>}
+          <div style={{ fontWeight: 800, fontSize: 11, marginTop: 4 }}>{user?.firstName ?? 'Admin'} {user?.lastName || ''}</div>
+          <div style={{ fontSize: 9, color: G.muted, marginTop: 2 }}>Platform Admin</div>
+          {user?.email && <div style={{ fontSize: 8, color: G.muted, marginTop: 2, wordBreak: 'break-word' }}>📧 {user.email}</div>}
+          <div style={{ marginTop: 6, display: 'flex', gap: 6 }}>
+            <button 
+              onClick={() => router.push('/admin/profile')}
+              style={{ flex: 1, background: G.dark, color: G.lime, border: `1px solid ${G.lime}`, borderRadius: 6, padding: '4px 0', fontSize: 8, fontWeight: 700, cursor: 'pointer' }}
+            >
+              Edit
+            </button>
+            <button 
+              onClick={handleLogout}
+              style={{ flex: 1, background: '#ff6b6b', color: '#fff', border: 'none', borderRadius: 6, padding: '4px 0', fontSize: 8, fontWeight: 700, cursor: 'pointer' }}
+            >
+              Logout
+            </button>
+          </div>
         </div>
       </aside>
 
