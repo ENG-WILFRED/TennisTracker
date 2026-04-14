@@ -13,6 +13,14 @@ export function TournamentAnnouncementsSection({ tournament }: TournamentAnnounc
   const [loading, setLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useEffect(() => {
     fetchAnnouncements();
@@ -120,15 +128,15 @@ export function TournamentAnnouncementsSection({ tournament }: TournamentAnnounc
         backdropFilter: 'blur(14px)',
         border: '1px solid rgba(125,193,66,0.16)',
         borderRadius: '16px',
-        padding: '24px',
-        marginBottom: '24px',
+        padding: isMobile ? '18px' : '24px',
+        marginBottom: isMobile ? '18px' : '24px',
       }}>
         <h3 style={{
-          fontFamily: 'Syne, sans-serif',
-          fontSize: 16,
+          fontFamily: 'Clash Display, sans-serif',
+          fontSize: isMobile ? 15 : 16,
           fontWeight: 700,
           color: '#a8d84e',
-          marginBottom: 16,
+          marginBottom: isMobile ? 12 : 16,
           display: 'flex',
           alignItems: 'center',
           gap: 8,
@@ -182,7 +190,8 @@ export function TournamentAnnouncementsSection({ tournament }: TournamentAnnounc
             onClick={handlePublish}
             disabled={isSubmitting || !newAnnouncement.title || !newAnnouncement.message}
             style={{
-              padding: '10px 24px',
+              padding: isMobile ? '10px 18px' : '10px 24px',
+              width: isMobile ? '100%' : 'auto',
               background: isSubmitting || !newAnnouncement.title || !newAnnouncement.message
                 ? 'rgba(125, 193, 66, 0.4)'
                 : 'linear-gradient(135deg,#5aa820,#7dc142,#a8d84e)',
@@ -208,14 +217,14 @@ export function TournamentAnnouncementsSection({ tournament }: TournamentAnnounc
         backdropFilter: 'blur(14px)',
         border: '1px solid rgba(125,193,66,0.16)',
         borderRadius: '16px',
-        padding: '24px',
+        padding: isMobile ? '18px' : '24px',
       }}>
         <h3 style={{
-          fontFamily: 'Syne, sans-serif',
-          fontSize: 16,
+          fontFamily: 'Clash Display, sans-serif',
+          fontSize: isMobile ? 15 : 16,
           fontWeight: 700,
           color: '#a8d84e',
-          marginBottom: 16,
+          marginBottom: isMobile ? 12 : 16,
           display: 'flex',
           alignItems: 'center',
           gap: 8,
@@ -269,8 +278,9 @@ export function TournamentAnnouncementsSection({ tournament }: TournamentAnnounc
                 <button
                   onClick={() => handleDelete(a.id)}
                   style={{
-                    alignSelf: 'flex-start',
-                    padding: '5px 12px',
+                    alignSelf: isMobile ? 'stretch' : 'flex-start',
+                    width: isMobile ? '100%' : undefined,
+                    padding: isMobile ? '10px 12px' : '5px 12px',
                     background: 'rgba(224,80,80,0.15)',
                     color: '#e05050',
                     border: '1px solid rgba(224,80,80,0.3)',

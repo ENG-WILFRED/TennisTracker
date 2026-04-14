@@ -1,4 +1,5 @@
 import { verifyToken, generateAccessToken, TokenPayload } from '@/lib/jwt';
+import { isRefreshTokenBlacklisted } from '@/lib/tokenBlacklist';
 
 export async function POST(request: Request) {
   try {
@@ -15,7 +16,7 @@ export async function POST(request: Request) {
     // Verify the refresh token
     const payload = verifyToken(refreshToken) as TokenPayload | null;
 
-    if (!payload) {
+    if (!payload || isRefreshTokenBlacklisted(refreshToken)) {
       return new Response(
         JSON.stringify({ error: 'Invalid or expired refresh token' }),
         { status: 401, headers: { 'Content-Type': 'application/json' } }

@@ -6,6 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { getTournamentDetails, getTournamentLeaderboard } from '@/actions/tournaments';
 import { authenticatedFetch } from '@/lib/authenticatedFetch';
 import React from 'react';
+import { LoadingState } from '@/components/LoadingState';
 
 import { TournamentManagementView } from './components';
 
@@ -40,6 +41,14 @@ export default function OrganizationTournamentManagementPage({
   const [updateLoading, setUpdateLoading] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Wrapper for setActiveTab that also updates URL
   const setActiveTab = (tab: 'overview' | 'registrations' | 'settings' | 'rules' | 'facilities' | 'schedule' | 'analytics' | 'announcements' | 'appeals') => {
@@ -162,18 +171,7 @@ export default function OrganizationTournamentManagementPage({
   }, [tournamentId, orgId]);
 
   if (loading) {
-    return (
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '100vh',
-        background: '#0f1f0f',
-        color: '#e8f5e0'
-      }}>
-        Loading tournament...
-      </div>
-    );
+    return <LoadingState icon="🏆" message="Loading tournament details..." />;
   }
 
   if (!tournament) {
@@ -184,7 +182,9 @@ export default function OrganizationTournamentManagementPage({
         alignItems: 'center',
         height: '100vh',
         background: '#0f1f0f',
-        color: '#e8f5e0'
+        color: '#e8f5e0',
+        padding: isMobile ? '16px' : '20px',
+        fontFamily: "'Epilogue', sans-serif"
       }}>
         Tournament not found
       </div>

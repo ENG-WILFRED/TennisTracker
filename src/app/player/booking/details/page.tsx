@@ -61,6 +61,24 @@ function BookingDetailsContent() {
   const [processing, setProcessing] = useState(false);
   const [paymentError, setPaymentError] = useState<string>('');
   const [paymentSuccess, setPaymentSuccess] = useState<string>('');
+  const [summaryOpen, setSummaryOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Mobile detection
+  React.useEffect(() => {
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      if (mobile) {
+        setSummaryOpen(false); // Close summary by default on mobile
+      } else {
+        setSummaryOpen(true); // Open summary by default on desktop
+      }
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Fetch court details
   useEffect(() => {
@@ -220,7 +238,15 @@ function BookingDetailsContent() {
   const totalPrice = 45 * duration;
 
   return (
-    <div className="w-full min-h-screen p-4 md:p-6" style={{ backgroundColor: G.dark, color: G.text }}>
+    <div className="w-full min-h-screen p-4 md:p-6 relative" style={{ backgroundColor: G.dark, color: G.text }}>
+      {/* Mobile Summary Overlay */}
+      {isMobile && summaryOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+          onClick={() => setSummaryOpen(false)}
+        />
+      )}
+
       <div className="mx-auto">
         {/* Header/Title Section */}
         <div className="mb-8">
@@ -232,6 +258,19 @@ function BookingDetailsContent() {
             >
               ← Back
             </button>
+            {/* Mobile Summary Toggle Button */}
+            {isMobile && selectedSlot && (
+              <button
+                onClick={() => setSummaryOpen(!summaryOpen)}
+                className="ml-auto px-4 py-2 rounded-lg font-bold text-sm transition-all"
+                style={{
+                  backgroundColor: G.lime,
+                  color: G.dark,
+                }}
+              >
+                {summaryOpen ? 'Hide' : 'Show'} Summary
+              </button>
+            )}
           </div>
           <h1 className="text-3xl md:text-4xl font-black tracking-tight mb-2" style={{ color: G.lime }}>
             🎾 Complete Your Booking
@@ -242,9 +281,9 @@ function BookingDetailsContent() {
         </div>
 
         {/* Main Layout: Two Columns */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className={`grid gap-6 ${isMobile ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-3'}`}>
           {/* Left: Booking Form (2 columns on large screens) */}
-          <div className="lg:col-span-2 space-y-5">
+          <div className={`${isMobile ? 'space-y-4' : 'lg:col-span-2 space-y-5'}`}>
             {/* Date Selection */}
             <Card className="border">
               <Label>Select Date</Label>
@@ -303,9 +342,11 @@ function BookingDetailsContent() {
             <Card className="border">
               <Label>Available Time Slots</Label>
               {loading ? (
-                <div className="text-center py-8">
-                  <div className="inline-block text-2xl mb-2">⏳</div>
-                  <p style={{ color: G.muted }} className="text-sm">Loading available times...</p>
+                <div className="text-center py-12">
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full" style={{ backgroundColor: G.sidebar }}>
+                    <div className="w-8 h-8 border-4 border-transparent rounded-full animate-spin" style={{ borderTopColor: G.lime }}></div>
+                  </div>
+                  <p style={{ color: G.muted }} className="text-sm mt-4">Loading available times...</p>
                 </div>
               ) : timeSlots.length === 0 ? (
                 <div className="text-center py-8">
@@ -313,7 +354,7 @@ function BookingDetailsContent() {
                   <p style={{ color: G.muted }} className="text-sm">No slots available for this date</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-6 md:grid-cols-8 gap-2">
+                <div className={`grid gap-2 ${isMobile ? 'grid-cols-4' : 'grid-cols-6 md:grid-cols-8'}`}>
                   {timeSlots.map(slot => (
                     <div key={slot.hour} className="relative group">
                       <button
@@ -321,10 +362,14 @@ function BookingDetailsContent() {
                           // Only allow selection if slot is available
                           if (slot.available) {
                             setSelectedSlot(slot.time);
+                            // Auto-open summary on mobile when slot is selected
+                            if (isMobile) {
+                              setSummaryOpen(true);
+                            }
                           }
                         }}
                         disabled={!slot.available}
-                        className={`flex flex-col items-center py-3 px-2 rounded-lg border-2 transition-all text-xs font-bold w-full ${
+                        className={`flex flex-col items-center ${isMobile ? 'py-4 px-3' : 'py-3 px-2'} rounded-lg border-2 transition-all text-xs font-bold w-full ${
                           !slot.available ? 'cursor-not-allowed opacity-50' : ''
                         }`}
                         style={{
@@ -374,8 +419,14 @@ function BookingDetailsContent() {
                   {[1, 2, 3].map(h => (
                     <button
                       key={h}
-                      onClick={() => setDuration(h)}
-                      className="flex-1 py-3 rounded-lg border-2 font-bold transition-all"
+                      onClick={() => {
+                        setDuration(h);
+                        // Auto-open summary on mobile when duration changes
+                        if (isMobile && selectedSlot) {
+                          setSummaryOpen(true);
+                        }
+                      }}
+                      className={`flex-1 ${isMobile ? 'py-4' : 'py-3'} rounded-lg border-2 font-bold transition-all`}
                       style={{
                         backgroundColor: duration === h ? G.lime : G.sidebar,
                         borderColor: duration === h ? G.lime : G.cardBorder,
@@ -408,9 +459,36 @@ function BookingDetailsContent() {
           </div>
 
           {/* Right: Summary & Policies (1 column on large screens) */}
-          <div className="lg:col-span-1 space-y-5">
-            {/* Summary Card - Sticky */}
-            <div className="sticky top-6">
+          <div className={`${
+            isMobile 
+              ? 'fixed right-0 top-0 h-full w-80 border-l overflow-y-auto z-50 transform transition-transform duration-300'
+              : 'lg:col-span-1 space-y-5'
+          }`}
+          style={isMobile ? {
+            backgroundColor: G.dark,
+            borderColor: G.cardBorder,
+            transform: summaryOpen ? 'translateX(0)' : 'translateX(100%)'
+          } : undefined}>
+            {/* Summary Card - Sticky on desktop only */}
+            <div className={`${isMobile ? 'p-4' : 'sticky top-6'}`}>
+              {/* Mobile Close Button */}
+              {isMobile && (
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-bold" style={{ color: G.lime }}>Booking Summary</h3>
+                  <button
+                    onClick={() => setSummaryOpen(false)}
+                    className="p-2 rounded-lg transition-colors"
+                    style={{ 
+                      backgroundColor: G.sidebar,
+                      color: G.muted
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.background = G.cardBorder)}
+                    onMouseLeave={e => (e.currentTarget.style.background = G.sidebar)}
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
               <Card className="border">
                 <Label>Booking Summary</Label>
                 <div className="space-y-3 mb-5">
@@ -452,7 +530,7 @@ function BookingDetailsContent() {
                 {selectedSlot && (
                   <div className="mb-5 pb-4" style={{ borderBottomColor: G.cardBorder, borderBottomWidth: '2px' }}>
                     <Label>Payment Method</Label>
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className={`grid gap-2 ${isMobile ? 'grid-cols-1' : 'grid-cols-3'}`}>
                       {[
                         { id: 'paypal', label: 'PayPal', icon: '🅿️' },
                         { id: 'stripe', label: 'Stripe', icon: '💳' },
@@ -460,8 +538,14 @@ function BookingDetailsContent() {
                       ].map((method) => (
                         <button
                           key={method.id}
-                          onClick={() => setPaymentMethod(method.id as any)}
-                          className="py-3 rounded-lg border-2 transition-all text-xs font-bold flex flex-col items-center gap-1"
+                          onClick={() => {
+                            setPaymentMethod(method.id as any);
+                            // Auto-open summary on mobile when payment method is selected
+                            if (isMobile) {
+                              setSummaryOpen(true);
+                            }
+                          }}
+                          className={`${isMobile ? 'py-4' : 'py-3'} rounded-lg border-2 transition-all text-xs font-bold flex flex-col items-center gap-1`}
                           style={{
                             backgroundColor: paymentMethod === method.id ? G.lime : G.sidebar,
                             borderColor: paymentMethod === method.id ? G.lime : G.cardBorder,
@@ -567,7 +651,16 @@ function BookingDetailsContent() {
 
 export default function BookingDetailsPage() {
   return (
-    <Suspense fallback={<div className="text-center py-12" style={{ color: '#7aaa6a' }}>Loading...</div>}>
+    <Suspense fallback={
+      <div className="w-full min-h-screen p-4 md:p-6 flex items-center justify-center" style={{ backgroundColor: G.dark }}>
+        <div className="text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full mb-4" style={{ backgroundColor: G.sidebar }}>
+            <div className="w-8 h-8 border-4 border-transparent rounded-full animate-spin" style={{ borderTopColor: G.lime }}></div>
+          </div>
+          <p style={{ color: G.muted }} className="text-sm">Loading booking details...</p>
+        </div>
+      </div>
+    }>
       <BookingDetailsContent />
     </Suspense>
   );

@@ -53,10 +53,10 @@ export default function OrganizationOverviewSection({
         ))}
       </div>
 
-      {/* KPI Bars */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10 }}>
+      {/* KPI Bars - Responsive: 2 rows of 2 columns */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 gap-4 mb-6">
         {kpiData.map((kpi: any, i: number) => (
-          <div key={i} style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 12 }}>
+          <div key={i} className="bg-[#1a3020] border" style={{ borderColor: G.cardBorder, borderRadius: 10, padding: 12 }}>
             <div style={{ fontSize: 11, color: G.muted, marginBottom: 6 }}>{kpi.label}</div>
             <div style={{ fontSize: 24, fontWeight: 900, color: kpi.color, marginBottom: 6 }}>{kpi.value}</div>
             <div style={{ height: 6, background: G.dark, borderRadius: 3, overflow: 'hidden' }}>
@@ -67,8 +67,8 @@ export default function OrganizationOverviewSection({
         ))}
       </div>
 
-      {/* Revenue + Schedule + Staff */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12 }}>
+      {/* Revenue + Schedule + Staff - Each in its own row on mobile, 3 columns on desktop */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         {/* Revenue Trend */}
         <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 14, gridColumn: 'span 1' }}>
           <div style={{ fontWeight: 800, fontSize: 13, marginBottom: 2 }}>💰 Revenue Trend</div>
@@ -126,8 +126,8 @@ export default function OrganizationOverviewSection({
         </div>
       </div>
 
-      {/* Announcements + Tasks + System */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+      {/* Announcements + Tasks + System - Each in its own row on mobile, 3 columns on desktop */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         {/* Announcements */}
         <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 14 }}>
           <div style={{ fontWeight: 800, fontSize: 13, marginBottom: 8 }}>📢 Announcements</div>

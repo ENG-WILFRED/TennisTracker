@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useRole } from '@/context/RoleContext';
+import { LoadingState } from '@/components/LoadingState';
 import {
   getAvailableCourts,
   getAvailableTimeSlots,
@@ -435,12 +436,7 @@ export function BookingView({ onClose, isEmbedded = false, canBook = true, organ
 
   // ── Loading state ──────────────────────────────────────────────────────────
   if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-48 gap-3">
-        <div className="text-3xl animate-spin">⏳</div>
-        <div className="text-sm text-[#7aaa6a]">Loading courts…</div>
-      </div>
-    );
+    return <LoadingState icon="🎾" message="Loading courts…" fullPage={false} />;
   }
 
   // ── No membership ──────────────────────────────────────────────────────────

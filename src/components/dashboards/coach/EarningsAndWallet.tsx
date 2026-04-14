@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { LoadingState } from '@/components/LoadingState';
 
 const G = {
   dark: '#0a180a', sidebar: '#0f1e0f', card: '#162616', card2: '#1b2f1b', card3: '#203520',
@@ -90,7 +91,7 @@ export default function EarningsAndWallet({ coachId }: { coachId: string }) {
   const card = { background: G.card, border: `1px solid ${G.border}`, borderRadius: 12, padding: 14 } as const;
   const inputSt = { width: '100%', padding: '8px 11px', background: G.dark, border: `1px solid ${G.border}`, color: G.text, borderRadius: 7, fontSize: 11.5, outline: 'none', boxSizing: 'border-box' } as const;
 
-  if (loading) return <div style={{ ...card, textAlign: 'center', padding: 40, color: G.muted, fontSize: 12 }}>Loading wallet...</div>;
+  if (loading) return <LoadingState icon="💳" message="Loading wallet..." fullPage={false} />;
 
   if (!wallet) return <div style={{ ...card, textAlign: 'center', padding: 40, color: G.muted, fontSize: 12 }}>No wallet data available</div>;
 

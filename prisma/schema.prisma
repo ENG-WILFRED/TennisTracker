@@ -25,6 +25,7 @@ model User {
   termsDeclineCount Int @default(0)
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
+  memberships  Membership[]
   player       Player?
   referee      Referee?
   spectator    Spectator?
@@ -35,8 +36,29 @@ model User {
   taskHistoryEntries TaskHistory[]
   resourceRequests   ResourceRequest[] @relation("ResourceRequests")
   resourceApprovals  ResourceRequest[] @relation("ResourceApprovals")
+  bugReports   BugReport[]
 
   @@index([createdAt])
+}
+
+model Membership {
+  id          String      @id @default(uuid())
+  userId      String
+  orgId       String
+  role        String      // 'player', 'coach', 'referee', 'staff', 'admin', 'finance_officer'
+  status      String      @default("pending") // 'pending', 'accepted', 'rejected', 'suspended'
+  joinedAt    DateTime    @default(now())
+  approvedAt  DateTime?
+  approvedBy  String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, orgId])
+  @@index([userId])
+  @@index([orgId])
+  @@index([status])
 }
 
 model Player {
@@ -195,6 +217,7 @@ model Organization {
   ratingCount             Int                      @default(0)
   tournamentEngScore      Int                      @default(0)
   verifiedBadge           Boolean                  @default(false)
+  memberships             Membership[]
   announcements           ClubAnnouncement[]
   tournamentAnnouncements TournamentAnnouncement[] @relation("tournamentAnnouncements")
   events                  ClubEvent[]
@@ -222,6 +245,7 @@ model Organization {
   coachSessions           CoachSession[]           @relation("CoachSessions")
   taskTemplates           TaskTemplate[]           @relation("TaskTemplates")
   assignedTasks           Task[]                   @relation("OrganizationTasks")
+  communityPosts          CommunityPost[]
 
   @@index([createdAt])
   @@index([slug])
@@ -1051,22 +1075,25 @@ model ClubRating {
 }
 
 model CommunityPost {
-  id           String         @id @default(uuid())
-  authorId     String
-  content      String
-  visibility   String         @default("public")
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
-  type         String         @default("post")
-  tournamentId String?
-  shareCount   Int            @default(1)
-  author       Player         @relation(fields: [authorId], references: [userId], onDelete: Cascade)
-  comments     PostComment[]
-  likes        PostReaction[]
+  id             String         @id @default(uuid())
+  authorId       String
+  content        String
+  visibility     String         @default("public")
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  type           String         @default("post")
+  tournamentId   String?
+  organizationId String?
+  shareCount     Int            @default(1)
+  author         Player         @relation(fields: [authorId], references: [userId], onDelete: Cascade)
+  organization   Organization?  @relation(fields: [organizationId], references: [id])
+  comments       PostComment[]
+  likes          PostReaction[]
 
   @@index([authorId])
   @@index([createdAt])
   @@index([tournamentId])
+  @@index([organizationId])
 }
 
 model PostComment {
@@ -1731,12 +1758,34 @@ model NotificationLog {
   sentAt         DateTime?       // When successfully sent
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
-  
+
   task           Task            @relation("TaskNotifications", fields: [taskId], references: [id], onDelete: Cascade)
-  
+
   @@index([taskId])
   @@index([recipientEmail])
   @@index([status])
   @@index([nextRetryAt])
+  @@index([createdAt])
+}
+
+// BugReport: User-submitted bug reports for app improvement
+model BugReport {
+  id          String      @id @default(uuid())
+  title       String
+  description String
+  severity    String      @default("medium") // "low", "medium", "high", "critical"
+  pageUrl     String
+  userAgent   String
+  userId      String
+  status      String      @default("open") // "open", "in_progress", "resolved", "closed"
+  timestamp   DateTime    @default(now())
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@index([severity])
   @@index([createdAt])
 }

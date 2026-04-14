@@ -1,4 +1,5 @@
 import { verifyToken } from './jwt';
+import { isAccessTokenBlacklisted } from './tokenBlacklist';
 
 export interface AuthenticatedRequest {
   playerId: string;
@@ -17,7 +18,7 @@ export function extractAndVerifyToken(authHeader: string | null): AuthenticatedR
   const token = authHeader.slice(7); // Remove 'Bearer ' prefix
   const payload = verifyToken(token);
 
-  if (!payload) {
+  if (!payload || isAccessTokenBlacklisted(token)) {
     return null;
   }
 

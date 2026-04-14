@@ -58,13 +58,13 @@ export default function PlayerInventory({ items }: { items: InventoryItem[] }) {
           </div>
 
           {/* Pagination */}
-          <div className="mt-4 flex items-center justify-between">
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="text-sm text-gray-600">Page {page} of {totalPages}</div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <button onClick={() => goTo(page - 1)} disabled={page === 1} className="px-3 py-1 rounded-md border border-gray-200 bg-white disabled:opacity-50">
                 Prev
               </button>
-              <div className="hidden sm:flex items-center gap-1">
+              <div className="flex flex-wrap items-center gap-1">
                 {Array.from({ length: totalPages }).map((_, i) => (
                   <button key={i} onClick={() => goTo(i + 1)} className={`px-2 py-1 rounded ${page === i + 1 ? 'bg-emerald-600 text-white' : 'bg-white border border-gray-200'}`}>
                     {i + 1}

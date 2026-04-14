@@ -4,8 +4,7 @@ import React, { useState, useRef, Suspense, lazy, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { authenticatedFetch } from '@/lib/authenticatedFetch';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
-import SessionManagement from './coach/SessionManagement';
+import { useRouter, useSearchParams } from 'next/navigation';import { LoadingState } from '@/components/LoadingState';import SessionManagement from './coach/SessionManagement';
 import PlayerManagement from './coach/PlayerManagement';
 import AnalyticsSection from './coach/AnalyticsSection';
 import CalendarView from './coach/CalendarView';
@@ -127,10 +126,10 @@ export const CoachDashboard: React.FC = () => {
 
   // State for real data
   const [players, setPlayers] = useState<any[]>([]);
-  const [schedule, setSchedule] = useState<any[]>([]);
   const [coachData, setCoachData] = useState<any>(null);
-  const [earnings, setEarnings] = useState({ thisMonth: 0, pending: 0, perSession: 0 });
-  const [stats, setStats] = useState({ studentCount: 0, rating: 0 });
+  const [dashboardData, setDashboardData] = useState<any>(null);
+  const [earnings, setEarnings] = useState({ thisMonth: 0, pending: 0, perSession: 0, balance: 0, students: 0 });
+  const [stats, setStats] = useState({ studentCount: 0, rating: 0, totalSessions: 0 });
   const [activities, setActivities] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingProfile, setEditingProfile] = useState(false);
@@ -149,14 +148,17 @@ export const CoachDashboard: React.FC = () => {
 
   const isProfile = activeNav === 'My Profile';
 
+  if (loading && !dashboardData) {
+    return <LoadingState icon="🎾" message="Loading coach dashboard..." />;
+  }
+
   // Fetch real data on mount
   useEffect(() => {
-    const fetchCoachData = async () => {
+    const fetchCoachDashboard = async () => {
       try {
         if (!user?.id) return;
         const coachId = user.id;
 
-        // Fetch full user profile with additional fields
         const userRes = await authenticatedFetch(`/api/user/profile/${coachId}`);
         if (userRes.ok) {
           const fullUserData = await userRes.json();
@@ -174,89 +176,24 @@ export const CoachDashboard: React.FC = () => {
           });
         }
 
-        // Fetch coach profile data
-        const profileRes = await fetch(`/api/coaches/${coachId}`);
-        if (profileRes.ok) {
-          const data = await profileRes.json();
-          setCoachData(data);
-        }
-
-        // Fetch players/students
-        const playersRes = await fetch(`/api/coaches/${coachId}/players`);
-        if (playersRes.ok) {
-          const data = await playersRes.json();
-          setPlayers(data);
-        }
-
-        // Fetch today's schedule
-        const scheduleRes = await fetch(`/api/coaches/${coachId}/schedule/today`);
-        if (scheduleRes.ok) {
-          const data = await scheduleRes.json();
-          setSchedule(data);
-        }
-
-        // Fetch earnings
-        const earningsRes = await fetch(`/api/coaches/${coachId}/earnings`);
-        if (earningsRes.ok) {
-          const data = await earningsRes.json();
-          setEarnings(data);
-        }
-
-        // Fetch coach stats
-        const statsRes = await fetch(`/api/coaches/${coachId}/stats`);
-        if (statsRes.ok) {
-          const data = await statsRes.json();
-          setStats(data);
-        }
-
-        // Fetch today's activities from the Activity table
-        const activitiesRes = await fetch(`/api/coaches/activities?coachId=${coachId}`);
-        if (activitiesRes.ok) {
-          const data = await activitiesRes.json();
-          const activitiesArray = Array.isArray(data.activities) ? data.activities : [];
-          // Filter for today's activities only (not completed, date = today)
-          const today = new Date();
-          const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`; // YYYY-MM-DD format
-          const todaysActivities = activitiesArray
-            .filter((a: any) => {
-              if (a.completed) return false;
-              return a.date === todayStr; // Only today's scheduled activities
-            })
-            .sort((a: any, b: any) => new Date(`${a.date}T${a.startTime}:00Z`).getTime() - new Date(`${b.date}T${b.startTime}:00Z`).getTime());
-          setActivities(todaysActivities);
+        const dashboardRes = await authenticatedFetch(`/api/dashboard/role?role=coach&userId=${coachId}`);
+        if (dashboardRes.ok) {
+          const data = await dashboardRes.json();
+          setDashboardData(data);
+          setCoachData(data.coach);
+          setPlayers(data.students || []);
+          setEarnings(data.earnings || { thisMonth: 0, pending: 0, perSession: 0, balance: 0, students: 0 });
+          setStats(data.stats || { studentCount: 0, rating: 0, totalSessions: 0 });
+          setActivities(data.activities || []);
         }
       } catch (error) {
-        console.error('Error fetching coach data:', error);
+        console.error('Error fetching coach dashboard:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchCoachData();
-  }, [user?.id]);
-
-  // Auto-follow players and organizations on mount
-  useEffect(() => {
-    const autoFollowContacts = async () => {
-      if (!user?.id) return;
-      try {
-        console.log('👥 Coach Dashboard: Triggering auto-follow for', user.id);
-        const res = await fetch(`/api/coaches/${user.id}/auto-follow-contacts`, {
-          method: 'POST',
-        });
-        
-        if (res.ok) {
-          const result = await res.json();
-          console.log('✅ Auto-follow result:', result);
-        } else {
-          console.warn('⚠️ Auto-follow failed:', res.status);
-        }
-      } catch (error) {
-        console.warn('⚠️ Auto-follow error:', error instanceof Error ? error.message : error);
-      }
-    };
-
-    autoFollowContacts();
+    fetchCoachDashboard();
   }, [user?.id]);
 
   const handleSaveProfile = async () => {
@@ -296,10 +233,10 @@ export const CoachDashboard: React.FC = () => {
   const miniSt = { background: G.card, border: `1px solid ${G.border}`, borderRadius: 8, padding: '8px 10px', marginBottom: 5 } as const;
 
   return (
-    <div style={{ display: 'flex', height: '100vh', fontFamily: "'Segoe UI', system-ui, sans-serif", background: G.dark, color: G.text, overflow: 'hidden', fontSize: 13 }}>
+    <div className="min-h-screen flex flex-col md:flex-row" style={{ fontFamily: "'Segoe UI', system-ui, sans-serif", background: G.dark, color: G.text, minHeight: '100vh', overflow: 'hidden', fontSize: 13 }}>
 
       {/* ═══════════════ LEFT NAV ═══════════════ */}
-      <aside style={{ width: 188, background: G.sidebar, borderRight: `1px solid ${G.border}`, display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
+      <aside className="hidden md:flex md:w-56" style={{ background: G.sidebar, borderRight: `1px solid ${G.border}`, flexDirection: 'column', flexShrink: 0 }}>
 
         {/* Brand */}
         <div style={{ padding: '14px 15px 13px', borderBottom: `1px solid ${G.border}`, display: 'flex', alignItems: 'center', gap: 9 }}>
@@ -380,8 +317,24 @@ export const CoachDashboard: React.FC = () => {
       </aside>
 
       {/* ═══════════════ MAIN ═══════════════ */}
-      <main style={{ flex: 1, overflowY: activeNav === 'Calendar' ? 'hidden' : 'auto', padding: activeNav === 'Calendar' ? 0 : '14px 18px', display: 'flex', flexDirection: 'column', gap: activeNav === 'Calendar' ? 0 : 11, minWidth: 0 }}>
+      <main className="flex-1 overflow-y-auto md:overflow-hidden" style={{ padding: activeNav === 'Calendar' ? 0 : '14px 18px', display: 'flex', flexDirection: 'column', gap: activeNav === 'Calendar' ? 0 : 11, minWidth: 0 }}>
 
+        <div className="md:hidden sticky top-0 z-20 bg-[#0f1e0f] border-b border-[#243e24] px-4 py-3">
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {navItems.map((item) => {
+              const isActive = activeNav === item.label;
+              return (
+                <button
+                  key={item.label}
+                  onClick={() => handleNavigation(item.label)}
+                  className={`whitespace-nowrap rounded-2xl border px-3 py-2 text-xs font-semibold transition ${isActive ? 'bg-[#1f3b1f] border-[#326832] text-[#d1e6c3]' : 'bg-transparent border-[#243e24] text-[#8aa274]'}`}
+                >
+                  {item.icon} {item.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
         {isProfile ? (
           /* ── PROFILE VIEW ── */
@@ -414,7 +367,7 @@ export const CoachDashboard: React.FC = () => {
                   </BtnSecondary>
                 </div>
                 {editingProfile ? (
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                     <div>
                       <label style={{ fontSize: 9.5, color: G.muted2, display: 'block', marginBottom: 4, fontWeight: 600 }}>FIRST NAME</label>
                       <input
@@ -498,7 +451,7 @@ export const CoachDashboard: React.FC = () => {
                     </button>
                   </div>
                 ) : (
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                     {[
                       { label: 'First Name', value: profileData?.firstName || user?.firstName },
                       { label: 'Last Name', value: profileData?.lastName || user?.lastName },
@@ -592,14 +545,14 @@ export const CoachDashboard: React.FC = () => {
         ) : activeNav === 'Dashboard' ? (
           <>
             {/* ── STAT CARDS AT TOP ── */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 9, marginBottom: 16 }}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-9 mb-4 md:mb-16">
               {[
                 { label: 'This Month', value: `$${earnings.thisMonth.toLocaleString()}`, delta: '↑ 12% vs last mo' },
                 { label: 'Per Session', value: `$${earnings.perSession}`, delta: `${players.length} players` },
                 { label: 'Pending Payout', value: `$${earnings.pending}`, delta: 'Available', yellow: true },
                 { label: 'Active Students', value: stats.studentCount.toString(), delta: `${stats.studentCount} managed` },
               ].map((s, i) => (
-                <div key={i} style={{ background: G.card, border: `1px solid ${G.border}`, borderRadius: 10, padding: '11px 12px' }}>
+                <div key={i} className="rounded-xl p-3 md:p-4" style={{ background: G.card, border: `1px solid ${G.border}`, borderRadius: 10, padding: '11px 12px' }}>
                   <div style={{ fontSize: 8.5, color: G.muted, textTransform: 'uppercase', letterSpacing: 0.8 }}>{s.label}</div>
                   <div style={{ fontSize: 20, fontWeight: 900, color: s.yellow ? G.yellow : G.lime2, marginTop: 5, lineHeight: 1 }}>{s.value}</div>
                   <Tag yellow={s.yellow}>{s.delta}</Tag>

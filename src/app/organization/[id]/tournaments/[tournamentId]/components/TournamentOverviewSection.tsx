@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface TournamentOverviewSectionProps {
   tournament: any;
@@ -36,6 +36,15 @@ export function TournamentOverviewSection({
   announcements,
   setActiveTab,
 }: TournamentOverviewSectionProps) {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   const fill = fillRate(tournament, approvedRegistrations);
   const data = leaderboard.length ? leaderboard : MOCK_LEADERBOARD;
 
@@ -44,7 +53,7 @@ export function TournamentOverviewSection({
       {/* Stat cards */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))',
+        gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit,minmax(180px,1fr))',
         gap: '14px',
         marginBottom: '24px',
       }}>
@@ -63,7 +72,7 @@ export function TournamentOverviewSection({
               backdropFilter: 'blur(12px)',
               border: '1px solid rgba(125,193,66,0.16)',
               borderRadius: '14px',
-              padding: '20px 22px',
+              padding: isMobile ? '16px 18px' : '20px 22px',
               position: 'relative',
               overflow: 'hidden',
             }}
@@ -77,19 +86,19 @@ export function TournamentOverviewSection({
               background: 'linear-gradient(90deg, #7dc142, transparent)',
               opacity: 0.5,
             }} />
-            <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '.08em', color: '#6a9058', textTransform: 'uppercase', marginBottom: 6 }}>
+            <div style={{ fontSize: isMobile ? 10 : 11, fontWeight: 600, letterSpacing: '.08em', color: '#6a9058', textTransform: 'uppercase', marginBottom: 6 }}>
               {stat.label}
             </div>
             <div style={{
-              fontFamily: 'Syne, sans-serif',
-              fontSize: 30,
+              fontFamily: 'Clash Display, sans-serif',
+              fontSize: isMobile ? 24 : 30,
               fontWeight: 800,
               color: stat.color || '#c8f07a',
               lineHeight: 1,
             }}>
               {stat.value}
             </div>
-            <div style={{ fontSize: 12, color: '#6a9058', marginTop: 4 }}>{stat.sub}</div>
+            <div style={{ fontSize: isMobile ? 11 : 12, color: '#6a9058', marginTop: 4 }}>{stat.sub}</div>
             {i === 0 && (
               <div style={{
                 height: '6px',
@@ -116,7 +125,7 @@ export function TournamentOverviewSection({
       {/* Two-column layout */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit,minmax(320px,1fr))',
+        gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit,minmax(320px,1fr))',
         gap: '18px',
       }}>
         {/* Live matches */}
@@ -125,12 +134,12 @@ export function TournamentOverviewSection({
           backdropFilter: 'blur(14px)',
           border: '1px solid rgba(125,193,66,0.16)',
           borderRadius: '16px',
-          padding: '24px',
+          padding: isMobile ? '16px' : '24px',
           marginBottom: '20px',
         }}>
           <div style={{
-            fontFamily: 'Syne, sans-serif',
-            fontSize: 16,
+            fontFamily: 'Clash Display, sans-serif',
+            fontSize: isMobile ? 14 : 16,
             fontWeight: 700,
             color: '#a8d84e',
             marginBottom: 16,
@@ -140,7 +149,7 @@ export function TournamentOverviewSection({
           }}>
             🔴 Live Matches
           </div>
-          <p style={{ color: '#c8f07a', fontSize: 13 }}>Live matches and tracking are being implemented soon.</p>
+          <p style={{ color: '#c8f07a', fontSize: isMobile ? 12 : 13 }}>Live matches and tracking are being implemented soon.</p>
         </div>
 
         {/* Upcoming */}
@@ -149,12 +158,12 @@ export function TournamentOverviewSection({
           backdropFilter: 'blur(14px)',
           border: '1px solid rgba(125,193,66,0.16)',
           borderRadius: '16px',
-          padding: '24px',
+          padding: isMobile ? '16px' : '24px',
           marginBottom: '20px',
         }}>
           <div style={{
-            fontFamily: 'Syne, sans-serif',
-            fontSize: 16,
+            fontFamily: 'Clash Display, sans-serif',
+            fontSize: isMobile ? 14 : 16,
             fontWeight: 700,
             color: '#a8d84e',
             marginBottom: 16,
@@ -164,7 +173,7 @@ export function TournamentOverviewSection({
           }}>
             ⏳ Upcoming Matches
           </div>
-          <p style={{ color: '#c8f07a', fontSize: 13 }}>Matches schedule is being implemented soon.</p>
+          <p style={{ color: '#c8f07a', fontSize: isMobile ? 12 : 13 }}>Matches schedule is being implemented soon.</p>
         </div>
 
         {/* Announcements preview */}
@@ -173,12 +182,12 @@ export function TournamentOverviewSection({
           backdropFilter: 'blur(14px)',
           border: '1px solid rgba(125,193,66,0.16)',
           borderRadius: '16px',
-          padding: '24px',
+          padding: isMobile ? '16px' : '24px',
           marginBottom: '20px',
         }}>
           <div style={{
-            fontFamily: 'Syne, sans-serif',
-            fontSize: 16,
+            fontFamily: 'Clash Display, sans-serif',
+            fontSize: isMobile ? 14 : 16,
             fontWeight: 700,
             color: '#a8d84e',
             marginBottom: 16,
@@ -190,15 +199,15 @@ export function TournamentOverviewSection({
           </div>
           {(announcements.length ? announcements : []).slice(0, 3).map(a => (
             <div key={a.id} style={{ marginBottom: 8 }}>
-              <div style={{ fontWeight: 600, color: '#dff0d0', fontSize: 14, marginBottom: 4 }}>
+              <div style={{ fontWeight: 600, color: '#dff0d0', fontSize: isMobile ? 13 : 14, marginBottom: 4 }}>
                 {a.title}
               </div>
-              <div style={{ fontWeight: 400, color:'GrayText', fontSize: 12, marginBottom: 4 }}>
+              <div style={{ fontWeight: 400, color:'GrayText', fontSize: isMobile ? 11 : 12, marginBottom: 4 }}>
                 {a.message}
               </div>
               <div
                 style={{
-                  fontSize: 12,
+                  fontSize: isMobile ? 11 : 12,
                   color: '#7a9c6a',
                   WebkitLineClamp: 2,
                   overflow: 'hidden',
@@ -208,7 +217,7 @@ export function TournamentOverviewSection({
               >
                 {a.body}
               </div>
-              <div style={{ fontSize: 11, color: '#4a6a3a', marginTop: 6 }}>{a.time}</div>
+              <div style={{ fontSize: isMobile ? 10 : 11, color: '#4a6a3a', marginTop: 6 }}>{a.time}</div>
             </div>
           ))}
           <button
@@ -216,13 +225,13 @@ export function TournamentOverviewSection({
             style={{
               marginTop: 8,
               width: '100%',
-              padding: '10px 24px',
+              padding: isMobile ? '8px 16px' : '10px 24px',
               background: 'linear-gradient(135deg,#5aa820,#7dc142,#a8d84e)',
               color: '#0a160a',
               border: 'none',
               borderRadius: '8px',
               cursor: 'pointer',
-              fontSize: '13px',
+              fontSize: isMobile ? 12 : '13px',
               fontWeight: 700,
               fontFamily: 'DM Sans, sans-serif',
             }}
@@ -237,12 +246,12 @@ export function TournamentOverviewSection({
           backdropFilter: 'blur(14px)',
           border: '1px solid rgba(125,193,66,0.16)',
           borderRadius: '16px',
-          padding: '24px',
+          padding: isMobile ? '16px' : '24px',
           marginBottom: '20px',
         }}>
           <div style={{
-            fontFamily: 'Syne, sans-serif',
-            fontSize: 16,
+            fontFamily: 'Clash Display, sans-serif',
+            fontSize: isMobile ? 14 : 16,
             fontWeight: 700,
             color: '#a8d84e',
             marginBottom: 16,
@@ -252,7 +261,7 @@ export function TournamentOverviewSection({
           }}>
             🏅 Top Players
           </div>
-          <p style={{ color: '#c8f07a', fontSize: 13 }}>Top player and leaderboard details are being implemented soon.</p>
+          <p style={{ color: '#c8f07a', fontSize: isMobile ? 12 : 13 }}>Top player and leaderboard details are being implemented soon.</p>
         </div>
       </div>
     </div>

@@ -66,12 +66,14 @@ function AppealCard({
   processing,
   onDraftChange,
   onDecision,
+  isMobile,
 }: {
   appeal: AppealItem;
   draft: string;
   processing: boolean;
   onDraftChange: (text: string) => void;
   onDecision: (status: 'approved' | 'denied') => void;
+  isMobile: boolean;
 }) {
   const name =
     appeal.user?.user?.firstName
@@ -90,9 +92,9 @@ function AppealCard({
     }}>
       {/* Card top bar */}
       <div style={{
-        padding: '16px 20px',
+        padding: isMobile ? '12px 16px' : '16px 20px',
         borderBottom: '1px solid rgba(125,193,66,0.08)',
-        display: 'flex', alignItems: 'center', gap: 14,
+        display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center', gap: isMobile ? 12 : 14,
         background: 'rgba(0,0,0,0.2)',
       }}>
         {/* Avatar */}
@@ -108,9 +110,9 @@ function AppealCard({
         </div>
 
         {/* Name + time */}
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ flex: 1, minWidth: 0, width: '100%' }}>
           <div style={{
-            fontFamily: 'Syne, sans-serif', fontSize: 14, fontWeight: 700,
+            fontFamily: 'Clash Display, sans-serif', fontSize: isMobile ? 14 : 14, fontWeight: 700,
             color: '#dff0c8', lineHeight: 1.2,
           }}>
             {name}
@@ -125,7 +127,7 @@ function AppealCard({
       </div>
 
       {/* Card body */}
-      <div style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column' as const, gap: 14 }}>
+      <div style={{ padding: isMobile ? '14px 16px' : '18px 20px', display: 'flex', flexDirection: 'column' as const, gap: 14 }}>
 
         {/* Appeal text */}
         <div>
@@ -208,28 +210,30 @@ function AppealCard({
               placeholder="Provide a reason for your decision…"
               style={{
                 width: '100%', boxSizing: 'border-box' as const,
-                padding: '10px 14px',
+                padding: isMobile ? '9px 12px' : '10px 14px',
                 borderRadius: 9,
                 border: '1px solid rgba(125,193,66,0.22)',
                 background: 'rgba(6,14,6,0.7)',
-                color: '#e8f5e0', fontSize: 13,
+                color: '#e8f5e0', fontSize: isMobile ? 12 : 13,
                 fontFamily: 'DM Sans, sans-serif',
                 outline: 'none', caretColor: '#a8d84e',
               }}
             />
 
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+            <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 8, justifyContent: isMobile ? 'stretch' : 'flex-end' }}>
               <DecisionBtn
                 label={processing ? 'Saving…' : 'Deny'}
                 disabled={processing || !draft.trim()}
                 onClick={() => onDecision('denied')}
                 variant="deny"
+                fullWidth={isMobile}
               />
               <DecisionBtn
                 label={processing ? 'Saving…' : 'Approve'}
                 disabled={processing || !draft.trim()}
                 onClick={() => onDecision('approved')}
                 variant="approve"
+                fullWidth={isMobile}
               />
             </div>
           </div>
@@ -258,12 +262,13 @@ function RuleTag({ label, value }: { label: string; value: string }) {
 }
 
 function DecisionBtn({
-  label, disabled, onClick, variant,
+  label, disabled, onClick, variant, fullWidth = false,
 }: {
   label: string;
   disabled: boolean;
   onClick: () => void;
   variant: 'approve' | 'deny';
+  fullWidth?: boolean;
 }) {
   const [hov, setHov] = useState(false);
   const isApprove = variant === 'approve';
@@ -291,6 +296,7 @@ function DecisionBtn({
           ? hov ? '#071407' : '#a8d84e'
           : hov ? '#fff' : '#f77b7b',
         cursor: disabled ? 'not-allowed' : 'pointer',
+        width: fullWidth ? '100%' : undefined,
         fontSize: 12, fontWeight: 700,
         fontFamily: 'Syne, sans-serif',
         letterSpacing: '0.07em',
@@ -314,6 +320,14 @@ export function TournamentAppealsSection({ tournamentId }: TournamentAppealsSect
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [processing, setProcessing] = useState<Record<string, boolean>>({});
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'denied'>('all');
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const loadAppeals = async () => {
     setLoading(true);
@@ -369,10 +383,10 @@ export function TournamentAppealsSection({ tournamentId }: TournamentAppealsSect
     <div style={{ fontFamily: 'DM Sans, sans-serif' }}>
 
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 26 }}>
+      <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'flex-end', justifyContent: 'space-between', marginBottom: isMobile ? 20 : 26, gap: isMobile ? 14 : 0 }}>
         <div>
           <h2 style={{
-            fontFamily: 'Syne, sans-serif', fontSize: 26, fontWeight: 800,
+            fontFamily: 'Clash Display, sans-serif', fontSize: isMobile ? 22 : 26, fontWeight: 800,
             color: '#a8d84e', margin: 0, letterSpacing: '-0.01em', lineHeight: 1,
           }}>
             Appeals
@@ -385,13 +399,15 @@ export function TournamentAppealsSection({ tournamentId }: TournamentAppealsSect
           disabled={loading}
           style={{
             display: 'flex', alignItems: 'center', gap: 6,
-            padding: '7px 14px', borderRadius: 9,
+            padding: isMobile ? '8px 12px' : '7px 14px', borderRadius: 9,
             background: 'rgba(125,193,66,0.08)',
             border: '1px solid rgba(125,193,66,0.2)',
             color: '#7dc142', cursor: loading ? 'not-allowed' : 'pointer',
             fontSize: 12, fontWeight: 700,
             fontFamily: 'Syne, sans-serif', letterSpacing: '0.06em',
             opacity: loading ? 0.5 : 1, transition: 'opacity 0.18s',
+            width: isMobile ? '100%' : 'auto',
+            justifyContent: 'center',
           }}
         >
           <span style={{
@@ -404,11 +420,11 @@ export function TournamentAppealsSection({ tournamentId }: TournamentAppealsSect
 
       {/* Filter tabs */}
       <div style={{
-        display: 'flex', gap: 6, marginBottom: 20,
+        display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 20,
         padding: '6px', borderRadius: 12,
         background: 'rgba(10,22,10,0.7)',
         border: '1px solid rgba(125,193,66,0.1)',
-        width: 'fit-content',
+        width: isMobile ? '100%' : 'fit-content',
       }}>
         {(['all', 'pending', 'approved', 'denied'] as const).map(tab => {
           const active = filter === tab;
@@ -513,6 +529,7 @@ export function TournamentAppealsSection({ tournamentId }: TournamentAppealsSect
               processing={!!processing[appeal.id]}
               onDraftChange={text => setDrafts(d => ({ ...d, [appeal.id]: text }))}
               onDecision={status => handleDecision(appeal.id, status)}
+              isMobile={isMobile}
             />
           ))}
         </div>

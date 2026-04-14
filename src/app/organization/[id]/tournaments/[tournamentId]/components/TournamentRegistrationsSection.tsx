@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { PlayerProfileModal } from '@/app/tournaments/[id]/components/PlayerProfileModal';
 import { authenticatedFetch } from '@/lib/authenticatedFetch';
 
@@ -69,6 +69,14 @@ export function TournamentRegistrationsSection({
   const [selectedPlayerForContact, setSelectedPlayerForContact] = useState<any>(null);
   const [contactMessage, setContactMessage] = useState('');
   const [contactLoading, setContactLoading] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const handleViewProfile = (registration: any) => {
     setSelectedRegistration(registration);
@@ -235,11 +243,11 @@ export function TournamentRegistrationsSection({
   return (
     <div>
       <h2 style={{
-        fontFamily: 'Syne, sans-serif',
-        fontSize: 24,
+        fontFamily: 'Clash Display, sans-serif',
+        fontSize: isMobile ? 20 : 24,
         fontWeight: 700,
         color: '#a8d84e',
-        marginBottom: 24,
+        marginBottom: isMobile ? 18 : 24,
       }}>
         Player Registrations
       </h2>
@@ -284,17 +292,19 @@ export function TournamentRegistrationsSection({
                 key={reg.id}
                 style={{
                   display: 'flex',
+                  flexDirection: isMobile ? 'column' : 'row',
                   justifyContent: 'space-between',
-                  alignItems: 'center',
-                  padding: '14px 18px',
+                  alignItems: isMobile ? 'flex-start' : 'center',
+                  padding: isMobile ? '14px 16px' : '14px 18px',
                   borderRadius: '10px',
                   background: 'rgba(12,24,12,0.6)',
                   border: '1px solid rgba(240,192,64,0.2)',
                   marginBottom: '8px',
                   transition: 'border-color .2s',
+                  gap: isMobile ? 12 : 0,
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div style={{ display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', gap: 14, width: isMobile ? '100%' : 'auto' }}>
                   <div style={{
                     width: 40,
                     height: 40,
@@ -323,11 +333,13 @@ export function TournamentRegistrationsSection({
                     )}
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: 8 }}>
+
+                <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 8, width: isMobile ? '100%' : 'auto' }}>
                   <button
                     onClick={() => handleViewProfile(reg)}
                     style={{
-                      padding: '8px 16px',
+                      width: isMobile ? '100%' : undefined,
+                      padding: isMobile ? '10px 16px' : '8px 16px',
                       background: 'rgba(125,160,170,0.15)',
                       color: '#64b5d8',
                       border: '1px solid rgba(125,160,170,0.3)',
@@ -346,7 +358,8 @@ export function TournamentRegistrationsSection({
                     onClick={() => onRegistrationAction(reg.id, 'approve')}
                     disabled={managementLoading}
                     style={{
-                      padding: '8px 16px',
+                      width: isMobile ? '100%' : undefined,
+                      padding: isMobile ? '10px 16px' : '8px 16px',
                       background: 'rgba(125,193,66,0.15)',
                       color: '#7dc142',
                       border: '1px solid rgba(125,193,66,0.3)',
@@ -365,7 +378,8 @@ export function TournamentRegistrationsSection({
                     onClick={() => onRegistrationAction(reg.id, 'reject')}
                     disabled={managementLoading}
                     style={{
-                      padding: '8px 16px',
+                      width: isMobile ? '100%' : undefined,
+                      padding: isMobile ? '10px 16px' : '8px 16px',
                       background: 'rgba(224,80,80,0.15)',
                       color: '#e05050',
                       border: '1px solid rgba(224,80,80,0.3)',
@@ -442,115 +456,122 @@ export function TournamentRegistrationsSection({
         {approvedRegistrations.length === 0 ? (
           <p style={{ color: '#4a6a3a', fontSize: 13 }}>No approved players yet.</p>
         ) : (
-          approvedRegistrations.map((reg: any) => (
-            <div
-              key={reg.id}
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: '14px 18px',
-                borderRadius: '10px',
-                background: 'rgba(12,24,12,0.6)',
-                border: '1px solid rgba(125,193,66,0.12)',
-                marginBottom: '8px',
-                transition: 'border-color .2s',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                <div style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: '50%',
-                  background: 'linear-gradient(135deg,#2a5a12,#4a8a22)',
+          <>
+            {approvedRegistrations.map((reg: any) => (
+              <div
+                key={reg.id}
+                style={{
                   display: 'flex',
+                  justifyContent: 'space-between',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  fontFamily: 'Syne, sans-serif',
-                  fontWeight: 800,
-                  color: '#a8d84e',
-                  fontSize: 15,
-                  flexShrink: 0,
-                }}>
-                  {getNameInitial(reg)}
-                </div>
-                <div>
-                  <div style={{ fontWeight: 500, color: '#dff0d0', fontSize: 14 }}>
-                    {getPlayerName(reg)}
+                  padding: '14px 18px',
+                  borderRadius: '10px',
+                  background: 'rgba(12,24,12,0.6)',
+                  border: '1px solid rgba(125,193,66,0.12)',
+                  marginBottom: '8px',
+                  transition: 'border-color .2s',
+                }}
+              >
+                <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', gap: isMobile ? 12 : 0, width: '100%' }}>
+                  <div style={{ display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', gap: 14, width: isMobile ? '100%' : 'auto' }}>
+                    <div style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: '50%',
+                      background: 'linear-gradient(135deg,#2a5a12,#4a8a22)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontFamily: 'Syne, sans-serif',
+                      fontWeight: 800,
+                      color: '#a8d84e',
+                      fontSize: 15,
+                      flexShrink: 0,
+                    }}>
+                      {getNameInitial(reg)}
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 500, color: '#dff0d0', fontSize: 14 }}>
+                        {getPlayerName(reg)}
+                      </div>
+                      <div style={{ fontSize: 11, color: '#4a6a3a', marginTop: 2 }}>
+                        Approved {new Date(reg.updatedAt).toLocaleDateString()}
+                      </div>
+                    </div>
                   </div>
-                  <div style={{ fontSize: 11, color: '#4a6a3a', marginTop: 2 }}>
-                    Approved {new Date(reg.updatedAt).toLocaleDateString()}
+                  <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 8, alignItems: isMobile ? 'stretch' : 'center', flexWrap: 'wrap', width: isMobile ? '100%' : 'auto' }}>
+                    <button
+                      onClick={() => handleViewProfile(reg)}
+                      style={{
+                        width: isMobile ? '100%' : undefined,
+                        padding: isMobile ? '10px 12px' : '6px 12px',
+                        background: 'rgba(125,160,170,0.15)',
+                        color: '#64b5d8',
+                        border: '1px solid rgba(125,160,170,0.3)',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: 12,
+                        fontWeight: 600,
+                        fontFamily: 'DM Sans, sans-serif',
+                        transition: 'background .2s',
+                        whiteSpace: 'nowrap',
+                      }}
+                      title="View full profile"
+                    >
+                      👤 Profile
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSelectedPlayerForReminder(reg);
+                        setShowPaymentReminder(true);
+                      }}
+                      style={{
+                        width: isMobile ? '100%' : undefined,
+                        padding: isMobile ? '10px 12px' : '6px 12px',
+                        background: 'rgba(240,192,64,0.15)',
+                        color: '#f0c040',
+                        border: '1px solid rgba(240,192,64,0.3)',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: 12,
+                        fontWeight: 600,
+                        fontFamily: 'DM Sans, sans-serif',
+                        transition: 'background .2s',
+                        whiteSpace: 'nowrap',
+                      }}
+                      title="Send payment reminder"
+                    >
+                      💬 Payment Reminder
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSelectedPlayerForContact(reg);
+                        setShowContactModal(true);
+                      }}
+                      style={{
+                        width: isMobile ? '100%' : undefined,
+                        padding: isMobile ? '10px 12px' : '6px 12px',
+                        background: 'rgba(125,193,66,0.15)',
+                        color: '#7dc142',
+                        border: '1px solid rgba(125,193,66,0.3)',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: 12,
+                        fontWeight: 600,
+                        fontFamily: 'DM Sans, sans-serif',
+                        transition: 'background .2s',
+                        whiteSpace: 'nowrap',
+                      }}
+                      title="Send message to player"
+                    >
+                      📞 Contact
+                    </button>
+                    <span style={{ color: '#7dc142', fontSize: 18, whiteSpace: 'nowrap' }}>✓</span>
                   </div>
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                <button
-                  onClick={() => handleViewProfile(reg)}
-                  style={{
-                    padding: '6px 12px',
-                    background: 'rgba(125,160,170,0.15)',
-                    color: '#64b5d8',
-                    border: '1px solid rgba(125,160,170,0.3)',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontSize: 12,
-                    fontWeight: 600,
-                    fontFamily: 'DM Sans, sans-serif',
-                    transition: 'background .2s',
-                    whiteSpace: 'nowrap',
-                  }}
-                  title="View full profile"
-                >
-                  👤 Profile
-                </button>
-                <button
-                  onClick={() => {
-                    setSelectedPlayerForReminder(reg);
-                    setShowPaymentReminder(true);
-                  }}
-                  style={{
-                    padding: '6px 12px',
-                    background: 'rgba(240,192,64,0.15)',
-                    color: '#f0c040',
-                    border: '1px solid rgba(240,192,64,0.3)',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontSize: 12,
-                    fontWeight: 600,
-                    fontFamily: 'DM Sans, sans-serif',
-                    transition: 'background .2s',
-                    whiteSpace: 'nowrap',
-                  }}
-                  title="Send payment reminder"
-                >
-                  💬 Payment Reminder
-                </button>
-                <button
-                  onClick={() => {
-                    setSelectedPlayerForContact(reg);
-                    setShowContactModal(true);
-                  }}
-                  style={{
-                    padding: '6px 12px',
-                    background: 'rgba(125,193,66,0.15)',
-                    color: '#7dc142',
-                    border: '1px solid rgba(125,193,66,0.3)',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontSize: 12,
-                    fontWeight: 600,
-                    fontFamily: 'DM Sans, sans-serif',
-                    transition: 'background .2s',
-                    whiteSpace: 'nowrap',
-                  }}
-                  title="Send message to player"
-                >
-                  📞 Contact
-                </button>
-                <span style={{ color: '#7dc142', fontSize: 18, whiteSpace: 'nowrap' }}>✓</span>
-              </div>
-            </div>
-          ))
+            ))}
+          </>
         )}
       </div>
 
@@ -561,7 +582,7 @@ export function TournamentRegistrationsSection({
           backdropFilter: 'blur(14px)',
           border: '1px solid rgba(220,76,100,0.25)',
           borderRadius: '16px',
-          padding: '24px',
+          padding: isMobile ? '18px' : '24px',
           marginTop: '24px',
         }}>
           <div style={{
@@ -886,5 +907,4 @@ export function TournamentRegistrationsSection({
         />
       )}
     </div>
-  );
-}
+  )};

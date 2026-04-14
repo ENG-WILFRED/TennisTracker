@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 
 interface TournamentHeaderProps {
@@ -16,11 +16,20 @@ export function TournamentHeader({
   orgId,
   pendingRegistrations = [],
 }: TournamentHeaderProps) {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   const statusColor = tournament?.status === 'open' ? '#7dc142' : '#d4a574';
   const statusBg = tournament?.status === 'open' ? 'rgba(125,193,66,0.12)' : 'rgba(212,165,116,0.12)';
 
   return (
-    <div style={{ marginBottom: '32px' }}>
+    <div style={{ marginBottom: isMobile ? '24px' : '32px' }}>
       {/* Back link */}
       <Link href={`/dashboard/org/${orgId}`} style={{
         display: 'inline-flex',
@@ -43,13 +52,13 @@ export function TournamentHeader({
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'flex-start',
-        flexWrap: 'wrap',
-        gap: '16px',
+        flexDirection: isMobile ? 'column' : 'row',
+        gap: isMobile ? '16px' : '16px',
       }}>
         <div>
           <h1 style={{
-            fontFamily: 'Syne, sans-serif',
-            fontSize: '38px',
+            fontFamily: "'Clash Display', sans-serif",
+            fontSize: isMobile ? '28px' : '38px',
             fontWeight: 800,
             background: 'linear-gradient(120deg,#7dc142 0%,#c8f07a 60%,#e8f5e0 100%)',
             WebkitBackgroundClip: 'text',
@@ -65,8 +74,9 @@ export function TournamentHeader({
             flexWrap: 'wrap',
             gap: '12px',
             alignItems: 'center',
-            fontSize: '13px',
+            fontSize: isMobile ? '12px' : '13px',
             color: '#9dc880',
+            fontFamily: "'Epilogue', sans-serif"
           }}>
             <span>📅 {new Date(tournament.startDate).toLocaleDateString()} — {new Date(tournament.endDate).toLocaleDateString()}</span>
             <span>📍 {tournament.location || 'TBD'}</span>

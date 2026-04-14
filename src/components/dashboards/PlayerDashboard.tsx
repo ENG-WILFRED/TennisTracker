@@ -2,16 +2,16 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { getStoredTokens } from '@/lib/tokenManager';
+import { LoadingState } from '@/components/LoadingState';
 import { useSearchParams, useRouter, useParams } from 'next/navigation';
-import Link from 'next/link';
 import { ProfileView } from '@/components/profile/ProfileView';
 import { BookingView } from '@/components/booking/BookingViewNew';
 import { CommunityView } from '@/components/community/CommunityView';
-import { TournamentsView } from '@/components/tournaments/TournamentsView';
+import { TournamentsView } from '@/components/players/TournamentsView';
 import { StatsView } from '@/components/stats/StatsView';
 import { SettingsView } from '@/components/settings/SettingsView';
-import { DashboardHome, ProfileSnapshot, UpcomingEvents, FriendsOnline } from '@/components/dashboards/DashboardHome';
-import { PaymentRemindersWidget } from '@/components/dashboards/PaymentRemindersWidget';
+import { DashboardHome, ProfileSnapshot } from '@/components/dashboards/DashboardHome';
 import MessagingPanel from '@/components/dashboards/MessagingPanel';
 
 const G = {
@@ -21,7 +21,7 @@ const G = {
 };
 
 export const PlayerDashboard: React.FC = () => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
@@ -33,6 +33,7 @@ export const PlayerDashboard: React.FC = () => {
   const showMessages = searchParams.get('messages') === 'true';
   const showSettings = searchParams.get('settings') === 'true';
   const [activeNav, setActiveNav] = useState('Home');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [feedPost, setFeedPost] = useState('');
   const [playerData, setPlayerData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -114,13 +115,32 @@ export const PlayerDashboard: React.FC = () => {
     { name: 'Social Mixer', date: 'June 5', icon: '🎉' },
   ];
 
+  const handleLogout = async () => {
+    const storedTokens = getStoredTokens();
+    try {
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(storedTokens?.accessToken ? { Authorization: `Bearer ${storedTokens.accessToken}` } : {}),
+        },
+        body: JSON.stringify({ refreshToken: storedTokens?.refreshToken }),
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      logout();
+      router.push('/login');
+    }
+  };
+
   const friendsOnline: { name: string; status: 'online' | 'away' | 'offline'; avatar: string }[] = [
     { name: 'Michael', status: 'online', avatar: '👦' }, { name: 'Lisa', status: 'online', avatar: '👩' },
     { name: 'Tom', status: 'away', avatar: '👨' }, { name: 'Anna', status: 'online', avatar: '👧' },
   ];
 
   if (loading) {
-    return <div className="flex items-center justify-center min-h-screen bg-court-dark text-court-text"><div>Loading...</div></div>;
+    return <LoadingState icon="🎾" message="Loading dashboard..." />;
   }
 
   const upcomingMatches = playerData?.upcomingMatches || [
@@ -129,97 +149,152 @@ export const PlayerDashboard: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen text-court-text flex" style={{ background: G.sidebar, color: G.text }}>
+    <div className="min-h-screen text-court-text flex flex-col lg:flex-row" style={{ background: G.sidebar, color: G.text }}>
 
-      {/* ── LEFT SIDEBAR ── */}
-      <aside style={{ width: 192, background: G.sidebar, borderRight: `1px solid ${G.cardBorder}`, padding: '12px 14px', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
-        <div style={{ paddingBottom: 12, borderBottom: `1px solid ${G.cardBorder}`, display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span className="text-2xl">🎾</span>
-          <div><div className="text-court-lime font-black text-sm">Vico Tennis</div></div>
+      {/* ── Mobile top bar ── */}
+      <div className="lg:hidden flex items-center justify-between px-4 py-3 border-b border-[#2d5a35]" style={{ background: G.sidebar }}>
+        <button
+          type="button"
+          onClick={() => setSidebarOpen(true)}
+          className="inline-flex items-center justify-center w-10 h-10 rounded-xl border border-[#2d5a35] text-[#7aaa6a] hover:bg-[#1e3a20] transition"
+          aria-label="Open navigation"
+        >
+          ☰
+        </button>
+        <div className="text-sm font-semibold">Player Dashboard</div>
+        <div className="text-xs text-[#7aaa6a] truncate">{user?.firstName ?? 'Player'}</div>
+      </div>
+
+      {sidebarOpen && (
+        <div className="fixed inset-0 z-30 bg-black/40 lg:hidden" onClick={() => setSidebarOpen(false)} />
+      )}
+
+      <aside className={`fixed inset-y-0 left-0 z-40 w-72 max-w-[80vw] transform border-r lg:relative lg:translate-x-0 transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:w-72 lg:translate-x-0`} style={{ background: G.sidebar, borderColor: G.cardBorder, display: 'flex', flexDirection: 'column', flexShrink: 0, minHeight: '100vh', overflow: 'hidden' }}>
+        <div className="flex items-center justify-between gap-3 px-4 py-4 lg:hidden">
+          <div className="flex items-center gap-2">
+            <span className="text-2xl">🎾</span>
+            <div>
+              <div className="text-court-lime font-black text-sm">Vico Tennis</div>
+              <div className="text-[11px] text-[#7aaa6a]">Player Dashboard</div>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(false)}
+            className="inline-flex items-center justify-center w-9 h-9 rounded-xl border border-[#2d5a35] text-[#7aaa6a] hover:bg-[#1e3a20] transition"
+            aria-label="Close navigation"
+          >
+            ✕
+          </button>
         </div>
-        <nav style={{ flex: 1, paddingTop: 8 }}>
-          {navItems.map(item => 
-            item.href ? (
-              <Link key={item.label} href={item.href}>
-                <button style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, paddingLeft: 14, paddingRight: 14, paddingTop: 10, paddingBottom: 10, fontSize: 12, textAlign: 'left', borderTop: 'none', borderRight: 'none', borderBottom: 'none', borderLeft: `3px solid ${activeNav === item.label ? G.lime : 'transparent'}`, transition: 'all 0.2s', background: activeNav === item.label ? G.mid : 'transparent', color: activeNav === item.label ? 'white' : G.muted, cursor: 'pointer' }} className="hover:text-court-text">
-                  <span>{item.icon}</span>{item.label}
+        <div className="hidden lg:flex items-center justify-between gap-3 px-4 py-4">
+          <div className="flex items-center gap-2">
+            <span className="text-2xl">🎾</span>
+            <div>
+              <div className="text-court-lime font-black text-sm">Vico Tennis</div>
+              <div className="text-[11px] text-[#7aaa6a]">Player Dashboard</div>
+            </div>
+          </div>
+          <div className="text-xs text-[#7aaa6a] truncate">{user?.firstName ?? 'Player'}</div>
+        </div>
+
+        <div className="flex-1 px-4 pb-4">
+          <div className="flex flex-col gap-2">
+            {navItems.map(item => {
+              const isActive = activeNav === item.label;
+              const buttonClasses = `w-full flex items-center gap-2 px-3 py-2 text-[11px] text-left rounded-xl transition-all ${isActive ? 'bg-[#2d5a27] border-l-4 border-[#7dc142] text-white' : 'bg-[#152515] text-[#7aaa6a] hover:border-l-4 hover:border-[#7dc142] hover:text-white'}`;
+              const targetPath = item.href?.startsWith('/')
+                ? item.href
+                : `/dashboard/${params?.role || 'player'}/${params?.id || user?.id}${item.href || ''}`;
+
+              return (
+                <button
+                  key={item.label}
+                  type="button"
+                  onClick={() => {
+                    setActiveNav(item.label);
+                    setSidebarOpen(false);
+                    if (item.label === 'Home' && params?.role && params?.id) {
+                      router.push(`/dashboard/${params.role}/${params.id}`);
+                    } else {
+                      router.push(targetPath);
+                    }
+                  }}
+                  className={buttonClasses}
+                >
+                  <span>{item.icon}</span>
+                  <span className="truncate">{item.label}</span>
                 </button>
-              </Link>
-            ) : (
-              <button key={item.label} onClick={() => {
-                setActiveNav(item.label);
-                if (item.label === 'Home' && params?.role && params?.id) {
-                  router.push(`/dashboard/${params.role}/${params.id}`);
-                } else if (item.label === 'Court Booking' && params?.role && params?.id) {
-                  router.push(`/dashboard/${params.role}/${params.id}?booking=true`);
-                } else if (item.label === 'Messages' && params?.role && params?.id) {
-                  router.push(`/dashboard/${params.role}/${params.id}?messages=true`);
-                } else if (item.label === 'Community' && params?.role && params?.id) {
-                  router.push(`/dashboard/${params.role}/${params.id}?community=true`);
-                } else if (item.label === 'Tournaments' && params?.role && params?.id) {
-                  router.push(`/dashboard/${params.role}/${params.id}?tournaments=true`);
-                } else if (item.label === 'Stats' && params?.role && params?.id) {
-                  router.push(`/dashboard/${params.role}/${params.id}?stats=true`);
-                } else if (item.label === 'Settings' && params?.role && params?.id) {
-                  router.push(`/dashboard/${params.role}/${params.id}?settings=true`);
-                }
-              }} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, paddingLeft: 14, paddingRight: 14, paddingTop: 10, paddingBottom: 10, fontSize: 12, textAlign: 'left', borderTop: 'none', borderRight: 'none', borderBottom: 'none', borderLeft: `3px solid ${activeNav === item.label ? G.lime : 'transparent'}`, transition: 'all 0.2s', background: activeNav === item.label ? G.mid : 'transparent', color: activeNav === item.label ? 'white' : G.muted, cursor: 'pointer' }} className="hover:text-court-text">
-                <span>{item.icon}</span>{item.label}
-              </button>
-            )
-          )}
-        </nav>
-        <div style={{ paddingLeft: 12, paddingRight: 12, paddingBottom: 8, paddingTop: 8 }}>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="px-4 pb-4">
           <button
             onClick={() => {
               setActiveNav('Court Booking');
+              setSidebarOpen(false);
               if (params?.role && params?.id) {
                 router.push(`/dashboard/${params.role}/${params.id}?booking=true`);
               }
             }}
-            style={{ width: '100%', backgroundImage: `linear-gradient(to right, ${G.lime}, ${G.bright})`, border: 'none', color: '#0f1f0f', borderRadius: 6, padding: '10px 0', fontWeight: 800, fontSize: 12, cursor: 'pointer', opacity: 0.9 }}
-            className="hover:opacity-100 transition-opacity"
+            className="w-full rounded-xl py-3 font-bold text-[12px] bg-gradient-to-r from-[#7dc142] to-[#a8d84e] text-[#0f1f0f] hover:opacity-90 transition-opacity"
           >
             🎾 Book a Court
           </button>
-        </div>
-        <div style={{ marginLeft: 10, marginRight: 10, marginBottom: 12, background: G.mid, borderRadius: 8, padding: 12 }}>
-          <div style={{ fontSize: 10, color: G.accent, fontWeight: 800, letterSpacing: '0.05em' }}>UPCOMING EVENT</div>
-          <div style={{ fontSize: 12, fontWeight: 800, marginTop: 6 }}>Club Tournament</div>
-          <div style={{ fontSize: 12, color: G.muted, marginTop: 6 }}>Saturday, May 28</div>
+          <div className="mt-4">
+            <ProfileSnapshot user={user} playerData={playerData} showViewProfileButton={false} />
+          </div>
+          <div className="grid grid-cols-2 gap-2 mt-4">
+            <button
+              type="button"
+              onClick={() => {
+                setActiveNav('My Profile');
+                setSidebarOpen(false);
+                if (params?.role && params?.id) {
+                  router.push(`/dashboard/${params.role}/${params.id}?profile=true`);
+                } else {
+                  router.push('?profile=true');
+                }
+              }}
+              className="rounded-xl py-3 text-[12px] font-bold bg-[#2d5a27] text-[#7dc142] hover:bg-[#3d7a32] transition-colors"
+            >
+              View Profile
+            </button>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="rounded-xl py-3 text-[12px] font-bold bg-red-600 text-white hover:bg-red-700 transition-colors"
+            >
+              Logout
+            </button>
+          </div>
         </div>
       </aside>
 
-      {/* ── MAIN ── */}
-      <main className="flex-1 p-3 flex flex-col gap-3" style={{ background: G.sidebar }} >{showProfile ? (
-          <ProfileView isEmbedded={true} canEdit={true} />
-        ) : showBooking ? (
-          <BookingView isEmbedded={true} canBook={true} organizationId={organizationId} />
-        ) : showMessages ? (
-          <MessagingPanel userId={user?.id || ''} userType="player" />
-        ) : showCommunity ? (
-          <CommunityView isEmbedded={true} />
-        ) : showTournaments ? (
-          <TournamentsView isEmbedded={true} />
-        ) : showStats ? (
-          <StatsView isEmbedded={true} playerData={playerData} />
-        ) : showSettings ? (
-          <SettingsView isEmbedded={true} />
-        ) : (
-          <DashboardHome playerData={playerData} upcomingMatches={upcomingMatches} leaderboard={leaderboard} activityFeed={activityFeed} />
-        )}
+      {/* ── MAIN CONTENT ── */}
+      <main className="flex-1 px-3 py-4 sm:px-5 sm:py-5">
+        <div className="space-y-4">
+          {showProfile ? (
+            <ProfileView isEmbedded={true} canEdit={true} />
+          ) : showBooking ? (
+            <BookingView isEmbedded={true} canBook={true} organizationId={organizationId} />
+          ) : showMessages ? (
+            <MessagingPanel userId={user?.id || ''} userType="player" />
+          ) : showCommunity ? (
+            <CommunityView isEmbedded={true} />
+          ) : showTournaments ? (
+            <TournamentsView isEmbedded={true} playerId={params.id as string} />
+          ) : showStats ? (
+            <StatsView isEmbedded={true} playerData={playerData} />
+          ) : showSettings ? (
+            <SettingsView isEmbedded={true} />
+          ) : (
+            <DashboardHome playerData={playerData} upcomingMatches={upcomingMatches} leaderboard={leaderboard} activityFeed={activityFeed} />
+          )}
+        </div>
       </main>
-
-      {/* ── RIGHT SIDEBAR ── */}
-      <aside style={{ width: 188, background: G.sidebar, borderLeft: `2px solid ${G.lime}`, padding: '14px 12px', display: 'flex', flexDirection: 'column', gap: 16, flexShrink: 0, minWidth: 188 }}>
-        <ProfileSnapshot user={user} playerData={playerData} />
-
-        <PaymentRemindersWidget />
-
-        <UpcomingEvents events={upcomingEvents} />
-
-        <FriendsOnline friends={friendsOnline} />
-      </aside>
     </div>
   );
 };

@@ -10,126 +10,112 @@ const prisma = new PrismaClient();
 export async function getCoachDashboard(coachId: string) {
   const coach = await prisma.staff.findUnique({
     where: { userId: coachId },
-    include: { user: true },
-  });
-  if (!coach || !coach.role.includes("Coach")) throw new Error("Coach not found");
-
-  // Get students coached by this coach
-  // Note: Querying players who have attendance records
-  const students = await prisma.user.findMany({
-    where: {
-      player: {
-        isNot: null,
-      },
-    },
     include: {
-      player: {
+      user: true,
+      stats: true,
+      wallet: true,
+      players: {
+        where: { status: 'active' },
+        orderBy: { lastSessionAt: 'desc' },
+        take: 6,
         include: {
-          attendance: {
-            orderBy: { date: "desc" },
-            take: 10,
+          player: {
+            include: { user: true },
           },
         },
       },
+      activities: {
+        where: {
+          date: new Date().toISOString().slice(0, 10),
+          completed: false,
+        },
+        orderBy: { startTime: 'asc' },
+      },
     },
-    take: 4,
   });
 
-  const studentsList = students.map((s) => {
-    const totalSessions = s.player?.attendance.length || 0;
-    const progressRate = Math.min(
-      Math.round((totalSessions / 20) * 100),
-      100
-    );
-    return {
-      id: s.id,
-      name: `${s.firstName} ${s.lastName}`,
-      progress: progressRate,
-      sessions: totalSessions,
-      nextSession: s.player?.attendance[0]
-        ? new Date(s.player.attendance[0].date).toLocaleDateString("en-US", {
-            weekday: "short",
-            month: "short",
-            day: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-          })
-        : "No upcoming session",
-    };
-  });
+  if (!coach || !coach.role.includes('Coach')) throw new Error('Coach not found');
 
-  // Get upcoming matches the coach is associated with
-  const coachMatches = await prisma.match.findMany({
+  const studentsList = coach.players.map((rel) => ({
+    id: rel.playerId,
+    name: `${rel.player.user.firstName} ${rel.player.user.lastName}`,
+    sessions: rel.sessionsCount,
+    progress: rel.sessionsCount > 0 ? Math.min(Math.round((rel.sessionsCount / 20) * 100), 100) : 0,
+    lastSessionAt: rel.lastSessionAt?.toISOString() || null,
+    status: rel.status,
+  }));
+
+  const upcomingSessions = await prisma.coachSession.findMany({
     where: {
-      refereeId: coachId,
-      winnerId: null,
+      coachId,
+      status: 'scheduled',
+      startTime: {
+        gte: new Date(),
+      },
     },
     include: {
-      playerA: { include: { user: true } },
-      playerB: { include: { user: true } },
+      player: { include: { user: true } },
+      court: true,
     },
-    orderBy: { createdAt: "asc" },
-    take: 1,
+    orderBy: { startTime: 'asc' },
+    take: 3,
   });
 
-  const nextMatch =
-    coachMatches.length > 0
-      ? {
-          player: `${coachMatches[0].playerA.user.firstName} ${coachMatches[0].playerA.user.lastName}`,
-          opponent: `${coachMatches[0].playerB.user.firstName} ${coachMatches[0].playerB.user.lastName}`,
-          date: new Date(coachMatches[0].createdAt).toLocaleDateString(
-            "en-US",
-            { weekday: "short", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }
-          ),
-          court: `Court ${Math.floor(Math.random() * 5) + 1}`,
-        }
-      : null;
+  const nextSession = upcomingSessions[0]
+    ? {
+        player: `${upcomingSessions[0].player?.user.firstName ?? ''} ${upcomingSessions[0].player?.user.lastName ?? ''}`.trim(),
+        date: upcomingSessions[0].startTime.toLocaleString('en-US', {
+          weekday: 'short',
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+        court: upcomingSessions[0].court?.courtNumber ? `Court ${upcomingSessions[0].court.courtNumber}` : 'Court 1',
+      }
+    : null;
 
-  // Calculate earnings
-  const monthlyRevenue = studentsList.reduce((acc, s) => acc + (s.sessions * 60), 0);
   const earnings = {
-    thisMonth: monthlyRevenue,
-    pending: Math.floor(monthlyRevenue * 0.1),
+    thisMonth: coach.wallet?.totalEarned ?? 0,
+    pending: coach.wallet?.pendingBalance ?? 0,
+    balance: coach.wallet?.balance ?? 0,
     perSession: 60,
     students: studentsList.length,
   };
+
+  const activities = coach.activities.map((activity) => ({
+    ...activity,
+    dateLabel: new Date(`${activity.date}T${activity.startTime}:00Z`).toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }),
+  }));
 
   return {
     coach: {
       id: coach.userId,
       name: `${coach.user.firstName} ${coach.user.lastName}`,
       photo: coach.user.photo,
-      role: "Coach",
+      role: 'Coach',
+      bio: coach.bio ?? '',
     },
     students: studentsList,
-    nextMatch,
+    nextSession,
     earnings,
     drills: [
-      {
-        name: "Serve Technique",
-        duration: "30 min",
-        pct: 90,
-        color: "#7dc142",
-      },
-      {
-        name: "Net Volley Practice",
-        duration: "25 min",
-        pct: 75,
-        color: "#5aa832",
-      },
-      {
-        name: "Footwork Drills",
-        duration: "20 min",
-        pct: 60,
-        color: "#3d7a32",
-      },
-      {
-        name: "Intensive Training",
-        duration: "15 min",
-        pct: 45,
-        color: "#2d5a27",
-      },
+      { name: 'Serve Technique', duration: '30 min', pct: 90, color: '#7dc142' },
+      { name: 'Net Volley Practice', duration: '25 min', pct: 75, color: '#5aa832' },
+      { name: 'Footwork Drills', duration: '20 min', pct: 60, color: '#3d7a32' },
+      { name: 'Intensive Training', duration: '15 min', pct: 45, color: '#2d5a27' },
     ],
+    activities,
+    stats: {
+      studentCount: coach.stats?.activePlayers ?? studentsList.length,
+      rating: coach.stats?.avgRating ?? 4.6,
+      totalSessions: coach.stats?.totalSessions ?? 0,
+    },
   };
 }
 
@@ -137,38 +123,36 @@ export async function getCoachDashboard(coachId: string) {
  * Get referee dashboard data - upcoming matches, score submissions, stats
  */
 export async function getRefereeDashboard(refereeId: string) {
-  const referee = await prisma.staff.findUnique({
+  const referee = await prisma.referee.findUnique({
     where: { userId: refereeId },
     include: { user: true },
   });
-  if (!referee || !referee.role.includes("Referee"))
-    throw new Error("Referee not found");
 
-  // Get upcoming matches assigned to this referee
+  if (!referee) throw new Error('Referee not found');
+
   const upcomingMatches = await prisma.match.findMany({
     where: { refereeId, winnerId: null },
     include: {
       playerA: { include: { user: true } },
       playerB: { include: { user: true } },
     },
-    orderBy: { createdAt: "asc" },
+    orderBy: { createdAt: 'asc' },
     take: 5,
   });
 
   const nextMatches = upcomingMatches.slice(0, 2).map((m) => ({
     p1: m.playerA.user.firstName,
     p2: m.playerB.user.firstName,
-    date: new Date(m.createdAt).toLocaleDateString("en-US", {
-      weekday: "short",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
+    date: m.createdAt.toLocaleString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
     }),
-    type: m.round || "Regular Match",
+    type: m.round || 'Regular Match',
   }));
 
-  // Get recent score submissions (completed matches)
   const completedMatches = await prisma.match.findMany({
     where: { refereeId, winnerId: { not: null } },
     include: {
@@ -176,22 +160,21 @@ export async function getRefereeDashboard(refereeId: string) {
       playerB: { include: { user: true } },
       winner: { include: { user: true } },
     },
-    orderBy: { createdAt: "desc" },
+    orderBy: { createdAt: 'desc' },
     take: 5,
   });
 
   const scoreSubmissions = completedMatches.map((m) => ({
     match: `${m.playerA.user.firstName} vs ${m.playerB.user.firstName}`,
-    winner: m.winner?.user.firstName || "Unknown",
-    score: `${Math.floor(Math.random() * 7)}-${Math.floor(Math.random() * 7)}, ${Math.floor(Math.random() * 7)}-${Math.floor(Math.random() * 7)}`,
-    date: new Date(m.createdAt).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
+    winner: m.winner?.user.firstName || 'Unknown',
+    score: m.score || 'TBD',
+    date: m.createdAt.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
     }),
-    status: "Submitted",
+    status: 'Submitted',
   }));
 
-  // Get referee stats
   const totalMatches = await prisma.match.count({
     where: { refereeId },
   });
@@ -204,6 +187,34 @@ export async function getRefereeDashboard(refereeId: string) {
     },
   });
 
+  const incomingMatches = upcomingMatches.map((m) => ({
+    id: m.id,
+    playerA: `${m.playerA.user.firstName} ${m.playerA.user.lastName}`,
+    playerB: `${m.playerB.user.firstName} ${m.playerB.user.lastName}`,
+    eventName: m.round ? `Round ${m.round}` : 'Scheduled Match',
+    status: 'upcoming',
+    court: 'Court 1',
+    date: m.createdAt.toLocaleString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }),
+  }));
+
+  const recentMatches = completedMatches.map((m) => ({
+    player1: `${m.playerA.user.firstName} ${m.playerA.user.lastName}`,
+    player2: `${m.playerB.user.firstName} ${m.playerB.user.lastName}`,
+    date: m.createdAt.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+    }),
+    court: 'Court 1',
+    score: m.score || 'TBD',
+    status: 'Completed',
+  }));
+
   return {
     referee: {
       id: referee.userId,
@@ -211,14 +222,26 @@ export async function getRefereeDashboard(refereeId: string) {
       photo: referee.user.photo,
       rating: 4.8,
       onTimeRate: 98,
+      certifications: referee.certifications || [],
+      experience: referee.experience || '',
     },
     liveMatch: {
-      p1: upcomingMatches[0]?.playerA.user.firstName || "Roger Federer",
-      p2: upcomingMatches[0]?.playerB.user.firstName || "Carlos Alcaraz",
-      court: "Court 1",
-      status: "Sunday 3:00 PM",
+      p1: upcomingMatches[0]?.playerA.user.firstName || 'Roger Federer',
+      p2: upcomingMatches[0]?.playerB.user.firstName || 'Carlos Alcaraz',
+      court: 'Court 1',
+      status: upcomingMatches[0]
+        ? upcomingMatches[0].createdAt.toLocaleString('en-US', {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+          })
+        : 'No live match',
     },
     nextMatches,
+    incomingMatches,
+    recentMatches,
     scoreSubmissions: scoreSubmissions.slice(0, 3),
     stats: {
       matchesRefereed: totalMatches,

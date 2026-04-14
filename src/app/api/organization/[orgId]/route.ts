@@ -112,21 +112,44 @@ export async function GET(
     const { orgId } = await params;
     const queryInclude = buildOrgQuery();
 
+    const orgInclude = {
+      ...queryInclude,
+      membershipTiers: {
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          monthlyPrice: true,
+          benefitsJson: true,
+          courtHoursPerMonth: true,
+          maxConcurrentBookings: true,
+          discountPercentage: true,
+        },
+      },
+    };
+
     let org: any = await prisma.organization.findUnique({
       where: { id: orgId },
-      include: queryInclude,
+      include: orgInclude,
     });
 
     // If not found by id, try to resolve by slug (support both id and slug URLs)
     if (!org) {
       org = await prisma.organization.findUnique({
         where: { slug: orgId },
-        include: queryInclude,
+        include: orgInclude,
       });
     }
 
     if (!org) {
       return new Response(JSON.stringify({ error: 'Organization not found' }), { status: 404 });
+    }
+
+    if (Array.isArray(org.membershipTiers)) {
+      org.membershipTiers = org.membershipTiers.map((tier: any) => ({
+        ...tier,
+        benefits: typeof tier.benefitsJson === 'string' && tier.benefitsJson ? JSON.parse(tier.benefitsJson) : [],
+      }));
     }
 
     return new Response(

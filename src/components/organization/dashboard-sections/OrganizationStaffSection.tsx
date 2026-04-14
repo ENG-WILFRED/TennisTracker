@@ -99,7 +99,7 @@ export default function OrganizationStaffSection({ orgId }: StaffSectionProps) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       {/* Staff Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 10 }}>
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 md:gap-4">
         <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 12 }}>
           <div style={{ fontSize: 10, color: G.muted, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Staff</div>
           <div style={{ fontSize: 24, fontWeight: 900, color: G.lime }}>{loading ? '-' : stats.total}</div>
@@ -127,8 +127,8 @@ export default function OrganizationStaffSection({ orgId }: StaffSectionProps) {
       </div>
 
       {/* Role Filter & Search */}
-      <div style={{ display: 'flex', gap: 12, justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+      <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+        <div className="flex flex-wrap gap-2">
           {(['all', 'coach', 'referee', 'admin'] as RoleType[]).map(role => (
             <button
               key={role}
@@ -158,17 +158,7 @@ export default function OrganizationStaffSection({ orgId }: StaffSectionProps) {
           placeholder="Search staff..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          style={{
-            padding: '8px 14px',
-            borderRadius: 8,
-            border: `1px solid ${G.cardBorder}`,
-            background: G.dark,
-            color: G.text,
-            fontSize: 11,
-            fontFamily: "'Raleway', sans-serif",
-            minWidth: 200,
-            outline: 'none',
-          }}
+          className="w-full sm:w-auto min-w-0 sm:min-w-[200px] px-3 py-2 rounded-lg border border-gray-300 bg-white text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       </div>
 
@@ -186,13 +176,7 @@ export default function OrganizationStaffSection({ orgId }: StaffSectionProps) {
             {filteredStaff.map((s, i) => (
               <div
                 key={s.id}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 12,
-                  padding: '14px 0',
-                  borderBottom: i < filteredStaff.length - 1 ? `1px solid ${G.cardBorder}33` : 'none',
-                }}
+                className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 p-4 border-b border-gray-200 last:border-b-0"
               >
                 {/* Avatar */}
                 <div
@@ -217,10 +201,10 @@ export default function OrganizationStaffSection({ orgId }: StaffSectionProps) {
                 </div>
 
                 {/* Info */}
-                <div style={{ flex: 1, minWidth: 0 }}>
+                <div className="flex-1 min-w-0">
                   <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 4 }}>{s.name}</div>
                   <div style={{ fontSize: 10, color: G.muted, marginBottom: 2 }}>{s.email}</div>
-                  <div style={{ display: 'flex', gap: 10, fontSize: 9, color: G.muted }}>
+                  <div className="flex flex-wrap gap-2 text-xs text-gray-600">
                     <span style={{ textTransform: 'capitalize', fontWeight: 600, color: getRoleColor(s.role) }}>
                       {getRoleIcon(s.role)} {s.role}
                     </span>
@@ -231,7 +215,7 @@ export default function OrganizationStaffSection({ orgId }: StaffSectionProps) {
                 </div>
 
                 {/* Status & Activity */}
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <div className="flex gap-2 items-center flex-shrink-0">
                   <span
                     style={{
                       fontSize: 9,

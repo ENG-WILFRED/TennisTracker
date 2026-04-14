@@ -27,6 +27,8 @@ interface Contact {
 interface ConversationsSidebarProps {
   selectedContactId: string | null;
   onSelectContact: (contactId: string, contactName: string, contactPhoto?: string, contactType?: 'individual' | 'group' | 'dm') => void;
+  isMobile?: boolean;
+  onClose?: () => void;
 }
 
 type FilterTab = 'all' | 'unread' | 'starred';
@@ -34,6 +36,8 @@ type FilterTab = 'all' | 'unread' | 'starred';
 export default function ConversationsSidebar({
   selectedContactId,
   onSelectContact,
+  isMobile = false,
+  onClose
 }: ConversationsSidebarProps) {
   const { playerId } = useAuth();
   const { contacts, loading, refreshContacts } = useChat();
@@ -55,10 +59,12 @@ export default function ConversationsSidebar({
     }));
   }, [contacts, starredContacts]);
 
-  // Load contacts on mount
+  // Load contacts on mount if they have not already been loaded by the provider
   useEffect(() => {
-    refreshContacts();
-  }, [refreshContacts]);
+    if (contacts.length === 0) {
+      refreshContacts();
+    }
+  }, [contacts.length, refreshContacts]);
 
   // Calculate online count and total unread
   const onlineCount = useMemo(() => contactsWithStarred.filter(c => c.isOnline).length, [contactsWithStarred]);
@@ -179,13 +185,38 @@ export default function ConversationsSidebar({
       {/* Header */}
       <div style={{ padding: '20px 16px 0', borderBottom: '1px solid #1e2235' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-          <div>
-            <h2 style={{ margin: 0, fontSize: '22px', fontWeight: 800, color: '#e8eaf6', letterSpacing: '-0.03em' }}>
-              Messages
-            </h2>
-            <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#22c55e' }}>
-              {onlineCount} online now
-            </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {isMobile && onClose && (
+              <button
+                onClick={onClose}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#8b8fa8',
+                  padding: '8px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+                onMouseEnter={e => (e.currentTarget.style.background = '#1e2235')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                title="Close sidebar"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M15 18l-6-6 6-6"/>
+                </svg>
+              </button>
+            )}
+            <div>
+              <h2 style={{ margin: 0, fontSize: '22px', fontWeight: 800, color: '#e8eaf6', letterSpacing: '-0.03em' }}>
+                Messages
+              </h2>
+              <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#22c55e' }}>
+                {onlineCount} online now
+              </p>
+            </div>
           </div>
           <div style={{ display: 'flex', gap: '4px' }}>
             <button
@@ -306,7 +337,12 @@ export default function ConversationsSidebar({
             return (
               <div
                 key={contact.id}
-                onClick={() => onSelectContact(contact.id, name, photo, contact.role === 'group' ? 'group' : contact.role === 'dm' ? 'dm' : 'individual')}
+                onClick={() => {
+                  onSelectContact(contact.id, name, photo, contact.role === 'group' ? 'group' : contact.role === 'dm' ? 'dm' : 'individual');
+                  if (isMobile && onClose) {
+                    onClose();
+                  }
+                }}
                 style={{
                   display: 'flex', alignItems: 'center', gap: '12px',
                   padding: '12px 16px', cursor: 'pointer',

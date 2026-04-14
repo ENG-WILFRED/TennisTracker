@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { authenticatedFetch } from '@/lib/authenticatedFetch';
 import { useAuth } from '@/context/AuthContext';
 import toast from 'react-hot-toast';
+import { LoadingState } from '@/components/LoadingState';
 
 const G = {
   dark: '#0f1f0f', sidebar: '#152515', card: '#1a3020', cardBorder: '#2d5a35',
@@ -109,6 +110,14 @@ export default function EventDetailsPage() {
   const [showReminderForm, setShowReminderForm] = useState(false);
   const [reminderForm, setReminderForm] = useState({ title: '', description: '', remindTime: '', reminderType: 'email' });
   const [loadingAddReminder, setLoadingAddReminder] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useEffect(() => {
     if (orgId && eventId) {
@@ -552,7 +561,7 @@ export default function EventDetailsPage() {
     }
   }
 
-  if (loading) return <div style={{ padding: 20, color: G.muted }}>Loading...</div>;
+  if (loading) return <LoadingState icon="📅" message="Loading event details..." />;
   if (error) return <div style={{ padding: 20, color: 'red' }}>Error: {error}</div>;
   if (!event) return <div style={{ padding: 20, color: G.muted }}>Event not found</div>;
 
@@ -560,15 +569,35 @@ export default function EventDetailsPage() {
   const remaining = event.registrationCap - registered;
 
   return (
-    <div style={{ padding: 20, background: G.dark, minHeight: '100vh', color: G.text }}>
-      <div style={{  margin: '0 auto' }}>
+    <div style={{ 
+      padding: isMobile ? '16px' : '20px', 
+      background: G.dark, 
+      minHeight: '100vh', 
+      color: G.text 
+    }}>
+      <div style={{ 
+        maxWidth: '1200px', 
+        margin: '0 auto',
+        width: '100%'
+      }}>
         {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'flex-start', 
+          marginBottom: 24,
+          flexDirection: isMobile ? 'column' : 'row',
+          gap: isMobile ? '16px' : '0'
+        }}>
           <div>
             <Link href={`/dashboard/org/${orgId}?section=events`} style={{ color: G.lime, textDecoration: 'none', fontSize: 12 }}>
               ← Back to Dashboard
             </Link>
-            <h1 style={{ fontSize: 28, fontWeight: 900, marginTop: 8 }}>{event.name}</h1>
+            <h1 style={{ 
+              fontSize: isMobile ? 24 : 28, 
+              fontWeight: 900, 
+              marginTop: 8 
+            }}>{event.name}</h1>
           </div>
           <button
             onClick={() => setEditMode(!editMode)}
@@ -579,14 +608,20 @@ export default function EventDetailsPage() {
               border: 'none',
               borderRadius: 6,
               cursor: 'pointer',
-              fontWeight: 600
+              fontWeight: 600,
+              alignSelf: isMobile ? 'flex-start' : 'center'
             }}
           >
             {editMode ? 'Cancel' : 'Edit Event'}
           </button>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 24 }}>
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', 
+          gap: isMobile ? 16 : 20, 
+          marginBottom: 24 
+        }}>
           {/* Event Details Card */}
           <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 20 }}>
             <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 16 }}>📋 Event Details</h2>
@@ -647,7 +682,7 @@ export default function EventDetailsPage() {
                   <div style={{ fontSize: 11, color: G.muted, marginBottom: 4 }}>Description</div>
                   <div style={{ fontSize: 13 }}>{event.description || 'N/A'}</div>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 12, marginBottom: 12 }}>
                   <div>
                     <div style={{ fontSize: 11, color: G.muted, marginBottom: 4 }}>Start Date</div>
                     <div style={{ fontSize: 13 }}>{new Date(event.startDate).toLocaleDateString()}</div>
@@ -657,7 +692,7 @@ export default function EventDetailsPage() {
                     <div style={{ fontSize: 13 }}>{event.endDate ? new Date(event.endDate).toLocaleDateString() : 'N/A'}</div>
                   </div>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 12 }}>
                   <div>
                     <div style={{ fontSize: 11, color: G.muted, marginBottom: 4 }}>Entry Fee</div>
                     <div style={{ fontSize: 14, fontWeight: 700, color: G.accent }}>${event.entryFee}</div>
@@ -674,7 +709,7 @@ export default function EventDetailsPage() {
           {/* Registration Stats */}
           <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 20 }}>
             <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 16 }}>📊 Registration Stats</h2>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 12, marginBottom: 20 }}>
               <div style={{ background: G.dark, borderRadius: 8, padding: 12 }}>
                 <div style={{ fontSize: 11, color: G.muted, marginBottom: 8 }}>Registered</div>
                 <div style={{ fontSize: 24, fontWeight: 900, color: G.lime }}>{registered}</div>
@@ -708,7 +743,7 @@ export default function EventDetailsPage() {
 
         {/* Tasks */}
         <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 20 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? '12px' : '0' }}>
             <h2 style={{ fontSize: 16, fontWeight: 800 }}>📋 Tasks</h2>
             <button
               onClick={() => setShowStaffForm(!showStaffForm)}
@@ -729,7 +764,7 @@ export default function EventDetailsPage() {
 
           {showStaffForm && (
             <div style={{ background: G.dark, borderRadius: 8, padding: 16, marginBottom: 16 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 12, marginBottom: 12 }}>
                 <div>
                   <label style={{ fontSize: 12, color: G.muted, marginBottom: 6, display: 'block' }}>Assign To *</label>
                   <select
@@ -866,7 +901,7 @@ export default function EventDetailsPage() {
                       <div style={{ fontSize: 14, fontWeight: 700, color: task.status === 'completed' ? G.muted : G.lime, marginBottom: 8 }}>
                         {task.assignedTo?.name || 'Unassigned'}
                       </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 8 }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1fr 1fr 1fr', gap: 12, marginBottom: 8 }}>
                         <div>
                           <div style={{ fontSize: 10, color: G.muted, marginBottom: 2 }}>Role</div>
                           <div style={{ fontSize: 12, fontWeight: 600 }}>{task.role}</div>
@@ -976,7 +1011,7 @@ export default function EventDetailsPage() {
 
           {showReminderForm && (
             <div style={{ background: G.dark, borderRadius: 8, padding: 16, marginBottom: 16 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 12, marginBottom: 12 }}>
                 <div>
                   <label style={{ fontSize: 12, color: G.muted, marginBottom: 6, display: 'block' }}>Reminder Title *</label>
                   <input
@@ -1112,7 +1147,7 @@ export default function EventDetailsPage() {
                       <div style={{ fontSize: 14, fontWeight: 700, color: reminder.isActive ? G.lime : G.muted, marginBottom: 8 }}>
                         {reminder.title}
                       </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 8 }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 12, marginBottom: 8 }}>
                         <div>
                           <div style={{ fontSize: 10, color: G.muted, marginBottom: 2 }}>Scheduled For</div>
                           <div style={{ fontSize: 12, fontWeight: 600 }}>
@@ -1201,7 +1236,7 @@ export default function EventDetailsPage() {
 
           {showRegistrationForm && (
             <div style={{ background: G.dark, borderRadius: 8, padding: 16, marginBottom: 16 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 12, marginBottom: 12 }}>
                 <div>
                   <label style={{ fontSize: 12, color: G.muted, marginBottom: 6, display: 'block' }}>Select Member *</label>
                   <select
@@ -1284,7 +1319,8 @@ export default function EventDetailsPage() {
           )}
 
           {event.registrations && event.registrations.length > 0 ? (
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <div style={{ overflowX: isMobile ? 'auto' : 'visible' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: isMobile ? '600px' : 'auto' }}>
               <thead>
                 <tr style={{ borderBottom: `1px solid ${G.cardBorder}` }}>
                   <th style={{ textAlign: 'left', padding: 8, fontSize: 11, color: G.muted, fontWeight: 600 }}>Order</th>
@@ -1348,6 +1384,7 @@ export default function EventDetailsPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           ) : (
             <div style={{ padding: 16, textAlign: 'center', color: G.muted, fontSize: 14 }}>
               No registrations yet

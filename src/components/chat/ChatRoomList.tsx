@@ -35,8 +35,6 @@ export default function ChatRoomList({ selectedRoomId, onSelectRoom }: ChatRoomL
 
   useEffect(() => {
     fetchRooms();
-    const interval = setInterval(fetchRooms, 5000);
-    return () => clearInterval(interval);
   }, []);
 
   const fetchRooms = async () => {

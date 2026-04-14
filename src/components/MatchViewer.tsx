@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useMatchWebSocket, MatchUpdate } from '@/hooks/useMatchWebSocket';
+import { LoadingState } from '@/components/LoadingState';
 import { authenticatedFetch } from '@/lib/authenticatedFetch';
 
 const G = {

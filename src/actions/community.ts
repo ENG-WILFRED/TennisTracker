@@ -11,7 +11,8 @@ export async function createCommunityPost(
   authorId: string,
   content: string,
   visibility: string = "public",
-  tournamentId?: string
+  tournamentId?: string,
+  organizationId?: string
 ) {
   try {
     if (!content.trim()) {
@@ -79,6 +80,7 @@ export async function createCommunityPost(
             visibility,
             type: 'tournament_share',
             tournamentId,
+            organizationId,
             shareCount: 1,
           },
           include: {
@@ -99,6 +101,7 @@ export async function createCommunityPost(
           authorId,
           content,
           visibility,
+          organizationId,
         },
         include: {
           author: {
@@ -125,12 +128,18 @@ export async function getCommunityFeed(
   userId: string,
   includeFollowersOnly: boolean = false,
   limit: number = 20,
-  offset: number = 0
+  offset: number = 0,
+  organizationId?: string
 ) {
   try {
     let whereCondition: any = { visibility: "public" };
 
-    if (includeFollowersOnly) {
+    if (organizationId) {
+      whereCondition = {
+        visibility: "public",
+        organizationId,
+      };
+    } else if (includeFollowersOnly) {
       // Get posts from users you follow and your own posts
       const userFollowing = await prisma.userFollower.findMany({
         where: { followerId: userId },

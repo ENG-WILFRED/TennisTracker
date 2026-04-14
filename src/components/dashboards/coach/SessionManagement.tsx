@@ -4,6 +4,7 @@
 // ─────────────────────────────────────────────────────────────────
 import React, { useEffect, useState } from 'react';
 import { format } from 'date-fns';
+import { LoadingState } from '@/components/LoadingState';
 import { useToast } from '@/components/ui/ToastContext';
 
 const G = {
@@ -366,7 +367,7 @@ export default function SessionManagement({ coachId }: { coachId: string }) {
   const card = { background: G.card, border: `1px solid ${G.border}`, borderRadius: 12, padding: 14 } as const;
   const inputSt = { width: '100%', padding: '8px 11px', background: G.dark, border: `1px solid ${G.border}`, color: G.text, borderRadius: 7, fontSize: 11.5, outline: 'none', boxSizing: 'border-box' } as const;
 
-  if (loading) return <div style={{ ...card, color: G.muted, textAlign: 'center', padding: 40 }}>Loading sessions...</div>;
+  if (loading) return <LoadingState icon="📅" message="Loading sessions..." fullPage={false} />;
 
   const sessionTypeColors: Record<string, string> = { '1-on-1': G.lime, group: G.blue, clinic: G.yellow };
 

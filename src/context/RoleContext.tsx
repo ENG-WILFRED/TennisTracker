@@ -3,16 +3,24 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { UserRole, getRoleConfig, getRoleColor, hasPermission, ROLES } from '@/config/roles';
 
+export interface Membership {
+  role: UserRole;
+  orgId: string;
+  orgName: string;
+}
+
 export interface RoleContextType {
   currentRole: UserRole | null;
-  availableRoles: UserRole[];
+  currentOrgId: string | null;
+  currentOrgName: string;
+  availableMemberships: Membership[];
   setCurrentRole: (role: UserRole) => void;
   hasPermission: (permission: string) => boolean;
   getRoleConfig: (role?: UserRole) => any;
   getRoleColor: (role?: UserRole) => any;
   isRoleLoaded: boolean;
-  userRoles: UserRole[];
-  setUserRoles: (roles: UserRole[]) => void;
+  userMemberships: Membership[];
+  setUserMemberships: (memberships: Membership[]) => void;
 }
 
 const RoleContext = createContext<RoleContextType | undefined>(undefined);
@@ -24,24 +32,36 @@ export interface RoleProviderProps {
 
 export const RoleProvider: React.FC<RoleProviderProps> = ({ children, defaultRole = 'player' }) => {
   const [currentRole, setCurrentRole] = useState<UserRole | null>(defaultRole);
-  const [userRoles, setUserRoles] = useState<UserRole[]>([defaultRole]);
+  const [currentOrgId, setCurrentOrgId] = useState<string | null>(null);
+  const [currentOrgName, setCurrentOrgName] = useState<string>('Platform');
+  const [userMemberships, setUserMemberships] = useState<Membership[]>([{ role: defaultRole, orgId: '', orgName: 'Platform' }]);
   const [isRoleLoaded, setIsRoleLoaded] = useState(false);
 
   // Load role from localStorage on mount
   useEffect(() => {
     const storedRole = localStorage.getItem('userRole') as UserRole | null;
-    const storedRoles = localStorage.getItem('userRoles');
+    const storedOrgId = localStorage.getItem('userOrgId');
+    const storedOrgName = localStorage.getItem('userOrgName');
+    const storedMemberships = localStorage.getItem('userMemberships');
 
     if (storedRole && ROLES[storedRole]) {
       setCurrentRole(storedRole);
     }
 
-    if (storedRoles) {
+    if (storedOrgId) {
+      setCurrentOrgId(storedOrgId);
+    }
+
+    if (storedOrgName) {
+      setCurrentOrgName(storedOrgName);
+    }
+
+    if (storedMemberships) {
       try {
-        const roles = JSON.parse(storedRoles) as UserRole[];
-        setUserRoles(roles);
+        const memberships = JSON.parse(storedMemberships) as Membership[];
+        setUserMemberships(memberships);
       } catch (error) {
-        console.error('Failed to parse stored roles:', error);
+        console.error('Failed to parse stored memberships:', error);
       }
     }
 
@@ -56,13 +76,18 @@ export const RoleProvider: React.FC<RoleProviderProps> = ({ children, defaultRol
     }
   }, []);
 
-  const handleSetUserRoles = useCallback((roles: UserRole[]) => {
-    setUserRoles(roles);
-    localStorage.setItem('userRoles', JSON.stringify(roles));
+  const handleSetUserMemberships = useCallback((memberships: Membership[]) => {
+    setUserMemberships(memberships);
+    localStorage.setItem('userMemberships', JSON.stringify(memberships));
 
-    // If current role is not in available roles, switch to first available
-    if (roles.length > 0 && !roles.includes(currentRole || 'player')) {
-      handleSetCurrentRole(roles[0]);
+    // If current role is not in available memberships, switch to first available
+    if (memberships.length > 0 && !memberships.some(m => m.role === currentRole)) {
+      const firstMembership = memberships[0];
+      handleSetCurrentRole(firstMembership.role);
+      setCurrentOrgId(firstMembership.orgId);
+      setCurrentOrgName(firstMembership.orgName);
+      localStorage.setItem('userOrgId', firstMembership.orgId);
+      localStorage.setItem('userOrgName', firstMembership.orgName);
     }
   }, [currentRole, handleSetCurrentRole]);
 
@@ -89,14 +114,16 @@ export const RoleProvider: React.FC<RoleProviderProps> = ({ children, defaultRol
 
   const value: RoleContextType = {
     currentRole,
-    availableRoles: userRoles,
+    currentOrgId,
+    currentOrgName,
+    availableMemberships: userMemberships,
     setCurrentRole: handleSetCurrentRole,
     hasPermission: handleHasPermission,
     getRoleConfig: getRoleConfigWithDefault,
     getRoleColor: getRoleColorWithDefault,
     isRoleLoaded,
-    userRoles,
-    setUserRoles: handleSetUserRoles,
+    userMemberships,
+    setUserMemberships: handleSetUserMemberships,
   };
 
   return <RoleContext.Provider value={value}>{children}</RoleContext.Provider>;

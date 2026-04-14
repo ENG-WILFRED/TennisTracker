@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { LoadingState } from '@/components/LoadingState';
 import MatchViewer from '@/components/MatchViewer';
 import MatchOfficiation from '@/components/MatchOfficiation';
 import { authenticatedFetch } from '@/lib/authenticatedFetch';
@@ -120,9 +121,7 @@ export default function MatchesPage() {
         <h1 style={{ fontSize: 32, fontWeight: 800, marginBottom: 30 }}>Matches</h1>
 
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '40px 0' }}>
-            <div style={{ fontSize: 16, color: G.muted2 }}>Loading matches...</div>
-          </div>
+          <LoadingState icon="🎾" message="Loading matches..." fullPage={false} />
         ) : matches.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px 0' }}>
             <div style={{ fontSize: 16, color: G.muted2 }}>No matches found</div>

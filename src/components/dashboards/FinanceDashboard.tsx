@@ -96,10 +96,10 @@ export const FinanceDashboard: React.FC = () => {
   const statusColor = (s: string) => s === 'Paid' ? G.lime : s === 'Pending' ? G.yellow : '#e57373';
 
   return (
-    <div style={{ display: 'flex', height: '100vh', fontFamily: "'Segoe UI', system-ui, sans-serif", background: G.dark, color: G.text, overflow: 'hidden' }}>
+    <div className="flex flex-col md:flex-row" style={{ height: '100vh', fontFamily: "'Segoe UI', system-ui, sans-serif", background: G.dark, color: G.text, overflow: 'hidden' }}>
 
       {/* LEFT SIDEBAR */}
-      <aside style={{ width: 180, background: G.sidebar, borderRight: `1px solid ${G.cardBorder}`, display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
+      <aside className="hidden md:flex md:w-48" style={{ background: G.sidebar, borderRight: `1px solid ${G.cardBorder}`, flexDirection: 'column', flexShrink: 0 }}>
         <div style={{ padding: '15px 14px 10px', borderBottom: `1px solid ${G.cardBorder}`, display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontSize: 20 }}>🎾</span>
           <div style={{ color: G.lime, fontWeight: 900, fontSize: 14 }}>Vico Sports</div>
@@ -123,7 +123,7 @@ export const FinanceDashboard: React.FC = () => {
       </aside>
 
       {/* MAIN */}
-      <main style={{ flex: 1, overflowY: 'auto', padding: 14, display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
+      <main className="flex-1 overflow-y-auto" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
 
         {/* Tabs */}
         <div style={{ display: 'flex', gap: 0, background: G.card, borderRadius: 8, padding: 4, border: `1px solid ${G.cardBorder}` }}>
@@ -137,7 +137,7 @@ export const FinanceDashboard: React.FC = () => {
         </div>
 
         {/* Top Stats */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10 }}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-10" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10 }}>
           {[
             { label: 'Total Revenue', value: `$${(stats.totalRevenue / 1000).toFixed(1)}k`, icon: '💵' },
             { label: 'Monthly Expenses', value: `$${stats.monthlyExpenses.toLocaleString()}`, icon: '💸' },
@@ -155,7 +155,7 @@ export const FinanceDashboard: React.FC = () => {
         </div>
 
         {/* Revenue Chart + Breakdown */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-12" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           {/* Revenue Chart */}
           <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 14 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>

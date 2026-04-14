@@ -10,10 +10,11 @@ import { AdminDashboard } from '@/components/dashboards/AdminDashboard';
 import { FinanceDashboard } from '@/components/dashboards/FinanceDashboard';
 import { RefereeDashboard } from '@/components/dashboards/referee/RefereeDashboard';
 import { OrganizationDashboard } from '@/components/dashboards/OrganizationDashboard';
+import { SpectatorDashboard } from '@/components/dashboards/spectator';
 import { UserRole } from '@/config/roles';
 
 export default function DashboardRoleIdPage() {
-  const { currentRole, isRoleLoaded, setCurrentRole } = useRole();
+  const { currentRole, currentOrgId, availableMemberships, isRoleLoaded, setCurrentRole } = useRole();
   const { isLoggedIn, user } = useAuth();
   const router = useRouter();
   const params = useParams();
@@ -76,9 +77,10 @@ export default function DashboardRoleIdPage() {
       {currentRole === 'finance_officer' && <FinanceDashboard />}
       {currentRole === 'referee' && <RefereeDashboard />}
       {currentRole === 'org' && <OrganizationDashboard />}
+      {currentRole === 'spectator' && <SpectatorDashboard />}
 
       {/* Fallback for unknown roles */}
-      {!['player', 'coach', 'admin', 'finance_officer', 'referee', 'org'].includes(currentRole || '') && (
+      {!['player', 'coach', 'admin', 'finance_officer', 'referee', 'org', 'spectator'].includes(currentRole || '') && (
         <div className="min-h-screen flex items-center justify-center">
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 max-w-md">
             <h2 className="text-xl font-bold text-yellow-800 mb-2">Role Not Configured</h2>

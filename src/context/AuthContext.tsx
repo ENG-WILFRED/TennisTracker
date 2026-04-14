@@ -14,7 +14,7 @@ import {
   recordActivity,
   isUserInactive,
   refreshAccessToken,
-  getAccessToken,
+  logoutFromServer,
 } from '@/lib/tokenManager';
 import InactivityModal from '@/components/InactivityModal';
 
@@ -33,7 +33,7 @@ interface AuthContextType {
   user: User | null;
   isLoggedIn: boolean;
   isLoading: boolean;
-  logout: () => void;
+  logout: () => Promise<void>;
   login: (tokens: { accessToken: string; refreshToken: string }, user: User) => void;
   recordActivity: () => void;
 }
@@ -122,14 +122,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setShowInactivityModal(false);
   }, []);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
     setPlayerId(null);
     setUser(null);
-    clearTokens();
 
     if (inactivityCheckInterval) {
       clearInterval(inactivityCheckInterval);
     }
+
+    await logoutFromServer();
 
     if (typeof window !== 'undefined') {
       // Do not force navigation on logout — keep the current page.
@@ -158,12 +159,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Try to refresh the token
     const refreshed = await refreshAccessToken();
     if (!refreshed) {
-      logout();
+      await logout();
     }
   };
 
-  const handleInactivityLogout = () => {
-    logout();
+  const handleInactivityLogout = async () => {
+    await logout();
   };
 
   return (

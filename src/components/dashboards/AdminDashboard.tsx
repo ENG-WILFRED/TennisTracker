@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { LoadingState } from '@/components/LoadingState';
 import Link from 'next/link';
 
 const G = {
@@ -120,11 +121,7 @@ export const AdminDashboard: React.FC = () => {
   const statusColor = (status: string) => status === 'Healthy' ? '#5fc45f' : status === 'Degraded' ? '#f0c040' : '#e57373';
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">
-        <div>Loading admin dashboard...</div>
-      </div>
-    );
+    return <LoadingState icon="⚙️" message="Loading admin dashboard..." />;
   }
 
   if (error) {
@@ -136,10 +133,10 @@ export const AdminDashboard: React.FC = () => {
   }
 
   return (
-    <div style={{ display: 'flex', height: '100vh', fontFamily: "'Segoe UI', system-ui, sans-serif", background: G.dark, color: G.text, overflow: 'hidden' }}>
+    <div className="flex flex-col md:flex-row" style={{ height: '100vh', fontFamily: "'Segoe UI', system-ui, sans-serif", background: G.dark, color: G.text, overflow: 'hidden' }}>
 
       {/* LEFT SIDEBAR */}
-      <aside style={{ width: 188, background: G.sidebar, borderRight: `1px solid ${G.cardBorder}`, display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
+      <aside className="hidden md:flex md:w-48" style={{ background: G.sidebar, borderRight: `1px solid ${G.cardBorder}`, flexDirection: 'column', flexShrink: 0 }}>
         <div style={{ padding: '15px 14px 10px', borderBottom: `1px solid ${G.cardBorder}`, display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontSize: 20 }}>🎾</span>
           <div style={{ color: G.lime, fontWeight: 900, fontSize: 14 }}>Vico Tennis</div>
@@ -182,7 +179,7 @@ export const AdminDashboard: React.FC = () => {
       </aside>
 
       {/* MAIN */}
-      <main style={{ flex: 1, overflowY: 'auto', padding: 14, display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
+      <main className="flex-1 overflow-y-auto" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
             <h1 style={{ margin: 0, fontSize: 16, fontWeight: 900 }}>Platform Admin Dashboard</h1>
@@ -191,7 +188,7 @@ export const AdminDashboard: React.FC = () => {
           <div style={{ color: G.muted, fontSize: 11 }}>Active section: {activeNav}</div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10 }}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 md:gap-10" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10 }}>
           {[
             { label: 'Organizations', value: stats.totalOrganizations, icon: '🏢' },
             { label: 'Users', value: stats.totalUsers, icon: '👤' },

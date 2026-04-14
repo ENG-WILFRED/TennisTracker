@@ -4,6 +4,7 @@ import { Target, Scale, Dribbble, AlertCircle, ArrowRight, ArrowLeft } from 'luc
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
+import { LoadingState } from '@/components/LoadingState';
 
 interface Rule {
   label: string;
@@ -46,13 +47,7 @@ export default function TeachingsPage() {
   ];
 
   if (isLoading) {
-    return (
-      <div className="w-full min-h-screen py-20 px-4 bg-gradient-to-br from-slate-50 via-white to-slate-100">
-        <div className="max-w-7xl mx-auto text-center">
-          <div className="animate-pulse text-lg text-gray-600">Loading teachings...</div>
-        </div>
-      </div>
-    );
+    return <LoadingState icon="📚" message="Loading teachings..." />;
   }
 
   return (

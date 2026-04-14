@@ -65,7 +65,7 @@ const StatPill: React.FC<{ label: string; value: string | number; highlight?: bo
 
 // ─── ProfileSnapshot ──────────────────────────────────────────────────────────
 
-export const ProfileSnapshot: React.FC<{ user: any; playerData: any }> = ({ user, playerData }) => (
+export const ProfileSnapshot: React.FC<{ user: any; playerData: any; showViewProfileButton?: boolean }> = ({ user, playerData, showViewProfileButton = true }) => (
   <Card className="text-center">
     <div className="flex justify-center mb-3">
       {user?.photo ? (
@@ -81,13 +81,15 @@ export const ProfileSnapshot: React.FC<{ user: any; playerData: any }> = ({ user
       <span className="bg-[#152515] text-[#e8f5e0] text-[10px] rounded px-2 py-0.5">{playerData?.matchesLost || 5}L</span>
       <span className="bg-[#7dc142] text-[#0f1f0f] text-[10px] font-bold rounded px-2 py-0.5">{playerData?.winRate || 78}%</span>
     </div>
-    <div className="mt-3 pt-3 border-t border-[#2d5a35]">
-      <Link href="/profile">
-        <button className="w-full bg-[#2d5a27] hover:bg-[#3d7a32] text-[#7dc142] text-xs font-bold rounded-lg py-2 transition-colors">
-          View Profile →
-        </button>
-      </Link>
-    </div>
+    {showViewProfileButton && (
+      <div className="mt-3 pt-3 border-t border-[#2d5a35]">
+        <Link href="/profile">
+          <button className="w-full bg-[#2d5a27] hover:bg-[#3d7a32] text-[#7dc142] text-xs font-bold rounded-lg py-2 transition-colors">
+            View Profile →
+          </button>
+        </Link>
+      </div>
+    )}
   </Card>
 );
 
@@ -146,7 +148,7 @@ export const UpcomingEvents: React.FC<{ events: { name: string; date: string; ic
 const QuickActions: React.FC = () => (
   <Card>
     <SectionTitle>⚡ Quick Actions</SectionTitle>
-    <div className="grid grid-cols-2 gap-2">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
       {[
         { icon: '🎾', label: 'Book Court' },
         { icon: '🤝', label: 'Find Partner' },
@@ -174,7 +176,7 @@ const CourtConditions: React.FC = () => (
         <div className="text-xs text-[#7aaa6a]">Partly Cloudy · Wind 12 km/h</div>
       </div>
     </div>
-    <div className="grid grid-cols-3 gap-2">
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
       {[
         { label: 'Humidity', value: '55%' },
         { label: 'UV Index', value: '6' },
@@ -238,7 +240,7 @@ const Achievements: React.FC = () => {
       <SectionTitle action={<span className="text-[10px] text-[#7aaa6a]">4 / 12 unlocked</span>}>
         🏅 Achievements
       </SectionTitle>
-      <div className="grid grid-cols-6 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
         {badges.map(b => (
           <div key={b.label} className={`flex flex-col items-center gap-1 py-2.5 rounded-lg border transition-all ${b.unlocked ? 'bg-[#2d5a27] border-[#7dc142]' : 'bg-[#152515] border-[#2d5a35] opacity-40'}`}>
             <span className="text-xl">{b.icon}</span>
@@ -271,7 +273,7 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
     <div className="space-y-4">
 
       {/* ── Top KPI Strip ─────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
           { label: 'Upcoming Matches', value: upcomingMatches?.length || 3, icon: '📅', sub: 'next: tomorrow' },
           { label: 'Players Online', value: 12, icon: '🟢', sub: 'in your area' },
@@ -290,14 +292,14 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
       </div>
 
       {/* ── Main Row ──────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
         {/* Next Match – spans 2 cols */}
-        <Card className="col-span-2 bg-gradient-to-br from-[#2d5a27] to-[#1a3020] border-[#7dc142]">
+        <Card className="col-span-1 lg:col-span-2 bg-gradient-to-br from-[#2d5a27] to-[#1a3020] border-[#7dc142]">
           <SectionTitle>
             <span className="text-[#a8d84e]">NEXT MATCH</span>
           </SectionTitle>
-          <div className="flex justify-between items-start">
+          <div className="flex flex-col xl:flex-row justify-between items-start gap-4">
             <div className="flex-1">
               <div className="text-2xl font-black text-[#e8f5e0] leading-tight mb-1">
                 John Smith <span className="text-[#7aaa6a] font-normal text-lg">vs</span> {upcomingMatches[0]?.opponent || 'Opponent'}
@@ -309,11 +311,11 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
                   {upcomingMatches[0]?.type || 'Singles'}
                 </span>
               </div>
-              <div className="flex gap-2 mt-4">
-                <button className="bg-[#7dc142] hover:bg-[#a8d84e] text-[#0f1f0f] font-bold text-xs px-4 py-2 rounded-lg transition-colors">
+              <div className="flex flex-col sm:flex-row gap-2 mt-4">
+                <button className="w-full sm:w-auto bg-[#7dc142] hover:bg-[#a8d84e] text-[#0f1f0f] font-bold text-xs px-4 py-2 rounded-lg transition-colors">
                   View Details
                 </button>
-                <button className="bg-transparent text-[#7dc142] border border-[#7dc142] hover:bg-[#7dc142]/10 font-bold text-xs px-4 py-2 rounded-lg transition-colors">
+                <button className="w-full sm:w-auto bg-transparent text-[#7dc142] border border-[#7dc142] hover:bg-[#7dc142]/10 font-bold text-xs px-4 py-2 rounded-lg transition-colors">
                   Check In
                 </button>
               </div>
@@ -365,7 +367,7 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
       </div>
 
       {/* ── Stats + Activity Row ──────────────────────────────────────────── */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
         {/* My Stats */}
         <Card className="flex flex-col gap-4">
@@ -397,7 +399,7 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {[
               { l: 'Sets Won', v: playerData?.setsWon || 38 },
               { l: 'Sets Lost', v: playerData?.setsLost || 21 },
@@ -412,18 +414,18 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
           </div>
         </Card>
 
-        {/* Activity Feed – spans 2 cols */}
-        <Card className="col-span-2 flex flex-col gap-3">
-          <div className="flex items-center justify-between">
+        {/* Activity Feed */}
+        <Card className="flex flex-col gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <SectionTitle>💬 Activity Feed</SectionTitle>
-            <div className="flex gap-2 ml-4 flex-shrink-0">
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
               <input
                 value={feedPost}
                 onChange={e => setFeedPost(e.target.value)}
                 placeholder="Post an update…"
-                className="bg-[#2d5a27] border border-[#2d5a35] text-[#e8f5e0] rounded-lg px-3 py-1.5 text-xs w-44 outline-none focus:border-[#7dc142] transition-colors placeholder-[#7aaa6a]"
+                className="bg-[#2d5a27] border border-[#2d5a35] text-[#e8f5e0] rounded-lg px-3 py-1.5 text-xs w-full sm:w-44 outline-none focus:border-[#7dc142] transition-colors placeholder-[#7aaa6a]"
               />
-              <button className="bg-[#7dc142] hover:bg-[#a8d84e] text-[#0f1f0f] font-bold text-xs px-3 py-1.5 rounded-lg transition-colors flex-shrink-0">
+              <button className="w-full sm:w-auto bg-[#7dc142] hover:bg-[#a8d84e] text-[#0f1f0f] font-bold text-xs px-3 py-1.5 rounded-lg transition-colors">
                 Post ▼
               </button>
             </div>
@@ -446,7 +448,7 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
             ))}
           </div>
 
-          <div className="flex gap-2 pt-1 border-t border-[#2d5a35]">
+          <div className="flex flex-col sm:flex-row gap-2 pt-1 border-t border-[#2d5a35]">
             {[
               { icon: '🔗', label: 'Quick Links' },
               { icon: '🤝', label: 'Find a Partner' },
@@ -463,14 +465,14 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
       {/* ── Bottom Row: Achievements + Recent Results + Sidebar Widgets ──── */}
       <Achievements />
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <RecentResults />
         <CourtConditions />
         <QuickActions />
       </div>
 
       {/* ── Sidebar extras (Friends + Events) ─────────────────────────────── */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <FriendsOnline
           friends={[
             { name: 'Alex Kim', status: 'online', avatar: '🧑' },

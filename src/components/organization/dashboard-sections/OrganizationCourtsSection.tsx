@@ -137,7 +137,7 @@ export default function OrganizationCourtsSection({ orgId }: CourtsProps) {
       {/* Stats */}
       <div style={{ 
         display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+        gridTemplateColumns: 'repeat(2, minmax(auto, 1fr))', 
         gap: 12 
       }}>
         <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 12, padding: 16 }}>

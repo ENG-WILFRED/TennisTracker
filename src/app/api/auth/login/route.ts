@@ -8,53 +8,34 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 /**
- * Get all available roles for a user
+ * Get all available roles for a user based on active memberships
  */
-async function getUserAvailableRoles(userId: string): Promise<UserRole[]> {
-  const roles: UserRole[] = [];
-
-  // Check if player
-  const player = await prisma.player.findUnique({ where: { userId } });
-  if (player) {
-    roles.push('player');
-  }
-
-  // Check if referee
-  const referee = await prisma.referee.findUnique({ where: { userId } });
-  if (referee) {
-    roles.push('referee');
-  }
-
-  // Check if staff/coach
-  const staff = await prisma.staff.findUnique({ where: { userId } });
-  if (staff) {
-    roles.push('coach');
-  }
-
-  // Check if organization owner
-  const org = await prisma.organization.findFirst({ where: { createdBy: userId } });
-  if (org) {
-    roles.push('org');
-  }
-
-  // Check if admin or finance officer in any organization
-  const clubMemberships = await prisma.clubMember.findMany({
-    where: { playerId: userId },
-    include: { organization: true },
-  });
-
-  clubMemberships.forEach((member) => {
-    if (member.role === 'admin' && !roles.includes('admin')) {
-      roles.push('admin');
-    }
-    if (member.role === 'finance_officer' && !roles.includes('finance_officer')) {
-      roles.push('finance_officer');
+async function getUserAvailableRoles(userId: string): Promise<{ role: UserRole; orgId: string; orgName: string; status: string }[]> {
+  const memberships = await prisma.membership.findMany({
+    where: {
+      userId,
+      status: 'accepted'
+    },
+    include: {
+      organization: true
     }
   });
 
-  // Default to player if no roles found
+  const roles: { role: UserRole; orgId: string; orgName: string; status: string }[] = memberships.map(membership => ({
+    role: membership.role as UserRole,
+    orgId: membership.orgId,
+    orgName: membership.organization.name,
+    status: membership.status,
+  }));
+
+  // If no active memberships, default to spectator
   if (roles.length === 0) {
-    roles.push('player');
+    roles.push({
+      role: 'spectator',
+      orgId: '',
+      orgName: 'Platform',
+      status: 'accepted',
+    });
   }
 
   return roles;
@@ -147,39 +128,44 @@ export async function POST(request: Request) {
       }
     }
 
-    // Get available roles for this user
-    const availableRoles = await getUserAvailableRoles(userId);
+    // Get available memberships for this user
+    const availableMemberships = await getUserAvailableRoles(userId);
 
     // If only requesting available roles (for role selection screen)
     if (body.getRolesOnly === true) {
-      return NextResponse.json({ availableRoles, user });
-    }
-
-    // Validate selected role if provided
-    let roleToUse = selectedRole || availableRoles[0];
-    if (!availableRoles.includes(roleToUse)) {
-      roleToUse = availableRoles[0];
+      return NextResponse.json({ availableRoles: availableMemberships, user });
     }
 
     const accessToken = generateAccessToken({ playerId: userId, email: user.email, username: user.username });
     const refreshToken = generateRefreshToken({ playerId: userId, email: user.email, username: user.username });
 
-    // Add role-specific data
+    // Base client user with membership details
     const clientUser: any = {
       ...user,
       id: userId,
-      role: roleToUse,
-      availableRoles,
+      availableRoles: availableMemberships,
+      memberships: availableMemberships,
       acceptedTerms: termsAccepted,
     };
 
-    // Add organization ID if org role
-    if (roleToUse === 'org') {
-      const org = await prisma.organization.findFirst({ where: { createdBy: userId } });
-      if (org) {
-        clientUser.organizationId = org.id;
-      }
+    // If user has multiple active memberships, require role selection
+    if (availableMemberships.length > 1) {
+      return NextResponse.json({
+        requiresRoleSelection: true,
+        accessToken,
+        refreshToken,
+        user: clientUser,
+      });
     }
+
+    // Single membership or spectator - proceed with login
+    const membership = availableMemberships[0];
+    const roleToUse = membership.role;
+    const orgId = membership.orgId || null;
+
+    // Add role-specific data
+    clientUser.role = roleToUse;
+    clientUser.orgId = orgId;
 
     if (!termsAccepted) {
       return NextResponse.json({

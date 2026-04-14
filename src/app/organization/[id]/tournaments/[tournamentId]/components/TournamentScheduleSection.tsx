@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface TournamentScheduleSectionProps {
   tournament: any;
@@ -23,6 +23,15 @@ const pill = (color = '#7dc142', bg = 'rgba(125,193,66,0.12)') => ({
 } as React.CSSProperties);
 
 export function TournamentScheduleSection({ tournament }: TournamentScheduleSectionProps) {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   return (
     <div>
       {['Round of 16', 'Quarter Final', 'Semi Final', 'Final'].map(round => {
@@ -34,12 +43,12 @@ export function TournamentScheduleSection({ tournament }: TournamentScheduleSect
             backdropFilter: 'blur(14px)',
             border: '1px solid rgba(125,193,66,0.16)',
             borderRadius: '16px',
-            padding: '24px',
+            padding: isMobile ? '16px' : '24px',
             marginBottom: '20px',
           }}>
             <h3 style={{
-              fontFamily: 'Syne, sans-serif',
-              fontSize: 16,
+              fontFamily: 'Clash Display, sans-serif',
+              fontSize: isMobile ? 18 : 16,
               fontWeight: 700,
               color: '#a8d84e',
               marginBottom: 16,
@@ -55,33 +64,33 @@ export function TournamentScheduleSection({ tournament }: TournamentScheduleSect
                     background: m.status === 'live' ? 'rgba(60,10,10,0.4)' : 'rgba(12,24,12,0.6)',
                     border: m.status === 'live' ? '1px solid rgba(240,80,80,0.5)' : '1px solid rgba(125,193,66,0.12)',
                     borderRadius: '12px',
-                    padding: '16px 20px',
+                    padding: isMobile ? '12px 16px' : '16px 20px',
                     display: 'grid',
-                    gridTemplateColumns: '130px 1fr auto',
-                    alignItems: 'center',
-                    gap: '16px',
+                    gridTemplateColumns: isMobile ? '1fr' : '130px 1fr auto',
+                    alignItems: isMobile ? 'flex-start' : 'center',
+                    gap: isMobile ? '12px' : '16px',
                     transition: 'border-color .2s',
                   }}
                 >
                   <div>
-                    <div style={{ fontSize: 11, color: '#6a9058', marginBottom: 4 }}>{m.date} · {m.time}</div>
-                    <div style={{ fontSize: 11, color: '#6a9058' }}>{m.court}</div>
+                    <div style={{ fontSize: isMobile ? 10 : 11, color: '#6a9058', marginBottom: 4 }}>{m.date} · {m.time}</div>
+                    <div style={{ fontSize: isMobile ? 10 : 11, color: '#6a9058' }}>{m.court}</div>
                     {m.status === 'live' && <div style={{ ...pill('#e05050', 'rgba(224,80,80,0.12)'), marginTop: 6 }}>● LIVE</div>}
                     {m.status === 'completed' && <div style={{ ...pill('#7dc142', 'rgba(125,193,66,0.10)'), marginTop: 6 }}>DONE</div>}
                     {m.status === 'upcoming' && <div style={{ ...pill('#9dc880', 'rgba(157,200,128,0.10)'), marginTop: 6 }}>UPCOMING</div>}
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    <div style={{ fontSize: 14, fontWeight: 500, color: '#dff0d0' }}>{m.player1}</div>
-                    <div style={{ fontSize: 10, color: '#4a6a3a', letterSpacing: '.08em' }}>VS</div>
-                    <div style={{ fontSize: 14, fontWeight: 500, color: '#dff0d0' }}>{m.player2}</div>
+                    <div style={{ fontSize: isMobile ? 13 : 14, fontWeight: 500, color: '#dff0d0' }}>{m.player1}</div>
+                    <div style={{ fontSize: isMobile ? 9 : 10, color: '#4a6a3a', letterSpacing: '.08em' }}>VS</div>
+                    <div style={{ fontSize: isMobile ? 13 : 14, fontWeight: 500, color: '#dff0d0' }}>{m.player2}</div>
                   </div>
-                  <div style={{ textAlign: 'right' }}>
+                  <div style={{ textAlign: isMobile ? 'left' : 'right', marginTop: isMobile ? '8px' : 0 }}>
                     {m.score ? (
-                      <div style={{ fontFamily: 'Syne, sans-serif', fontSize: 13, color: '#a8d84e', fontWeight: 700 }}>
+                      <div style={{ fontFamily: 'Clash Display, sans-serif', fontSize: isMobile ? 12 : 13, color: '#a8d84e', fontWeight: 700 }}>
                         {m.score.split(',').map((s, i) => <div key={i}>{s.trim()}</div>)}
                       </div>
                     ) : (
-                      <div style={{ color: '#4a6a3a', fontSize: 13 }}>—</div>
+                      <div style={{ color: '#4a6a3a', fontSize: isMobile ? 12 : 13 }}>—</div>
                     )}
                   </div>
                 </div>

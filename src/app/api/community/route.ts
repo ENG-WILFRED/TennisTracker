@@ -24,21 +24,33 @@ export async function GET(request: NextRequest) {
       const page = parseInt(searchParams.get('page') || '1');
       const pageSize = 10;
       const skip = (page - 1) * pageSize;
-      
-      const followedUserIds = await prisma.userFollower
-        .findMany({
-          where: { followerId: userId },
-          select: { followingId: true },
-        })
-        .then((follows: Array<{ followingId: string }>) => follows.map((f) => f.followingId));
+      const organizationId = searchParams.get('organizationId');
 
-      const feedPosts = await prisma.communityPost.findMany({
-        where: {
+      let whereClause: any;
+
+      if (organizationId) {
+        whereClause = {
+          visibility: 'public',
+          organizationId,
+        };
+      } else {
+        const followedUserIds = await prisma.userFollower
+          .findMany({
+            where: { followerId: userId },
+            select: { followingId: true },
+          })
+          .then((follows: Array<{ followingId: string }>) => follows.map((f) => f.followingId));
+
+        whereClause = {
           OR: [
             { authorId: userId },
             { authorId: { in: followedUserIds } },
           ],
-        },
+        };
+      }
+
+      const feedPosts = await prisma.communityPost.findMany({
+        where: whereClause,
         include: {
           author: {
             include: {
@@ -70,12 +82,7 @@ export async function GET(request: NextRequest) {
       });
 
       const totalPosts = await prisma.communityPost.count({
-        where: {
-          OR: [
-            { authorId: userId },
-            { authorId: { in: followedUserIds } },
-          ],
-        },
+        where: whereClause,
       });
 
       const feedWithMeta = feedPosts.map((post: typeof feedPosts[number]) => ({
@@ -221,7 +228,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === 'create-post') {
-      const { content, visibility } = data;
+      const { content, visibility, organizationId } = data;
 
       if (!content || content.trim().length === 0) {
         return NextResponse.json(
@@ -230,12 +237,17 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      const postData: any = {
+        authorId: userId,
+        content: content.trim(),
+        visibility: visibility || 'public',
+      };
+      if (organizationId) {
+        postData.organizationId = organizationId;
+      }
+
       const post = await prisma.communityPost.create({
-        data: {
-          authorId: userId,
-          content: content.trim(),
-          visibility: visibility || 'public',
-        },
+        data: postData,
         include: {
           author: {
             include: {

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { LoadingState } from '@/components/LoadingState';
 import ActivityModal, { type ActivityFormData } from './ActivityModal';
 
 const G = {
@@ -219,7 +220,7 @@ export default function CalendarView({ coachId }: { coachId: string }) {
     }
   };
 
-  if (loading) return <div style={{ ...card, textAlign: 'center', padding: 40, color: G.muted, fontSize: 12 }}>Loading calendar...</div>;
+  if (loading) return <LoadingState icon="📅" message="Loading calendar..." fullPage={false} />;
 
   return (
     <>

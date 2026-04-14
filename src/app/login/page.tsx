@@ -65,7 +65,7 @@ const GoogleIcon = () => (
 
 export default function LoginPage() {
   const { login } = useAuth();
-  const { setCurrentRole, setUserRoles } = useRole();
+  const { setCurrentRole, setUserMemberships } = useRole();
   const { addToast } = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -74,7 +74,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [showRoleSelection, setShowRoleSelection] = useState(false);
-  const [availableRoles, setAvailableRoles] = useState<UserRole[]>([]);
+  const [availableMemberships, setAvailableMemberships] = useState<any[]>([]);
   const [pendingUser, setPendingUser] = useState<any>(null);
   const [pendingLoginData, setPendingLoginData] = useState<any>(null);
   const [tokens, setTokens] = useState<{ accessToken: string; refreshToken: string } | null>(null);
@@ -89,15 +89,15 @@ export default function LoginPage() {
         sessionStorage.removeItem('pendingLoginData');
         sessionStorage.removeItem('pendingTokens');
         const user = { ...data.user, acceptedTerms: true };
-        const roles: UserRole[] = user?.availableRoles || [];
-        if (roles.length > 1) {
-          setAvailableRoles(roles);
+        const memberships = user?.memberships?.filter((m: any) => m.status === 'accepted') || [];
+        if (memberships.length > 1) {
+          setAvailableMemberships(memberships);
           setPendingUser(user);
           setTokens(tokens);
           setShowRoleSelection(true);
         } else {
-          const selectedRole = (user?.role as UserRole) || roles[0] || 'player';
-          completeLogin({ ...data, user }, selectedRole);
+          const selectedMembership = memberships[0];
+          completeLogin({ ...data, user }, selectedMembership?.role, selectedMembership?.orgId, selectedMembership?.orgName);
         }
       }
     }
@@ -127,32 +127,36 @@ export default function LoginPage() {
         return;
       }
 
-      const roles: UserRole[] = data.user?.availableRoles || [];
-      if (roles.length > 1) {
-        setAvailableRoles(roles);
-        setPendingUser(data.user);
+      const memberships = data.user?.memberships?.filter((m: any) => m.status === 'accepted') || data.availableRoles || [];
+      if (memberships.length > 1) {
+        setAvailableMemberships(memberships);
+        setPendingUser({ ...data.user, memberships });
         setTokens({ accessToken: data.accessToken, refreshToken: data.refreshToken });
         setShowRoleSelection(true);
         setLoading(false);
         return;
       }
 
-      const selectedRole = (data.user?.role as UserRole) || roles[0] || 'player';
-      await completeLogin(data, selectedRole);
+      const selectedMembership = memberships[0];
+      await completeLogin(data, selectedMembership?.role, selectedMembership?.orgId, selectedMembership?.orgName);
     } catch (error: any) {
       addToast(error.message || 'Login failed.', 'error');
       setLoading(false);
     }
   };
 
-  const completeLogin = async (data: any, selectedRole: UserRole) => {
+  const completeLogin = async (data: any, selectedRole: UserRole, orgId?: string, orgName?: string) => {
     const finalUser = {
       ...data.user,
       role: selectedRole,
+      orgId,
+      orgName,
     };
 
     setCurrentRole(selectedRole);
-    setUserRoles(data.user?.availableRoles || [selectedRole]);
+    const memberships = data.user?.memberships?.filter((m: any) => m.status === 'accepted') || data.availableRoles || [];
+    // Save memberships to context/localStorage for context switching
+    setUserMemberships(memberships.length ? memberships : [{ role: selectedRole, orgId, orgName }]);
 
     login(
       {
@@ -163,20 +167,23 @@ export default function LoginPage() {
     );
 
     addToast('Login successful! Redirecting…', 'success');
-    setLoading(false);
 
     setTimeout(() => {
-      router.push(`/dashboard/${selectedRole}/${finalUser.id}`);
+      if (finalUser.id && selectedRole) {
+        router.push(`/dashboard/${selectedRole}/${finalUser.id}`);
+      } else {
+        router.push('/dashboard');
+      }
     }, 500);
   };
 
-  const handleRoleSelect = async (selectedRole: UserRole) => {
+  const handleRoleSelect = async (membership: any) => {
     setLoading(true);
     try {
       if (!tokens || !pendingUser) {
         throw new Error('Session expired, please sign in again.');
       }
-      await completeLogin({ ...tokens, user: pendingUser }, selectedRole);
+      await completeLogin({ ...tokens, user: pendingUser }, membership.role, membership.orgId, membership.orgName);
     } catch (error: any) {
       setShowRoleSelection(false);
       setPendingUser(null);
@@ -190,12 +197,12 @@ export default function LoginPage() {
     addToast('Google login is coming soon. Please sign in with username or email.', 'error');
   };
 
-  if (showRoleSelection && availableRoles.length > 0 && pendingUser) {
+  if (showRoleSelection && availableMemberships.length > 0 && pendingUser) {
     return (
       <>
         <div className="min-h-screen app-bg flex flex-col items-center justify-center py-8">
           <RoleSelection
-            availableRoles={availableRoles}
+            availableMemberships={availableMemberships}
             userName={`${pendingUser.firstName} ${pendingUser.lastName}`}
             userPhoto={pendingUser.photo}
             onRoleSelect={handleRoleSelect}

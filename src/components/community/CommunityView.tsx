@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { LoadingState } from '@/components/LoadingState';
 import {
     createCommunityPost,
     getCommunityFeed,
@@ -36,9 +37,10 @@ const G = {
 interface CommunityViewProps {
     onClose?: () => void;
     isEmbedded?: boolean;
+    organizationId?: string;
 }
 
-export function CommunityView({ onClose, isEmbedded = false }: CommunityViewProps) {
+export function CommunityView({ onClose, isEmbedded = false, organizationId }: CommunityViewProps) {
     const { user: authUser } = useAuth();
     const router = useRouter();
     const params = useParams();
@@ -64,7 +66,8 @@ export function CommunityView({ onClose, isEmbedded = false }: CommunityViewProp
                     userId,
                     activeTab === 'following',
                     20,
-                    0
+                    0,
+                    organizationId
                 );
                 setPosts(postsData);
 
@@ -80,7 +83,7 @@ export function CommunityView({ onClose, isEmbedded = false }: CommunityViewProp
         };
 
         loadFeed();
-    }, [userId, activeTab]);
+    }, [userId, activeTab, organizationId]);
 
     const handleCreatePost = async () => {
         if (!newPostContent.trim()) {
@@ -90,7 +93,7 @@ export function CommunityView({ onClose, isEmbedded = false }: CommunityViewProp
 
         setPosting(true);
         try {
-            const newPost = await createCommunityPost(userId!, newPostContent, 'public');
+            const newPost = await createCommunityPost(userId!, newPostContent, 'public', undefined, organizationId);
             setPosts([newPost, ...posts]);
             setNewPostContent('');
             setToast({ type: 'success', message: 'Post created!' });
@@ -170,12 +173,7 @@ export function CommunityView({ onClose, isEmbedded = false }: CommunityViewProp
     };
 
     if (loading) {
-        return (
-            <div style={{ textAlign: 'center', padding: '40px 20px' }}>
-                <div style={{ fontSize: 24, marginBottom: 16 }}>⏳</div>
-                <div style={{ color: G.muted }}>Loading community...</div>
-            </div>
-        );
+        return <LoadingState icon="👥" message="Loading community..." fullPage={false} />;
     }
 
     return (
@@ -183,10 +181,10 @@ export function CommunityView({ onClose, isEmbedded = false }: CommunityViewProp
             {/* Header */}
             <div style={{ marginBottom: 24 }}>
                 <h2 style={{ fontSize: 20, fontWeight: 700, color: G.text, marginBottom: 6 }}>
-                    👥 Community
+                    👥 {organizationId ? 'Organization Community' : 'Community'}
                 </h2>
                 <p style={{ fontSize: 13, color: G.muted }}>
-                    Share your thoughts and connect with other players
+                    {organizationId ? 'Discuss current club news, ask questions, and connect with members.' : 'Share your thoughts and connect with other players'}
                 </p>
             </div>
 

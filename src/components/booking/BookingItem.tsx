@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface BookingItemProps {
   booking: any;
@@ -12,6 +12,17 @@ export function BookingItem({ booking, canView = false }: BookingItemProps) {
   const end = new Date(booking.endTime);
   const isPast = start < new Date();
   const durationHrs = Math.round((end.getTime() - start.getTime()) / 3600000);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Mobile detection
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const statusColors: Record<string, string> = {
     confirmed: 'bg-[#7dc142] text-[#0f1f0f]',
@@ -35,7 +46,7 @@ export function BookingItem({ booking, canView = false }: BookingItemProps) {
         </span>
       </div>
 
-      <div className="grid grid-cols-3 gap-2">
+      <div className={`grid gap-2 ${isMobile ? 'grid-cols-1' : 'grid-cols-3'}`}>
         <div className="bg-[#0f1f0f] rounded-lg px-2 py-1.5 text-center">
           <div className="text-[9px] text-[#7aaa6a]">Start</div>
           <div className="text-xs font-bold text-[#e8f5e0]">{start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>

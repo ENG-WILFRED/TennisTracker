@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
+import { LoadingState } from '@/components/LoadingState';
 import EditProfileModal from '@/app/dashboard/components/EditProfileModal';
 import OrganizationOverviewSection from '@/components/organization/dashboard-sections/OrganizationOverviewSection';
 import OrganizationMembersSection from '@/components/organization/dashboard-sections/OrganizationMembersSection';
@@ -18,6 +19,7 @@ import OrganizationBookingsSection from '@/components/organization/dashboard-sec
 import OrganizationPlayersSection from '@/components/organization/dashboard-sections/OrganizationPlayersSection';
 import MessagingPanel from '@/components/dashboards/MessagingPanel';
 import { authenticatedFetch } from '@/lib/authenticatedFetch';
+import { clearTokens, getStoredTokens } from '@/lib/tokenManager';
 
 const G = {
   dark: '#0f1f0f', sidebar: '#152515', card: '#1a3020', cardBorder: '#2d5a35',
@@ -48,6 +50,9 @@ export const OrganizationDashboard: React.FC = () => {
   // Map section URL param to label
   const sectionParam = searchParams.get('section') || 'overview';
   const activeNav = navItems.find(item => item.section === sectionParam)?.label || 'Overview';
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const mobileNavItems = navItems.filter((item) => !['Reports', 'Messages'].includes(item.label));
+  const displayedNav = sidebarOpen ? mobileNavItems : navItems;
 
   // Handle navigation to a new section
   const handleNavigation = (section: string) => {
@@ -242,10 +247,28 @@ export const OrganizationDashboard: React.FC = () => {
 
   const handleLogout = async () => {
     try {
-      await authenticatedFetch('/api/auth/logout', { method: 'POST' });
-      router.push('/');
+      const storedTokens = getStoredTokens();
+      const response = await fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(storedTokens?.accessToken ? { Authorization: `Bearer ${storedTokens.accessToken}` } : {}),
+        },
+        body: JSON.stringify({ refreshToken: storedTokens?.refreshToken }),
+      });
+
+      if (response.ok) {
+        clearTokens();
+        router.push('/');
+      } else {
+        console.error('Logout failed', await response.text());
+        clearTokens();
+        router.push('/');
+      }
     } catch (err) {
       console.error('Logout error:', err);
+      clearTokens();
+      router.push('/');
     }
   };
 
@@ -304,11 +327,7 @@ export const OrganizationDashboard: React.FC = () => {
   const priorityBg = (p: string) => p === 'High' ? '#ff6b6b33' : p === 'Medium' ? G.yellow + '33' : G.muted + '33';
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">
-        <div>Loading organization dashboard...</div>
-      </div>
-    );
+    return <LoadingState icon="🏢" message="Loading organization dashboard..." />;
   }
 
   if (error) {
@@ -320,25 +339,56 @@ export const OrganizationDashboard: React.FC = () => {
   }
 
   return (
-    <div style={{ display: 'flex', height: '100vh', fontFamily: "'Segoe UI', system-ui, sans-serif", background: G.dark, color: G.text, overflow: 'hidden' }}>
+    <div className="min-h-screen flex flex-col lg:flex-row" style={{ fontFamily: "'Segoe UI', system-ui, sans-serif", background: G.dark, color: G.text, overflow: 'hidden' }}>
 
-      {/* LEFT SIDEBAR */}
-      <aside style={{ width: 200, background: G.sidebar, borderRight: `1px solid ${G.cardBorder}`, display: 'flex', flexDirection: 'column', flexShrink: 0, overflowY: 'auto', paddingBottom: 14 }}>
+      {/* Mobile top bar */}
+      <div className="lg:hidden flex items-center justify-between px-4 py-3 border-b" style={{ background: G.sidebar, borderColor: G.cardBorder }}>
+        <div className="flex items-center gap-2">
+          <span className="text-lg">🎾</span>
+          <span className="text-sm font-semibold" style={{ color: G.lime }}>Org dashboard</span>
+        </div>
+        <button
+          onClick={() => setSidebarOpen(true)}
+          className="rounded-xl px-3 py-2 text-xs font-semibold"
+          style={{ background: G.lime, color: G.dark }}
+        >
+          Menu
+        </button>
+      </div>
+
+      {sidebarOpen && (
+        <div className="fixed inset-0 z-30 bg-black/40 lg:hidden" onClick={() => setSidebarOpen(false)} />
+      )}
+
+      <aside
+        className={`fixed inset-y-0 left-0 z-40 w-64 transform border-r lg:relative lg:translate-x-0 transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
+        style={{ background: G.sidebar, borderColor: G.cardBorder, display: 'flex', flexDirection: 'column', flexShrink: 0, overflowY: 'auto', paddingBottom: 14 }}
+      >
         <div style={{ padding: '15px 14px 10px', borderBottom: `1px solid ${G.cardBorder}`, display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
           <span style={{ fontSize: 20 }}>🎾</span>
           <div style={{ color: G.lime, fontWeight: 900, fontSize: 14 }}>Vico Sports</div>
+          <button
+            className="lg:hidden ml-auto rounded-md px-2 py-1 text-xs font-semibold"
+            style={{ background: G.card, color: G.text, border: `1px solid ${G.cardBorder}` }}
+            onClick={() => setSidebarOpen(false)}
+          >
+            Close
+          </button>
         </div>
 
         {/* Navigation */}
         <nav style={{ paddingTop: 8, flexShrink: 0 }}>
-          {navItems.map(item => (
-            <button key={item.label} onClick={() => handleNavigation(item.section)} style={{
-              width: '100%', display: 'flex', alignItems: 'center', gap: 9, padding: '9px 13px',
+          {displayedNav.map(item => (
+            <button key={item.label} onClick={() => { handleNavigation(item.section); setSidebarOpen(false); }} style={{
+              width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '9px 13px',
               background: activeNav === item.label ? G.mid : 'transparent',
               color: activeNav === item.label ? '#fff' : G.muted,
-              border: 'none', cursor: 'pointer', fontSize: 12, textAlign: 'left',
+              border: 'none', cursor: 'pointer', fontSize: 11, textAlign: 'left',
               borderLeft: activeNav === item.label ? `3px solid ${G.lime}` : '3px solid transparent',
-            }}><span>{item.icon}</span>{item.label}</button>
+            }}>
+              <span>{item.icon}</span>
+              <span className="truncate">{item.label}</span>
+            </button>
           ))}
         </nav>
 
@@ -346,7 +396,7 @@ export const OrganizationDashboard: React.FC = () => {
         <div style={{ flex: 1, minHeight: 12, flexShrink: 0 }} />
 
         {/* Stats Card */}
-        <div style={{ padding: '0 10px 14px', flexShrink: 0 }}>
+        <div className="hidden lg:block" style={{ padding: '0 10px 14px', flexShrink: 0 }}>
           <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 9, padding: 11 }}>
             <div style={{ fontWeight: 800, fontSize: 11, marginBottom: 8 }}>📊 Stats</div>
             {[
@@ -365,7 +415,7 @@ export const OrganizationDashboard: React.FC = () => {
 
         {/* Recent Activity Card */}
         {activities.length > 0 && (
-          <div style={{ padding: '0 10px 14px', flexShrink: 0 }}>
+          <div className="hidden lg:block" style={{ padding: '0 10px 14px', flexShrink: 0 }}>
             <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 9, padding: 11 }}>
               <div style={{ fontWeight: 800, fontSize: 11, marginBottom: 8 }}>📝 Activity</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5, maxHeight: 100, overflowY: 'auto' }}>
@@ -389,9 +439,9 @@ export const OrganizationDashboard: React.FC = () => {
               : <div style={{ width: 48, height: 48, borderRadius: '50%', background: G.bright, margin: '0 auto 6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>🏢</div>}
             <div style={{ fontWeight: 800, fontSize: 12 }}>{user?.firstName ?? 'Organization'} {user?.lastName || ''}</div>
             <div style={{ color: G.muted, fontSize: 9, marginTop: 2 }}>Manager</div>
-            {user?.email && <div style={{ color: G.muted, fontSize: 8, marginTop: 1, wordBreak: 'break-word' }}>📧 {user.email}</div>}
-            {(user as any)?.phone && <div style={{ color: G.muted, fontSize: 8 }}>📱 {(user as any).phone}</div>}
-            {(user as any)?.nationality && <div style={{ color: G.muted, fontSize: 8 }}>🌍 {(user as any).nationality}</div>}
+            <div className="hidden sm:block" style={{ color: G.muted, fontSize: 8, marginTop: 1, wordBreak: 'break-word' }}>📧 {user?.email}</div>
+            <div className="hidden sm:block" style={{ color: G.muted, fontSize: 8 }}>{(user as any)?.phone ? `📱 ${(user as any).phone}` : ''}</div>
+            <div className="hidden sm:block" style={{ color: G.muted, fontSize: 8 }}>{(user as any)?.nationality ? `🌍 ${(user as any).nationality}` : ''}</div>
             <div style={{ marginTop: 6, display: 'flex', gap: 6 }}>
               <button 
                 onClick={() => {
@@ -425,13 +475,8 @@ export const OrganizationDashboard: React.FC = () => {
       </aside>
 
       {/* MAIN */}
-      <main style={{ flex: 1, overflowY: 'auto', padding: 14, display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
+      <main className="flex-1 overflow-y-auto p-4 lg:p-6" style={{ minWidth: 0 }}>
 
-        {/* Section Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-          <span style={{ fontSize: 14, fontWeight: 700, color: G.text }}>📍 {activeNav}</span>
-          <span style={{ fontSize: 11, color: G.muted }}>Click a sidebar item to navigate</span>
-        </div>
 
         {/* Conditional Content Rendering */}
         {activeNav === 'Overview' && (

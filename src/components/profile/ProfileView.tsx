@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { LoadingState } from '@/components/LoadingState';
 import { getUserProfile, updateProfile } from '@/actions/auth';
 
 const G = {
@@ -136,14 +137,7 @@ export function ProfileView({ onClose, isEmbedded = false, canEdit = false }: Pr
   };
 
   if (loading) {
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '200px', color: G.text }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 36, marginBottom: 20 }}>⏳</div>
-          <div>Loading profile...</div>
-        </div>
-      </div>
-    );
+    return <LoadingState icon="👤" message="Loading profile..." fullPage={false} />;
   }
 
   if (!profileData) {

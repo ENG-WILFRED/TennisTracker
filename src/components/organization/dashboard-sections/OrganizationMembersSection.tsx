@@ -168,10 +168,9 @@ function MemberCard({ member, onClick }: { member: Member; onClick: () => void }
   };
 
   return (
-    <div style={{
+    <div className="member-card-grid" style={{
       background: G.card, borderRadius: 10, padding: '12px 14px',
       border: `1px solid ${G.cardBorder}`,
-      display: 'grid', gridTemplateColumns: '44px 1fr auto',
       alignItems: 'center', gap: 12,
       transition: 'border-color 0.2s, background 0.2s',
       cursor: 'pointer',
@@ -195,7 +194,7 @@ function MemberCard({ member, onClick }: { member: Member; onClick: () => void }
         {renderRoleDetail()}
       </div>
 
-      <div style={{ textAlign: 'right' }}>
+      <div className="member-card-meta" style={{ textAlign: 'right' }}>
         <div style={{ fontSize: 10, color: G.muted }}>Age {member.age} · {member.nationality}</div>
         <div style={{ fontSize: 10, color: G.muted, marginTop: 2 }}>{member.visits ?? 0} visits</div>
         <div style={{ fontSize: 9, color: G.muted, marginTop: 2 }}>Since {member.joinDate ? new Date(member.joinDate).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }) : 'Unknown'}</div>
@@ -620,18 +619,44 @@ export default function OrganizationMembersSection({
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14, fontFamily: "'Raleway', sans-serif" }}>
 
       {/* Google Font */}
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Raleway:wght@400;500;600;700;800;900&display=swap');`}</style>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Raleway:wght@400;500;600;700;800;900&display=swap');
+        .members-header-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+        .members-header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        .members-stats-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+        .members-role-tabs { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+        .members-filter-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .members-detail-grid { display: grid; grid-template-columns: 1fr 300px; gap: 20px; }
+        .member-card-grid { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; align-items: center; gap: 12px; }
+        .member-card-meta { text-align: right; }
+
+        @media (max-width: 980px) {
+          .members-stats-grid { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+        }
+        @media (max-width: 840px) {
+          .members-detail-grid { grid-template-columns: 1fr; }
+          .member-card-grid { grid-template-columns: 44px minmax(0, 1fr); }
+          .member-card-meta { grid-column: 1 / -1; text-align: left; }
+        }
+        @media (max-width: 640px) {
+          .members-header-row, .members-role-tabs, .members-filter-row { justify-content: space-between; }
+          .members-header-actions { width: 100%; justify-content: flex-start; }
+          .members-stats-grid { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
+          .members-filter-row > * { min-width: 0; flex: 1 1 100%; }
+          .members-header-row > div:first-child { min-width: 0; }
+        }
+      `}</style>
 
       {/* Court line decoration */}
       <div style={{ position: 'relative', marginBottom: 4 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div className="members-header-row" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
             <div style={{ fontSize: 18, fontWeight: 900, color: G.text, letterSpacing: '-0.02em' }}>
               <span style={{ color: G.lime }}>Members</span> · Organisation
             </div>
             <div style={{ fontSize: 11, color: G.muted, marginTop: 2 }}>Manage players, coaches & referees</div>
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div className="members-header-actions" style={{ gap: 8 }}>
             <button onClick={() => setShowInviteModal(true)} style={{
               padding: '8px 16px', borderRadius: 8, fontSize: 11, fontWeight: 700,
               background: G.lime, color: G.dark, border: 'none', cursor: 'pointer',
@@ -652,7 +677,7 @@ export default function OrganizationMembersSection({
       </div>
 
       {/* Stats Strip */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 8 }}>
+      <div className="members-stats-grid" style={{ gap: 8 }}>
         {statCards.map(card => (
           <div key={card.label} style={{
             background: G.card, border: `1px solid ${G.cardBorder}`,
@@ -665,7 +690,7 @@ export default function OrganizationMembersSection({
       </div>
 
       {/* Role Quick-filter tabs */}
-      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+      <div className="members-role-tabs" style={{ alignItems: 'center' }}>
         {(['all', 'player', 'coach', 'referee'] as Role[]).map(role => {
           const cfg = role === 'all' ? null : ROLE_CONFIG[role];
           const count = role === 'all' ? memberData.length : memberData.filter((m: Member) => m.role === role).length;
@@ -710,10 +735,9 @@ export default function OrganizationMembersSection({
       )}
 
       {/* Filters Row */}
-      <div style={{
+      <div className="members-filter-row" style={{
         background: G.card, border: `1px solid ${G.cardBorder}`,
         borderRadius: 10, padding: '10px 14px',
-        display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap',
       }}>
         {/* Search */}
         <div style={{
@@ -780,7 +804,7 @@ export default function OrganizationMembersSection({
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 20 }}>
+          <div className="members-detail-grid" style={{ gap: 20 }}>
             <div>
               <div style={{ background: G.dark, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 16, marginBottom: 16 }}>
                 <div style={{ fontSize: 14, fontWeight: 700, color: G.text, marginBottom: 12 }}>Profile Information</div>

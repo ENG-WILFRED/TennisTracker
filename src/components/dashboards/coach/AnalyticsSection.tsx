@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { LoadingState } from '@/components/LoadingState';
 
 const G = {
   dark: '#0a180a',
@@ -220,12 +221,7 @@ export default function AnalyticsSection({ coachId }: { coachId: string }) {
   const card = { background: G.card, border: `1px solid ${G.border}`, borderRadius: 12, padding: 14 } as const;
   const card2 = { background: G.card2, border: `1px solid ${G.border}`, borderRadius: 10, padding: 12 } as const;
 
-  if (loading) return (
-    <div style={{ ...card, textAlign: 'center', padding: 40, color: G.muted }}>
-      <div style={{ fontSize: 24, marginBottom: 8 }}>📊</div>
-      <div style={{ fontSize: 12 }}>Loading analytics...</div>
-    </div>
-  );
+  if (loading) return <LoadingState icon="📊" message="Loading analytics..." fullPage={false} />;
 
   if (!stats) return <div style={card}><div style={{ color: G.muted }}>No data available</div></div>;
 

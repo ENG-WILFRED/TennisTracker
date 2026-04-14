@@ -102,7 +102,7 @@ const CACHE_DURATION = {
 };
 
 export function ChatProvider({ children }: { children: React.ReactNode }) {
-  const { playerId } = useAuth();
+  const { playerId, user } = useAuth();
   const [cache, setCache] = useState<ChatCache>({
     contacts: [],
     messages: {},
@@ -123,27 +123,18 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
   const wsRefs = useRef<Record<string, WebSocket>>({});
 
-  // Initialize current user
   useEffect(() => {
-    if (playerId && !cache.currentUser) {
-      fetchCurrentUser();
-    }
-  }, [playerId]);
+    if (!user) return;
 
-  const fetchCurrentUser = async () => {
-    try {
-      const response = await authenticatedFetch('/api/chat/me');
-      if (response.ok) {
-        const user = await response.json();
-        setCache(prev => ({
-          ...prev,
-          currentUser: user,
-        }));
-      }
-    } catch (error) {
-      console.error('Failed to fetch current user:', error);
-    }
-  };
+    setCache(prev => ({
+      ...prev,
+      currentUser: {
+        id: user.id,
+        name: `${user.firstName} ${user.lastName}`,
+        photo: user.photo || undefined,
+      },
+    }));
+  }, [user]);
 
   const updateCache = useCallback((updates: Partial<ChatCache>) => {
     setCache(prev => ({
@@ -541,16 +532,14 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Set up global contacts polling (less frequent since WebSocket handles real-time updates)
+  // Load contacts once on auth initialization; WebSocket events keep real-time data fresh.
   useEffect(() => {
-    if (!playerId) {
+    if (!playerId || !user) {
       return;
     }
 
     refreshContacts();
-    const interval = setInterval(refreshContacts, 300000); // Poll every 5 minutes instead of 1 minute
-    return () => clearInterval(interval);
-  }, [playerId, refreshContacts]);
+  }, [playerId, user, refreshContacts]);
 
   const value: ChatContextType = {
     contacts: cache.contacts,

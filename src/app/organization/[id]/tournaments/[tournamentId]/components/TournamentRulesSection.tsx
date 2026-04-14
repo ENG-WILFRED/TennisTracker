@@ -77,7 +77,7 @@ function ActionBtn({
 // ── Individual Rule Row ───────────────────────────────────────────────────────
 function RuleRow({
   rule, index, onEdit, onDelete, onSave,
-  isEditing, editingText, setEditingText,
+  isEditing, editingText, setEditingText, isMobile,
 }: {
   rule: Rule;
   index: number;
@@ -87,6 +87,7 @@ function RuleRow({
   isEditing: boolean;
   editingText: string;
   setEditingText: (t: string) => void;
+  isMobile: boolean;
 }) {
   const [hovered, setHovered] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -101,9 +102,10 @@ function RuleRow({
       onMouseLeave={() => setHovered(false)}
       style={{
         display: 'flex',
-        alignItems: 'center',
-        gap: 14,
-        padding: '12px 16px',
+        flexDirection: isMobile ? 'column' : 'row',
+        alignItems: isMobile ? 'stretch' : 'center',
+        gap: isMobile ? 12 : 14,
+        padding: isMobile ? '12px 14px' : '12px 16px',
         borderRadius: 11,
         background: isEditing
           ? 'rgba(125,193,66,0.08)'
@@ -128,8 +130,8 @@ function RuleRow({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        fontFamily: 'Syne, sans-serif',
-        fontSize: 11,
+        fontFamily: 'Clash Display, sans-serif',
+        fontSize: isMobile ? 10 : 11,
         fontWeight: 800,
         color: isEditing ? '#071407' : '#a8d84e',
         letterSpacing: '0.04em',
@@ -156,7 +158,7 @@ function RuleRow({
               border: 'none',
               outline: 'none',
               color: '#e8f5e0',
-              fontSize: 14,
+              fontSize: isMobile ? 13 : 14,
               fontFamily: 'DM Sans, sans-serif',
               lineHeight: 1.5,
               caretColor: '#a8d84e',
@@ -180,6 +182,7 @@ function RuleRow({
       <div style={{
         display: 'flex',
         gap: 6,
+        flexWrap: isMobile ? 'wrap' : 'nowrap',
         flexShrink: 0,
         opacity: (hovered || isEditing) ? 1 : 0,
         transition: 'opacity 0.15s',
@@ -227,6 +230,7 @@ export function TournamentRulesSection({
   fetchTournamentData,
   onSaveTournament,
 }: TournamentRulesSectionProps) {
+  const [isMobile, setIsMobile] = useState(false);
   const [rules, setRules] = useState<Rule[]>(() =>
     parseRulesToList(tournament?.rules || '')
   );
@@ -237,6 +241,13 @@ export function TournamentRulesSection({
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useEffect(() => {
     setRules(parseRulesToList(tournament?.rules || ''));
@@ -297,17 +308,17 @@ export function TournamentRulesSection({
     <div style={{ fontFamily: 'DM Sans, sans-serif' }}>
 
       {/* ── Page header ── */}
-      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 26 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: isMobile ? 16 : 26 }}>
         <div>
           <div style={{
-            fontFamily: 'Syne, sans-serif', fontSize: 10, fontWeight: 800,
+            fontFamily: 'Clash Display, sans-serif', fontSize: isMobile ? 8 : 10, fontWeight: 800,
             letterSpacing: '0.2em', textTransform: 'uppercase' as const,
             color: '#7dc142', marginBottom: 5, opacity: 0.75,
           }}>
             Tournament Management
           </div>
           <h2 style={{
-            fontFamily: 'Syne, sans-serif', fontSize: 26, fontWeight: 800,
+            fontFamily: 'Clash Display, sans-serif', fontSize: isMobile ? 20 : 26, fontWeight: 800,
             color: '#a8d84e', margin: 0, letterSpacing: '-0.01em', lineHeight: 1,
           }}>
             Rules & Regulations
@@ -350,7 +361,7 @@ export function TournamentRulesSection({
 
         {/* Add-rule input bar */}
         <div style={{
-          padding: '14px 18px',
+          padding: isMobile ? '12px 14px' : '14px 18px',
           borderBottom: '1px solid rgba(125,193,66,0.09)',
           background: 'rgba(0,0,0,0.22)',
           display: 'flex',
@@ -442,6 +453,7 @@ export function TournamentRulesSection({
                   onEdit={startEdit}
                   onDelete={deleteRule}
                   onSave={saveEdit}
+                  isMobile={isMobile}
                 />
               ))}
             </div>

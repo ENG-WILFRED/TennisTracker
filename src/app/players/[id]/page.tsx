@@ -43,11 +43,11 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
         {/* Profile Header Card */}
         <div className="mt-8 bg-white rounded-xl shadow-lg overflow-hidden">
           <div className="bg-gradient-to-r from-green-600 to-sky-600 h-32"></div>
-          <div className="px-8 pb-8">
+          <div className="px-4 sm:px-8 pb-8">
             <div className="flex flex-col sm:flex-row items-start sm:items-end gap-6 -mt-16">
               {/* Avatar */}
               <div className="relative">
-                <div className="w-32 h-32 rounded-full bg-gradient-to-br from-green-400 to-sky-400 flex items-center justify-center text-white text-5xl font-bold shadow-xl border-4 border-white">
+                <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-gradient-to-br from-green-400 to-sky-400 flex items-center justify-center text-white text-4xl sm:text-5xl font-bold shadow-xl border-4 border-white">
                   {player.firstName?.[0]}
                 </div>
                 <div className="absolute bottom-2 right-2 w-6 h-6 bg-green-500 rounded-full border-4 border-white"></div>

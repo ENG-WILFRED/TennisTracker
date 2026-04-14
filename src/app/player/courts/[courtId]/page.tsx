@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
+import { LoadingState } from '@/components/LoadingState';
 import { authenticatedFetch } from '@/lib/authenticatedFetch';
 
 const G = {
@@ -162,14 +163,7 @@ export default function PlayerCourtDetailsPage() {
   };
 
   if (loading) {
-    return (
-      <div style={{ padding: 32, background: G.dark, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>🎾</div>
-          <div style={{ color: G.muted, fontSize: 16, fontWeight: 600 }}>Loading court details…</div>
-        </div>
-      </div>
-    );
+    return <LoadingState icon="🎾" message="Loading court details…" />;
   }
 
   if (error || !court) {
@@ -187,48 +181,48 @@ export default function PlayerCourtDetailsPage() {
   }
 
   return (
-    <div style={{ padding: '24px 32px', background: G.dark, minHeight: '100vh' }}>
-      <div style={{ maxWidth: 1280, margin: '0 auto' }}>
+    <div className="px-4 sm:px-8 lg:px-16 py-6 bg-gray-900 min-h-screen">
+      <div className="max-w-7xl mx-auto">
         {/* Back Button */}
         <button
           onClick={() => router.back()}
-          style={{ background: 'transparent', color: G.lime, border: 'none', fontSize: 14, cursor: 'pointer', marginBottom: 16, fontWeight: 700 }}
+          className="mb-4 text-green-400 hover:text-green-300 text-sm font-bold transition-colors"
         >
           ← Back
         </button>
 
         {/* Hero Image */}
-        <div style={{ marginBottom: 28, borderRadius: 16, overflow: 'hidden', height: 300, backgroundColor: G.card }}>
-          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: G.muted }}>
+        <div className="mb-7 rounded-xl overflow-hidden h-48 sm:h-64 lg:h-80 bg-gray-800">
+          <div className="w-full h-full flex items-center justify-center text-gray-500">
             🎾 Court Image
           </div>
         </div>
 
         {/* Header */}
-        <div style={{ marginBottom: 28 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: 16, marginBottom: 12 }}>
+        <div className="mb-7">
+          <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-3">
             <div>
-              <h1 style={{ fontSize: 32, fontWeight: 900, color: G.text, margin: 0 }}>
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white mb-1">
                 {court.name}
               </h1>
-              <div style={{ fontSize: 13, color: G.muted, marginTop: 4 }}>
+              <div className="text-xs sm:text-sm text-gray-400">
                 Court #{court.courtNumber} • {court.surface} • {court.indoorOutdoor}
                 {court.organization && ` • ${court.organization.name}`}
               </div>
             </div>
             {stats && (
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: 24, fontWeight: 900, color: G.lime }}>
+              <div className="text-right">
+                <div className="text-xl sm:text-2xl font-black text-green-400">
                   {stats.averageRating ? `${stats.averageRating.toFixed(1)}★` : 'N/A'}
                 </div>
-                <div style={{ fontSize: 11, color: G.muted }}>({stats.totalComments} reviews)</div>
+                <div className="text-xs text-gray-400">({stats.totalComments} reviews)</div>
               </div>
             )}
           </div>
         </div>
 
         {/* Stats Bar */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 28 }}>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-7">
           <StatCard label="Total Bookings" value={stats?.totalBookings || 0} />
           <StatCard label="Rating" value={stats?.averageRating ? stats.averageRating.toFixed(1) : 'N/A'} />
           <StatCard label="Confirmed" value={stats?.confirmedBookings || 0} />
@@ -236,23 +230,17 @@ export default function PlayerCourtDetailsPage() {
         </div>
 
         {/* Tabs */}
-        <div style={{ marginBottom: 24, borderBottom: `2px solid ${G.cardBorder}` }}>
-          <div style={{ display: 'flex', gap: 0 }}>
+        <div className="mb-6 border-b-2 border-gray-700">
+          <div className="flex overflow-x-auto">
             {TABS.map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                style={{
-                  padding: '12px 20px',
-                  background: activeTab === tab.id ? G.mid : 'transparent',
-                  border: 'none',
-                  borderBottom: activeTab === tab.id ? `3px solid ${G.lime}` : 'none',
-                  color: activeTab === tab.id ? G.text : G.muted,
-                  fontSize: 13,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                }}
+                className={`px-3 sm:px-5 py-3 text-xs sm:text-sm font-semibold whitespace-nowrap transition-all ${
+                  activeTab === tab.id
+                    ? 'text-white border-b-3 border-green-400'
+                    : 'text-gray-400 hover:text-white'
+                }`}
               >
                 {tab.icon} {tab.label}
               </button>

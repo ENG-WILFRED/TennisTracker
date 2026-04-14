@@ -1,52 +1,325 @@
 "use client"
 
-import React, { useState } from 'react'
-import Button from '@/components/Button'
-import { announcements, events, tips } from '@/data/site'
+import { useState, useEffect, useRef, useCallback, type MouseEvent as ReactMouseEvent, type TouchEvent as ReactTouchEvent, type FormEvent } from 'react'
 import { useAuth } from '@/context/AuthContext'
+import { useToast } from './ToastProvider'
+
+interface BugReport {
+  title: string
+  description: string
+  severity: 'low' | 'medium' | 'high' | 'critical'
+  pageUrl: string
+  userAgent: string
+  username: string
+  email: string
+  timestamp: string
+}
+
+type BugReportForm = {
+  title: string
+  description: string
+  severity: BugReport['severity']
+}
 
 export default function FloatingMessagesPanel() {
   const [isOpen, setIsOpen] = useState(false)
-  const { isLoggedIn } = useAuth()
+  const [isDragging, setIsDragging] = useState(false)
+  const [position, setPosition] = useState({ x: 0, y: 0 })
+  const [panelPosition, setPanelPosition] = useState({ x: 0, y: 0 })
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
+  const [isMobileViewport, setIsMobileViewport] = useState(false)
+  const touchTimerRef = useRef<number | null>(null)
+  const touchStartPoint = useRef({ x: 0, y: 0 })
+  const ignoreClickRef = useRef(false)
+  const [bugReport, setBugReport] = useState<BugReportForm>({
+    title: '',
+    description: '',
+    severity: 'medium'
+  })
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const { user, isLoggedIn } = useAuth()
+  const { showToast } = useToast()
 
-  // Don't render for non-logged-in users
+  const handleMouseDown = (e: ReactMouseEvent<HTMLElement>) => {
+    setIsDragging(true)
+    const rect = e.currentTarget.getBoundingClientRect()
+
+    setDragOffset({
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
+    })
+  }
+
+  const handleTouchStart = (e: ReactTouchEvent<Element>) => {
+    const touch = e.touches[0]
+    touchStartPoint.current = { x: touch.clientX, y: touch.clientY }
+    const rect = e.currentTarget.getBoundingClientRect()
+
+    setDragOffset({
+      x: touch.clientX - rect.left,
+      y: touch.clientY - rect.top
+    })
+
+    if (touchTimerRef.current) {
+      window.clearTimeout(touchTimerRef.current)
+    }
+
+    touchTimerRef.current = window.setTimeout(() => {
+      setIsDragging(true)
+      ignoreClickRef.current = true
+    }, 250)
+  }
+
+  const cancelTouchDrag = () => {
+    if (touchTimerRef.current) {
+      window.clearTimeout(touchTimerRef.current)
+      touchTimerRef.current = null
+    }
+  }
+
+  const handleTouchMove = useCallback((e: ReactTouchEvent<Element>) => {
+    const touch = e.touches[0]
+    const moveDist = Math.hypot(touch.clientX - touchStartPoint.current.x, touch.clientY - touchStartPoint.current.y)
+
+    if (!isDragging && moveDist > 8) {
+      cancelTouchDrag()
+    }
+
+    if (!isDragging) return
+
+    e.preventDefault()
+    const newX = touch.clientX - dragOffset.x
+    const newY = touch.clientY - dragOffset.y
+
+    // Keep draggable element within viewport bounds
+    const maxX = window.innerWidth - 80
+    const maxY = window.innerHeight - 80
+
+    setPosition({
+      x: Math.max(0, Math.min(newX, maxX)),
+      y: Math.max(0, Math.min(newY, maxY))
+    })
+  }, [isDragging, dragOffset])
+
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (!isDragging) return
+
+    const newX = e.clientX - dragOffset.x
+    const newY = e.clientY - dragOffset.y
+
+    // Keep draggable element within viewport bounds
+    const maxX = window.innerWidth - 80
+    const maxY = window.innerHeight - 80
+
+    setPosition({
+      x: Math.max(0, Math.min(newX, maxX)),
+      y: Math.max(0, Math.min(newY, maxY))
+    })
+  }, [isDragging, dragOffset])
+
+  const handleMouseUp = () => {
+    setIsDragging(false)
+  }
+
+  const handleTouchEnd = useCallback(() => {
+    cancelTouchDrag()
+    if (isDragging) {
+      setIsDragging(false)
+      window.setTimeout(() => {
+        ignoreClickRef.current = false
+      }, 100)
+    }
+  }, [isDragging])
+
+  useEffect(() => {
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove)
+      document.addEventListener('mouseup', handleMouseUp)
+      document.addEventListener('touchmove', handleTouchMove as unknown as EventListener, { passive: false })
+      document.addEventListener('touchend', handleTouchEnd)
+
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove)
+        document.removeEventListener('mouseup', handleMouseUp)
+        document.removeEventListener('touchmove', handleTouchMove as unknown as EventListener)
+        document.removeEventListener('touchend', handleTouchEnd)
+      }
+    }
+  }, [isDragging, handleTouchMove, handleTouchEnd, handleMouseMove])
+
+  useEffect(() => {
+    const updateMobileViewport = () => setIsMobileViewport(window.innerWidth <= 768)
+    updateMobileViewport()
+    window.addEventListener('resize', updateMobileViewport)
+    return () => window.removeEventListener('resize', updateMobileViewport)
+  }, [])
+
+  useEffect(() => {
+    setPosition({
+      x: window.innerWidth - 80 - 24,
+      y: window.innerHeight - 80 - 24
+    })
+  }, [])
+
+  useEffect(() => {
+    if (!isOpen) return
+
+    const panelWidth = isMobileViewport ? Math.min(window.innerWidth - 32, 320) : 320
+    const panelHeight = Math.min(520, window.innerHeight - 32)
+    const margin = 16
+
+    const defaultX = isMobileViewport ? Math.max(margin, (window.innerWidth - panelWidth) / 2) : position.x
+    const defaultY = isMobileViewport ? margin : position.y
+
+    const maxX = window.innerWidth - panelWidth - margin
+    const maxY = window.innerHeight - panelHeight - margin
+
+    setPanelPosition({
+      x: Math.max(margin, Math.min(defaultX, maxX)),
+      y: Math.max(margin, Math.min(defaultY, maxY))
+    })
+  }, [isOpen, position, isMobileViewport])
+
+  const handleSubmitBug = async (e: FormEvent) => {
+    e.preventDefault()
+    if (!user) return
+
+    setIsSubmitting(true)
+
+    try {
+      const bugData: BugReport = {
+        title: bugReport.title,
+        description: bugReport.description,
+        severity: bugReport.severity,
+        pageUrl: window.location.href,
+        userAgent: navigator.userAgent,
+        username: user.username,
+        email: user.email,
+        timestamp: new Date().toISOString()
+      }
+
+      // Save to database
+      const response = await fetch('/api/bugs', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(bugData),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to submit bug report')
+      }
+
+      // Reset form and close panel
+      setBugReport({ title: '', description: '', severity: 'medium' })
+      setIsOpen(false)
+
+      showToast('Bug report submitted successfully! Thank you for helping us improve.', 'success')
+
+    } catch (error) {
+      console.error('Error submitting bug report:', error)
+      showToast('Failed to submit bug report. Please try again.', 'error')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   if (!isLoggedIn) {
     return null
   }
 
   return (
     <>
-      {/* Floating Button */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-6 right-6 z-40 inline-flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-lg hover:shadow-xl hover:scale-110 transition-all duration-200 hover:from-green-700 hover:to-emerald-700"
-        title="Messages & Announcements"
+      {/* Draggable Floating Button */}
+      <div
+        onMouseDown={handleMouseDown}
+        className="fixed z-40"
+        style={{
+          left: position.x,
+          top: position.y,
+          cursor: isDragging ? 'grabbing' : 'grab',
+          touchAction: 'none'
+        }}
       >
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        <button
+          onClick={(e) => {
+            if (ignoreClickRef.current || isDragging) {
+              e.preventDefault()
+              e.stopPropagation()
+              return
+            }
+            setIsOpen(!isOpen)
+          }}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-r from-red-600 to-orange-600 text-white shadow-lg hover:shadow-xl hover:scale-110 transition-all duration-200 hover:from-red-700 hover:to-orange-700"
+          title="Report a Bug"
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+          {/* Antennae */}
+          <path d="M9 3l-2 4M15 3l2 4" strokeLinecap="round" strokeLinejoin="round"/>
+          {/* Body */}
+          <ellipse cx="12" cy="13" rx="4" ry="6" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+          {/* Left legs */}
+          <path d="M8 10l-4-2M8 12l-5 0M8 14l-4 2" strokeLinecap="round" strokeLinejoin="round"/>
+          {/* Right legs */}
+          <path d="M16 10l4-2M16 12l5 0M16 14l4 2" strokeLinecap="round" strokeLinejoin="round"/>
+          {/* Head circle */}
+          <circle cx="12" cy="7" r="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
-        {/* Notification Badge */}
-        {(announcements.length > 0 || events.length > 0) && (
-          <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-red-500 rounded-full">
-            {announcements.length + events.length}
-          </span>
-        )}
       </button>
+      </div>
 
       {/* Floating Panel */}
       {isOpen && (
         <>
           {/* Overlay to close */}
           <div
-            className="fixed inset-0 z-30 bg-black/70"
+            className="fixed inset-0 z-30 bg-black/50"
             onClick={() => setIsOpen(false)}
           />
-          
+
           {/* Panel */}
-          <div className="fixed bottom-24 right-6 z-40 w-full md:w-[500px] max-w-[calc(100vw-3rem)] bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden">
-            {/* Header */}
-            <div className="bg-gradient-to-r from-green-600 to-emerald-600 px-6 py-4 flex items-center justify-between">
-              <h3 className="text-white font-bold text-lg">Messages & Announcements</h3>
+          <div
+            className="fixed z-40 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden"
+            style={{
+              left: panelPosition.x,
+              top: panelPosition.y,
+              width: isMobileViewport ? 'calc(100vw - 32px)' : 320,
+              maxWidth: '100%',
+              maxHeight: 'calc(100vh - 32px)',
+              right: 'auto',
+              bottom: 'auto',
+              cursor: isDragging ? 'grabbing' : 'default',
+              overflowY: 'auto'
+            }}
+          >
+            {/* Draggable Header */}
+            <div
+              className="bg-gradient-to-r from-red-600 to-orange-600 px-4 py-3 flex items-center justify-between cursor-grab active:cursor-grabbing select-none"
+              onMouseDown={handleMouseDown}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+              style={{ touchAction: 'none' }}
+            >
+              <h3 className="text-white font-bold text-lg flex items-center gap-2">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  {/* Antennae */}
+                  <path d="M9 3l-2 4M15 3l2 4" strokeLinecap="round" strokeLinejoin="round"/>
+                  {/* Body */}
+                  <ellipse cx="12" cy="13" rx="4" ry="6" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+                  {/* Left legs */}
+                  <path d="M8 10l-4-2M8 12l-5 0M8 14l-4 2" strokeLinecap="round" strokeLinejoin="round"/>
+                  {/* Right legs */}
+                  <path d="M16 10l4-2M16 12l5 0M16 14l4 2" strokeLinecap="round" strokeLinejoin="round"/>
+                  {/* Head circle */}
+                  <circle cx="12" cy="7" r="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                Report Bug
+              </h3>
               <button
                 onClick={() => setIsOpen(false)}
                 className="text-white hover:bg-white/20 p-1 rounded-md transition-all"
@@ -57,80 +330,79 @@ export default function FloatingMessagesPanel() {
               </button>
             </div>
 
-            {/* Content - Scrollable */}
-            <div className="max-h-96 overflow-y-auto">
-              {/* Announcements */}
-              {announcements.length > 0 && (
-                <div className="px-6 py-4 border-b border-gray-200">
-                  <h4 className="font-bold text-green-700 mb-3 flex items-center gap-2">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882m0 0a2 2 0 100 4 2 2 0 000-4zm0 0C6.5 7 4 9.239 4 12c0 .341.025.671.07 1H4c-2.21 0-4 1.343-4 3s1.79 3 4 3h7m6-10c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3z" />
-                    </svg>
-                    Announcements
-                  </h4>
-                  <ul className="space-y-3">
-                    {announcements.map(a => (
-                      <li key={a.id} className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-3 border border-green-100">
-                        <div className="font-semibold text-gray-900 text-sm">{a.title}</div>
-                        <div className="text-xs text-gray-500 mt-1">{a.date}</div>
-                        <div className="text-gray-600 text-sm mt-2">{a.body}</div>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+            {/* Bug Report Form */}
+            <form onSubmit={handleSubmitBug} className="p-4 space-y-4">
+              {/* Title */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Bug Title *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={bugReport.title}
+                  onChange={(e) => setBugReport(prev => ({ ...prev, title: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  placeholder="Brief description of the issue"
+                />
+              </div>
 
-              {/* Events */}
-              {events.length > 0 && (
-                <div className="px-6 py-4 border-b border-gray-200">
-                  <h4 className="font-bold text-blue-700 mb-3 flex items-center gap-2">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    Upcoming Events
-                  </h4>
-                  <ul className="space-y-3">
-                    {events.map(ev => (
-                      <li key={ev.id} className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-lg p-3 border border-blue-100">
-                        <div className="font-semibold text-gray-900 text-sm">{ev.title}</div>
-                        <div className="text-xs text-gray-500 mt-1">
-                          <div>{ev.date}</div>
-                          <div className="flex items-center gap-1 mt-1">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                            </svg>
-                            {ev.location}
-                          </div>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+              {/* Severity */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Severity
+                </label>
+                <select
+                  value={bugReport.severity}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setBugReport(prev => ({ ...prev, severity: e.target.value as BugReport['severity'] }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                >
+                  <option value="low">Low - Minor inconvenience</option>
+                  <option value="medium">Medium - Affects functionality</option>
+                  <option value="high">High - Major feature broken</option>
+                  <option value="critical">Critical - App unusable</option>
+                </select>
+              </div>
 
-              {/* Tips */}
-              {tips.length > 0 && (
-                <div className="px-6 py-4">
-                  <h4 className="font-bold text-amber-700 mb-3 flex items-center gap-2">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5h.01" />
-                    </svg>
-                    Quick Tips
-                  </h4>
-                  <ul className="space-y-3">
-                    {tips.map(t => (
-                      <li key={t.id} className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-lg p-3 border border-amber-100">
-                        <div className="font-semibold text-gray-900 text-sm">{t.title}</div>
-                        <div className="text-gray-600 text-sm mt-2">{t.body}</div>
-                      </li>
-                    ))}
-                  </ul>
+              {/* Description */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Description *
+                </label>
+                <textarea
+                  required
+                  value={bugReport.description}
+                  onChange={(e) => setBugReport(prev => ({ ...prev, description: e.target.value }))}
+                  rows={4}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none"
+                  placeholder="Please describe the bug in detail. What were you doing? What happened? What should have happened?"
+                />
+              </div>
+
+              {/* Page Info */}
+              <div className="bg-gray-50 p-3 rounded-md">
+                <h4 className="text-sm font-medium text-gray-700 mb-2">Page Information</h4>
+                <div className="text-xs text-gray-600 space-y-1">
+                  <div><strong>URL:</strong> {window.location.href}</div>
+                  <div><strong>Browser:</strong> {navigator.userAgent.split(' ').pop()}</div>
+                  <div><strong>Time:</strong> {new Date().toLocaleString()}</div>
                 </div>
-              )}
-            </div>
+              </div>
+
+              {/* Submit Button */}
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full bg-gradient-to-r from-red-600 to-orange-600 text-white py-2 px-4 rounded-md hover:from-red-700 hover:to-orange-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              >
+                {isSubmitting ? 'Submitting...' : 'Submit Bug Report'}
+              </button>
+            </form>
           </div>
         </>
       )}
     </>
   )
 }
+
+

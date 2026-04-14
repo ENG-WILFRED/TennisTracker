@@ -232,6 +232,69 @@ export async function seedMemberships(organizations: any[], users: any[]) {
     }
   }
 
+  console.log('\n💠 Seeding membership records for authenticated roles...');
+
+  const roleMap: Record<string, string> = {
+    member: 'player',
+    admin: 'admin',
+    officer: 'finance_officer',
+  };
+
+  async function upsertOrganizationMembership(userId: string, orgId: string, role: string) {
+    if (!userId || !orgId || !role) return;
+
+    try {
+      await prisma.membership.upsert({
+        where: {
+          userId_orgId: {
+            userId,
+            orgId,
+          },
+        },
+        update: {
+          role,
+          status: 'accepted',
+          approvedAt: new Date(),
+        },
+        create: {
+          userId,
+          orgId,
+          role,
+          status: 'accepted',
+          approvedAt: new Date(),
+        },
+      });
+    } catch (error) {
+      console.error(`  ✗ Error creating membership for user ${userId} in org ${orgId}:`, error);
+    }
+  }
+
+  const clubMembers = await prisma.clubMember.findMany({
+    where: {
+      organizationId: { in: organizations.map((org) => org.id) },
+    },
+  });
+
+  for (const clubMember of clubMembers) {
+    const role = roleMap[clubMember.role] || 'player';
+    await upsertOrganizationMembership(clubMember.playerId, clubMember.organizationId, role);
+  }
+
+  for (const user of users) {
+    if (!user.organizationId) continue;
+    if (user.role === 'spectator') continue;
+
+    // Ensure seeded users with organization roles also have a membership record.
+    await upsertOrganizationMembership(user.id, user.organizationId, user.role);
+  }
+
+  // Ensure organization owners get an accepted org-level membership too.
+  for (const org of organizations) {
+    if (org.createdBy) {
+      await upsertOrganizationMembership(org.createdBy, org.id, 'org');
+    }
+  }
+
   console.log('');
   return { tiers: createdTiers, members: createdMembers };
 }

@@ -1,7 +1,19 @@
+import { blacklistAccessToken, blacklistRefreshToken } from '@/lib/tokenBlacklist';
+
 export async function POST(request: Request) {
   try {
-    // In a token-based system, logout is mainly client-side (clearing tokens)
-    // But we can add server-side logic later like blacklisting tokens if needed
+    const body = await request.json().catch(() => ({} as any));
+    const refreshToken = typeof body.refreshToken === 'string' ? body.refreshToken : null;
+    const authHeader = request.headers.get('Authorization');
+    const accessToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+
+    if (refreshToken) {
+      blacklistRefreshToken(refreshToken);
+    }
+
+    if (accessToken) {
+      blacklistAccessToken(accessToken);
+    }
 
     return new Response(
       JSON.stringify({ message: 'Logged out successfully' }),

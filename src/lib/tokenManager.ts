@@ -1,8 +1,8 @@
 // Token configuration
 export const TOKEN_CONFIG = {
-  ACCESS_TOKEN_EXPIRY: 30 * 60 * 1000, // 15 minutes in ms
+  ACCESS_TOKEN_EXPIRY: 30 * 60 * 1000, // 30 minutes in ms
   REFRESH_TOKEN_EXPIRY: 7 * 24 * 60 * 60 * 1000, // 7 days in ms
-  INACTIVITY_TIMEOUT: 10 * 60 * 1000, // 10 minutes in ms
+  INACTIVITY_TIMEOUT: 30 * 60 * 1000, // 30 minutes in ms
 };
 
 export interface TokenPayload {
@@ -57,7 +57,36 @@ export function clearTokens(): void {
 
   localStorage.removeItem('authTokens');
   localStorage.removeItem('playerId');
+  localStorage.removeItem('currentUser');
   localStorage.removeItem('lastActivityTime');
+}
+
+export async function logoutFromServer(): Promise<void> {
+  if (typeof window === 'undefined') {
+    clearTokens();
+    return;
+  }
+
+  const tokens = getStoredTokens();
+  if (!tokens) {
+    clearTokens();
+    return;
+  }
+
+  try {
+    await fetch('/api/auth/logout', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(tokens.accessToken ? { Authorization: `Bearer ${tokens.accessToken}` } : {}),
+      },
+      body: JSON.stringify({ refreshToken: tokens.refreshToken }),
+    });
+  } catch (error) {
+    console.error('Failed to invalidate tokens on server logout:', error);
+  } finally {
+    clearTokens();
+  }
 }
 
 // Check if access token is expired

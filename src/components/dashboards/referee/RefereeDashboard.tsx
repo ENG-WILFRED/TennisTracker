@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { authenticatedFetch } from '@/lib/authenticatedFetch';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { LoadingState } from '@/components/LoadingState';
 import MessagingPanel from '@/components/dashboards/MessagingPanel';
 import CommunityPanel from '../coach/CommunityPanel';
 import AssignedTasksWidget from '@/components/AssignedTasksWidget';
@@ -119,6 +120,7 @@ export const RefereeDashboard: React.FC = () => {
 
   // State for real data
   const [refereeData, setRefereeData] = useState<any>(null);
+  const [dashboardData, setDashboardData] = useState<any>(null);
   const [matches, setMatches] = useState<any[]>([]);
   const [incomingMatches, setIncomingMatches] = useState<any[]>([]);
   const [performance, setPerformance] = useState<any>(null);
@@ -164,14 +166,17 @@ export const RefereeDashboard: React.FC = () => {
 
   const isProfile = activeNav === 'My Profile';
 
+  if (loading && !dashboardData) {
+    return <LoadingState icon="🧑‍⚖️" message="Loading referee dashboard..." />;
+  }
+
   // Fetch real data on mount
   useEffect(() => {
-    const fetchRefereeData = async () => {
+    const fetchRefereeDashboard = async () => {
       try {
         if (!user?.id) return;
         const refereeId = user.id;
 
-        // Fetch full user profile with additional fields
         const userRes = await authenticatedFetch(`/api/user/profile/${refereeId}`);
         if (userRes.ok) {
           const fullUserData = await userRes.json();
@@ -189,42 +194,24 @@ export const RefereeDashboard: React.FC = () => {
           });
         }
 
-        // Fetch referee profile data
-        const profileRes = await authenticatedFetch(`/api/referees/${refereeId}`);
-        if (profileRes.ok) {
-          const data = await profileRes.json();
-          setRefereeData(data);
-        }
-
-        // Fetch matches
-        const matchesRes = await authenticatedFetch(`/api/referees/${refereeId}/matches`);
-        if (matchesRes.ok) {
-          const data = await matchesRes.json();
-          setMatches(data.matches || []);
+        const dashboardRes = await authenticatedFetch(`/api/dashboard/role?role=referee&userId=${refereeId}`);
+        if (dashboardRes.ok) {
+          const data = await dashboardRes.json();
+          setDashboardData(data);
+          setRefereeData(data.referee);
+          setMatches(data.recentMatches || []);
           setIncomingMatches(data.incomingMatches || []);
-        }
-
-        // Fetch performance data
-        const perfRes = await authenticatedFetch(`/api/referees/${refereeId}/performance`);
-        if (perfRes.ok) {
-          const data = await perfRes.json();
-          setPerformance(data);
-        }
-
-        // Fetch certificates
-        const certRes = await authenticatedFetch(`/api/referees/${refereeId}/certificates`);
-        if (certRes.ok) {
-          const data = await certRes.json();
-          setCertificates(Array.isArray(data) ? data : []);
+          setPerformance(data.stats || null);
+          setCertificates(data.referee?.certifications || []);
         }
       } catch (error) {
-        console.error('Error fetching referee data:', error);
+        console.error('Error fetching referee dashboard:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchRefereeData();
+    fetchRefereeDashboard();
   }, [user?.id]);
 
   // Auto-follow players and organizations on mount
@@ -308,10 +295,10 @@ export const RefereeDashboard: React.FC = () => {
   const card2 = { background: G.card2, border: `1px solid ${G.border}`, borderRadius: 12, padding: 13 } as const;
 
   return (
-    <div style={{ display: 'flex', height: '100vh', fontFamily: "'Segoe UI', system-ui, sans-serif", background: G.dark, color: G.text, overflow: 'hidden', fontSize: 13 }}>
+    <div className="min-h-screen flex flex-col md:flex-row" style={{ fontFamily: "'Segoe UI', system-ui, sans-serif", background: G.dark, color: G.text, minHeight: '100vh', overflow: 'hidden', fontSize: 13 }}>
 
       {/* ═══════════════ LEFT NAV ═══════════════ */}
-      <aside style={{ width: 188, background: G.sidebar, borderRight: `1px solid ${G.border}`, display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
+      <aside className="hidden md:flex md:w-56" style={{ background: G.sidebar, borderRight: `1px solid ${G.border}`, display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
 
         {/* Brand */}
         <div style={{ padding: '14px 15px 13px', borderBottom: `1px solid ${G.border}`, display: 'flex', alignItems: 'center', gap: 9 }}>
@@ -382,6 +369,22 @@ export const RefereeDashboard: React.FC = () => {
       {/* ═══════════════ MAIN ═══════════════ */}
       <main style={{ flex: 1, overflowY: 'auto', padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 11, minWidth: 0 }}>
 
+        <div className="md:hidden sticky top-0 z-20 bg-[#0f1e0f] border-b border-[#243e24] px-4 py-3">
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {navItems.map((item) => {
+              const isActive = activeNav === item.label;
+              return (
+                <button
+                  key={item.label}
+                  onClick={() => handleNavigation(item.label)}
+                  className={`whitespace-nowrap rounded-2xl border px-3 py-2 text-xs font-semibold transition ${isActive ? 'bg-[#1f3b1f] border-[#326832] text-[#d1e6c3]' : 'bg-transparent border-[#243e24] text-[#8aa274]'}`}
+                >
+                  {item.icon} {item.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
         {isProfile ? (
           /* ── PROFILE VIEW ── */

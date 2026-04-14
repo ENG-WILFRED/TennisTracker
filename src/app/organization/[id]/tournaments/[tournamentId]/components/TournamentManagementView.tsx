@@ -47,10 +47,19 @@ export function TournamentManagementView({
   onSaveTournament,
   updateLoading,
 }: TournamentManagementViewProps) {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Clash+Display:wght@400;600;700;800&family=Epilogue:wght@300;400;500&display=swap');
         
         * { box-sizing: border-box; }
         
@@ -61,12 +70,16 @@ export function TournamentManagementView({
         
         .tmv-root {
           min-height: 100vh;
-          background: #0a160a;
-          color: #dff0d0;
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-          padding: 28px 32px;
+          background: #0f1f0f;
+          color: #e8f5e0;
+          font-family: 'Epilogue', sans-serif;
+          padding: ${isMobile ? '16px' : '28px 32px'};
           position: relative;
           overflow-x: hidden;
+        }
+        
+        .tmv-root h1, .tmv-root h2, .tmv-root h3 {
+          font-family: 'Clash Display', sans-serif;
         }
         
         .tmv-root::before {
@@ -85,9 +98,11 @@ export function TournamentManagementView({
           position: relative;
           z-index: 1;
           width: 100%;
+          max-width: 1200px;
+          margin: 0 auto;
         }
         
-        @media (max-width: 640px) {
+        @media (max-width: 768px) {
           .tmv-root { padding: 16px; }
         }
       `}</style>

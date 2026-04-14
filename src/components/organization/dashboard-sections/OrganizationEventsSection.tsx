@@ -137,7 +137,7 @@ export default function OrganizationEventsSection({ orgId }: EventsSectionProps)
                   </div>
                   <div style={{ textAlign: 'right' }}>
                     <div style={{ fontSize: 9, color: G.muted, marginBottom: 2 }}>Entry Fee</div>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: G.accent }}>${event.entryFee.toFixed(2)}</div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: G.accent }}>${typeof event.entryFee === 'number' ? event.entryFee.toFixed(2) : '0.00'}</div>
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 6 }}>

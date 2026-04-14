@@ -41,9 +41,12 @@ interface ChatWindowProps {
   roomId: string;
   contactName?: string;
   contactPhoto?: string;
+  isMobile?: boolean;
+  onToggleSidebar?: () => void;
+  sidebarOpen?: boolean;
 }
 
-export default function ChatWindow({ roomId, contactName = 'Conversation', contactPhoto }: ChatWindowProps) {
+export default function ChatWindow({ roomId, contactName = 'Conversation', contactPhoto, isMobile = false, onToggleSidebar, sidebarOpen = true }: ChatWindowProps) {
   const { playerId } = useAuth();
   const { messages, participants, loading, sendMessage, refreshMessages, refreshParticipants, subscribeToRoom, unsubscribeFromRoom } = useChat();
   const [messageText, setMessageText] = useState('');
@@ -231,7 +234,35 @@ export default function ChatWindow({ roomId, contactName = 'Conversation', conta
           padding: '12px 20px', display: 'flex', alignItems: 'center',
           justifyContent: 'space-between', gap: '12px'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+          {/* Mobile back button */}
+          {isMobile && (
+            <button
+              onClick={onToggleSidebar}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#8b8fa8',
+                padding: '8px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+              onMouseEnter={e => (e.currentTarget.style.background = '#1e2235')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+            >
+              <ChevronDown 
+                size={18} 
+                style={{ 
+                  transform: sidebarOpen ? 'rotate(90deg)' : 'rotate(-90deg)',
+                  transition: 'transform 0.2s'
+                }} 
+              />
+            </button>
+          )}
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: 1 }}>
             <div style={{ position: 'relative', flexShrink: 0 }}>
               {contactPhoto ? (
                 <img src={contactPhoto} alt={contactName} style={{
@@ -808,10 +839,16 @@ export default function ChatWindow({ roomId, contactName = 'Conversation', conta
       {/* ── Participants sidebar ── */}
       {showParticipants && (
         <div style={{
-          width: '260px', background: '#13151f',
+          width: isMobile ? '100%' : '260px', 
+          background: '#13151f',
           borderLeft: '1px solid #1e2235',
           display: 'flex', flexDirection: 'column',
-          flexShrink: 0
+          flexShrink: 0,
+          position: isMobile ? 'absolute' : 'relative',
+          right: 0,
+          top: 0,
+          bottom: 0,
+          zIndex: 10
         }}>
           <div style={{ padding: '16px 20px', borderBottom: '1px solid #1e2235' }}>
             <h3 style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: '#8b8fa8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>

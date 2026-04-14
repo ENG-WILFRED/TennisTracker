@@ -27,7 +27,7 @@ const G = {
 
 export default function AcceptTermsPage() {
   const { login } = useAuth();
-  const { setCurrentRole, setUserRoles } = useRole();
+  const { setCurrentRole, setUserMemberships } = useRole();
   const { addToast } = useToast();
   const router = useRouter();
 
@@ -48,13 +48,15 @@ export default function AcceptTermsPage() {
   }, [router]);
 
   const completeLogin = async (data: any, selectedRole: UserRole) => {
+    const memberships = data.user?.memberships?.filter((m: any) => m.status === 'accepted') || data.availableRoles || [];
     const finalUser = {
       ...data.user,
       role: selectedRole,
+      memberships,
     };
 
     setCurrentRole(selectedRole);
-    setUserRoles(data.user?.availableRoles || [selectedRole]);
+    setUserMemberships(memberships.length ? memberships : [{ role: selectedRole, orgId: '', orgName: 'Platform' }]);
 
     login(
       {
@@ -68,7 +70,11 @@ export default function AcceptTermsPage() {
     setLoading(false);
 
     setTimeout(() => {
-      router.push(`/dashboard/${selectedRole}/${finalUser.id}`);
+      if (finalUser.id && selectedRole) {
+        router.push(`/dashboard/${selectedRole}/${finalUser.id}`);
+      } else {
+        router.push('/dashboard');
+      }
     }, 500);
   };
 
@@ -83,6 +89,15 @@ export default function AcceptTermsPage() {
           Authorization: `Bearer ${tokens.accessToken}`,
         },
       });
+
+      if (response.status === 401) {
+        // Unauthorized - redirect to login
+        addToast('Session expired. Please log in again.', 'error');
+        sessionStorage.removeItem('pendingLoginData');
+        sessionStorage.removeItem('pendingTokens');
+        router.push('/login');
+        return;
+      }
 
       const data = await response.json();
       if (!response.ok || data.error) {
@@ -114,6 +129,15 @@ export default function AcceptTermsPage() {
             Authorization: `Bearer ${tokens.accessToken}`,
           },
         });
+
+        if (response.status === 401) {
+          // Unauthorized - redirect to login
+          addToast('Session expired. Please log in again.', 'error');
+          sessionStorage.removeItem('pendingLoginData');
+          sessionStorage.removeItem('pendingTokens');
+          router.push('/login');
+          return;
+        }
 
         const data = await response.json();
 

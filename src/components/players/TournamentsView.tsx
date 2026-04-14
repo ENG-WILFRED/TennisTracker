@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { LoadingState } from '@/components/LoadingState';
 
 const G = {
   dark: '#0f1f0f', sidebar: '#152515', card: '#1a3020', cardBorder: '#2d5a35',
@@ -11,12 +12,15 @@ const G = {
 
 interface TournamentsViewProps {
   isEmbedded?: boolean;
+  playerId?: string;
 }
 
-export function TournamentsView({ isEmbedded = false }: TournamentsViewProps) {
+export function TournamentsView({ isEmbedded = false, playerId }: TournamentsViewProps) {
+  const router = useRouter();
   const [tournaments, setTournaments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'upcoming' | 'ongoing' | 'completed'>('all');
+  const [activeTournamentId, setActiveTournamentId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchTournaments = async () => {
@@ -35,16 +39,102 @@ export function TournamentsView({ isEmbedded = false }: TournamentsViewProps) {
   }, []);
 
   if (loading) {
-    return (
-      <div style={{ textAlign: 'center', padding: '40px 20px' }}>
-        <div style={{ fontSize: 24, marginBottom: 16 }}>⏳</div>
-        <div style={{ color: G.muted }}>Loading tournaments...</div>
-      </div>
-    );
+    return <LoadingState icon="🏆" message="Loading tournaments..." fullPage={false} />;
   }
 
   return (
-    <div style={{ width: '100%', background: isEmbedded ? 'linear-gradient(to bottom right, #0f2710, #0f1f0f, #0d1f0d)' : undefined, padding: isEmbedded ? 20 : 0, borderRadius: isEmbedded ? 8 : 0 }}>
+    <>
+      <style jsx>{`
+        .player-tournaments-root {
+          width: 100%;
+        }
+
+        .player-tournaments-inner {
+          width: 100%;
+        }
+
+        .player-tournaments-filter {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 12px;
+          margin-bottom: 24px;
+          border-bottom: 1px solid ${G.cardBorder};
+        }
+
+        .player-tournaments-list {
+          max-height: ${isEmbedded ? 'calc(100vh - 200px)' : 'none'};
+          overflow-y: ${isEmbedded ? 'auto' : 'visible'};
+        }
+
+        .player-tournaments-grid {
+          display: grid;
+          gap: 12px;
+          grid-template-columns: 1fr;
+        }
+
+        .player-tournament-card {
+          padding: 16px 14px;
+          background: ${G.card};
+          border: 1px solid ${G.cardBorder};
+          border-radius: 8px;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .player-tournament-card:hover {
+          border-color: ${G.lime};
+          background: #1d4020;
+        }
+
+        .player-tournament-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          margin-bottom: 12px;
+          gap: 12px;
+        }
+
+        .player-tournament-meta {
+          display: flex;
+          gap: 12px;
+          flex-wrap: wrap;
+          font-size: 12px;
+          color: ${G.muted};
+        }
+
+        .player-tournament-stats {
+          display: grid;
+          gap: 10px;
+          margin-bottom: 12px;
+          grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        }
+
+        .player-tournament-action {
+          width: 100%;
+          padding: 10px 16px;
+          background: linear-gradient(135deg, ${G.lime}, ${G.bright});
+          color: #0f1f0f;
+          border: none;
+          border-radius: 6px;
+          font-size: 12px;
+          font-weight: 700;
+          cursor: pointer;
+          transition: opacity 0.2s ease;
+        }
+
+        .player-tournament-action:disabled {
+          opacity: 0.65;
+          cursor: not-allowed;
+        }
+
+        @media (max-width: 640px) {
+          .player-tournament-header {
+            flex-direction: column;
+            align-items: stretch;
+          }
+        }
+      `}</style>
+      <div className="player-tournaments-root" style={{ background: isEmbedded ? 'linear-gradient(to bottom right, #0f2710, #0f1f0f, #0d1f0d)' : undefined, padding: isEmbedded ? 20 : 0, borderRadius: isEmbedded ? 8 : 0 }}>
       {/* Header */}
       <div style={{ marginBottom: 24 }}>
         <h2 style={{ fontSize: 20, fontWeight: 700, color: G.text, marginBottom: 6 }}>
@@ -56,7 +146,7 @@ export function TournamentsView({ isEmbedded = false }: TournamentsViewProps) {
       </div>
 
       {/* Filter Tabs */}
-      <div style={{ display: 'flex', gap: 12, marginBottom: 24, borderBottom: `1px solid ${G.cardBorder}` }}>
+      <div className="player-tournaments-filter">
         {(['all', 'upcoming', 'ongoing', 'completed'] as const).map((tab) => (
           <button
             key={tab}
@@ -79,8 +169,8 @@ export function TournamentsView({ isEmbedded = false }: TournamentsViewProps) {
       </div>
 
       {/* Tournaments List */}
-      <div style={{ maxHeight: isEmbedded ? 'calc(100vh - 200px)' : 'none', overflowY: isEmbedded ? 'auto' : 'visible' }}>
-        <div style={{ display: 'grid', gap: 12 }}>
+      <div className="player-tournaments-list">
+        <div className="player-tournaments-grid">
           {(() => {
             // Filter tournaments based on selected filter
             const filteredTournaments = filter === 'all' 
@@ -98,27 +188,9 @@ export function TournamentsView({ isEmbedded = false }: TournamentsViewProps) {
                 const statusColor = status === 'upcoming' ? G.lime : status === 'ongoing' ? G.yellow : G.muted;
 
                 return (
-                  <div
-                    key={tournament.id}
-                    style={{
-                      padding: '16px 14px',
-                      background: G.card,
-                      border: `1px solid ${G.cardBorder}`,
-                      borderRadius: 8,
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                    }}
-                    onMouseEnter={(e) => {
-                      (e.currentTarget as HTMLDivElement).style.borderColor = G.lime;
-                      (e.currentTarget as HTMLDivElement).style.background = '#1d4020';
-                    }}
-                    onMouseLeave={(e) => {
-                      (e.currentTarget as HTMLDivElement).style.borderColor = G.cardBorder;
-                      (e.currentTarget as HTMLDivElement).style.background = G.card;
-                    }}
-                  >
+                  <div key={tournament.id} className="player-tournament-card">
                     {/* Tournament Header */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: 12 }}>
+                    <div className="player-tournament-header">
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: 15, fontWeight: 700, color: G.text, marginBottom: 4 }}>
                           {tournament.name}
@@ -126,7 +198,7 @@ export function TournamentsView({ isEmbedded = false }: TournamentsViewProps) {
                         <div style={{ fontSize: 12, color: G.accent, marginBottom: 6, fontWeight: 600 }}>
                           🏢 {tournament.organization?.name || 'Unknown Organization'}
                         </div>
-                        <div style={{ display: 'flex', gap: 12, fontSize: 12, color: G.muted }}>
+                        <div className="player-tournament-meta">
                           <span>📅 {new Date(tournament.startDate).toLocaleDateString()}</span>
                           <span>📍 {tournament.location || 'TBA'}</span>
                         </div>
@@ -147,7 +219,7 @@ export function TournamentsView({ isEmbedded = false }: TournamentsViewProps) {
                     </div>
 
                     {/* Tournament Stats */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 12 }}>
+                    <div className="player-tournament-stats">
                       <div style={{ background: G.dark, borderRadius: 6, padding: '8px 10px' }}>
                         <div style={{ fontSize: 10, color: G.muted, marginBottom: 2 }}>Participants</div>
                         <div style={{ fontSize: 14, fontWeight: 700, color: G.accent }}>
@@ -194,23 +266,17 @@ export function TournamentsView({ isEmbedded = false }: TournamentsViewProps) {
                     )}
 
                     {/* Action Button */}
-                    <Link href={`/tournaments/${tournament.id}`}>
-                      <button
-                        style={{
-                          width: '100%',
-                          padding: '10px 16px',
-                          background: `linear-gradient(135deg, ${G.lime}, ${G.bright})`,
-                          color: '#0f1f0f',
-                          border: 'none',
-                          borderRadius: 6,
-                          fontSize: 12,
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                        }}
-                      >
-                        View Details & Register →
-                      </button>
-                    </Link>
+                    <button
+                      className="player-tournament-action"
+                      type="button"
+                      disabled={activeTournamentId === tournament.id}
+                      onClick={() => {
+                        setActiveTournamentId(tournament.id);
+                        router.push(`/dashboard/player/${playerId}/tournaments/${tournament.id}`);
+                      }}
+                    >
+                      {activeTournamentId === tournament.id ? 'Loading…' : 'View Details & Register →'}
+                    </button>
                   </div>
                 );
               })
@@ -219,5 +285,6 @@ export function TournamentsView({ isEmbedded = false }: TournamentsViewProps) {
         </div>
       </div>
     </div>
+    </>
   );
 }

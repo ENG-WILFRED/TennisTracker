@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 
 interface TournamentFacilitiesSectionProps {
@@ -12,11 +12,20 @@ export function TournamentFacilitiesSection({
   orgId,
   tournament,
 }: TournamentFacilitiesSectionProps) {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   return (
     <div>
       <h2 style={{
-        fontFamily: 'Syne, sans-serif',
-        fontSize: 24,
+        fontFamily: 'Clash Display, sans-serif',
+        fontSize: isMobile ? 20 : 24,
         fontWeight: 700,
         color: '#a8d84e',
         marginBottom: 24,
@@ -26,7 +35,7 @@ export function TournamentFacilitiesSection({
 
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))',
+        gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit,minmax(260px,1fr))',
         gap: '18px',
         marginBottom: 20,
       }}>
@@ -43,12 +52,12 @@ export function TournamentFacilitiesSection({
               backdropFilter: 'blur(14px)',
               border: '1px solid rgba(125,193,66,0.16)',
               borderRadius: '16px',
-              padding: '24px',
+              padding: isMobile ? '16px' : '24px',
             }}
           >
             <div style={{
-              fontFamily: 'Syne, sans-serif',
-              fontSize: 16,
+              fontFamily: 'Clash Display, sans-serif',
+              fontSize: isMobile ? 14 : 16,
               fontWeight: 700,
               color: '#a8d84e',
               marginBottom: 16,
@@ -58,7 +67,7 @@ export function TournamentFacilitiesSection({
             }}>
               {f.icon} {f.title}
             </div>
-            <p style={{ color: '#7a9c6a', fontSize: 13, lineHeight: 1.6 }}>{f.desc}</p>
+            <p style={{ color: '#7a9c6a', fontSize: isMobile ? 12 : 13, lineHeight: 1.6 }}>{f.desc}</p>
           </div>
         ))}
       </div>
@@ -68,11 +77,11 @@ export function TournamentFacilitiesSection({
         backdropFilter: 'blur(14px)',
         border: '1px solid rgba(125,193,66,0.16)',
         borderRadius: '16px',
-        padding: '24px',
+        padding: isMobile ? '16px' : '24px',
       }}>
         <div style={{
-          fontFamily: 'Syne, sans-serif',
-          fontSize: 16,
+          fontFamily: 'Clash Display, sans-serif',
+          fontSize: isMobile ? 14 : 16,
           fontWeight: 700,
           color: '#a8d84e',
           marginBottom: 16,
@@ -82,20 +91,20 @@ export function TournamentFacilitiesSection({
         }}>
           🏢 Manage Facilities
         </div>
-        <p style={{ color: '#7a9c6a', fontSize: 14, marginBottom: 16 }}>
+        <p style={{ color: '#7a9c6a', fontSize: isMobile ? 12 : 14, marginBottom: 16 }}>
           Update court assignments, eating, and sleeping area details in tournament settings, or manage organization courts below.
         </p>
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
           <Link
             href={`/organization/${orgId}/courts`}
             style={{
-              padding: '10px 24px',
+              padding: isMobile ? '8px 16px' : '10px 24px',
               background: 'linear-gradient(135deg,#5aa820,#7dc142,#a8d84e)',
               color: '#0a160a',
               border: 'none',
               borderRadius: '8px',
               cursor: 'pointer',
-              fontSize: '13px',
+              fontSize: isMobile ? 12 : '13px',
               fontWeight: 700,
               fontFamily: 'DM Sans, sans-serif',
               textDecoration: 'none',
@@ -111,7 +120,7 @@ export function TournamentFacilitiesSection({
             style={{
               color: '#7dc142',
               fontWeight: 700,
-              fontSize: '13px',
+              fontSize: isMobile ? 12 : '13px',
               textDecoration: 'underline',
             }}
           >

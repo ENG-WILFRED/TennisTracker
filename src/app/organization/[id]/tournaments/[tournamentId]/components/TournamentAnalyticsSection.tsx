@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface TournamentAnalyticsSectionProps {
   tournament: any;
@@ -22,6 +22,15 @@ export function TournamentAnalyticsSection({
   leaderboard,
   approvedRegistrations,
 }: TournamentAnalyticsSectionProps) {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   const data = leaderboard.length ? leaderboard : MOCK_LEADERBOARD;
 
   return (
@@ -32,12 +41,13 @@ export function TournamentAnalyticsSection({
         backdropFilter: 'blur(14px)',
         border: '1px solid rgba(125,193,66,0.16)',
         borderRadius: '16px',
-        padding: '24px',
+        padding: isMobile ? '16px' : '24px',
         marginBottom: '20px',
+        overflowX: isMobile ? 'auto' : 'visible',
       }}>
         <h3 style={{
-          fontFamily: 'Syne, sans-serif',
-          fontSize: 16,
+          fontFamily: "'Clash Display', sans-serif",
+          fontSize: isMobile ? 14 : 16,
           fontWeight: 700,
           color: '#a8d84e',
           marginBottom: 20,
@@ -49,7 +59,7 @@ export function TournamentAnalyticsSection({
         {/* Headers */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: '40px 1fr 60px 60px 80px 50px',
+          gridTemplateColumns: isMobile ? '40px 1fr 40px 40px 60px 40px' : '40px 1fr 60px 60px 80px 50px',
           gap: 12,
           padding: '6px 18px',
           fontSize: 11,
@@ -77,7 +87,7 @@ export function TournamentAnalyticsSection({
               key={p.rank}
               style={{
                 display: 'grid',
-                gridTemplateColumns: '40px 1fr 60px 60px 80px 50px',
+                gridTemplateColumns: isMobile ? '40px 1fr 40px 40px 60px 40px' : '40px 1fr 60px 60px 80px 50px',
                 alignItems: 'center',
                 gap: 12,
                 padding: '13px 18px',
@@ -85,13 +95,13 @@ export function TournamentAnalyticsSection({
                 background: p.rank === 1 ? 'rgba(50,40,0,0.5)' : 'rgba(12,24,12,0.6)',
                 border: p.rank === 1 ? '1px solid rgba(255,215,0,0.35)' : p.rank === 2 ? '1px solid rgba(192,192,192,0.25)' : p.rank === 3 ? '1px solid rgba(205,127,50,0.25)' : '1px solid rgba(125,193,66,0.10)',
                 marginBottom: 6,
-                fontSize: 14,
+                fontSize: isMobile ? 12 : 14,
                 transition: 'border-color .2s',
               }}
             >
               <span style={{
-                fontFamily: 'Syne, sans-serif',
-                fontSize: 16,
+                fontFamily: "'Clash Display', sans-serif",
+                fontSize: isMobile ? 14 : 16,
                 fontWeight: 800,
                 color: rankColor,
                 textAlign: 'center',
@@ -103,7 +113,7 @@ export function TournamentAnalyticsSection({
               <span style={{ textAlign: 'center', color: '#9dc880' }}>{p.losses}</span>
               <span style={{
                 textAlign: 'center',
-                fontFamily: 'Syne, sans-serif',
+                fontFamily: "'Clash Display', sans-serif",
                 fontWeight: 700,
                 color: '#a8d84e',
               }}>
@@ -118,8 +128,8 @@ export function TournamentAnalyticsSection({
       {/* Charts */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit,minmax(300px,1fr))',
-        gap: 18,
+        gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit,minmax(300px,1fr))',
+        gap: isMobile ? 16 : 18,
       }}>
         {/* Win Distribution */}
         <div style={{
@@ -127,19 +137,19 @@ export function TournamentAnalyticsSection({
           backdropFilter: 'blur(14px)',
           border: '1px solid rgba(125,193,66,0.16)',
           borderRadius: '16px',
-          padding: '24px',
+          padding: isMobile ? '16px' : '24px',
         }}>
           <h4 style={{
-            fontFamily: 'Syne, sans-serif',
-            fontSize: 16,
+            fontFamily: "'Clash Display', sans-serif",
+            fontSize: isMobile ? 14 : 16,
             fontWeight: 700,
             color: '#a8d84e',
             marginBottom: 12,
           }}>📊 Win Distribution</h4>
           <div>
             {data.map(p => (
-              <div key={p.rank} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10, fontSize: 13 }}>
-                <span style={{ width: 120, color: '#9dc880', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <div key={p.rank} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10, fontSize: isMobile ? 12 : 13 }}>
+                <span style={{ width: isMobile ? 80 : 120, color: '#9dc880', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {p.name.split(' ')[0]}
                 </span>
                 <div style={{ flex: 1, height: 8, background: 'rgba(125,193,66,0.08)', borderRadius: '99px', overflow: 'hidden' }}>
@@ -164,11 +174,11 @@ export function TournamentAnalyticsSection({
           backdropFilter: 'blur(14px)',
           border: '1px solid rgba(125,193,66,0.16)',
           borderRadius: '16px',
-          padding: '24px',
+          padding: isMobile ? '16px' : '24px',
         }}>
           <h4 style={{
-            fontFamily: 'Syne, sans-serif',
-            fontSize: 16,
+            fontFamily: "'Clash Display', sans-serif",
+            fontSize: isMobile ? 14 : 16,
             fontWeight: 700,
             color: '#a8d84e',
             marginBottom: 12,
@@ -177,8 +187,8 @@ export function TournamentAnalyticsSection({
             {['Week 1', 'Week 2', 'Week 3', 'Week 4', 'Week 5'].map((w, i) => {
               const vals = [12, 28, 45, 60, approvedRegistrations.length || 68];
               return (
-                <div key={w} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10, fontSize: 13 }}>
-                  <span style={{ width: 120, color: '#9dc880' }}>{w}</span>
+                <div key={w} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10, fontSize: isMobile ? 12 : 13 }}>
+                  <span style={{ width: isMobile ? 80 : 120, color: '#9dc880' }}>{w}</span>
                   <div style={{ flex: 1, height: 8, background: 'rgba(125,193,66,0.08)', borderRadius: '99px', overflow: 'hidden' }}>
                     <div style={{
                       height: '100%',
@@ -202,11 +212,11 @@ export function TournamentAnalyticsSection({
           backdropFilter: 'blur(14px)',
           border: '1px solid rgba(125,193,66,0.16)',
           borderRadius: '16px',
-          padding: '24px',
+          padding: isMobile ? '16px' : '24px',
         }}>
           <h4 style={{
-            fontFamily: 'Syne, sans-serif',
-            fontSize: 16,
+            fontFamily: "'Clash Display', sans-serif",
+            fontSize: isMobile ? 14 : 16,
             fontWeight: 700,
             color: '#a8d84e',
             marginBottom: 12,
@@ -226,12 +236,12 @@ export function TournamentAnalyticsSection({
                   justifyContent: 'space-between',
                   padding: '10px 0',
                   borderBottom: '1px solid rgba(125,193,66,0.07)',
-                  fontSize: 13,
+                  fontSize: isMobile ? 12 : 13,
                 }}
               >
                 <span style={{ color: '#6a9058' }}>{row.label}</span>
                 <span style={{
-                  fontFamily: 'Syne, sans-serif',
+                  fontFamily: "'Clash Display', sans-serif",
                   fontWeight: 700,
                   color: '#a8d84e',
                 }}>

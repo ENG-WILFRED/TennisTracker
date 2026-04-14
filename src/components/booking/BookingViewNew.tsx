@@ -41,6 +41,8 @@ export function BookingView({ organizationId, onClose, isEmbedded, canBook }: Bo
   const [loadingCourtId, setLoadingCourtId] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<'all' | 'confirmed' | 'pending' | 'rejected' | 'cancelled' | 'completed'>('all');
   const [filterTime, setFilterTime] = useState<'all' | 'today' | 'week' | 'upcoming' | 'past'>('upcoming');
+  const [isMobile, setIsMobile] = useState(false);
+  const [mobileTabOpen, setMobileTabOpen] = useState(false);
 
   // Load organizations on mount
   useEffect(() => {
@@ -62,6 +64,16 @@ export function BookingView({ organizationId, onClose, isEmbedded, canBook }: Bo
     };
     loadOrgs();
   }, [userId, organizationId]);
+
+  // Mobile detection
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Load courts and bookings when org changes
   useEffect(() => {
@@ -160,7 +172,7 @@ export function BookingView({ organizationId, onClose, isEmbedded, canBook }: Bo
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-3">
+      <div className={`grid gap-3 ${isMobile ? 'grid-cols-2' : 'grid-cols-4'}`}>
         {[
           { icon: '📅', label: 'My Bookings', value: bookings.filter(b => b.status !== 'cancelled').length },
           { icon: '🎾', label: 'Courts Open', value: courts.length },
@@ -178,24 +190,73 @@ export function BookingView({ organizationId, onClose, isEmbedded, canBook }: Bo
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-[#152515] p-1 rounded-xl">
-        {[
-          { id: 'booking', label: '+ New Booking' },
-          { id: 'myBookings', label: `📋 My Bookings (${upcomingCount})` },
-          { id: 'history', label: '🕑 History' },
-        ].map(tab => (
+      <div style={{ marginBottom: '24px' }}>
+        {/* Mobile Tab Selector */}
+        <div className="mobile-tab-selector" style={{ display: isMobile ? 'flex' : 'none' }}>
+          <p style={{ fontSize: 12, fontStyle: 'italic', color: '#7aaa6a', margin: '0 0 8px 0', fontFamily: "'Epilogue', sans-serif" }}>
+            Tap here to switch between booking sections.
+          </p>
           <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
-            className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${
-              activeTab === tab.id
-                ? 'bg-[#2d5a27] text-[#7dc142] border border-[#7dc142]/40'
-                : 'text-[#7aaa6a] hover:text-[#e8f5e0]'
-            }`}
+            onClick={() => setMobileTabOpen(!mobileTabOpen)}
+            className="mobile-tab-button"
           >
-            {tab.label}
+            <span>
+              {activeTab === 'booking' && '+ New Booking'}
+              {activeTab === 'myBookings' && `📋 My Bookings (${upcomingCount})`}
+              {activeTab === 'history' && '🕑 History'}
+            </span>
+            <span style={{ transform: mobileTabOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>⌄</span>
           </button>
-        ))}
+
+          {mobileTabOpen && (
+            <div className="mobile-tab-dropdown">
+              <button
+                onClick={() => {
+                  setActiveTab('booking');
+                  setMobileTabOpen(false);
+                }}
+                className={`mobile-tab-option ${activeTab === 'booking' ? 'active' : ''}`}
+              >
+                + New Booking
+              </button>
+              <button
+                onClick={() => {
+                  setActiveTab('myBookings');
+                  setMobileTabOpen(false);
+                }}
+                className={`mobile-tab-option ${activeTab === 'myBookings' ? 'active' : ''}`}
+              >
+                📋 My Bookings ({upcomingCount})
+              </button>
+              <button
+                onClick={() => {
+                  setActiveTab('history');
+                  setMobileTabOpen(false);
+                }}
+                className={`mobile-tab-option ${activeTab === 'history' ? 'active' : ''}`}
+              >
+                🕑 History
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Desktop Tabs */}
+        <div className="tab-navigation" style={{ display: isMobile ? 'none' : 'flex' }}>
+          {[
+            { id: 'booking', label: '+ New Booking' },
+            { id: 'myBookings', label: `📋 My Bookings (${upcomingCount})` },
+            { id: 'history', label: '🕑 History' },
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`tab-button ${activeTab === tab.id ? 'active' : ''}`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* BOOKING TAB */}
@@ -263,7 +324,7 @@ export function BookingView({ organizationId, onClose, isEmbedded, canBook }: Bo
                   <div className="text-sm">No courts available in this organization</div>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-3 pr-2">
+                <div className={`grid gap-3 ${isMobile ? 'grid-cols-1' : 'grid-cols-2'} pr-2`}>
                   {courts.map(court => (
                     <button
                       key={court.id}
@@ -369,7 +430,7 @@ export function BookingView({ organizationId, onClose, isEmbedded, canBook }: Bo
                   <div className="text-xs text-[#7aaa6a]">Try adjusting your filters</div>
                 </Card>
               ) : (
-                <div className="grid grid-cols-2 gap-3">
+                <div className={`grid gap-3 ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
                   {getFilteredBookings(bookings).map(booking => (
                     <div
                       key={booking.id}
@@ -434,7 +495,7 @@ export function BookingView({ organizationId, onClose, isEmbedded, canBook }: Bo
                   <div className="text-sm text-[#7aaa6a]">No past sessions found</div>
                 </Card>
               ) : (
-                <div className="grid grid-cols-2 gap-3">
+                <div className={`grid gap-3 ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
                   {bookings
                     .filter(b => new Date(b.startTime) < new Date() || b.status === 'cancelled')
                     .filter(b => filterStatus === 'all' || b.status === filterStatus)
@@ -455,6 +516,109 @@ export function BookingView({ organizationId, onClose, isEmbedded, canBook }: Bo
         onConfirm={handleConfirmCourt}
         onCancel={() => setShowCourtModal(false)}
       />
+
+      <style jsx>{`
+        .tab-navigation {
+          display: flex;
+          gap: 1px;
+          background: #152515;
+          padding: 4px;
+          border-radius: 12px;
+        }
+
+        .tab-button {
+          flex: 1;
+          padding: 8px 12px;
+          border-radius: 8px;
+          font-size: 12px;
+          font-weight: 700;
+          transition: all 0.2s ease;
+          background: transparent;
+          color: #7aaa6a;
+          border: none;
+          cursor: pointer;
+        }
+
+        .tab-button:hover {
+          color: #e8f5e0;
+        }
+
+        .tab-button.active {
+          background: #2d5a27;
+          color: #7dc142;
+          border: 1px solid #7dc14266;
+        }
+
+        .mobile-tab-selector {
+          position: relative;
+          width: 100%;
+          margin-bottom: 16px;
+        }
+
+        .mobile-tab-button {
+          width: 100%;
+          padding: 12px 16px;
+          background: #1a3020;
+          border: 1px solid #2a4a30;
+          border-radius: 8px;
+          color: #e8f5e8;
+          font-family: 'Epilogue', sans-serif;
+          font-size: 16px;
+          font-weight: 500;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .mobile-tab-button:hover {
+          background: #2a4a30;
+          border-color: #3a5a40;
+        }
+
+        .mobile-tab-dropdown {
+          position: absolute;
+          top: 100%;
+          left: 0;
+          right: 0;
+          background: #1a3020;
+          border: 1px solid #2a4a30;
+          border-radius: 8px;
+          margin-top: 4px;
+          z-index: 10;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .mobile-tab-option {
+          width: 100%;
+          padding: 12px 16px;
+          background: none;
+          border: none;
+          color: #e8f5e8;
+          font-family: 'Epilogue', sans-serif;
+          font-size: 16px;
+          font-weight: 500;
+          text-align: left;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          border-bottom: 1px solid #2a4a30;
+        }
+
+        .mobile-tab-option:last-child {
+          border-bottom: none;
+        }
+
+        .mobile-tab-option:hover {
+          background: #2a4a30;
+        }
+
+        .mobile-tab-option.active {
+          background: #3a5a40;
+          color: #7aaa6a;
+          font-weight: 600;
+        }
+      `}</style>
     </div>
   );
 }

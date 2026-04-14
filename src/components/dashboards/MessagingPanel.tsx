@@ -67,6 +67,8 @@ export default function MessagingPanel({ userId, userType }: { userId: string; u
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<string[]>([]); // Selected roles for filtering
   const [sending, setSending] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
   const [userStatuses, setUserStatuses] = useState<Map<string, boolean>>(new Map());
   const statusTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -79,6 +81,29 @@ export default function MessagingPanel({ userId, userType }: { userId: string; u
   useEffect(() => {
     activeRoomRef.current = activeRoom;
   }, [activeRoom]);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(max-width: 900px)');
+    const updateMobile = () => {
+      setIsMobile(mediaQuery.matches);
+      if (!mediaQuery.matches) setIsSidebarOpen(true);
+    };
+    updateMobile();
+    mediaQuery.addEventListener('change', updateMobile);
+    return () => mediaQuery.removeEventListener('change', updateMobile);
+  }, []);
+
+  useEffect(() => {
+    if (isMobile) {
+      if (activeRoom) {
+        setIsSidebarOpen(false);
+      } else {
+        setIsSidebarOpen(true);
+      }
+    } else {
+      setIsSidebarOpen(true);
+    }
+  }, [isMobile, activeRoom]);
 
   useEffect(() => {
     fetch('/api/messaging/status', {
@@ -299,6 +324,9 @@ export default function MessagingPanel({ userId, userType }: { userId: string; u
 
   const totalUnread = chatRooms.reduce((a, r) => a + r.unread, 0);
   const onlineCount = Array.from(userStatuses.values()).filter(Boolean).length;
+  const shouldShowSidebar = !isMobile || isSidebarOpen || !activeRoom;
+  const shouldShowChatArea = Boolean(activeRoom && (!isMobile || !isSidebarOpen));
+  const activeChat = shouldShowChatArea ? activeRoom : null;
 
   const formatMessageTime = (date: Date) => {
     const now = new Date();
@@ -332,7 +360,7 @@ export default function MessagingPanel({ userId, userType }: { userId: string; u
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 0, height: '100%', borderRadius: 16, overflow: 'hidden', border: `1px solid ${G.border}` }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 0, height: '100vh', borderRadius: 16, overflow: 'hidden', border: `1px solid ${G.border}` }}>
 
       {/* Top Bar */}
       <div style={{
@@ -347,16 +375,40 @@ export default function MessagingPanel({ userId, userType }: { userId: string; u
           </div>
         </div>
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          {isMobile && (
+            <button
+              onClick={() => setIsSidebarOpen(prev => !prev)}
+              style={{
+                padding: '8px 12px', borderRadius: 10, border: `1px solid ${G.border}`,
+                background: G.dark, color: G.text, cursor: 'pointer', fontSize: 11,
+              }}
+            >
+              {isSidebarOpen ? 'Hide chats' : 'Show chats'}
+            </button>
+          )}
           {totalUnread > 0 && <Tag red>{totalUnread} unread</Tag>}
           <Tag>🟢 {onlineCount}/{chatRooms.length} online</Tag>
         </div>
       </div>
 
       {/* Main Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', flex: 1, minHeight: 0 }}>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: shouldShowSidebar && shouldShowChatArea ? '280px 1fr' : '1fr',
+        flex: 1,
+        minHeight: 0,
+      }}>
 
         {/* Sidebar */}
-        <div style={{ background: G.sidebar, borderRight: `1px solid ${G.border}`, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        {shouldShowSidebar && (
+          <div style={{
+            background: G.sidebar,
+            borderRight: shouldShowSidebar && shouldShowChatArea ? `1px solid ${G.border}` : 'none',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            minHeight: 0,
+          }}>
 
         {/* Search */}
           <div style={{ padding: '12px 14px', borderBottom: `1px solid ${G.border}`, flexShrink: 0 }}>
@@ -535,10 +587,11 @@ export default function MessagingPanel({ userId, userType }: { userId: string; u
             </span>
           </div>
         </div>
+        )}
 
         {/* Chat Area */}
-        {activeRoom ? (
-          <div style={{ background: G.dark, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        {activeRoom && shouldShowChatArea ? (
+          <div style={{ background: G.dark, display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0 }}>
 
             {/* Chat Header */}
             <div style={{
@@ -554,9 +607,9 @@ export default function MessagingPanel({ userId, userType }: { userId: string; u
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: 13, fontWeight: 800, color: G.lime,
                   }}>
-                    {activeRoom.personInitial}
+                    {activeChat?.personInitial}
                   </div>
-                  {userStatuses.get(activeRoom.id) && (
+                  {activeChat && userStatuses.get(activeChat.id) && (
                     <div style={{
                       position: 'absolute', bottom: 1, right: 1,
                       width: 8, height: 8, background: '#4cd964',
@@ -565,9 +618,9 @@ export default function MessagingPanel({ userId, userType }: { userId: string; u
                   )}
                 </div>
                 <div>
-                  <div style={{ fontSize: 13, fontWeight: 800, color: G.text }}>{activeRoom.personName}</div>
-                  <div style={{ fontSize: 10, fontWeight: 600, marginTop: 2, color: userStatuses.get(activeRoom.id) ? '#4cd964' : G.muted }}>
-                    {userStatuses.get(activeRoom.id) ? '● Online' : '○ Offline'}
+                  <div style={{ fontSize: 13, fontWeight: 800, color: G.text }}>{activeChat?.personName}</div>
+                  <div style={{ fontSize: 10, fontWeight: 600, marginTop: 2, color: activeChat && userStatuses.get(activeChat.id) ? '#4cd964' : G.muted }}>
+                    {activeChat && userStatuses.get(activeChat.id) ? '● Online' : '○ Offline'}
                   </div>
                 </div>
               </div>
@@ -585,6 +638,18 @@ export default function MessagingPanel({ userId, userType }: { userId: string; u
                     {icon}
                   </button>
                 ))}
+                {isMobile && (
+                  <button
+                    onClick={() => setIsSidebarOpen(prev => !prev)}
+                    style={{
+                      background: G.dark, border: `1px solid ${G.border}`, borderRadius: 7,
+                      padding: '8px 11px', color: G.text, cursor: 'pointer', fontSize: 12,
+                      transition: 'all .12s',
+                    }}
+                  >
+                    {isSidebarOpen ? 'Hide list' : 'Room list'}
+                  </button>
+                )}
                 <button
                   onClick={() => setActiveRoom(null)}
                   style={{
@@ -612,7 +677,7 @@ export default function MessagingPanel({ userId, userType }: { userId: string; u
               scrollbarColor: `${G.lime} ${G.card}`,
               scrollbarWidth: 'thin',
             }}>
-              {activeRoom.messages && activeRoom.messages.length === 0 ? (
+              {activeChat?.messages && activeChat.messages.length === 0 ? (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 12, color: G.muted }}>
                   <div style={{
                     width: 52, height: 52, borderRadius: '50%',
@@ -620,11 +685,11 @@ export default function MessagingPanel({ userId, userType }: { userId: string; u
                     display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22,
                   }}>👋</div>
                   <div style={{ fontSize: 12, color: G.muted2, textAlign: 'center' }}>
-                    Start the conversation with {activeRoom.personName}
+                    Start the conversation with {activeChat?.personName}
                   </div>
                 </div>
               ) : (
-                activeRoom.messages
+                activeChat!.messages
                   .reduce((acc: Message[], msg) => {
                     if (!acc.some(m => m.id === msg.id)) acc.push(msg);
                     return acc;
@@ -656,12 +721,12 @@ export default function MessagingPanel({ userId, userType }: { userId: string; u
                               display: 'flex', alignItems: 'center', justifyContent: 'center',
                               fontSize: 10, fontWeight: 800, color: G.lime, flexShrink: 0, marginRight: 8,
                             }}>
-                              {activeRoom.personInitial}
+                              {activeChat?.personInitial}
                             </div>
                           )}
                           <div style={{ maxWidth: '68%', display: 'flex', flexDirection: 'column', alignItems: isMe ? 'flex-end' : 'flex-start' }}>
                             <div style={{ fontSize: 9, color: G.muted2, marginBottom: 3, fontWeight: 600 }}>
-                              {isMe ? 'You' : activeRoom.personName}
+                              {isMe ? 'You' : activeChat?.personName}
                             </div>
                             <div style={{
                               padding: '9px 13px',
@@ -696,7 +761,7 @@ export default function MessagingPanel({ userId, userType }: { userId: string; u
                   value={messageInput}
                   onChange={e => { setMessageInput(e.target.value); autoResize(e.target); }}
                   onKeyDown={handleKeyDown}
-                  placeholder={`Message ${activeRoom.personName}...`}
+                  placeholder={`Message ${activeChat?.personName ?? ''}...`}
                   rows={1}
                   style={{
                     flex: 1, padding: '10px 14px',
@@ -725,7 +790,7 @@ export default function MessagingPanel({ userId, userType }: { userId: string; u
               </div>
             </div>
           </div>
-        ) : (
+        ) : activeRoom ? null : (
           <div style={{
             background: G.dark,
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',

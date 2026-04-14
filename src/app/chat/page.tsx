@@ -15,12 +15,30 @@ export default function ChatPage() {
   const [selectedContactPhoto, setSelectedContactPhoto] = useState<string | undefined>(undefined);
   const [selectedContactType, setSelectedContactType] = useState<'individual' | 'group' | 'dm'>('individual');
   const [selectedContactUserId, setSelectedContactUserId] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   useEffect(() => {
     if (!isLoading && !playerId) {
       router.push('/login');
     }
   }, [playerId, isLoading, router]);
+
+  // Mobile detection
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      if (mobile) {
+        setSidebarOpen(false); // Close sidebar by default on mobile
+      } else {
+        setSidebarOpen(true); // Open sidebar by default on desktop
+      }
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const handleSelectContact = async (contactId: string, contactName: string, contactPhoto?: string, contactType?: 'individual' | 'group' | 'dm') => {
     const type = contactType || 'individual';
@@ -68,22 +86,45 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="flex h-screen bg-white">
+    <div className="flex h-screen bg-white relative">
+      {/* Mobile Overlay */}
+      {isMobile && sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar - Messages/Conversations List */}
-      <div className="w-full md:w-80 lg:w-96 bg-white border-r border-gray-200 overflow-y-auto">
+      <div className={`${
+        isMobile 
+          ? `fixed left-0 top-0 h-full w-80 bg-white border-r border-gray-200 overflow-y-auto z-50 transform transition-transform duration-300 ${
+              sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+            }`
+          : 'w-full md:w-80 lg:w-96 bg-white border-r border-gray-200 overflow-y-auto'
+      }`}>
         <ConversationsSidebar 
           selectedContactId={selectedContactId} 
-          onSelectContact={handleSelectContact} 
+          onSelectContact={handleSelectContact}
+          isMobile={isMobile}
+          onClose={() => setSidebarOpen(false)}
         />
       </div>
 
       {/* Main Chat Area */}
-      <div className="hidden md:flex flex-1 flex-col">
+      <div className={`flex-1 flex-col ${
+        isMobile 
+          ? (sidebarOpen ? 'hidden' : 'flex') 
+          : 'hidden md:flex'
+      }`}>
         {selectedContactId ? (
           <ChatWindow 
             roomId={selectedContactId} 
             contactName={selectedContactName || 'Conversation'}
             contactPhoto={selectedContactPhoto}
+            isMobile={isMobile}
+            onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+            sidebarOpen={sidebarOpen}
           />
         ) : selectedContactName && selectedContactUserId ? (
           <div className="flex items-center justify-center h-full">

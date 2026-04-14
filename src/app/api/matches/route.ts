@@ -5,8 +5,14 @@ const globalForPrisma = global as unknown as { prisma: PrismaClient };
 const prisma = globalForPrisma.prisma || new PrismaClient();
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const url = new URL(request.url);
+    const page = Math.max(1, Number(url.searchParams.get('page')) || 1);
+    const limit = Math.max(1, Math.min(50, Number(url.searchParams.get('limit')) || 10));
+    const sort = url.searchParams.get('sort') === 'oldest' ? 'asc' : 'desc';
+    const take = page * limit;
+
     const [regularMatches, tournamentMatches] = await Promise.all([
       prisma.match.findMany({
         include: {
@@ -15,8 +21,8 @@ export async function GET() {
           referee: { include: { user: true } },
           winner: { include: { user: true } },
         },
-        orderBy: { createdAt: 'desc' },
-        take: 50,
+        orderBy: { createdAt: sort },
+        take,
       }),
       prisma.tournamentMatch.findMany({
         include: {
@@ -32,8 +38,8 @@ export async function GET() {
           },
           event: { select: { name: true } },
         },
-        orderBy: { createdAt: 'desc' },
-        take: 50,
+        orderBy: { createdAt: sort },
+        take,
       }),
     ]);
 
@@ -70,12 +76,18 @@ export async function GET() {
         : null,
     }));
 
-    const data = [...regularData, ...tournamentData]
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    const allMatches = [...regularData, ...tournamentData].sort((a, b) => {
+      const diff = new Date(a.date).getTime() - new Date(b.date).getTime();
+      return sort === 'asc' ? diff : -diff;
+    });
 
-    return NextResponse.json(data);
+    const start = (page - 1) * limit;
+    const pagedMatches = allMatches.slice(start, start + limit);
+    const hasMore = allMatches.length > start + limit;
+
+    return NextResponse.json({ items: pagedMatches, hasMore });
   } catch (err) {
     console.error('API /api/matches error:', err);
-    return NextResponse.json([], { status: 200 });
+    return NextResponse.json({ items: [], hasMore: false }, { status: 200 });
   }
 }

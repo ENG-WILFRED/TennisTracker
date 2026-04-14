@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
+import { LoadingState } from '@/components/LoadingState';
 import { authenticatedFetch } from '@/lib/authenticatedFetch';
 
 // Declare google maps type
@@ -161,10 +162,8 @@ const Badge: React.FC<{ label: string; color: string; bg?: string }> = ({ label,
 
 const InfoRow: React.FC<{ label: string; value: React.ReactNode }> = ({ label, value }) => (
   <div
+    className="grid grid-cols-1 gap-3 sm:grid-cols-[200px_1fr]"
     style={{
-      display: 'grid',
-      gridTemplateColumns: '200px 1fr',
-      gap: 12,
       padding: '12px 0',
       borderBottom: `1px solid ${G.cardBorder}22`,
       alignItems: 'center',
@@ -294,6 +293,7 @@ export default function CourtDetailPage() {
   const [stats, setStats] = useState<CourtStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [mobileTabOpen, setMobileTabOpen] = useState(false);
   
   // Get active tab from URL, fallback to 'overview'
   const activeTab = (searchParams.get('tab') as TabId) || 'overview';
@@ -301,6 +301,7 @@ export default function CourtDetailPage() {
     const params = new URLSearchParams(searchParams.toString());
     params.set('tab', tab);
     router.push(`?${params.toString()}`, { scroll: false });
+    setMobileTabOpen(false);
   };
 
   // Image state
@@ -621,14 +622,7 @@ export default function CourtDetailPage() {
   // ─── Loading / Error ───────────────────────────────────────────────────────
 
   if (loading) {
-    return (
-      <div style={{ padding: 32, background: G.dark, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>🎾</div>
-          <div style={{ color: G.muted, fontSize: 16, fontWeight: 600 }}>Loading court details…</div>
-        </div>
-      </div>
-    );
+    return <LoadingState icon="🎾" message="Loading court details…" />;
   }
 
   if (error || !court) {
@@ -642,29 +636,19 @@ export default function CourtDetailPage() {
   // ─── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div style={{ padding: '24px 32px', background: G.dark, minHeight: '100vh' }}>
-      <div style={{ margin: '0 auto' }}>
+    <div className="min-h-screen bg-court-dark px-4 py-6 sm:px-6 lg:px-8" style={{ background: G.dark, minHeight: '100vh' }}>
+      <div className="mx-auto" style={{ margin: '0 auto' }}>
 
         {/* Toast */}
         {successMsg && (
-          <div style={{
-            position: 'fixed', top: 24, right: 24, zIndex: 2000,
-            background: G.lime, color: G.dark, borderRadius: 10,
-            padding: '12px 20px', fontWeight: 700, fontSize: 14,
-            boxShadow: '0 8px 32px #7dc14266',
-          }}>
+          <div className="fixed top-6 right-6 z-50 bg-green-400 text-gray-900 rounded-lg px-4 py-3 font-bold text-sm shadow-lg">
             ✅ {successMsg}
           </div>
         )}
 
         {/* Error Toast */}
         {errorMsg && (
-          <div style={{
-            position: 'fixed', top: 24, right: 24, zIndex: 2000,
-            background: G.red, color: '#fff', borderRadius: 10,
-            padding: '12px 20px', fontWeight: 700, fontSize: 14,
-            boxShadow: '0 8px 32px #ff6b6b66',
-          }}>
+          <div className="fixed top-6 right-6 z-50 bg-red-500 text-white rounded-lg px-4 py-3 font-bold text-sm shadow-lg">
             ⚠️ {errorMsg}
           </div>
         )}
@@ -796,8 +780,47 @@ export default function CourtDetailPage() {
         </div>
 
         {/* Tabs */}
-        <div style={{ marginBottom: 24, borderBottom: `2px solid ${G.cardBorder}` }}>
-          <div style={{ display: 'flex', gap: 0, overflowX: 'auto' }}>
+        <div className="relative mb-6" style={{ borderBottom: `2px ` }}>
+          <div className="flex flex-col gap-2 lg:hidden">
+            <p style={{ fontSize: 12, fontStyle: 'italic', color: G.muted, margin: 0 }}>Tap here to switch between court detail sections.</p>
+            <div className="flex items-center justify-between gap-3">
+              <button
+                onClick={() => setMobileTabOpen((prev) => !prev)}
+                className="flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-left text-sm font-semibold"
+                style={{
+                  borderColor: G.cardBorder,
+                background: G.card,
+                color: G.text,
+              }}
+            >              
+              <span>{TABS.find((tab) => tab.id === activeTab)?.icon} {TABS.find((tab) => tab.id === activeTab)?.label}</span>
+              <span style={{ transform: mobileTabOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>⌄</span>
+            </button>
+            </div>
+          </div>
+
+          {mobileTabOpen && (
+            <div className="lg:hidden mt-2 flex flex-col gap-2 rounded-2xl border p-3"
+              style={{ borderColor: G.cardBorder, background: G.card }}
+            >
+              {TABS.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className="w-full text-left rounded-xl px-4 py-3 text-sm font-semibold transition-colors"
+                  style={{
+                    background: activeTab === tab.id ? G.lime + '20' : 'transparent',
+                    color: activeTab === tab.id ? G.lime : G.text,
+                    border: activeTab === tab.id ? `1px solid ${G.lime}` : '1px solid transparent',
+                  }}
+                >
+                  {tab.icon} {tab.label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div className="hidden lg:flex gap-0 overflow-x-auto">
             {TABS.map((tab) => (
               <button
                 key={tab.id}
@@ -824,7 +847,7 @@ export default function CourtDetailPage() {
 
         {/* ── OVERVIEW ── */}
         {activeTab === 'overview' && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
 
             {/* Basic Info */}
             <Section title="🏷️ Court Information" action={{ label: 'Edit', onClick: () => openEdit('editCourt') }}>
@@ -945,15 +968,12 @@ export default function CourtDetailPage() {
                   {bookings.map((booking) => (
                     <div
                       key={booking.id}
+                      className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_100px_100px_180px] items-center"
                       style={{
                         background: G.dark,
                         border: `1px solid ${G.cardBorder}`,
                         borderRadius: 10,
                         padding: 16,
-                        display: 'grid',
-                        gridTemplateColumns: '1fr 100px 100px 180px',
-                        gap: 16,
-                        alignItems: 'center',
                       }}
                     >
                       <div>
@@ -1110,7 +1130,7 @@ export default function CourtDetailPage() {
 
         {/* ── LOCATION ── */}
         {activeTab === 'location' && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
             <Section title="📍 Address Details" action={{ label: 'Edit', onClick: () => openEdit('editLocation') }}>
               {court.address && <InfoRow label="Street Address" value={court.address} />}
               {court.city && <InfoRow label="City" value={court.city} />}
@@ -1214,8 +1234,8 @@ export default function CourtDetailPage() {
 
         {/* ── SETTINGS ── */}
         {activeTab === 'settings' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+          <div className="flex flex-col gap-5">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
               <Section title="⚙️ Court Actions">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <SettingsAction
@@ -1304,12 +1324,7 @@ export default function CourtDetailPage() {
                 {images.length === 0 ? (
                   <EmptyState icon="📸" message="No images uploaded yet" />
                 ) : (
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: `repeat(5, 1fr)`,
-                    gap: 16,
-                    width: '100%',
-                  }}>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 w-full">
                     {images.map((img, idx) => (
                       <div
                         key={img.id}
