@@ -414,6 +414,10 @@ model Match {
   winner    Player?         @relation(fields: [winnerId], references: [userId])
   ballCrew  MatchBallCrew[]
   report    MatchReport?
+
+  @@index([refereeId])
+  @@index([winnerId])
+  @@index([createdAt])
 }
 
 model MatchReport {
@@ -900,6 +904,12 @@ model TournamentMatch {
   organization      Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   playerA           ClubMember?       @relation("matchPlayerA", fields: [playerAId], references: [id])
   playerB           ClubMember?       @relation("matchPlayerB", fields: [playerBId], references: [id])
+
+  @@index([round])
+  @@index([playerAId])
+  @@index([playerBId])
+  @@index([winnerId])
+  @@index([scheduledTime])
 }
 
 model ClubAnnouncement {
@@ -1025,6 +1035,11 @@ model PaymentRecord {
   metadata              String?
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
+
+  @@index([userId])
+  @@index([eventId])
+  @@index([providerStatus])
+  @@index([createdAt])
 }
 
 model OrganizationRole {
@@ -1060,6 +1075,8 @@ model OrganizationBadge {
   achievementDate DateTime     @default(now())
   createdAt       DateTime     @default(now())
   organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
 }
 
 model ClubRating {
@@ -1072,6 +1089,10 @@ model ClubRating {
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
   organization   Organization? @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId])
+  @@index([ratedBy])
+  @@index([createdAt])
 }
 
 model CommunityPost {
@@ -1113,6 +1134,7 @@ model PostComment {
   @@index([postId])
   @@index([authorId])
   @@index([parentCommentId])
+  @@index([createdAt])
 }
 
 model TournamentComment {

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cacheResponse } from "@/lib/apiCache";
 import { verifyApiAuth } from "@/lib/authMiddleware";
 import prisma from "@/lib/prisma";
 import { refereeTaskOrchestrator } from "@/services/referee-task.orchestrator";
@@ -24,16 +25,28 @@ export async function GET(req: NextRequest) {
       );
     }
     
-    const dashboard = await refereeTaskOrchestrator.getRefereeDashboard(auth.playerId);
+    const dashboard = await cacheResponse(
+      `referee-dashboard:${auth.playerId}`,
+      async () => refereeTaskOrchestrator.getRefereeDashboard(auth.playerId),
+      10_000
+    );
 
-    return NextResponse.json({
-      success: true,
-      data: dashboard,
-    });
-  } catch (error: any) {
-    console.error("Error fetching referee dashboard:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to fetch dashboard" },
+      {
+        success: true,
+        data: dashboard,
+      },
+      {
+        headers: {
+          'Cache-Control': 'private, max-age=15, stale-while-revalidate=45',
+        },
+      }
+    );
+  } catch (error: unknown) {
+    console.error("Error fetching referee dashboard:", error);
+    const message = error instanceof Error ? error.message : String(error);
+    return NextResponse.json(
+      { error: message || "Failed to fetch dashboard" },
       { status: 500 }
     );
   }

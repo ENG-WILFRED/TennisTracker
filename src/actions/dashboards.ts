@@ -10,17 +10,49 @@ const prisma = new PrismaClient();
 export async function getCoachDashboard(coachId: string) {
   const coach = await prisma.staff.findUnique({
     where: { userId: coachId },
-    include: {
-      user: true,
-      stats: true,
-      wallet: true,
+    select: {
+      userId: true,
+      role: true,
+      bio: true,
+      user: {
+        select: {
+          firstName: true,
+          lastName: true,
+          photo: true,
+        },
+      },
+      stats: {
+        select: {
+          activePlayers: true,
+          avgRating: true,
+          totalSessions: true,
+        },
+      },
+      wallet: {
+        select: {
+          totalEarned: true,
+          pendingBalance: true,
+          balance: true,
+        },
+      },
       players: {
         where: { status: 'active' },
         orderBy: { lastSessionAt: 'desc' },
         take: 6,
-        include: {
+        select: {
+          playerId: true,
+          status: true,
+          sessionsCount: true,
+          lastSessionAt: true,
           player: {
-            include: { user: true },
+            select: {
+              user: {
+                select: {
+                  firstName: true,
+                  lastName: true,
+                },
+              },
+            },
           },
         },
       },
@@ -30,6 +62,15 @@ export async function getCoachDashboard(coachId: string) {
           completed: false,
         },
         orderBy: { startTime: 'asc' },
+        select: {
+          id: true,
+          date: true,
+          startTime: true,
+          endTime: true,
+          title: true,
+          description: true,
+          type: true,
+        },
       },
     },
   });
@@ -53,9 +94,23 @@ export async function getCoachDashboard(coachId: string) {
         gte: new Date(),
       },
     },
-    include: {
-      player: { include: { user: true } },
-      court: true,
+    select: {
+      startTime: true,
+      player: {
+        select: {
+          user: {
+            select: {
+              firstName: true,
+              lastName: true,
+            },
+          },
+        },
+      },
+      court: {
+        select: {
+          courtNumber: true,
+        },
+      },
     },
     orderBy: { startTime: 'asc' },
     take: 3,
@@ -84,7 +139,10 @@ export async function getCoachDashboard(coachId: string) {
   };
 
   const activities = coach.activities.map((activity) => ({
-    ...activity,
+    date: activity.date,
+    title: activity.title,
+    description: activity.description,
+    type: activity.type,
     dateLabel: new Date(`${activity.date}T${activity.startTime}:00Z`).toLocaleString('en-US', {
       month: 'short',
       day: 'numeric',
@@ -125,20 +183,106 @@ export async function getCoachDashboard(coachId: string) {
 export async function getRefereeDashboard(refereeId: string) {
   const referee = await prisma.referee.findUnique({
     where: { userId: refereeId },
-    include: { user: true },
+    select: {
+      userId: true,
+      certifications: true,
+      experience: true,
+      user: {
+        select: {
+          firstName: true,
+          lastName: true,
+          photo: true,
+        },
+      },
+    },
   });
 
   if (!referee) throw new Error('Referee not found');
 
-  const upcomingMatches = await prisma.match.findMany({
-    where: { refereeId, winnerId: null },
-    include: {
-      playerA: { include: { user: true } },
-      playerB: { include: { user: true } },
-    },
-    orderBy: { createdAt: 'asc' },
-    take: 5,
-  });
+  const [upcomingMatches, completedMatches, totalMatches, thisMonthMatches] = await Promise.all([
+    prisma.match.findMany({
+      where: { refereeId, winnerId: null },
+      select: {
+        id: true,
+        round: true,
+        createdAt: true,
+        playerA: {
+          select: {
+            user: {
+              select: {
+                firstName: true,
+                lastName: true,
+              },
+            },
+          },
+        },
+        playerB: {
+          select: {
+            user: {
+              select: {
+                firstName: true,
+                lastName: true,
+              },
+            },
+          },
+        },
+        score: true,
+      },
+      orderBy: { createdAt: 'asc' },
+      take: 5,
+    }),
+    prisma.match.findMany({
+      where: { refereeId, winnerId: { not: null } },
+      select: {
+        id: true,
+        round: true,
+        createdAt: true,
+        score: true,
+        playerA: {
+          select: {
+            user: {
+              select: {
+                firstName: true,
+                lastName: true,
+              },
+            },
+          },
+        },
+        playerB: {
+          select: {
+            user: {
+              select: {
+                firstName: true,
+                lastName: true,
+              },
+            },
+          },
+        },
+        winner: {
+          select: {
+            user: {
+              select: {
+                firstName: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 5,
+    }),
+    prisma.match.count({
+      where: { refereeId },
+    }),
+    prisma.match.count({
+      where: {
+        refereeId,
+        createdAt: {
+          gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+        },
+      },
+    }),
+  ]);
 
   const nextMatches = upcomingMatches.slice(0, 2).map((m) => ({
     p1: m.playerA.user.firstName,
@@ -153,17 +297,6 @@ export async function getRefereeDashboard(refereeId: string) {
     type: m.round || 'Regular Match',
   }));
 
-  const completedMatches = await prisma.match.findMany({
-    where: { refereeId, winnerId: { not: null } },
-    include: {
-      playerA: { include: { user: true } },
-      playerB: { include: { user: true } },
-      winner: { include: { user: true } },
-    },
-    orderBy: { createdAt: 'desc' },
-    take: 5,
-  });
-
   const scoreSubmissions = completedMatches.map((m) => ({
     match: `${m.playerA.user.firstName} vs ${m.playerB.user.firstName}`,
     winner: m.winner?.user.firstName || 'Unknown',
@@ -175,18 +308,6 @@ export async function getRefereeDashboard(refereeId: string) {
     status: 'Submitted',
   }));
 
-  const totalMatches = await prisma.match.count({
-    where: { refereeId },
-  });
-  const thisMonthMatches = await prisma.match.count({
-    where: {
-      refereeId,
-      createdAt: {
-        gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-      },
-    },
-  });
-
   const incomingMatches = upcomingMatches.map((m) => ({
     id: m.id,
     playerA: `${m.playerA.user.firstName} ${m.playerA.user.lastName}`,
@@ -194,7 +315,7 @@ export async function getRefereeDashboard(refereeId: string) {
     eventName: m.round ? `Round ${m.round}` : 'Scheduled Match',
     status: 'upcoming',
     court: 'Court 1',
-    date: m.createdAt.toLocaleString('en-US', {
+    date: m.createdAt.toLocaleDateString('en-US', {
       weekday: 'short',
       month: 'short',
       day: 'numeric',

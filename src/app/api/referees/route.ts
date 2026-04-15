@@ -1,4 +1,5 @@
 import { PrismaClient } from '@/generated/prisma';
+import { cacheResponse } from '@/lib/apiCache';
 
 const prisma = new PrismaClient();
 
@@ -9,17 +10,19 @@ export async function GET() {
       take: 50,
     });
 
-    const data = referees.map(r => ({
-      id: r.userId,
-      firstName: r.user.firstName,
-      lastName: r.user.lastName,
-      photo: r.user.photo,
-      nationality: r.user.nationality,
-      matchesRefereed: r.matchesRefereed,
-      ballCrewMatches: r.ballCrewMatches,
-      experience: r.experience,
-      certifications: r.certifications,
-    }));
+    const data = await cacheResponse('referees:list', async () => {
+      return referees.map(r => ({
+        id: r.userId,
+        firstName: r.user.firstName,
+        lastName: r.user.lastName,
+        photo: r.user.photo,
+        nationality: r.user.nationality,
+        matchesRefereed: r.matchesRefereed,
+        ballCrewMatches: r.ballCrewMatches,
+        experience: r.experience,
+        certifications: r.certifications,
+      }));
+    }, 15_000);
 
     return Response.json(data, {
       headers: {

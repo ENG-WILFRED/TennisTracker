@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { cacheResponse } from '@/lib/apiCache';
 import { getCoachDashboard, getRefereeDashboard, getAdminDashboard, getFinanceDashboard, getOrganizationDashboard } from '@/actions/dashboards';
 
 export async function GET(req: Request) {
@@ -12,32 +13,32 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'userId is required' }, { status: 400 });
     }
 
-    let dashboard;
-
-    switch (role) {
-      case 'coach':
-        dashboard = await getCoachDashboard(userId);
-        break;
-      case 'referee':
-        dashboard = await getRefereeDashboard(userId);
-        break;
-      case 'admin':
-        dashboard = await getAdminDashboard(userId, orgId);
-        break;
-      case 'finance':
-        dashboard = await getFinanceDashboard(userId);
-        break;
-      case 'organization':
-      case 'org':
-        dashboard = await getOrganizationDashboard(userId, orgId);
-        break;
-      default:
-        return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
+    if (!role || !['coach', 'referee', 'admin', 'finance', 'organization', 'org'].includes(role)) {
+      return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
     }
+
+    const cacheKey = `dashboard:${role}:${userId}:${orgId ?? 'none'}`;
+    const dashboard = await cacheResponse(cacheKey, async () => {
+      switch (role) {
+        case 'coach':
+          return getCoachDashboard(userId);
+        case 'referee':
+          return getRefereeDashboard(userId);
+        case 'admin':
+          return getAdminDashboard(userId, orgId);
+        case 'finance':
+          return getFinanceDashboard(userId);
+        case 'organization':
+        case 'org':
+          return getOrganizationDashboard(userId, orgId);
+        default:
+          throw new Error('Invalid role');
+      }
+    }, 10_000);
 
     return NextResponse.json(dashboard, {
       headers: {
-        'Cache-Control': 'public, max-age=10, s-maxage=10, stale-while-revalidate=20',
+        'Cache-Control': 'private, max-age=15, stale-while-revalidate=45',
       },
     });
   } catch (err) {
