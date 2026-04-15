@@ -14,9 +14,24 @@ import { seedStaffForAllOrgs } from './seeds/staff.js';
 import { seedTournamentTasks } from './seeds/tournament-tasks.js';
 import { seedTaskTemplates } from './seeds/task-templates-complete.js';
 import { seedTournamentPlayers } from './seeds/tournament-players-seeding.js';
+import { PrismaClient } from '../src/generated/prisma/index.js';
+
+const prisma = new PrismaClient();
 
 async function main() {
   try {
+    // Check if database is already seeded
+    const existingOrganizations = await prisma.organization.count();
+    if (existingOrganizations > 0) {
+      console.log('═══════════════════════════════════════════════════════════════');
+      console.log('ℹ️  DATABASE ALREADY SEEDED');
+      console.log('═══════════════════════════════════════════════════════════════');
+      console.log('Skipping seeding as data already exists in the database.');
+      console.log(`Found ${existingOrganizations} organizations.`);
+      console.log('═══════════════════════════════════════════════════════════════\n');
+      return;
+    }
+
     console.log('═══════════════════════════════════════════════════════════════');
     console.log('🌱 TENNIS TRACKER DATABASE SEEDING');
     console.log('═══════════════════════════════════════════════════════════════\n');
@@ -140,10 +155,13 @@ async function main() {
   } catch (error) {
     console.error('❌ Seeding failed:', error);
     process.exit(1);
+  } finally {
+    await prisma.$disconnect();
   }
 }
 
-main().catch((error) => {
+main().catch(async (error) => {
   console.error(error);
+  await prisma.$disconnect();
   process.exit(1);
 });

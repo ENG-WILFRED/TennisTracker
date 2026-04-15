@@ -1,9 +1,7 @@
 "use server";
 
-import { PrismaClient } from "../../src/generated/prisma";
+import prisma from '@/lib/prisma';
 import bcrypt from "bcryptjs";
-
-const prisma = new PrismaClient();
 
 export async function registerPlayer({
   username,

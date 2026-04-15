@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '../../../generated/prisma/index.js';
-
-const prisma = new PrismaClient();
+import prisma from '@/lib/prisma';
+import { cacheResponse } from '@/lib/apiCache';
 
 export async function GET(request: NextRequest) {
   try {
@@ -19,9 +18,10 @@ export async function GET(request: NextRequest) {
     // Filter by tournament status based on dates
     const now = new Date();
 
-    const tournaments = await prisma.clubEvent.findMany({
-      where: filters,
-      include: {
+    const tournaments = await cacheResponse(`tournaments:${organizationId || 'all'}:${status || 'all'}`, async () => {
+      return prisma.clubEvent.findMany({
+        where: filters,
+        include: {
         registrations: {
           select: {
             id: true,
@@ -55,6 +55,7 @@ export async function GET(request: NextRequest) {
         startDate: 'asc',
       },
     });
+  }, 30_000);
 
     // Format tournaments with computed status
     const formattedTournaments = tournaments
@@ -108,7 +109,5 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching tournaments:', error);
     return NextResponse.json({ error: 'Failed to fetch tournaments' }, { status: 500 });
-  } finally {
-    await prisma.$disconnect();
   }
 }

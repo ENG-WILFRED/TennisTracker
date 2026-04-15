@@ -59,7 +59,7 @@ const Tag = ({ children, red }: { children: React.ReactNode; red?: boolean }) =>
   </span>
 );
 
-export default function MessagingPanel({ userId, userType }: { userId: string; userType: 'coach' | 'player' | 'referee' | 'admin' }) {
+export default function MessagingPanel({ userId, userType }: { userId: string; userType: 'coach' | 'player' | 'referee' | 'admin' | 'spectator' }) {
   const [chatRooms, setChatRooms] = useState<ChatRoom[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeRoom, setActiveRoom] = useState<ChatRoom | null>(null);
@@ -360,7 +360,7 @@ export default function MessagingPanel({ userId, userType }: { userId: string; u
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 0, height: '100vh', borderRadius: 16, overflow: 'hidden', border: `1px solid ${G.border}` }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 0, height: '100%', minHeight: 0, borderRadius: 16, overflow: 'hidden', border: `1px solid ${G.border}` }}>
 
       {/* Top Bar */}
       <div style={{
@@ -371,7 +371,13 @@ export default function MessagingPanel({ userId, userType }: { userId: string; u
         <div>
           <div style={{ fontSize: 14, fontWeight: 800, color: G.text, letterSpacing: -0.2 }}>💬 Messages</div>
           <div style={{ fontSize: 10, color: G.muted2, marginTop: 2 }}>
-            {userType === 'coach' ? 'Chat with your players' : userType === 'admin' ? 'Send messages to staff and members' : 'Chat with your coaches'}
+            {userType === 'coach'
+            ? 'Chat with your players'
+            : userType === 'admin'
+            ? 'Send messages to staff and members'
+            : userType === 'spectator'
+            ? 'Chat with your community'
+            : 'Chat with your coaches'}
           </div>
         </div>
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
@@ -420,7 +426,15 @@ export default function MessagingPanel({ userId, userType }: { userId: string; u
               <input
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                placeholder={userType === 'coach' ? 'Search players...' : userType === 'admin' ? 'Search staff...' : 'Search coaches...'}
+                placeholder={
+                  userType === 'coach'
+                    ? 'Search players...'
+                    : userType === 'admin'
+                    ? 'Search staff...'
+                    : userType === 'spectator'
+                    ? 'Search contacts...'
+                    : 'Search coaches...'
+                }
                 style={{
                   width: '100%', padding: '8px 10px 8px 30px',
                   background: G.dark, border: `1px solid ${G.border}`,
@@ -490,7 +504,7 @@ export default function MessagingPanel({ userId, userType }: { userId: string; u
           }}>
             {filteredRooms.length === 0 ? (
               <div style={{ padding: 20, textAlign: 'center', color: G.muted, fontSize: 11 }}>
-                No {userType === 'coach' ? 'players' : userType === 'admin' ? 'staff' : 'coaches'} found
+                No {userType === 'coach' ? 'players' : userType === 'admin' ? 'staff' : userType === 'spectator' ? 'contacts' : 'coaches'} found
               </div>
             ) : (
               filteredRooms.map(room => {
@@ -569,11 +583,11 @@ export default function MessagingPanel({ userId, userType }: { userId: string; u
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 11, fontWeight: 800, color: G.lime2,
             }}>
-              {userType === 'coach' ? 'C' : userType === 'admin' ? 'A' : 'P'}
+              {userType === 'coach' ? 'C' : userType === 'admin' ? 'A' : userType === 'spectator' ? 'S' : 'P'}
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: G.text }}>
-                {userType === 'coach' ? 'Coach' : userType === 'admin' ? 'Admin' : 'Player'}
+                {userType === 'coach' ? 'Coach' : userType === 'admin' ? 'Admin' : userType === 'spectator' ? 'Spectator' : 'Player'}
               </div>
               <div style={{ fontSize: 9, color: G.muted2 }}>
                 {isConnected ? 'Connected' : 'Reconnecting...'}
@@ -803,7 +817,9 @@ export default function MessagingPanel({ userId, userType }: { userId: string; u
             }}>💬</div>
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: 12.5, color: G.muted2, marginBottom: 4 }}>Select a conversation</div>
-              <div style={{ fontSize: 10.5, color: G.muted }}>Choose a {userType === 'coach' ? 'player' : userType === 'admin' ? 'staff member' : 'coach'} to start messaging</div>
+              <div style={{ fontSize: 10.5, color: G.muted }}>
+                Choose a {userType === 'coach' ? 'player' : userType === 'admin' ? 'staff member' : userType === 'spectator' ? 'contact' : 'coach'} to start messaging
+              </div>
             </div>
           </div>
         )}

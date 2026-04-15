@@ -1,16 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
-import rateLimiter from '@/lib/rateLimiter';
+import rateLimiter, { MAX_REQUESTS, WINDOW_MS } from '@/lib/rateLimiter';
 
 export function middleware(req: NextRequest) {
-  // Basic per-IP rate limiting (per-instance). For scale, use Cloudflare rate
-  // limiting rules or a shared KV store.
+  const start = Date.now();
   const ip =
     (req.headers.get('cf-connecting-ip') as string) ||
     (req.headers.get('x-forwarded-for') as string) ||
     (req.headers.get('x-real-ip') as string) ||
     'unknown';
+
   if (rateLimiter.isRateLimited(ip)) {
-    return new NextResponse('Too Many Requests', { status: 429 });
+    const response = new NextResponse('Too Many Requests', { status: 429 });
+    response.headers.set('Retry-After', String(Math.ceil(WINDOW_MS / 1000)));
+    response.headers.set('X-RateLimit-Limit', String(MAX_REQUESTS));
+    response.headers.set('X-RateLimit-Remaining', String(rateLimiter.getRemaining(ip)));
+    response.headers.set('X-Response-Time', `${Date.now() - start}ms`);
+    return response;
   }
 
   const res = NextResponse.next();
@@ -29,6 +34,10 @@ export function middleware(req: NextRequest) {
   if (!res.headers.get('Cache-Control')) {
     res.headers.set('Cache-Control', 'no-store');
   }
+
+  res.headers.set('X-RateLimit-Limit', String(MAX_REQUESTS));
+  res.headers.set('X-RateLimit-Remaining', String(rateLimiter.getRemaining(ip)));
+  res.headers.set('X-Response-Time', `${Date.now() - start}ms`);
 
   return res;
 }

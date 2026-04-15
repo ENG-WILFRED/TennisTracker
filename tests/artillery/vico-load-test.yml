@@ -1,0 +1,119 @@
+# Artillery Load Testing Configuration
+# The Artillery framework can be installed with: npm install -g artillery
+# Run with: artillery run tests/artillery/vico-load-test.yml
+
+config:
+  target: "{{ $processEnvironment.STRESS_TEST_URL | default('http://localhost:3000') }}"
+  phases:
+    - duration: 60
+      arrivalRate: 10
+      name: "Warm up"
+    - duration: 120
+      arrivalRate: 50
+      name: "Sustained load"
+    - duration: 60
+      arrivalRate: 200
+      name: "Spike"
+  defaults:
+    headers:
+      User-Agent: "Artillery Load Test"
+      Content-Type: "application/json"
+
+scenarios:
+  - name: "Court Booking Flow"
+    flow:
+      - get:
+          url: "/courts"
+          expect:
+            - statusCode: 200
+      - think: 3
+      - post:
+          url: "/api/bookings"
+          json:
+            courtId: "court-1"
+            date: "2026-04-20T10:00:00Z"
+            timeSlot: "10:00"
+          expect:
+            - statusCode: 200
+            - statusCode: 201
+      - think: 2
+      - get:
+          url: "/api/bookings"
+          expect:
+            - statusCode: 200
+
+  - name: "Tournament Registration Flow"
+    flow:
+      - get:
+          url: "/tournaments"
+          expect:
+            - statusCode: 200
+      - think: 2
+      - get:
+          url: "/tournaments/{{ $randomNumber(1, 10) }}"
+          expect:
+            - statusCode: 200
+      - think: 1
+      - post:
+          url: "/tournaments/{{ $randomNumber(1, 10) }}/register"
+          json:
+            playerId: "player-{{ $randomNumber(1, 100) }}"
+            seedRating: 750
+          expect:
+            - statusCode: 200
+            - statusCode: 201
+
+  - name: "Dashboard Access"
+    flow:
+      - get:
+          url: "/dashboard/player/{{ $randomNumber(1, 50) }}"
+          expect:
+            - statusCode: 200
+      - think: 2
+      - get:
+          url: "/dashboard/player/{{ $randomNumber(1, 50) }}/tournaments"
+          expect:
+            - statusCode: 200
+      - think: 1
+      - get:
+          url: "/dashboard/player/{{ $randomNumber(1, 50) }}/statistics"
+          expect:
+            - statusCode: 200
+
+  - name: "Community Interaction"
+    flow:
+      - get:
+          url: "/community/posts"
+          expect:
+            - statusCode: 200
+      - think: 2
+      - post:
+          url: "/api/community/posts"
+          json:
+            content: "Stress test post {{ $timestamp }}"
+            type: "text"
+          expect:
+            - statusCode: 200
+            - statusCode: 201
+      - think: 1
+      - get:
+          url: "/community/posts/{{ $randomNumber(1, 100) }}/comments"
+          expect:
+            - statusCode: 200
+
+  - name: "API Health Check"
+    flow:
+      - get:
+          url: "/api/health"
+          expect:
+            - statusCode: 200
+      - think: 1
+      - get:
+          url: "/api/system/status"
+          expect:
+            - statusCode: 200
+      - think: 0.5
+      - get:
+          url: "/api/metrics"
+          expect:
+            - statusCode: 200

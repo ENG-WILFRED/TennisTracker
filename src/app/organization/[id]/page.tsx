@@ -2,8 +2,8 @@ import { notFound } from 'next/navigation';
 import prisma from '@/lib/prisma';
 import OrganizationPublicDetail from '@/components/organization/OrganizationPublicDetail';
 
-export default async function OrganizationPage({ params }: { params: { id: string } }) {
-  const orgId = params.id;
+export default async function OrganizationPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id: orgId } = await params;
 
   const baseQuery = {
     where: { id: orgId },

@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '../../../generated/prisma/index.js';
-
-const prisma = new PrismaClient();
+import prisma from '@/lib/prisma';
+import { cacheResponse, clearCachePrefix } from '@/lib/apiCache';
+import { recordEndpointMetrics } from '@/lib/monitoring';
 
 export async function POST(request: NextRequest) {
+  const start = Date.now();
+  let status = 200;
+
   try {
     const body = await request.json();
     const { amenityId, memberId, guestName, startTime, endTime, notes } = body;
@@ -15,7 +18,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if amenity exists and get its details
     const amenity = await prisma.eventAmenity.findUnique({
       where: { id: amenityId },
       include: {
@@ -26,37 +28,35 @@ export async function POST(request: NextRequest) {
               {
                 AND: [
                   { startTime: { lte: new Date(startTime) } },
-                  { endTime: { gt: new Date(startTime) } }
-                ]
+                  { endTime: { gt: new Date(startTime) } },
+                ],
               },
               {
                 AND: [
                   { startTime: { lt: new Date(endTime) } },
-                  { endTime: { gte: new Date(endTime) } }
-                ]
+                  { endTime: { gte: new Date(endTime) } },
+                ],
               },
               {
                 AND: [
                   { startTime: { gte: new Date(startTime) } },
-                  { endTime: { lte: new Date(endTime) } }
-                ]
-              }
-            ]
-          }
-        }
-      }
+                  { endTime: { lte: new Date(endTime) } },
+                ],
+              },
+            ],
+          },
+        },
+      },
     });
 
     if (!amenity) {
       return NextResponse.json({ error: 'Amenity not found' }, { status: 404 });
     }
 
-    // Check capacity
     if (amenity.capacity && amenity.bookings.length >= amenity.capacity) {
       return NextResponse.json({ error: 'Amenity is fully booked' }, { status: 409 });
     }
 
-    // Check if booking is within available time
     const bookingStart = new Date(startTime);
     const bookingEnd = new Date(endTime);
 
@@ -68,7 +68,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Booking ends after amenity is available' }, { status: 400 });
     }
 
-    // Create the booking
     const booking = await prisma.amenityBooking.create({
       data: {
         amenityId,
@@ -98,7 +97,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       booking: {
         id: booking.id,
@@ -107,18 +106,24 @@ export async function POST(request: NextRequest) {
         endTime: booking.endTime,
         price: booking.price,
         status: booking.status,
-      }
+      },
     });
 
+    clearCachePrefix(`bookings:${amenityId}`);
+    return response;
   } catch (error) {
+    status = 500;
     console.error('Error creating amenity booking:', error);
     return NextResponse.json({ error: 'Failed to create booking' }, { status: 500 });
   } finally {
-    await prisma.$disconnect();
+    recordEndpointMetrics('/api/bookings', 'POST', status, Date.now() - start);
   }
 }
 
 export async function GET(request: NextRequest) {
+  const start = Date.now();
+  let status = 200;
+
   try {
     const { searchParams } = new URL(request.url);
     const amenityId = searchParams.get('amenityId');
@@ -134,35 +139,39 @@ export async function GET(request: NextRequest) {
       filters.memberId = memberId;
     }
 
-    const bookings = await prisma.amenityBooking.findMany({
-      where: filters,
-      include: {
-        amenity: {
-          include: {
-            event: true,
+    const cacheKey = `bookings:${amenityId || 'all'}:${memberId || 'all'}`;
+    const bookings = await cacheResponse(cacheKey, async () => {
+      return prisma.amenityBooking.findMany({
+        where: filters,
+        include: {
+          amenity: {
+            include: {
+              event: true,
+            },
           },
-        },
-        member: {
-          include: {
-            player: {
-              include: {
-                user: true,
+          member: {
+            include: {
+              player: {
+                include: {
+                  user: true,
+                },
               },
             },
           },
         },
-      },
-      orderBy: {
-        startTime: 'asc',
-      },
-    });
+        orderBy: {
+          startTime: 'asc',
+        },
+      });
+    }, 30_000);
 
     return NextResponse.json(bookings);
 
   } catch (error) {
+    status = 500;
     console.error('Error fetching amenity bookings:', error);
     return NextResponse.json({ error: 'Failed to fetch bookings' }, { status: 500 });
   } finally {
-    await prisma.$disconnect();
+    recordEndpointMetrics('/api/bookings', 'GET', status, Date.now() - start);
   }
 }

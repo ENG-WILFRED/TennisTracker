@@ -12,6 +12,7 @@ import { FinanceDashboard } from '@/components/dashboards/FinanceDashboard';
 import { RefereeDashboard } from '@/components/dashboards/referee/RefereeDashboard';
 import { OrganizationDashboard } from '@/components/dashboards/OrganizationDashboard';
 import { SpectatorDashboard } from '@/components/dashboards/spectator';
+import { DeveloperDashboard } from '@/components/dashboards/DeveloperDashboard';
 
 export default function DashboardPage() {
   const { currentRole, isRoleLoaded } = useRole();
@@ -42,12 +43,13 @@ export default function DashboardPage() {
         {currentRole === 'referee' && <RefereeDashboard />}
         {currentRole === 'org' && <OrganizationDashboard />}
         {currentRole === 'spectator' && <SpectatorDashboard />}
+        {currentRole === 'developer' && <DeveloperDashboard />}
 
-        {/* Fallback for unknown roles */}
-        {!['player', 'coach', 'admin', 'finance_officer', 'referee', 'org', 'spectator'].includes(currentRole || '') && (
+        {/* No dashboard for unknown roles */}
+        {!['player', 'coach', 'admin', 'finance_officer', 'referee', 'org', 'spectator', 'developer'].includes(currentRole || '') && (
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
-            <h2 className="text-xl font-bold text-yellow-800">Role Not Configured</h2>
-            <p className="text-yellow-700">Your role is not recognized by the system.</p>
+            <h2 className="text-xl font-bold text-yellow-800">Dashboard Not Available</h2>
+            <p className="text-yellow-700">Your role does not have access to a dashboard.</p>
           </div>
         )}
       </div>

@@ -14,7 +14,7 @@ export interface ProtectedRouteConfig {
 export const PROTECTED_ROUTES: Record<string, ProtectedRouteConfig> = {
   // Dashboard routes
   '/dashboard': {
-    requiredRoles: ['player', 'coach', 'admin', 'finance_officer', 'referee', 'org'],
+    requiredRoles: ['player', 'coach', 'admin', 'finance_officer', 'referee', 'org', 'developer'],
   },
 
   // Player routes

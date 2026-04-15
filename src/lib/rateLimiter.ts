@@ -2,8 +2,8 @@
 // store like Redis or Cloudflare KV.
 type KeyRecord = { count: number; expiresAt: number };
 
-const WINDOW_MS = 60_000; // 1 minute
-const MAX_REQUESTS = 120; // per IP per window
+export const WINDOW_MS = Number(process.env.RATE_LIMIT_WINDOW_MS ?? 60_000);
+export const MAX_REQUESTS = Number(process.env.RATE_LIMIT_MAX ?? 300);
 
 const store = new Map<string, KeyRecord>();
 

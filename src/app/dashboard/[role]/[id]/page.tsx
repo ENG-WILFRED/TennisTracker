@@ -11,6 +11,7 @@ import { FinanceDashboard } from '@/components/dashboards/FinanceDashboard';
 import { RefereeDashboard } from '@/components/dashboards/referee/RefereeDashboard';
 import { OrganizationDashboard } from '@/components/dashboards/OrganizationDashboard';
 import { SpectatorDashboard } from '@/components/dashboards/spectator';
+import { DeveloperDashboard } from '@/components/dashboards/DeveloperDashboard';
 import { UserRole } from '@/config/roles';
 
 export default function DashboardRoleIdPage() {
@@ -78,9 +79,10 @@ export default function DashboardRoleIdPage() {
       {currentRole === 'referee' && <RefereeDashboard />}
       {currentRole === 'org' && <OrganizationDashboard />}
       {currentRole === 'spectator' && <SpectatorDashboard />}
+      {currentRole === 'developer' && <DeveloperDashboard />}
 
       {/* Fallback for unknown roles */}
-      {!['player', 'coach', 'admin', 'finance_officer', 'referee', 'org', 'spectator'].includes(currentRole || '') && (
+      {!['player', 'coach', 'admin', 'finance_officer', 'referee', 'org', 'spectator', 'developer'].includes(currentRole || '') && (
         <div className="min-h-screen flex items-center justify-center">
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 max-w-md">
             <h2 className="text-xl font-bold text-yellow-800 mb-2">Role Not Configured</h2>

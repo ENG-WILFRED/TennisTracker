@@ -10,7 +10,6 @@ import {
   Match,
   Player,
   Organization,
-  Contact,
   MatchFilter,
   NAV_SECTIONS,
 } from './types';
@@ -38,7 +37,6 @@ export const SpectatorDashboard: React.FC = () => {
   const [liveMatch, setLiveMatch] = useState<Match | null>(null);
   const [players, setPlayers] = useState<Player[]>([]);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
-  const [contacts, setContacts] = useState<Contact[]>([]);
 
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
@@ -147,24 +145,6 @@ export const SpectatorDashboard: React.FC = () => {
     }
   };
 
-  const fetchContacts = async () => {
-    if (!user?.id) return;
-    try {
-      const response = await authenticatedFetch(
-        `/api/messaging/contacts?userId=${user.id}&roles=coach,player,referee,admin`
-      );
-      if (response.ok) {
-        const data = await response.json();
-        setContacts(data);
-      } else {
-        setContacts([]);
-      }
-    } catch (error) {
-      console.error('Failed to fetch contacts:', error);
-      setContacts([]);
-    }
-  };
-
   const connectWebSocket = (matchId: string) => {
     if (wsRef.current) {
       wsRef.current.close();
@@ -213,7 +193,7 @@ export const SpectatorDashboard: React.FC = () => {
   useEffect(() => {
     const initializeData = async () => {
       setLoading(true);
-      await Promise.all([fetchMatches(1, matchSort), fetchPlayers(), fetchOrganizations(), fetchContacts()]);
+      await Promise.all([fetchMatches(1, matchSort), fetchPlayers(), fetchOrganizations()]);
       setLoading(false);
     };
 
@@ -466,7 +446,13 @@ export const SpectatorDashboard: React.FC = () => {
           />
         );
       case 'Messages':
-        return <MessagesSection contacts={contacts} />;
+        return user?.id ? (
+          <MessagesSection userId={user.id} />
+        ) : (
+          <SectionCard title="Messages" subtitle="Loading your messaging panel">
+            <p style={{ color: G.muted }}>Initializing messages...</p>
+          </SectionCard>
+        );
       case 'Community':
         return (
           <CommunitySection

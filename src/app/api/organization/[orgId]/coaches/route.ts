@@ -88,7 +88,7 @@ export async function GET(
  * Clear cache for organization
  * Useful after coach modifications
  */
-export function clearCoachesCache(organizationId: string) {
+function clearCoachesCache(organizationId: string) {
   cache.delete(`coaches:${organizationId}`);
   console.log(`🗑️  Cleared coaches cache for org ${organizationId}`);
 }

@@ -3,7 +3,7 @@
  * Centralized configuration for all user roles in the system
  */
 
-export type UserRole = 'player' | 'coach' | 'admin' | 'finance_officer' | 'referee' | 'org' | 'spectator';
+export type UserRole = 'player' | 'coach' | 'admin' | 'finance_officer' | 'referee' | 'org' | 'spectator' | 'developer';
 
 export interface RoleConfig {
   id: UserRole;
@@ -72,6 +72,13 @@ export const ROLE_COLORS: Record<UserRole, RoleConfig['color']> = {
     text: 'text-gray-700',
     border: 'border-gray-300',
     badge: 'bg-gray-200',
+  },
+  developer: {
+    primary: 'bg-emerald-700',
+    secondary: 'bg-emerald-100',
+    text: 'text-emerald-700',
+    border: 'border-emerald-300',
+    badge: 'bg-emerald-200',
   },
 };
 
@@ -190,6 +197,17 @@ export const ROLES: Record<UserRole, RoleConfig> = {
     permissions: ['view_matches', 'view_leaderboard', 'view_events'],
     dashboardRoute: '/dashboard/spectator',
     features: ['Match Viewing', 'Leaderboard Access', 'Event Calendar'],
+  },
+  developer: {
+    id: 'developer',
+    name: 'Developer',
+    displayName: 'Developer',
+    description: 'Monitor site health, bugs, and performance in realtime',
+    color: ROLE_COLORS.developer,
+    icon: '💻',
+    permissions: ['view_monitoring', 'manage_bugs', 'view_performance'],
+    dashboardRoute: '/dashboard/developer',
+    features: ['Bug Tracking', 'Performance Monitoring', 'Release Notifications', 'Incident Response'],
   },
 };
 

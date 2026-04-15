@@ -4,11 +4,17 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "test:stress": "RATE_LIMIT_MAX=5000 RATE_LIMIT_WINDOW_MS=60000 npx tsx tests/run-all-tests.ts --suite all",
+    "test:stress:booking": "npx tsx tests/stress/court-booking-stress.ts",
+    "test:stress:auth": "npx tsx tests/stress/auth-stress.ts",
+    "test:stress:websocket": "npx tsx tests/stress/websocket-stress.ts",
+    "test:stress:payment": "npx tsx tests/stress/payment-stress.ts",
+    "dev": "tsx server.ts",
+    "dev:next": "next dev",
     "websocket": "tsx src/websocket-server.ts",
     "websocket:dev": "tsx --watch src/websocket-server.ts",
     "test:websocket": "bash test-websocket.sh",
-    "build": "next build --turbopack",
+    "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "migrate": "prisma migrate dev",
@@ -44,7 +50,7 @@
     "recharts": "^3.2.1",
     "socket.io": "^4.8.3",
     "socket.io-client": "^4.8.3",
-    "ws": "^8.15.1"
+    "ws": "^8.20.0"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260301.1",
@@ -59,6 +65,7 @@
     "baseline-browser-mapping": "^2.10.17",
     "eslint": "^9",
     "eslint-config-next": "15.5.3",
+    "node-fetch": "^3.3.2",
     "postcss": "^8.5.6",
     "tailwindcss": "^4",
     "ts-node": "^10.9.2",

@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Match, Player, Organization, Contact, MatchFilter, MembershipApplication, MEMBERSHIP_TIERS, POSITIONS } from './types';
+import { Match, Player, Organization, MatchFilter, MembershipApplication, MEMBERSHIP_TIERS, POSITIONS } from './types';
+import MessagingPanel from '@/components/dashboards/MessagingPanel';
 import { Badge, SectionCard, StatPill, ActionBtn, FormField, inputStyle } from './ui';
 
 type MembershipTierOption = {
@@ -10,17 +11,34 @@ type MembershipTierOption = {
   description?: string;
   cost?: number;
   monthlyPrice?: number;
-  benefits?: string[];
-  perks?: string[];
+  benefits?: string[] | string | null;
+  perks?: string[] | string | null;
 };
 
-const normalizeMembershipTier = (tier: MembershipTierOption) => ({
-  id: tier.id ?? tier.name,
-  name: tier.name,
-  description: tier.description ?? '',
-  monthlyPrice: tier.monthlyPrice ?? tier.cost ?? 0,
-  benefits: tier.benefits ?? tier.perks ?? [],
-});
+const normalizeMembershipTier = (tier: MembershipTierOption) => {
+  let benefitsArray: string[] = [];
+  
+  const benefits = tier.benefits ?? tier.perks;
+  if (benefits) {
+    if (Array.isArray(benefits)) {
+      benefitsArray = benefits;
+    } else if (typeof benefits === 'string') {
+      try {
+        benefitsArray = JSON.parse(benefits);
+      } catch {
+        benefitsArray = benefits.split(',').map(b => b.trim()).filter(b => b);
+      }
+    }
+  }
+  
+  return {
+    id: tier.id ?? tier.name,
+    name: tier.name,
+    description: tier.description ?? '',
+    monthlyPrice: tier.monthlyPrice ?? tier.cost ?? 0,
+    benefits: benefitsArray,
+  };
+};
 
 export function HomeSection({
   user,
@@ -651,120 +669,8 @@ export function MatchesSection({
   );
 }
 
-export function MessagesSection({ contacts }: { contacts: Contact[] }) {
-  const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
-  const [messageText, setMessageText] = useState('');
-
-  const handleSendMessage = async () => {
-    if (!messageText.trim() || !selectedContact) return;
-    try {
-      console.log('Sending message to', `${selectedContact.firstName} ${selectedContact.lastName}`, ':', messageText);
-      setMessageText('');
-    } catch (error) {
-      console.error('Failed to send message:', error);
-    }
-  };
-
-  return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      <SectionCard title="Contacts" subtitle={`${contacts.length} available contacts`}>
-        <div className="flex flex-col gap-2 max-h-96 overflow-y-auto">
-          {contacts.length === 0 ? (
-            <p style={{ color: '#7aaa6a' }}>No contacts available.</p>
-          ) : (
-            contacts.map((contact) => (
-              <button
-                key={contact.id}
-                onClick={() => setSelectedContact(contact)}
-                className="flex items-center gap-3 rounded-xl px-4 py-3 text-left transition-all hover:opacity-90"
-                style={{
-                  background: selectedContact?.id === contact.id ? '#2d5a27' : '#1b2f1b',
-                  border: `1px solid ${selectedContact?.id === contact.id ? '#7dc142' : '#243e24'}`,
-                  color: '#e8f5e0',
-                }}
-              >
-                <div className="relative flex-shrink-0">
-                  {contact.photo ? (
-                    <img src={contact.photo} alt={`${contact.firstName} ${contact.lastName}`} className="w-10 h-10 rounded-full object-cover" />
-                  ) : (
-                    <div
-                      className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold"
-                      style={{ background: '#7dc142', color: '#0f1f0f' }}
-                    >
-                      {(contact.firstName || contact.username || '?').charAt(0).toUpperCase()}
-                    </div>
-                  )}
-                  {contact.isOnline && (
-                    <div
-                      className="absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2"
-                      style={{ background: '#5fc45f', borderColor: '#1a3020' }}
-                    />
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold truncate">{contact.firstName} {contact.lastName}</p>
-                  <p className="text-xs truncate" style={{ color: '#7aaa6a' }}>
-                    {contact.lastMessage || `${contact.role} • ${contact.username}`}
-                  </p>
-                </div>
-                {contact.unreadCount > 0 && (
-                  <div
-                    className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold"
-                    style={{ background: '#7dc142', color: '#0f1f0f' }}
-                  >
-                    {contact.unreadCount}
-                  </div>
-                )}
-              </button>
-            ))
-          )}
-        </div>
-      </SectionCard>
-
-      {selectedContact ? (
-        <SectionCard title={`Chat with ${selectedContact.firstName} ${selectedContact.lastName}`}>
-          <div className="flex flex-col gap-4">
-            <div
-              className="flex-1 min-h-64 max-h-96 rounded-xl p-4 overflow-y-auto"
-              style={{ background: '#0f1f0f', border: `1px solid #243e24` }}
-            >
-              <div className="text-center text-sm" style={{ color: '#7aaa6a' }}>
-                Start a conversation with {selectedContact.firstName} {selectedContact.lastName}
-              </div>
-            </div>
-
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={messageText}
-                onChange={(event) => setMessageText(event.target.value)}
-                onKeyDown={(event) => event.key === 'Enter' && handleSendMessage()}
-                placeholder={`Message ${selectedContact.firstName} ${selectedContact.lastName}...`}
-                className="flex-1 px-3 py-2 rounded-lg text-sm outline-none"
-                style={{
-                  background: '#1b2f1b',
-                  border: `1px solid #243e24`,
-                  color: '#e8f5e0',
-                }}
-              />
-              <ActionBtn onClick={handleSendMessage} disabled={!messageText.trim()}>
-                Send
-              </ActionBtn>
-            </div>
-          </div>
-        </SectionCard>
-      ) : (
-        <SectionCard title="Select a Contact" subtitle="Choose someone to start chatting">
-          <div className="flex items-center justify-center py-12">
-            <div className="text-center">
-              <div className="text-4xl mb-4">💬</div>
-              <p style={{ color: '#7aaa6a' }}>Select a contact from the list to start messaging</p>
-            </div>
-          </div>
-        </SectionCard>
-      )}
-    </div>
-  );
+export function MessagesSection({ userId }: { userId: string }) {
+  return <MessagingPanel userId={userId} userType="spectator" />;
 }
 
 export function MembershipSection({
@@ -804,7 +710,7 @@ export function MembershipSection({
                   <span className="h-2 w-2 rounded-full" style={{ background: '#7dc142' }} />
                 </div>
                 <div className="space-y-1 text-xs" style={{ color: '#7aaa6a' }}>
-                  {tier.benefits.map((perk) => (
+                  {(Array.isArray(tier.benefits) ? tier.benefits : []).map((perk) => (
                     <div key={perk}>• {perk}</div>
                   ))}
                 </div>

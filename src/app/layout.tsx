@@ -48,6 +48,15 @@ export const metadata: Metadata = {
       "A modern sports platform for tennis clubs, referees, coaches, court bookings and tournament operations.",
     images: ["/seo/og-image.png"],
   },
+  icons: {
+    icon: "/favicon.ico",
+    shortcut: "/vico_logo.png",
+    apple: "/vico_logo.png",
+    other: [
+      { rel: 'icon', url: '/vico_logo.png' },
+      { rel: 'apple-touch-icon', url: '/vico_logo.png' },
+    ],
+  },
   robots: {
     index: true,
     follow: true,
@@ -67,7 +76,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-        <link href="https://fonts.googleapis.com/css2?family=Clash+Display:wght@400;500;600;700&family=Epilogue:wght@300;400;500;600&display=swap" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=Clash+Display:wght@400;500;600;700&family=Epilogue:wght@300;400;500;600&family=Ubuntu:wght@300;400;500;700&display=swap" rel="stylesheet" />
+        <link rel="icon" href="/vico_logo.png" />
+        <link rel="apple-touch-icon" href="/vico_logo.png" />
+        <link rel="shortcut icon" href="/vico_logo.png" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -118,7 +130,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               '@type': 'Organization',
               name: 'Vico Sports',
               url: process.env.NEXT_PUBLIC_SITE_URL ?? 'https://vicotennis.onrender.com',
-              logo: `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://vicotennis.onrender.com'}/logo.png`,
+              logo: `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://vicotennis.onrender.com'}/vico_logo.png`,
               sameAs: [
                 'https://twitter.com/vicosports',
                 'https://linkedin.com/company/vico-sports',
