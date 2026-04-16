@@ -1,6 +1,5 @@
 "use server";
-import { PrismaClient } from "../../generated/prisma";
-const prisma = new PrismaClient();
+import prisma from '@/lib/prisma';
 export async function borrowItem(playerId: string | null, itemId: string, qty: number = 1) {
   if (!playerId) throw new Error('Login required to request items.');
   const item = await prisma.inventoryItem.findUnique({ where: { id: itemId } });

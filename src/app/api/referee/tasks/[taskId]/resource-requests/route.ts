@@ -151,10 +151,10 @@ export async function GET(
 
     const stats = {
       total: resourceRequests.length,
-      pending: resourceRequests.filter(r => r.status === 'PENDING').length,
-      approved: resourceRequests.filter(r => r.status === 'APPROVED').length,
-      rejected: resourceRequests.filter(r => r.status === 'REJECTED').length,
-      completed: resourceRequests.filter(r => r.status === 'COMPLETED').length,
+      pending: resourceRequests.filter((r: { status: string; }) => r.status === 'PENDING').length,
+      approved: resourceRequests.filter((r: { status: string; }) => r.status === 'APPROVED').length,
+      rejected: resourceRequests.filter((r: { status: string; }) => r.status === 'REJECTED').length,
+      completed: resourceRequests.filter((r: { status: string; }) => r.status === 'COMPLETED').length,
     };
 
     return new Response(JSON.stringify({

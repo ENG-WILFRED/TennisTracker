@@ -1,10 +1,6 @@
 import { NextResponse } from 'next/server';
 import { cacheResponse } from '@/lib/apiCache';
-import { PrismaClient } from '@/generated/prisma';
-
-const globalForPrisma = global as unknown as { prisma: PrismaClient };
-const prisma = globalForPrisma.prisma || new PrismaClient();
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+import prisma from '@/lib/prisma';
 
 export async function GET() {
   try {
@@ -23,7 +19,7 @@ export async function GET() {
     });
 
     const data = await cacheResponse('coaches:list', async () => {
-      return coaches.map((c) => ({
+      return coaches.map((c: typeof coaches[number]) => ({
         id: c.userId,
         name: `${c.user.firstName} ${c.user.lastName}`,
         role: c.role,

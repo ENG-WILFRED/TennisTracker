@@ -211,7 +211,7 @@ class TaskSubmissionService {
       orderBy: { submittedAt: "desc" },
     });
 
-    return submissions.map((s) => this.formatSubmission(s));
+    return submissions.map((s: typeof submissions[number]) => this.formatSubmission(s));
   }
 
   /**
@@ -227,7 +227,7 @@ class TaskSubmissionService {
       orderBy: { submittedAt: "asc" },
     });
 
-    return submissions.map((s) => this.formatSubmission(s));
+    return submissions.map((s: typeof submissions[number]) => this.formatSubmission(s));
   }
 
   /**
@@ -241,7 +241,7 @@ class TaskSubmissionService {
       orderBy: { reviewedAt: "desc" },
     });
 
-    return submissions.map((s) => this.formatSubmission(s));
+    return submissions.map((s: typeof submissions[number]) => this.formatSubmission(s));
   }
 
   // ─────────────────────────────────────────────────────────────────────────

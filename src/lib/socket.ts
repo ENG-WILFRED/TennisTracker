@@ -249,8 +249,9 @@ async function handleDeveloperSubscription(socket: any, playerId: string) {
   const user = await prisma.user.findUnique({
     where: { id: playerId }
   });
+  const userWithRole = user as unknown as { role?: string };
 
-  if (!user || user.role !== 'developer') {
+  if (!userWithRole || userWithRole.role !== 'developer') {
     socket.emit('error', { message: 'Access denied: developer role required' });
     return;
   }

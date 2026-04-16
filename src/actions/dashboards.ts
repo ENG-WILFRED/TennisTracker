@@ -1,8 +1,6 @@
 "use server";
 
-import { PrismaClient } from "@/generated/prisma";
-
-const prisma = new PrismaClient();
+import prisma from '@/lib/prisma';
 
 /**
  * Get coach dashboard data - student progress, training sessions, earnings
@@ -77,7 +75,7 @@ export async function getCoachDashboard(coachId: string) {
 
   if (!coach || !coach.role.includes('Coach')) throw new Error('Coach not found');
 
-  const studentsList = coach.players.map((rel) => ({
+  const studentsList = coach.players.map((rel: any) => ({
     id: rel.playerId,
     name: `${rel.player.user.firstName} ${rel.player.user.lastName}`,
     sessions: rel.sessionsCount,
@@ -141,7 +139,7 @@ export async function getCoachDashboard(coachId: string) {
   const activities = coach.activities.map((activity) => ({
     date: activity.date,
     title: activity.title,
-    description: activity.description,
+    description: activity.description || '',
     type: activity.type,
     dateLabel: new Date(`${activity.date}T${activity.startTime}:00Z`).toLocaleString('en-US', {
       month: 'short',
@@ -294,10 +292,16 @@ export async function getRefereeDashboard(refereeId: string) {
       hour: '2-digit',
       minute: '2-digit',
     }),
-    type: m.round || 'Regular Match',
+    type: `Round ${m.round}` || 'Regular Match',
   }));
 
-  const scoreSubmissions = completedMatches.map((m) => ({
+  const scoreSubmissions = completedMatches.map((m: {
+    playerA: { user: { firstName: string } };
+    playerB: { user: { firstName: string } };
+    winner?: { user: { firstName: string } } | null;
+    score?: string | null;
+    createdAt: Date;
+  }) => ({
     match: `${m.playerA.user.firstName} vs ${m.playerB.user.firstName}`,
     winner: m.winner?.user.firstName || 'Unknown',
     score: m.score || 'TBD',
@@ -312,7 +316,7 @@ export async function getRefereeDashboard(refereeId: string) {
     id: m.id,
     playerA: `${m.playerA.user.firstName} ${m.playerA.user.lastName}`,
     playerB: `${m.playerB.user.firstName} ${m.playerB.user.lastName}`,
-    eventName: m.round ? `Round ${m.round}` : 'Scheduled Match',
+    eventName: `Round ${m.round}` || 'Scheduled Match',
     status: 'upcoming',
     court: 'Court 1',
     date: m.createdAt.toLocaleDateString('en-US', {
@@ -324,7 +328,12 @@ export async function getRefereeDashboard(refereeId: string) {
     }),
   }));
 
-  const recentMatches = completedMatches.map((m) => ({
+  const recentMatches = completedMatches.map((m: {
+    playerA: { user: { firstName: string; lastName: string } };
+    playerB: { user: { firstName: string; lastName: string } };
+    createdAt: Date;
+    score?: string | null;
+  }) => ({
     player1: `${m.playerA.user.firstName} ${m.playerA.user.lastName}`,
     player2: `${m.playerB.user.firstName} ${m.playerB.user.lastName}`,
     date: m.createdAt.toLocaleDateString('en-US', {
@@ -456,7 +465,10 @@ export async function getFinanceDashboard(financeId: string) {
     take: 5,
   });
 
-  const recentTransactions = recentMatches.map((m) => ({
+  const recentTransactions = recentMatches.map((m: {
+    playerA: { user: { firstName: string } };
+    createdAt: Date | string;
+  }) => ({
     member: m.playerA.user.firstName,
     type: "Match Entry",
     amount: Math.floor(Math.random() * 100) + 50,
@@ -628,7 +640,10 @@ export async function getOrganizationDashboard(orgManagerId: string, orgId?: str
     take: 5,
   });
 
-  const scheduleItems = upcomingMatches.map((m, i) => {
+  const scheduleItems = upcomingMatches.map((m: {
+    playerA: { user: { firstName: string } };
+    playerB: { user: { firstName: string } };
+  }, i: number) => {
     const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
     return {
       day: days[i % 7],
@@ -677,12 +692,13 @@ export async function getOrganizationDashboard(orgManagerId: string, orgId?: str
       { label: "Avg Rating", value: 4.8, max: 5, color: "#f0c040" },
     ],
     schedule: scheduleItems.slice(0, 5),
-    staff: allStaff.map((s) => ({
+    staff: allStaff.map((s: { user: { firstName: string; lastName: string }; role: string }) => ({
       name: `${s.user.firstName} ${s.user.lastName}`,
       role: s.role,
       status: Math.random() > 0.3 ? "Active" : "Available",
       sessions: Math.floor(Math.random() * 30) + 5,
     })),
+
     members: members,
     announcements: [
       {

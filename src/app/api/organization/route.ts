@@ -29,7 +29,7 @@ export async function GET() {
 
     // Enrich with counts
     const enrichedOrgs = await Promise.all(
-      orgs.map(async (org) => {
+      orgs.map(async (org: Awaited<ReturnType<typeof prisma.organization.findMany>>[number]) => {
         const [members, courts, events] = await Promise.all([
           prisma.clubMember.count({ where: { organizationId: org.id } }),
           prisma.court.count({ where: { organizationId: org.id } }),

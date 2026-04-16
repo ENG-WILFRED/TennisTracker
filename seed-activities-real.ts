@@ -25,7 +25,7 @@ async function main() {
     const organizations = await prisma.organization.findMany({
       where: {
         id: {
-          in: coaches.map(c => c.organizationId).filter(Boolean) as string[],
+          in: coaches.map((c: any) => c.organizationId).filter(Boolean) as string[],
         },
       },
       include: { courts: true },

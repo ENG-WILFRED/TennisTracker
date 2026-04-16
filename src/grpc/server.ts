@@ -1,10 +1,8 @@
 import path from 'path';
-import { PrismaClient } from '../generated/prisma';
+import prisma from '@/lib/prisma';
 import { loadPackageDefinition } from '@grpc/grpc-js';
 import { loadSync } from '@grpc/proto-loader';
 import grpc from '@grpc/grpc-js';
-
-const prisma = new PrismaClient();
 
 const PROTO_PATH = path.join(process.cwd(), 'proto', 'tennis.proto');
 

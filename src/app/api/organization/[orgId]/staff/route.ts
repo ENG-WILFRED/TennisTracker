@@ -71,8 +71,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ orgI
     });
 
     // Format and combine results, avoiding duplicates
-    const staffIds = new Set(staff.map(s => s.userId));
-    const formattedStaff = staff.map(s => ({
+    const staffIds = new Set(staff.map((s: typeof staff[number]) => s.userId));
+    const formattedStaff = staff.map((s: typeof staff[number]) => ({
       id: s.userId,
       name: `${s.user.firstName} ${s.user.lastName}`,
       email: s.user.email,
@@ -88,8 +88,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ orgI
 
     // Add club members who aren't already in staff list
     const formattedClubMembers = clubMembers
-      .filter(cm => !staffIds.has(cm.playerId))
-      .map(cm => ({
+      .filter((cm: typeof clubMembers[number]) => !staffIds.has(cm.playerId))
+      .map((cm: typeof clubMembers[number]) => ({
         id: cm.playerId,
         name: `${cm.player.user.firstName} ${cm.player.user.lastName}`,
         email: cm.player.user.email,

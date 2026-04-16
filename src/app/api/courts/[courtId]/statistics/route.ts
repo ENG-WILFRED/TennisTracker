@@ -26,16 +26,16 @@ export async function GET(
       },
     });
 
-    const confirmedBookings = bookings.filter(b => b.status === 'confirmed');
-    const cancelledBookings = bookings.filter(b => b.status === 'cancelled');
-    const totalHoursBooked = confirmedBookings.reduce((acc, b) => {
+    const confirmedBookings = bookings.filter((b: typeof bookings[number]) => b.status === 'confirmed');
+    const cancelledBookings = bookings.filter((b: typeof bookings[number]) => b.status === 'cancelled');
+    const totalHoursBooked = confirmedBookings.reduce((acc: number, b: typeof confirmedBookings[number]) => {
       const duration = (new Date(b.endTime).getTime() - new Date(b.startTime).getTime()) / (1000 * 60 * 60);
       return acc + duration;
     }, 0);
 
-    const totalRevenue = confirmedBookings.reduce((acc, b) => acc + (b.price || 0), 0);
-    const peakBookings = confirmedBookings.filter(b => b.isPeak).length;
-    const offPeakBookings = confirmedBookings.filter(b => !b.isPeak).length;
+    const totalRevenue = confirmedBookings.reduce((acc: number, b: typeof confirmedBookings[number]) => acc + (b.price || 0), 0);
+    const peakBookings = confirmedBookings.filter((b: typeof confirmedBookings[number]) => b.isPeak).length;
+    const offPeakBookings = confirmedBookings.filter((b: typeof confirmedBookings[number]) => !b.isPeak).length;
 
     // Get monthly breakdown
     const monthlyData = await Promise.all(
@@ -55,7 +55,7 @@ export async function GET(
             _sum: { price: true },
             _count: true,
           })
-          .then(result => ({
+          .then((result) => ({
             month: monthStart.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
             revenue: result._sum?.price || 0,
             bookings: result._count || 0,

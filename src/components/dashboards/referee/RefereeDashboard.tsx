@@ -9,6 +9,9 @@ import MessagingPanel from '@/components/dashboards/MessagingPanel';
 import CommunityPanel from '../coach/CommunityPanel';
 import AssignedTasksWidget from '@/components/AssignedTasksWidget';
 import TaskDetailsPanel from '@/components/referee/TaskDetailsPanel';
+import { FindNearbyPeople } from '@/components/FindNearbyPeople';
+import { FindNearbyCourts } from '@/components/FindNearbyCourts';
+import { chatUrlForUser, sendChallengeRequest } from '@/lib/nearby';
 
 const G = {
   dark: '#0a180a',
@@ -162,6 +165,26 @@ export const RefereeDashboard: React.FC = () => {
     const params = new URLSearchParams(searchParams.toString());
     params.delete('taskId');
     router.push(`?${params.toString()}`, { scroll: false });
+  };
+
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+
+  const handleMessageClick = (personId: string, personName: string) => {
+    router.push(chatUrlForUser(personId, personName));
+  };
+
+  const handleChallenge = async (personId: string, personName: string) => {
+    if (!user?.id) {
+      setStatusMessage('Please sign in to send a challenge.');
+      return;
+    }
+
+    try {
+      await sendChallengeRequest(user.id, personId);
+      setStatusMessage(`Challenge request sent to ${personName}.`);
+    } catch (error: any) {
+      setStatusMessage(error?.message || 'Failed to send challenge request.');
+    }
   };
 
   const isProfile = activeNav === 'My Profile';
@@ -663,6 +686,17 @@ export const RefereeDashboard: React.FC = () => {
               ) : (
                 <div style={{ color: G.muted, fontSize: 11, textAlign: 'center', padding: '20px 0' }}>No matches yet</div>
               )}
+            </div>
+
+            {statusMessage && (
+              <div style={{ background: '#122212', border: `1px solid ${G.lime}`, borderRadius: 10, padding: 12, marginTop: 14, color: G.lime2 }}>
+                {statusMessage}
+              </div>
+            )}
+
+            <div className="grid gap-4 xl:grid-cols-2 mt-6">
+              <FindNearbyPeople onMessageClick={handleMessageClick} onChallengeClick={handleChallenge} />
+              <FindNearbyCourts />
             </div>
           </div>
 

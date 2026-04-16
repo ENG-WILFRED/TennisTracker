@@ -1,9 +1,7 @@
 "use server";
 
-import { PrismaClient } from "@/generated/prisma";
+import prisma from '@/lib/prisma';
 import { OrganizationActivityTracker } from "@/lib/organizationActivity";
-
-const prisma = new PrismaClient();
 
 /**
  * Get all available organizations in the database
@@ -62,7 +60,7 @@ export async function getPlayerOrganizations(playerId: string) {
     const organizations: Array<{ id: string; name: string; role: string }> = [];
 
     // Add club memberships
-    memberships.forEach((m) => {
+    memberships.forEach((m: any) => {
       organizationIds.add(m.organization.id);
       organizations.push({
         id: m.organization.id,
@@ -214,12 +212,12 @@ export async function getAvailableTimeSlots(
     });
 
     // Convert bookings to comparable times
-    const confirmedTimes = confirmedBookings.map(b => ({
+    const confirmedTimes = confirmedBookings.map((b: any) => ({
       start: new Date(b.startTime).getTime(),
       end: new Date(b.endTime).getTime(),
     }));
 
-    const pendingTimes = pendingBookings.map(b => ({
+    const pendingTimes = pendingBookings.map((b: any) => ({
       start: new Date(b.startTime).getTime(),
       end: new Date(b.endTime).getTime(),
     }));
@@ -243,12 +241,12 @@ export async function getAvailableTimeSlots(
       // Check if slot is booked (confirmed/no-show)
       // Overlap when: booking.start < slot.end AND booking.end > slot.start
       const isBooked = confirmedTimes.some(
-        (booking) => booking.start < slotEndTime && booking.end > slotStartTime
+        (booking: any) => booking.start < slotEndTime && booking.end > slotStartTime
       );
 
       // Count pending bookings for this slot
       const pendingCount = pendingTimes.filter(
-        (booking) => booking.start < slotEndTime && booking.end > slotStartTime
+        (booking: any) => booking.start < slotEndTime && booking.end > slotStartTime
       ).length;
 
       const isPeak = hour >= peakHourStart && hour < peakHourEnd;

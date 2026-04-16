@@ -22,7 +22,7 @@ import {
   BarChart3,
   MapPin
 } from 'lucide-react';
-import { PrismaClient } from '@/generated/prisma';
+import prisma from '@/lib/prisma';
 
 interface Props {
   params: Promise<{
@@ -32,8 +32,7 @@ interface Props {
 
 export default async function RefereeProfilePage({ params }: Props) {
   const resolvedParams = await params;
-  const prisma = new PrismaClient();
-  const referee = await prisma.referee.findUnique({
+    const referee = await prisma.referee.findUnique({
     where: { userId: resolvedParams.id },
     select: {
       userId: true,
@@ -270,7 +269,7 @@ export default async function RefereeProfilePage({ params }: Props) {
                     <h2 className="text-3xl font-black text-slate-900">Certifications</h2>
                   </div>
                   <div className="flex flex-wrap gap-3">
-                    {referee.certifications.map((cert, idx) => (
+                    {referee.certifications.map((cert: string, idx: number) => (
                       <div 
                         key={idx} 
                         className="bg-gradient-to-r from-pink-500 to-fuchsia-600 text-white px-6 py-3 rounded-full text-sm font-black shadow-lg hover:shadow-xl transition-all hover:scale-105 border-2 border-pink-400"

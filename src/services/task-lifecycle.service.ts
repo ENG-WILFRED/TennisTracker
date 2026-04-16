@@ -113,8 +113,8 @@ class TaskLifecycleService {
           });
 
           const playerEmails = players
-            .map((p) => p.user?.email)
-            .filter((email): email is string => !!email);
+            .map((p: typeof players[number]) => p.user?.email)
+            .filter((email: string | undefined | null): email is string => !!email);
 
           if (playerEmails.length > 0) {
             const assignedByName = task.assignedBy
@@ -417,7 +417,7 @@ class TaskLifecycleService {
       orderBy: { createdAt: "desc" },
     });
 
-    return tasks.map((t) => this.formatTask(t));
+    return tasks.map((t: typeof tasks[number]) => this.formatTask(t));
   }
 
   /**
@@ -433,7 +433,7 @@ class TaskLifecycleService {
       orderBy: { dueDate: "asc" },
     });
 
-    return tasks.map((t) => this.formatTask(t));
+    return tasks.map((t: typeof tasks[number]) => this.formatTask(t));
   }
 
   /**
@@ -449,7 +449,7 @@ class TaskLifecycleService {
       orderBy: { createdAt: "desc" },
     });
 
-    return tasks.map((t) => this.formatTask(t));
+    return tasks.map((t: typeof tasks[number]) => this.formatTask(t));
   }
 
   // ─────────────────────────────────────────────────────────────────────────

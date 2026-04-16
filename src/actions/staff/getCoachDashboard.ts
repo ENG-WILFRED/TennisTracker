@@ -1,7 +1,5 @@
 "use server";
-import { PrismaClient } from "../../generated/prisma";
-
-const prisma = new PrismaClient();
+import prisma from '@/lib/prisma';
 
 export async function getCoachDashboard(coachId: string) {
   // Get coach staff record
@@ -45,10 +43,10 @@ export async function getCoachDashboard(coachId: string) {
   // Calculate stats for coached students
   const studentsStats = {
     totalStudents: students.length,
-    totalStudentWins: students.reduce((sum, s) => sum + s.matchesWon, 0),
-    totalStudentMatches: students.reduce((sum, s) => sum + s.matchesPlayed, 0),
+    totalStudentWins: students.reduce((sum: number, s: { matchesWon: number }) => sum + s.matchesWon, 0),
+    totalStudentMatches: students.reduce((sum: number, s: { matchesPlayed: number }) => sum + s.matchesPlayed, 0),
     averageWinRate: students.length > 0
-      ? students.reduce((sum, s) => sum + (s.matchesWon / (s.matchesPlayed || 1)), 0) / students.length
+      ? students.reduce((sum: number, s: { matchesWon: number; matchesPlayed: number }) => sum + (s.matchesWon / (s.matchesPlayed || 1)), 0) / students.length
       : 0,
   };
 
@@ -93,7 +91,7 @@ export async function getCoachDashboard(coachId: string) {
   // Calculate overall rating from performance data
   const overallRating =
     performanceData.length > 0
-      ? performanceData.reduce((sum, p) => sum + p.rating, 0) / performanceData.length
+      ? performanceData.reduce((sum: number, p: { rating: number }) => sum + p.rating, 0) / performanceData.length
       : 0;
 
   return {

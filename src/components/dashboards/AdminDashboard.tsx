@@ -5,6 +5,9 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { LoadingState } from '@/components/LoadingState';
 import Link from 'next/link';
+import { FindNearbyPeople } from '@/components/FindNearbyPeople';
+import { FindNearbyCourts } from '@/components/FindNearbyCourts';
+import { chatUrlForUser, sendChallengeRequest } from '@/lib/nearby';
 
 const G = {
   dark: '#0f1f0f', sidebar: '#152515', card: '#1a3020', cardBorder: '#2d5a35',
@@ -51,6 +54,25 @@ export const AdminDashboard: React.FC = () => {
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+
+  const handleMessageClick = (personId: string, personName: string) => {
+    router.push(chatUrlForUser(personId, personName));
+  };
+
+  const handleChallenge = async (personId: string, personName: string) => {
+    if (!user?.id) {
+      setStatusMessage('Please sign in to send a challenge.');
+      return;
+    }
+
+    try {
+      await sendChallengeRequest(user.id, personId);
+      setStatusMessage(`Challenge request sent to ${personName}.`);
+    } catch (error: any) {
+      setStatusMessage(error?.message || 'Failed to send challenge request.');
+    }
+  };
 
   const handleLogout = async () => {
     try {
@@ -203,6 +225,19 @@ export const AdminDashboard: React.FC = () => {
           ))}
         </div>
 
+        {activeNav === 'Home' && (
+          <>
+            {statusMessage && (
+              <div style={{ background: '#122212', border: `1px solid ${G.lime}`, borderRadius: 10, padding: 12, marginBottom: 16, color: G.lime }}>
+                {statusMessage}
+              </div>
+            )}
+            <div className="grid gap-4 lg:grid-cols-2 mb-5">
+              <FindNearbyPeople onMessageClick={handleMessageClick} onChallengeClick={handleChallenge} />
+              <FindNearbyCourts />
+            </div>
+          </>
+        )}
         {activeNav === 'Platform' && (
           <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 12 }}>
             <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 14 }}>

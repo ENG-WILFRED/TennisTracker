@@ -1,9 +1,5 @@
 import { NextResponse, NextRequest } from 'next/server';
-import { PrismaClient } from '@/generated/prisma';
-
-const globalForPrisma = global as unknown as { prisma: PrismaClient };
-const prisma = globalForPrisma.prisma || new PrismaClient();
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+import prisma from '@/lib/prisma';
 
 /**
  * Get or create a 1-on-1 chat room between two players
@@ -166,7 +162,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Transform messages to expected format
-    const messages = room.messages.map(msg => ({
+    const messages = room.messages.map((msg: typeof room.messages[number]) => ({
       id: msg.id,
       content: msg.content,
       createdAt: msg.createdAt,
@@ -176,7 +172,7 @@ export async function GET(req: NextRequest) {
     }));
 
     // Get online status of participants
-    const participants = room.participants.map(p => ({
+    const participants = room.participants.map((p: typeof room.participants[number]) => ({
       playerId: p.playerId,
       isOnline: p.isOnline,
       lastSeen: p.lastSeen,

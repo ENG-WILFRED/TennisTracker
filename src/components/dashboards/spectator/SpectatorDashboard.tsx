@@ -5,6 +5,9 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useRole } from '@/context/RoleContext';
 import { authenticatedFetch } from '@/lib/authenticatedFetch';
+import { chatUrlForUser, sendChallengeRequest } from '@/lib/nearby';
+import { FindNearbyPeople } from '@/components/FindNearbyPeople';
+import { FindNearbyCourts } from '@/components/FindNearbyCourts';
 import { Badge, ActionBtn, SectionCard, G } from './ui';
 import {
   Match,
@@ -358,6 +361,24 @@ export const SpectatorDashboard: React.FC = () => {
     router.push(`/organization/${orgId}`);
   };
 
+  const handleMessageClick = (personId: string, personName: string) => {
+    router.push(chatUrlForUser(personId, personName));
+  };
+
+  const handleChallenge = async (personId: string, personName: string) => {
+    if (!user?.id) {
+      window.alert('Please sign in to send a challenge.');
+      return;
+    }
+
+    try {
+      await sendChallengeRequest(user.id, personId);
+      window.alert(`Challenge request sent to ${personName}.`);
+    } catch (error: any) {
+      window.alert(error?.message || 'Failed to send challenge request.');
+    }
+  };
+
   const handleLogout = async () => {
     try {
       await logout();
@@ -475,8 +496,8 @@ export const SpectatorDashboard: React.FC = () => {
             matches={matches}
             players={players}
             selectedOrg={selectedOrg}
-            setActiveSection={handleSectionChange}
-          />
+            setActiveSection={handleSectionChange}            onMessageClick={handleMessageClick}
+            onChallengeClick={handleChallenge}          />
         );
     }
   };

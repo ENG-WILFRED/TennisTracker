@@ -1,6 +1,5 @@
 "use server";
-import { PrismaClient } from "../../generated/prisma";
-const prisma = new PrismaClient();
+import prisma from '@/lib/prisma';
 export async function getAvailableCoaches() {
   const list = await prisma.staff.findMany({
     where: { role: { contains: 'Coach' }, employedById: null },
@@ -9,7 +8,14 @@ export async function getAvailableCoaches() {
   });
 
   // map to simpler shape used by UI
-  return list.map((s) => ({
+  return list.map((s: {
+    userId: string;
+    role: string;
+    expertise: string | null;
+    employedById: string | null;
+    contact: string | null;
+    user: { firstName: string; lastName: string };
+  }) => ({
     id: s.userId,
     name: `${s.user.firstName} ${s.user.lastName}`,
     role: s.role,

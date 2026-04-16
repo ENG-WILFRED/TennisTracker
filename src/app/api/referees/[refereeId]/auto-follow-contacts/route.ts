@@ -243,7 +243,7 @@ export async function GET(
     });
 
     // Get user details for followed accounts
-    const followingUserIds = follows.map((f) => f.followingId);
+    const followingUserIds = follows.map((f: typeof follows[number]) => f.followingId);
     let followingUsers: any[] = [];
     
     if (followingUserIds.length > 0) {

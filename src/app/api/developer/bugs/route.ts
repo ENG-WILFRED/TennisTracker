@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@/generated/prisma'
-
-const prisma = new PrismaClient()
+import prisma from '@/lib/prisma';
 
 export async function GET(request: NextRequest) {
   try {
@@ -31,7 +29,7 @@ export async function GET(request: NextRequest) {
     })
 
     // Transform for dashboard display
-    const transformed = bugReports.map(bug => ({
+    const transformed = bugReports.map((bug: typeof bugReports[number]) => ({
       id: bug.id,
       title: bug.title,
       severity: bug.severity,

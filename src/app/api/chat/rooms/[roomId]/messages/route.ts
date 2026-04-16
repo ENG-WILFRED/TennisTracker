@@ -68,8 +68,8 @@ export async function GET(
     let readMessageIds: string[] = [];
     if (me && me.userId) {
       readMessageIds = messagesToReturn
-        .filter(msg => msg.playerId !== me.userId && !msg.readAt)
-        .map(msg => msg.id);
+        .filter((msg: typeof messagesToReturn[number]) => msg.playerId !== me.userId && !msg.readAt)
+        .map((msg: typeof messagesToReturn[number]) => msg.id);
 
       if (readMessageIds.length > 0) {
         await prisma.chatMessage.updateMany({

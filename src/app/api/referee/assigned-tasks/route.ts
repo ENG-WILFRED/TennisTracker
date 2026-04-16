@@ -92,7 +92,7 @@ export async function GET(request: Request) {
     ]);
 
     // Format typed tasks
-    const formattedTasks = typedTasks.map(task => ({
+    const formattedTasks = typedTasks.map((task: typeof typedTasks[number]) => ({
       id: task.id,
       title: task.template?.name || 'Task',
       description: task.notes,

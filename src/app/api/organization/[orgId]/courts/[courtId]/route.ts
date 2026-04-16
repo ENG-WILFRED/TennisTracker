@@ -79,12 +79,12 @@ export async function GET(
       },
     });
 
-    const confirmedBookings = allBookings.filter(b => b.status === 'confirmed').length;
-    const cancelledBookings = allBookings.filter(b => b.status === 'cancelled').length;
-    const totalRevenue = allBookings.reduce((sum, b) => sum + (b.price || 0), 0);
+    const confirmedBookings = allBookings.filter((b: typeof allBookings[number]) => b.status === 'confirmed').length;
+    const cancelledBookings = allBookings.filter((b: typeof allBookings[number]) => b.status === 'cancelled').length;
+    const totalRevenue = allBookings.reduce((sum: number, b: typeof allBookings[number]) => sum + (b.price || 0), 0);
     
     const avgRating = comments.length > 0 
-      ? comments.reduce((sum, c) => sum + (c.rating || 5), 0) / comments.length 
+      ? comments.reduce((sum: number, c: typeof comments[number]) => sum + (c.rating || 5), 0) / comments.length 
       : undefined;
 
     const stats = {
@@ -94,7 +94,7 @@ export async function GET(
       revenue: totalRevenue,
       averageRating: avgRating,
       complaintCount: complaints.length,
-      resolvedComplaints: complaints.filter(c => c.status === 'resolved').length,
+      resolvedComplaints: complaints.filter((c: typeof complaints[number]) => c.status === 'resolved').length,
     };
 
     return NextResponse.json({ court, bookings, comments, complaints, stats });

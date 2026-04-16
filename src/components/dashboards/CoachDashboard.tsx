@@ -11,6 +11,9 @@ import CalendarView from './coach/CalendarView';
 import MessagingPanel from '@/components/dashboards/MessagingPanel';
 import CommunityPanel from './coach/CommunityPanel';
 import AssignedTasksWidget from '@/components/AssignedTasksWidget';
+import { FindNearbyPeople } from '@/components/FindNearbyPeople';
+import { FindNearbyCourts } from '@/components/FindNearbyCourts';
+import { chatUrlForUser, sendChallengeRequest } from '@/lib/nearby';
 
 const G = {
   dark: '#0a180a',
@@ -112,6 +115,26 @@ export const CoachDashboard: React.FC = () => {
       params.delete('tab');
     }
     router.push(`?${params.toString()}`, { scroll: false });
+  };
+
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+
+  const handleMessageClick = (personId: string, personName: string) => {
+    router.push(chatUrlForUser(personId, personName));
+  };
+
+  const handleNearbyPlayerChallenge = async (personId: string, personName: string) => {
+    if (!user?.id) {
+      setStatusMessage('Please sign in to send a challenge.');
+      return;
+    }
+
+    try {
+      await sendChallengeRequest(user.id, personId);
+      setStatusMessage(`Challenge request sent to ${personName}.`);
+    } catch (error: any) {
+      setStatusMessage(error?.message || 'Failed to send challenge request.');
+    }
   };
 
   // Read profile tab from URL, default to 'personal'
@@ -637,6 +660,17 @@ export const CoachDashboard: React.FC = () => {
                 <BtnPrimary style={{ flex: 1 }} onClick={() => handleNavigation('Calendar')}>📆 View Calendar</BtnPrimary>
                 <BtnSecondary style={{ flex: 1 }} onClick={() => handleNavigation('Sessions')}>➕ Add Activity</BtnSecondary>
               </div>
+            </div>
+
+            {statusMessage && (
+              <div style={{ background: '#122212', border: `1px solid ${G.lime}`, borderRadius: 10, padding: 12, marginBottom: 16, color: G.lime2 }}>
+                {statusMessage}
+              </div>
+            )}
+
+            <div className="grid gap-4 xl:grid-cols-2 mb-6">
+              <FindNearbyPeople onMessageClick={handleMessageClick} onChallengeClick={handleNearbyPlayerChallenge} />
+              <FindNearbyCourts />
             </div>
 
             {/* ── ANALYTICS SECTION ── */}

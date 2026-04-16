@@ -56,7 +56,7 @@ export async function GET(
     });
 
     // Format response
-    const coaches: CachedCoach[] = staff.map((s) => ({
+    const coaches: CachedCoach[] = staff.map((s: typeof staff[number]) => ({
       id: s.userId,
       userId: s.userId,
       name: `${s.user.firstName || ""} ${s.user.lastName || ""}`.trim(),

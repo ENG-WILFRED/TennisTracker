@@ -31,9 +31,9 @@ class RefereeTaskOrchestrator {
     });
 
     // Get referee assignment count
-    const assignmentCount = tasks.filter(t => t.status === TaskStatus.ASSIGNED).length;
-    const activeCount = tasks.filter(t => t.status === TaskStatus.IN_PROGRESS).length;
-    const completedCount = tasks.filter(t => t.status === TaskStatus.COMPLETED).length;
+    const assignmentCount = tasks.filter((t: typeof tasks[number]) => t.status === TaskStatus.ASSIGNED).length;
+    const activeCount = tasks.filter((t: typeof tasks[number]) => t.status === TaskStatus.IN_PROGRESS).length;
+    const completedCount = tasks.filter((t: typeof tasks[number]) => t.status === TaskStatus.COMPLETED).length;
 
     // Get pending match reports
     const pendingMatches = await prisma.match.findMany({
@@ -55,9 +55,9 @@ class RefereeTaskOrchestrator {
         completed: completedCount,
       },
       tasks: {
-        assigned: tasks.filter(t => t.status === TaskStatus.ASSIGNED),
-        active: tasks.filter(t => t.status === TaskStatus.IN_PROGRESS),
-        completed: tasks.filter(t => t.status === TaskStatus.COMPLETED),
+        assigned: tasks.filter((t: typeof tasks[number]) => t.status === TaskStatus.ASSIGNED),
+        active: tasks.filter((t: typeof tasks[number]) => t.status === TaskStatus.IN_PROGRESS),
+        completed: tasks.filter((t: typeof tasks[number]) => t.status === TaskStatus.COMPLETED),
       },
       pendingReports: {
         count: pendingMatches.length,
@@ -103,7 +103,7 @@ class RefereeTaskOrchestrator {
       orderBy: { round: "asc" },
     });
 
-    const reportsSubmitted = matches.filter(m => m.report).length;
+    const reportsSubmitted = matches.filter((m: typeof matches[number]) => m.report).length;
     const reportsPending = matches.length - reportsSubmitted;
 
     return {

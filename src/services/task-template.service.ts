@@ -95,7 +95,7 @@ class TaskTemplateService {
       orderBy: { createdAt: "desc" },
     });
 
-    return templates.map((t) => this.formatTemplate(t));
+    return templates.map((t: typeof templates[number]) => this.formatTemplate(t));
   }
 
   /**
@@ -116,7 +116,7 @@ class TaskTemplateService {
       orderBy: { createdAt: "desc" },
     });
 
-    return templates.map((t) => this.formatTemplate(t));
+    return templates.map((t: typeof templates[number]) => this.formatTemplate(t));
   }
 
   /**
@@ -136,7 +136,7 @@ class TaskTemplateService {
       },
     });
 
-    return templates.map((t) => this.formatTemplate(t));
+    return templates.map((t: typeof templates[number]) => this.formatTemplate(t));
   }
 
   /**

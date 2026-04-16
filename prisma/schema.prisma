@@ -21,6 +21,10 @@ model User {
   dateOfBirth  DateTime?
   nationality  String?
   bio          String?
+  latitude     Float?
+  longitude    Float?
+  city         String?
+  country      String      @default("Kenya")
   acceptedTermsAt DateTime?
   termsDeclineCount Int @default(0)
   createdAt    DateTime   @default(now())
@@ -39,6 +43,8 @@ model User {
   bugReports   BugReport[]
 
   @@index([createdAt])
+  @@index([latitude, longitude])
+  @@index([city])
 }
 
 model Membership {
@@ -59,6 +65,28 @@ model Membership {
   @@index([userId])
   @@index([orgId])
   @@index([status])
+}
+
+model MembershipInvitation {
+  id          String      @id @default(uuid())
+  orgId       String
+  email       String
+  role        String      // 'player', 'coach', 'referee', 'staff', 'admin', 'finance_officer'
+  status      String      @default("pending") // 'pending', 'accepted', 'rejected'
+  invitedBy   String?
+  invitedAt   DateTime    @default(now())
+  expiresAt   DateTime?
+  acceptedAt  DateTime?
+  acceptedBy  String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, email, role])
+  @@index([orgId])
+  @@index([email])
+  @@index([status])
+  @@index([expiresAt])
 }
 
 model Player {
@@ -218,6 +246,7 @@ model Organization {
   tournamentEngScore      Int                      @default(0)
   verifiedBadge           Boolean                  @default(false)
   memberships             Membership[]
+  invitations             MembershipInvitation[]
   announcements           ClubAnnouncement[]
   tournamentAnnouncements TournamentAnnouncement[] @relation("tournamentAnnouncements")
   events                  ClubEvent[]

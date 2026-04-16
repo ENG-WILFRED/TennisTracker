@@ -59,8 +59,8 @@ export async function GET(request: NextRequest) {
 
     // Format tournaments with computed status
     const formattedTournaments = tournaments
-      .filter((t) => t.eventType === 'tournament')
-      .map((tournament) => {
+      .filter((t: typeof tournaments[number]) => t.eventType === 'tournament')
+      .map((tournament: typeof tournaments[number]) => {
         let tournamentStatus = 'upcoming';
 
         if (tournament.endDate && tournament.endDate < now) {
@@ -84,14 +84,14 @@ export async function GET(request: NextRequest) {
           maxParticipants: tournament.registrationCap,
           format: tournament.bracket?.bracketType || 'single_elimination',
           matchesTotal: tournament.matches.length,
-          matchesCompleted: tournament.matches.filter((m) => m.status === 'completed').length,
+          matchesCompleted: tournament.matches.filter((m: typeof tournament.matches[number]) => m.status === 'completed').length,
           organization: tournament.organization,
           rules: tournament.rules,
           instructions: tournament.instructions,
           eatingAreas: tournament.eatingAreas,
           sleepingAreas: tournament.sleepingAreas,
           courtInfo: tournament.courtInfo,
-          amenities: tournament.amenities.map(amenity => ({
+          amenities: tournament.amenities.map((amenity: typeof tournament.amenities[number]) => ({
             id: amenity.id,
             name: amenity.name,
             type: amenity.type,

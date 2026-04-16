@@ -1,9 +1,5 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@/generated/prisma';
-
-const globalForPrisma = global as unknown as { prisma: PrismaClient };
-const prisma = globalForPrisma.prisma || new PrismaClient();
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+import prisma from '@/lib/prisma';
 
 export async function GET() {
   try {
@@ -20,7 +16,7 @@ export async function GET() {
       orderBy: { user: { firstName: 'asc' } },
     });
 
-    const data = coaches.map((c) => ({
+    const data = coaches.map((c: typeof coaches[number]) => ({
       id: c.userId,
       name: `${c.user.firstName} ${c.user.lastName}`,
       role: c.role,

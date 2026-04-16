@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import { authenticatedFetch } from '@/lib/authenticatedFetch';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import ConversationsSidebar from '@/components/chat/ConversationsSidebar';
 import ChatWindow from '@/components/chat/ChatWindow';
 
 export default function ChatPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { playerId, isLoading } = useAuth();
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [selectedContactName, setSelectedContactName] = useState<string | null>(null);
@@ -23,6 +24,18 @@ export default function ChatPage() {
       router.push('/login');
     }
   }, [playerId, isLoading, router]);
+
+  useEffect(() => {
+    const targetId = searchParams.get('targetId');
+    const targetName = searchParams.get('targetName');
+    if (targetId) {
+      setSelectedContactUserId(targetId);
+      setSelectedContactName(targetName || 'New Contact');
+      if (!isMobile) {
+        setSidebarOpen(true);
+      }
+    }
+  }, [searchParams, isMobile]);
 
   // Mobile detection
   useEffect(() => {

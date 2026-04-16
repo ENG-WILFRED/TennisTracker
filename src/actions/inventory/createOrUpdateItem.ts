@@ -1,6 +1,5 @@
 "use server";
-import { PrismaClient } from "../../generated/prisma";
-const prisma = new PrismaClient();
+import prisma from '@/lib/prisma';
 export async function createOrUpdateItem(actorId: string | null, data: { id?: string; name: string; count: number; condition?: string }) {
   if (!actorId) throw new Error('Unauthorized');
   const actor = await prisma.player.findUnique({ where: { userId: actorId } });

@@ -1,7 +1,5 @@
-import { PrismaClient } from '@/generated/prisma';
+import prisma from '@/lib/prisma';
 import { cacheResponse } from '@/lib/apiCache';
-
-const prisma = new PrismaClient();
 
 export async function GET() {
   try {
@@ -11,7 +9,7 @@ export async function GET() {
     });
 
     const data = await cacheResponse('referees:list', async () => {
-      return referees.map(r => ({
+      return referees.map((r: typeof referees[number]) => ({
         id: r.userId,
         firstName: r.user.firstName,
         lastName: r.user.lastName,

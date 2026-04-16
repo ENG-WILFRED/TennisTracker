@@ -110,7 +110,7 @@ async function main() {
 
           // Create session bookings
           const bookingCount = sessionType === '1-on-1' ? 1 : Math.floor(Math.random() * maxParticipants) + 1;
-          const bookingPlayers = [player, ...selectedPlayers.filter(p => p.userId !== player.userId)].slice(0, bookingCount);
+          const bookingPlayers = [player, ...selectedPlayers.filter((p: any) => p.userId !== player.userId)].slice(0, bookingCount);
 
           for (const bookingPlayer of bookingPlayers) {
             const booking = await prisma.sessionBooking.create({

@@ -19,7 +19,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ orgI
     });
 
     // Transform to include only needed fields
-    const formattedEvents = events.map(e => ({
+    const formattedEvents = events.map((e: typeof events[number]) => ({
       id: e.id,
       name: e.name,
       description: e.description,

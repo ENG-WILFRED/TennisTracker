@@ -1,9 +1,5 @@
 import { NextResponse, NextRequest } from 'next/server';
-import { PrismaClient } from '@/generated/prisma';
-
-const globalForPrisma = global as unknown as { prisma: PrismaClient };
-const prisma = globalForPrisma.prisma || new PrismaClient();
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+import prisma from '@/lib/prisma';
 
 export async function GET(
   req: NextRequest,
@@ -46,9 +42,9 @@ export async function GET(
       role: coach.role || 'Coach',
       expertise: coach.expertise || 'General Coaching',
       bio: coach.bio || '',
-      specializations: coach.specializations.map((s) => s.name),
-      certifications: coach.certifications.map((c) => ({ name: c.name, issuer: c.issuer || '' })),
-      availability: coach.availability.map((a) => ({ day: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][a.dayOfWeek], time: `${a.startTime} - ${a.endTime}` })),
+      specializations: coach.specializations.map((s: typeof coach.specializations[number]) => s.name),
+      certifications: coach.certifications.map((c: typeof coach.certifications[number]) => ({ name: c.name, issuer: c.issuer || '' })),
+      availability: coach.availability.map((a: typeof coach.availability[number]) => ({ day: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][a.dayOfWeek], time: `${a.startTime} - ${a.endTime}` })),
       rating: coach.stats?.avgRating || 4.8,
       totalSessions: coach.stats?.totalSessions || 0,
       completedSessions: coach.stats?.completedSessions || 0,

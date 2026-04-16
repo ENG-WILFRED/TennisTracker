@@ -18,7 +18,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ orgI
     });
 
     console.log(`Organization members queried for orgId=${orgId}: ${members.length} members`);
-    console.log('Member IDs:', members.map((m) => m.id));
+    console.log('Member IDs:', members.map((m: typeof members[number]) => m.id));
 
     return new Response(JSON.stringify(members), {
       status: 200,

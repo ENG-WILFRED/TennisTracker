@@ -2,6 +2,8 @@
 
 import React, { useState } from 'react';
 import { Match, Player, Organization, MatchFilter, MembershipApplication, MEMBERSHIP_TIERS, POSITIONS } from './types';
+import { FindNearbyPeople } from '@/components/FindNearbyPeople';
+import { FindNearbyCourts } from '@/components/FindNearbyCourts';
 import MessagingPanel from '@/components/dashboards/MessagingPanel';
 import { Badge, SectionCard, StatPill, ActionBtn, FormField, inputStyle } from './ui';
 
@@ -49,6 +51,8 @@ export function HomeSection({
   players,
   selectedOrg,
   setActiveSection,
+  onMessageClick,
+  onChallengeClick,
 }: {
   user: { firstName?: string; lastName?: string; email?: string; photo?: string | null } | null;
   memberships: Array<{ orgId: string; orgName: string; role: string }>;
@@ -58,6 +62,8 @@ export function HomeSection({
   players: Player[];
   selectedOrg: Organization | null;
   setActiveSection: (s: string) => void;
+  onMessageClick: (personId: string, personName: string) => void;
+  onChallengeClick: (personId: string, personName: string) => void;
 }) {
   const profileName = `${user?.firstName || 'Spectator'} ${user?.lastName || ''}`.trim();
   const registeredOrgs = memberships.filter((membership) => membership.orgId && membership.orgName !== 'Platform');
@@ -147,6 +153,11 @@ export function HomeSection({
             )}
           </SectionCard>
         </div>
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-2">
+        <FindNearbyPeople onMessageClick={onMessageClick} onChallengeClick={onChallengeClick} />
+        <FindNearbyCourts />
       </div>
 
     </div>

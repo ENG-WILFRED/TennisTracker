@@ -1,9 +1,5 @@
 import { NextResponse, NextRequest } from 'next/server';
-import { PrismaClient } from '@/generated/prisma';
-
-const globalForPrisma = global as unknown as { prisma: PrismaClient };
-const prisma = globalForPrisma.prisma || new PrismaClient();
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+import prisma from '@/lib/prisma';
 
 export async function GET(req: NextRequest) {
   try {
@@ -39,7 +35,7 @@ export async function GET(req: NextRequest) {
 
     if (relationships.length > 0) {
       console.log('   Coaches:');
-      relationships.forEach((rel, idx) => {
+      relationships.forEach((rel: typeof relationships[number], idx: number) => {
         console.log(`     ${idx + 1}. ${rel.coach.user.firstName} ${rel.coach.user.lastName}`);
       });
     } else {

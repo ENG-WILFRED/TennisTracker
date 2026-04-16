@@ -49,7 +49,7 @@ export async function GET(
       ]
     });
 
-    const formattedTasks = tasks.map(task => ({
+    const formattedTasks = tasks.map((task: typeof tasks[number]) => ({
       id: task.id,
       eventId: task.eventId,
       serviceId: task.serviceId,

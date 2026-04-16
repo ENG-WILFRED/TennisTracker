@@ -1,7 +1,5 @@
-import { PrismaClient } from "@/generated/prisma";
+import prisma from '@/lib/prisma';
 import { NextRequest, NextResponse } from "next/server";
-
-const prisma = new PrismaClient();
 
 /**
  * GET /api/player/organization
@@ -34,7 +32,7 @@ export async function GET(request: NextRequest) {
     const organizationIds = new Set<string>();
     
     // Add club membership organization IDs
-    clubMemberships.forEach((member) => {
+    clubMemberships.forEach((member: typeof clubMemberships[number]) => {
       organizationIds.add(member.organizationId);
     });
 

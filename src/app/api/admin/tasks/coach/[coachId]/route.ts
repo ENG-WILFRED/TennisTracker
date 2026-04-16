@@ -122,7 +122,7 @@ export async function GET(
     console.log(`✅ Found ${typedTasks.length} tasks for coach ${coachId}`);
 
     // Format tasks
-    const formattedTasks = typedTasks.map(task => ({
+    const formattedTasks = typedTasks.map((task: typeof typedTasks[number]) => ({
       id: task.id,
       title: task.template?.name || 'Task',
       description: task.notes,

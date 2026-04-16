@@ -6,6 +6,9 @@ import { useAuth } from '@/context/AuthContext';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { LoadingState } from '@/components/LoadingState';
+import { chatUrlForUser, sendChallengeRequest } from '@/lib/nearby';
+import { FindNearbyPeople } from '@/components/FindNearbyPeople';
+import { FindNearbyCourts } from '@/components/FindNearbyCourts';
 import EditProfileModal from '@/app/dashboard/components/EditProfileModal';
 import OrganizationOverviewSection from '@/components/organization/dashboard-sections/OrganizationOverviewSection';
 import OrganizationMembersSection from '@/components/organization/dashboard-sections/OrganizationMembersSection';
@@ -245,6 +248,24 @@ export const OrganizationDashboard: React.FC = () => {
     }
   };
 
+  const handleMessageClick = (personId: string, personName: string) => {
+    router.push(chatUrlForUser(personId, personName));
+  };
+
+  const handleChallenge = async (personId: string, personName: string) => {
+    if (!user?.id) {
+      toast.error('Please sign in to send a challenge.');
+      return;
+    }
+
+    try {
+      await sendChallengeRequest(user.id, personId);
+      toast.success(`Challenge request sent to ${personName}.`);
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to send challenge request.');
+    }
+  };
+
   const handleLogout = async () => {
     try {
       const storedTokens = getStoredTokens();
@@ -480,18 +501,24 @@ export const OrganizationDashboard: React.FC = () => {
 
         {/* Conditional Content Rendering */}
         {activeNav === 'Overview' && (
-          <OrganizationOverviewSection
-            kpiData={kpiData}
-            activeTab={activeTab}
-            setActiveTab={handleTabChange}
-            tabs={tabs}
-            revenueTrend={revenueTrend}
-            scheduleItems={scheduleItems}
-            staffRoles={staffRoles}
-            announcements={announcements}
-            pendingTasks={pendingTasks}
-            systemStatus={systemStatus}
-          />
+          <>
+            <div className="grid gap-4 lg:grid-cols-2 mb-5">
+              <FindNearbyPeople onMessageClick={handleMessageClick} onChallengeClick={handleChallenge} />
+              <FindNearbyCourts />
+            </div>
+            <OrganizationOverviewSection
+              kpiData={kpiData}
+              activeTab={activeTab}
+              setActiveTab={handleTabChange}
+              tabs={tabs}
+              revenueTrend={revenueTrend}
+              scheduleItems={scheduleItems}
+              staffRoles={staffRoles}
+              announcements={announcements}
+              pendingTasks={pendingTasks}
+              systemStatus={systemStatus}
+            />
+          </>
         )}
 
         {activeNav === 'Members' && (

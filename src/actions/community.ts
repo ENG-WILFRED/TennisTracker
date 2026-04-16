@@ -1,8 +1,28 @@
 "use server";
 
-import { PrismaClient } from "@/generated/prisma";
+import prisma from '@/lib/prisma';
 
-const prisma = new PrismaClient();
+type UserFollowerWithFollower = {
+  follower: {
+    user: {
+      id: string;
+      firstName: string;
+      lastName: string;
+      photo: string | null;
+    };
+  };
+};
+
+type UserFollowerWithFollowing = {
+  following: {
+    user: {
+      id: string;
+      firstName: string;
+      lastName: string;
+      photo: string | null;
+    };
+  };
+};
 
 /**
  * Create a new community post
@@ -146,7 +166,7 @@ export async function getCommunityFeed(
         select: { followingId: true },
       });
 
-      const followingIds = userFollowing.map((f) => f.followingId);
+      const followingIds = userFollowing.map((f: any) => f.followingId);
       followingIds.push(userId); // Include own posts
 
       whereCondition = {
@@ -510,42 +530,41 @@ export async function unfollowUser(followerId: string, followingId: string) {
  */
 export async function getUserFollows(userId: string) {
   try {
-    const [followers, following] = await Promise.all([
-      prisma.userFollower.findMany({
-        where: { followingId: userId },
-        include: {
-          follower: {
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  firstName: true,
-                  lastName: true,
-                  photo: true,
-                },
+    const followers = await prisma.userFollower.findMany({
+      where: { followingId: userId },
+      include: {
+        follower: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                photo: true,
               },
             },
           },
         },
-      }),
-      prisma.userFollower.findMany({
-        where: { followerId: userId },
-        include: {
-          following: {
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  firstName: true,
-                  lastName: true,
-                  photo: true,
-                },
+      },
+    }) as UserFollowerWithFollower[];
+
+    const following = await prisma.userFollower.findMany({
+      where: { followerId: userId },
+      include: {
+        following: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                photo: true,
               },
             },
           },
         },
-      }),
-    ]);
+      },
+    }) as UserFollowerWithFollowing[];
 
     return {
       followers: followers.map((f) => f.follower),

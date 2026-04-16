@@ -1,9 +1,5 @@
 import { NextResponse, NextRequest } from 'next/server';
-import { PrismaClient } from '@/generated/prisma';
-
-const globalForPrisma = global as unknown as { prisma: PrismaClient };
-const prisma = globalForPrisma.prisma || new PrismaClient();
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+import prisma from '@/lib/prisma';
 
 /**
  * GET /api/messaging/contacts?userId=xxx&roles=coach,player,referee&userType=coach|player|referee
@@ -65,7 +61,7 @@ export async function GET(req: NextRequest) {
       isOnline: boolean;
     };
 
-    const usersWithRoles: UserWithRole[] = allUsers.map((user) => {
+    const usersWithRoles: UserWithRole[] = allUsers.map((user: typeof allUsers[number]) => {
       const roles: Set<string> = new Set();
       if (user.player) roles.add('player');
       if (user.staff) roles.add('coach');
@@ -123,7 +119,7 @@ export async function GET(req: NextRequest) {
 
       for (const room of chatRooms) {
         // Find the other participant ID (not the current user)
-        const otherUserId = room.participants.find((p) => p.playerId !== userId)?.playerId;
+        const otherUserId = room.participants.find((p: typeof room.participants[number]) => p.playerId !== userId)?.playerId;
         if (!otherUserId) continue;
 
         const lastMessage = room.messages[0];
@@ -168,8 +164,8 @@ export async function GET(req: NextRequest) {
         orderBy: { lastSeen: 'desc' },
       });
 
-      const statusMap = new Map(latestStatuses.map(s => [s.playerId, s.isOnline]));
-      filteredUsers = filteredUsers.map(user => ({
+      const statusMap = new Map<string, boolean>(latestStatuses.map((s: typeof latestStatuses[number]) => [s.playerId, s.isOnline] as [string, boolean]));
+      filteredUsers = filteredUsers.map((user: typeof filteredUsers[number]) => ({
         ...user,
         isOnline: statusMap.get(user.id) ?? false,
       }));

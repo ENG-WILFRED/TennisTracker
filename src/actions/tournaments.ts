@@ -86,7 +86,7 @@ export async function getTournamentStats(tournamentId: string) {
     }
 
     const totalMatches = tournament.matches.length;
-    const matchesCompleted = tournament.matches.filter((m) => m.status === 'completed').length;
+    const matchesCompleted = tournament.matches.filter((m: { status: string }) => m.status === 'completed').length;
 
     // Determine tournament status
     let status = 'upcoming';
@@ -103,8 +103,8 @@ export async function getTournamentStats(tournamentId: string) {
 
     // Find winner (last completed match with a winner)
     const completedMatches = tournament.matches
-      .filter((m) => m.status === 'completed' && m.winnerId)
-      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+      .filter((m: { status: string; winnerId: string | null; updatedAt: Date }) => m.status === 'completed' && m.winnerId)
+      .sort((a: { updatedAt: Date }, b: { updatedAt: Date }) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 
     let winner = null;
     if (completedMatches.length > 0) {
@@ -248,7 +248,19 @@ export async function getTournamentLeaderboard(tournamentId: string) {
     // Calculate standings
     const standings = new Map<string, any>();
 
-    tournament.registrations.forEach((reg) => {
+    tournament.registrations.forEach((reg: {
+      memberId: string;
+      member: {
+        player: {
+          user: {
+            firstName: string;
+            lastName: string;
+            email: string;
+            photo: string | null;
+          };
+        };
+      };
+    }) => {
       standings.set(reg.memberId, {
         id: reg.memberId,
         name: `${reg.member.player.user.firstName} ${reg.member.player.user.lastName}`,
@@ -262,8 +274,12 @@ export async function getTournamentLeaderboard(tournamentId: string) {
 
     // Count matches
     tournament.matches
-      .filter((m) => m.status === 'completed')
-      .forEach((match) => {
+      .filter((m: { status: string }) => m.status === 'completed')
+      .forEach((match: {
+        playerAId: string | null;
+        playerBId: string | null;
+        winnerId: string | null;
+      }) => {
         if (match.playerAId && standings.has(match.playerAId)) {
           const playerA = standings.get(match.playerAId);
           playerA.matchesPlayed += 1;

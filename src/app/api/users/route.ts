@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Map to include role
-    const usersWithRole = users.map(user => ({
+    const usersWithRole = users.map((user: typeof users[number]) => ({
       id: user.id,
       firstName: user.firstName,
       lastName: user.lastName,

@@ -1,9 +1,5 @@
 import { NextResponse, NextRequest } from 'next/server';
-import { PrismaClient } from '@/generated/prisma';
-
-const globalForPrisma = global as unknown as { prisma: PrismaClient };
-const prisma = globalForPrisma.prisma || new PrismaClient();
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+import prisma from '@/lib/prisma';
 
 export async function GET(
   req: NextRequest,
@@ -61,7 +57,7 @@ export async function GET(
       orderBy: { startTime: 'asc' },
     });
 
-    const schedule = sessions.map((s) => ({
+    const schedule = sessions.map((s: typeof sessions[number]) => ({
       id: s.id,
       time: s.startTime.toISOString().split('T')[1].substring(0, 5), // HH:MM
       participantName: s.player

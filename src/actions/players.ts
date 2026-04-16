@@ -1,9 +1,5 @@
 "use server";
-import { PrismaClient } from "@/generated/prisma";
-
-const globalForPrisma = global as unknown as { prisma: PrismaClient };
-const prisma = globalForPrisma.prisma || new PrismaClient();
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+import prisma from '@/lib/prisma';
 
 export async function getTopPlayers(limit: number = 4) {
   try {
@@ -16,7 +12,17 @@ export async function getTopPlayers(limit: number = 4) {
       take: limit,
     });
 
-    return players.map((p) => ({
+    return players.map((p: {
+      userId: string;
+      matchesWon: number;
+      matchesPlayed: number;
+      user: {
+        firstName: string;
+        lastName: string;
+        username: string;
+        photo: string | null;
+      };
+    }) => ({
       id: p.userId,
       name: `${p.user.firstName} ${p.user.lastName}`,
       username: p.user.username,

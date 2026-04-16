@@ -74,7 +74,7 @@ export class OrganizationActivityTracker {
         take: limit,
       });
 
-      return activities.map(activity => ({
+      return activities.map((activity: typeof activities[number]) => ({
         id: activity.id,
         action: activity.action,
         details: activity.details,

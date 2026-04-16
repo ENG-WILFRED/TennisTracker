@@ -1,9 +1,5 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@/generated/prisma';
-
-const globalForPrisma = global as unknown as { prisma: PrismaClient };
-const prisma = globalForPrisma.prisma || new PrismaClient();
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+import prisma from '@/lib/prisma';
 
 export async function GET(request: Request) {
   try {
@@ -43,7 +39,7 @@ export async function GET(request: Request) {
       }),
     ]);
 
-    const regularData = regularMatches.map((m) => ({
+    const regularData = regularMatches.map((m: typeof regularMatches[number]) => ({
       id: m.id,
       date: m.createdAt,
       playerA: m.playerA
@@ -57,7 +53,7 @@ export async function GET(request: Request) {
       winner: m.winner ? { id: m.winner.user.id, name: `${m.winner.user.firstName} ${m.winner.user.lastName}` } : null,
     }));
 
-    const tournamentData = tournamentMatches.map((m) => ({
+    const tournamentData = tournamentMatches.map((m: typeof tournamentMatches[number]) => ({
       id: m.id,
       date: m.createdAt,
       scheduledTime: m.scheduledTime,

@@ -13,6 +13,9 @@ import { StatsView } from '@/components/stats/StatsView';
 import { SettingsView } from '@/components/settings/SettingsView';
 import { DashboardHome, ProfileSnapshot } from '@/components/dashboards/DashboardHome';
 import MessagingPanel from '@/components/dashboards/MessagingPanel';
+import { FindNearbyPeople } from '@/components/FindNearbyPeople';
+import { FindNearbyCourts } from '@/components/FindNearbyCourts';
+import { chatUrlForUser, sendChallengeRequest } from '@/lib/nearby';
 
 const G = {
   dark: '#0f1f0f', sidebar: '#152515', card: '#1a3020', cardBorder: '#2d5a35',
@@ -131,6 +134,21 @@ export const PlayerDashboard: React.FC = () => {
     } finally {
       logout();
       router.push('/login');
+    }
+  };
+
+  const handleChallenge = async (personId: string, personName: string) => {
+    if (!user?.id) {
+      alert('Please sign in to challenge a player.');
+      return;
+    }
+
+    try {
+      const result = await sendChallengeRequest(user.id, personId);
+      alert(result?.message || `Challenge sent to ${personName}.`);
+    } catch (error) {
+      console.error('Challenge error:', error);
+      alert(error instanceof Error ? error.message : 'Failed to send challenge.');
     }
   };
 
@@ -291,7 +309,16 @@ export const PlayerDashboard: React.FC = () => {
           ) : showSettings ? (
             <SettingsView isEmbedded={true} />
           ) : (
-            <DashboardHome playerData={playerData} upcomingMatches={upcomingMatches} leaderboard={leaderboard} activityFeed={activityFeed} />
+            <div className="space-y-4">
+              <DashboardHome playerData={playerData} upcomingMatches={upcomingMatches} leaderboard={leaderboard} activityFeed={activityFeed} />
+              <div className="grid gap-4 xl:grid-cols-2">
+                <FindNearbyPeople
+                  onMessageClick={(personId, personName) => router.push(chatUrlForUser(personId, personName))}
+                  onChallengeClick={handleChallenge}
+                />
+                <FindNearbyCourts />
+              </div>
+            </div>
           )}
         </div>
       </main>

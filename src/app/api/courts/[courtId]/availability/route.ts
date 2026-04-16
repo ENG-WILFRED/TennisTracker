@@ -62,7 +62,7 @@ export async function GET(
       const dateStr = d.toISOString().split('T')[0];
 
       // Get bookings for this day
-      const dayBookings = bookings.filter(b => 
+      const dayBookings = bookings.filter((b: typeof bookings[number]) => 
         b.startTime.toISOString().split('T')[0] === dateStr
       );
 

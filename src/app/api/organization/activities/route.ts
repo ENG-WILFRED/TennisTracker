@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
         },
       });
 
-      activities = orgActivities.map((activity) => ({
+      activities = orgActivities.map((activity: typeof orgActivities[number]) => ({
         id: activity.id,
         type: activity.action,
         description: (activity.details as any)?.description || activity.action?.replace(/_/g, ' ') || 'Activity',

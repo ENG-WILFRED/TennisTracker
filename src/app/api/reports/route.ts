@@ -1,9 +1,5 @@
 import { NextResponse, NextRequest } from 'next/server';
-import { PrismaClient } from '@/generated/prisma';
-
-const globalForPrisma = global as unknown as { prisma: PrismaClient };
-const prisma = globalForPrisma.prisma || new PrismaClient();
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+import prisma from '@/lib/prisma';
 
 /**
  * GET /api/reports?refereeId=xxx
@@ -34,7 +30,7 @@ export async function GET(req: NextRequest) {
       orderBy: { generatedAt: 'desc' },
     });
 
-    const mappedReports = reports.map(report => ({
+    const mappedReports = reports.map((report: typeof reports[number]) => ({
       id: report.id,
       matchId: report.matchId,
       fileName: report.fileName,

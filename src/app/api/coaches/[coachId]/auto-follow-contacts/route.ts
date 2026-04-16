@@ -154,9 +154,9 @@ export async function GET(
       },
     });
 
-    const coachesPlayersIds = new Set(playersCoached.map(p => p.player.userId));
-    const followsPlayers = follows.filter(f => coachesPlayersIds.has(f.followingId));
-    const followsOthers = follows.filter(f => !coachesPlayersIds.has(f.followingId));
+    const coachesPlayersIds = new Set(playersCoached.map((p: typeof playersCoached[number]) => p.player.userId));
+    const followsPlayers = follows.filter((f: typeof follows[number]) => coachesPlayersIds.has(f.followingId));
+    const followsOthers = follows.filter((f: typeof follows[number]) => !coachesPlayersIds.has(f.followingId));
 
     console.log(`📊 Auto-follow check for coach ${coachId}:`, {
       totalFollows: follows.length,
@@ -174,11 +174,11 @@ export async function GET(
         followsOthers: followsOthers.length,
         missingFollows: playersCoached.length - followsPlayers.length,
       },
-      followedPlayers: followsPlayers.map(f => ({
+      followedPlayers: followsPlayers.map((f: typeof followsPlayers[number]) => ({
         userId: f.followingId,
         name: `${f.following.user.firstName} ${f.following.user.lastName}`,
       })),
-      coachingPlayers: playersCoached.map(p => ({
+      coachingPlayers: playersCoached.map((p: typeof playersCoached[number]) => ({
         userId: p.player.userId,
         name: `${p.player.user.firstName} ${p.player.user.lastName}`,
         isFollowed: coachesPlayersIds.has(p.player.userId),

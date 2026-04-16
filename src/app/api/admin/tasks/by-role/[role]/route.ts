@@ -136,7 +136,7 @@ export async function GET(
     console.log(`✅ Found ${tasks.length} ${upperRole} tasks`);
 
     // Format tasks
-    const formattedTasks = tasks.map(task => ({
+    const formattedTasks = tasks.map((task: typeof tasks[number]) => ({
       id: task.id,
       title: task.template?.name || 'Task',
       description: task.notes,
@@ -163,12 +163,12 @@ export async function GET(
     // Build summary
     const summary = {
       total: totalCount,
-      pending: statusSummary.find(s => s.status === 'ASSIGNED')?._count || 0,
-      accepted: statusSummary.find(s => s.status === 'ACCEPTED')?._count || 0,
-      in_progress: statusSummary.find(s => s.status === 'IN_PROGRESS')?._count || 0,
-      completed: statusSummary.find(s => s.status === 'COMPLETED')?._count || 0,
-      rejected: statusSummary.find(s => s.status === 'FAILED')?._count || 0,
-      cancelled: statusSummary.find(s => s.status === 'CANCELLED')?._count || 0,
+      pending: statusSummary.find((s: typeof statusSummary[number]) => s.status === 'ASSIGNED')?._count || 0,
+      accepted: statusSummary.find((s: typeof statusSummary[number]) => s.status === 'ACCEPTED')?._count || 0,
+      in_progress: statusSummary.find((s: typeof statusSummary[number]) => s.status === 'IN_PROGRESS')?._count || 0,
+      completed: statusSummary.find((s: typeof statusSummary[number]) => s.status === 'COMPLETED')?._count || 0,
+      rejected: statusSummary.find((s: typeof statusSummary[number]) => s.status === 'FAILED')?._count || 0,
+      cancelled: statusSummary.find((s: typeof statusSummary[number]) => s.status === 'CANCELLED')?._count || 0,
     };
 
     return new Response(

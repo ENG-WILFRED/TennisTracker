@@ -50,7 +50,7 @@ export async function GET(
     });
 
     const eventIds = Array.from(new Set(assignedTasks
-      .map(task => (task.context as any)?.eventId)
+      .map((task: typeof assignedTasks[number]) => (task.context as any)?.eventId)
       .filter(Boolean)
     ));
 
@@ -107,7 +107,7 @@ export async function GET(
         ...referee,
         certifications: parsedCertifications,
       },
-      matches: matches.map(m => ({
+      matches: matches.map((m: typeof matches[number]) => ({
         id: m.id,
         round: m.round,
         score: m.score,
@@ -115,7 +115,7 @@ export async function GET(
         createdAt: m.createdAt.toISOString(),
         title: `${m.playerA.user.firstName} ${m.playerA.user.lastName} vs ${m.playerB.user.firstName} ${m.playerB.user.lastName}`,
       })),
-      upcomingMatches: upcomingMatches.map(m => ({
+      upcomingMatches: upcomingMatches.map((m: typeof upcomingMatches[number]) => ({
         id: m.id,
         round: m.round,
         score: m.score,
@@ -123,7 +123,7 @@ export async function GET(
         createdAt: m.createdAt.toISOString(),
         title: `${m.playerA.user.firstName} ${m.playerA.user.lastName} vs ${m.playerB.user.firstName} ${m.playerB.user.lastName}`,
       })),
-      incomingMatches: incomingMatches.map(m => ({
+      incomingMatches: incomingMatches.map((m: typeof incomingMatches[number]) => ({
         id: m.id,
         eventName: m.event?.name || 'Tournament',
         playerA: m.playerA?.player?.user ? `${m.playerA.player.user.firstName} ${m.playerA.player.user.lastName}` : 'TBD',

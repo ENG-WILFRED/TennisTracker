@@ -1,13 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@/generated/prisma';
+import prisma from '@/lib/prisma';
 import { verifyApiAuth } from '@/lib/authMiddleware';
 
-const globalForPrisma = global as unknown as { prisma: PrismaClient };
-
-const prisma = globalForPrisma.prisma || new PrismaClient();
-if (process.env.NODE_ENV !== 'production') {
-  globalForPrisma.prisma = prisma;
-}
 
 // PATCH /api/tournaments/[id]/appeals/[appealId] - Respond to an appeal
 export async function PATCH(
@@ -107,13 +101,13 @@ export async function PATCH(
           const updatedRules = event.rules || '';
           const lines = updatedRules
             .split('\n')
-            .map((ln) => ln.trim())
-            .filter((ln) => ln.length > 0);
+            .map((ln: string) => ln.trim())
+            .filter((ln: string) => ln.length > 0);
 
           let changed = false;
           const normalizedTarget = targetText.toLowerCase();
 
-          const rewritten = lines.map((ln) => {
+          const rewritten = lines.map((ln: string) => {
             if (ln.toLowerCase().includes(normalizedTarget)) {
               changed = true;
               return ln.replace(/\s*\(.*\)$/,'') + ' (approved appeal - MUST)';

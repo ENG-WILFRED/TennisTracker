@@ -39,7 +39,7 @@ export async function GET(
       }
     });
 
-    const formattedRegistrations = registrations.map(reg => ({
+    const formattedRegistrations = registrations.map((reg: typeof registrations[number]) => ({
       id: reg.id,
       eventId: reg.eventId,
       memberId: reg.memberId,

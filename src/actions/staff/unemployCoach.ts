@@ -1,6 +1,5 @@
 "use server";
-import { PrismaClient } from "../../generated/prisma";
-const prisma = new PrismaClient();
+import prisma from '@/lib/prisma';
 export async function unemployCoach(actorId: string | null, coachId: string) {
   if (!actorId) throw new Error('Unauthorized');
   const actor = await prisma.player.findUnique({ where: { userId: actorId } });

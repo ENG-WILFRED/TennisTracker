@@ -1,13 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@/generated/prisma';
+import prisma from '@/lib/prisma';
 import { verifyApiAuth } from '@/lib/authMiddleware';
 
-const globalForPrisma = global as unknown as { prisma: PrismaClient };
-
-const prisma = globalForPrisma.prisma || new PrismaClient();
-if (process.env.NODE_ENV !== 'production') {
-  globalForPrisma.prisma = prisma;
-}
 
 // GET /api/service-bookings - Get bookings (for providers and users)
 export async function GET(request: NextRequest) {

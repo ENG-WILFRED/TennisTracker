@@ -1,4 +1,4 @@
-import "../styles/globals.css";
+import "@/styles/globals.css";
 import type { ReactNode } from "react";
 import Providers from "@/components/Providers";
 import { RoleProvider } from "@/context/RoleContext";

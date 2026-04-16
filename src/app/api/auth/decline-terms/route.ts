@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@/generated/prisma';
+import prisma from '@/lib/prisma';
 import { verifyApiAuth } from '@/lib/authMiddleware';
-
-const prisma = new PrismaClient();
 
 export async function POST(request: Request) {
   const auth = verifyApiAuth(request);

@@ -33,7 +33,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ orgI
         },
       });
 
-      const data = relationships.map((rel) => ({
+      const data = relationships.map((rel: typeof relationships[number]) => ({
         id: rel.playerId,
         userId: rel.playerId,
         firstName: rel.player.user.firstName,
@@ -82,7 +82,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ orgI
 
     console.log(`📊 Found ${players.length} players for org ${orgId}`);
 
-    const data = players.map((p) => ({
+    const data = players.map((p: typeof players[number]) => ({
       id: p.userId,
       userId: p.userId,
       firstName: p.user.firstName,

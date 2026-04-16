@@ -1,9 +1,5 @@
 "use server";
-import { PrismaClient } from "../../generated/prisma";
-
-const globalForPrisma = global as unknown as { prisma: PrismaClient };
-const prisma = globalForPrisma.prisma || new PrismaClient();
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+import prisma from '@/lib/prisma';
 
 export async function getCoaches() {
   const coaches = await prisma.staff.findMany({
@@ -12,7 +8,19 @@ export async function getCoaches() {
     orderBy: { user: { firstName: 'asc' } },
   });
 
-  return coaches.map((c) => ({
+  return coaches.map((c: {
+    userId: string;
+    role: string;
+    expertise: string | null;
+    studentCount: number | null;
+    contact: string | null;
+    user: {
+      firstName: string;
+      lastName: string;
+      photo: string | null;
+      email: string;
+    };
+  }) => ({
     id: c.userId,
     name: `${c.user.firstName} ${c.user.lastName}`,
     firstName: c.user.firstName,

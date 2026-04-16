@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
 
     // Combine results
     const organizations = [
-      ...ownedOrgs.map((org) => ({
+      ...ownedOrgs.map((org: typeof ownedOrgs[number]) => ({
         organizationId: org.id,
         organizationName: org.name,
         role: 'owner',
@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
         organizationId: membership.organizationId,
         organizationName: membership.organization.name,
         role: membership.role || 'member',
-      })),
+      })), 
     ];
 
     // Remove duplicates (in case user is both owner and member)

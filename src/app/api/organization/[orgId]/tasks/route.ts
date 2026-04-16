@@ -120,7 +120,7 @@ export async function GET(
     });
 
     // Format typed tasks
-    const formattedTypedTasks = typedTasks.map(task => ({
+    const formattedTypedTasks = typedTasks.map((task: typeof typedTasks[number]) => ({
       id: task.id,
       eventId: undefined,
       staffUserId: task.assignedToId,
@@ -153,7 +153,7 @@ export async function GET(
     }));
 
     // Format event tasks
-    const formattedEventTasks = eventTasks.map(task => ({
+    const formattedEventTasks = eventTasks.map((task: typeof eventTasks[number]) => ({
       id: task.id,
       eventId: task.eventId,
       staffUserId: task.staffUserId,

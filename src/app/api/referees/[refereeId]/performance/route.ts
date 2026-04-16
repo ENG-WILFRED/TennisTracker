@@ -57,7 +57,7 @@ export async function GET(
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     const thisMonthMatches = matches.filter(
-      m => m.createdAt >= monthStart
+      (m: typeof matches[number]) => m.createdAt >= monthStart
     ).length;
 
     // Calculate rating
@@ -112,9 +112,9 @@ export async function GET(
         },
       },
       recentMatches: matches
-        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+        .sort((a: typeof matches[number], b: typeof matches[number]) => b.createdAt.getTime() - a.createdAt.getTime())
         .slice(0, 5)
-        .map((m, idx) => ({
+        .map((m: typeof matches[number], idx: number) => ({
           match: `Match ${idx + 1}`,
           date: m.createdAt.toLocaleDateString(),
           category: idx % 3 === 0 ? 'Doubles' : 'Singles',

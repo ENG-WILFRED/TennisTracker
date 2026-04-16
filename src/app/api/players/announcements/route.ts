@@ -25,7 +25,7 @@ export async function GET(request: Request) {
       },
     });
 
-    const eventIds = registrations.map((r) => r.eventId);
+    const eventIds = registrations.map((r: typeof registrations[number]) => r.eventId);
 
     if (eventIds.length === 0) {
       return new Response(JSON.stringify([]), {

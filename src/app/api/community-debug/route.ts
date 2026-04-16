@@ -46,7 +46,7 @@ export async function GET() {
         totalUsers,
         totalFollows,
       },
-      samplePosts: samplePosts.map(p => ({
+      samplePosts: samplePosts.map((p: typeof samplePosts[number]) => ({
         id: p.id,
         authorId: p.authorId,
         authorName: `${p.author.user.firstName} ${p.author.user.lastName}`,
@@ -55,7 +55,7 @@ export async function GET() {
         likesCount: p.likes.length,
         commentsCount: p.comments.length,
       })),
-      userFollowStats: allUsers.map(u => ({
+      userFollowStats: allUsers.map((u: typeof allUsers[number]) => ({
         userId: u.userId,
         name: `${u.user.firstName} ${u.user.lastName}`,
         followers: u._count?.followers || 0,

@@ -24,7 +24,7 @@ export async function seedTournamentTasks() {
     // If no staff, try to get referees directly
     let assigneeIds: string[] = [];
     if (staff.length > 0) {
-      assigneeIds = staff.map(s => s.userId);
+      assigneeIds = staff.map((s: any) => s.userId);
     } else {
       // Fallback: get any staff or users with referee role
       const users = await prisma.user.findMany({
@@ -33,7 +33,7 @@ export async function seedTournamentTasks() {
         },
         take: 3,
       });
-      assigneeIds = users.map(u => u.id);
+      assigneeIds = users.map((u: any) => u.id);
     }
 
     if (assigneeIds.length === 0) {

@@ -20,7 +20,7 @@ async function getUserAvailableRoles(userId: string): Promise<{ role: UserRole; 
     }
   });
 
-  const roles: { role: UserRole; orgId: string; orgName: string; status: string }[] = memberships.map(membership => ({
+  const roles: { role: UserRole; orgId: string; orgName: string; status: string }[] = memberships.map((membership: typeof memberships[number]) => ({
     role: membership.role as UserRole,
     orgId: membership.orgId,
     orgName: membership.organization.name,
@@ -144,15 +144,15 @@ export async function POST(request: Request) {
       const clubMemberships = await prisma.clubMember.findMany({ where: { playerId: userId } });
       if (!isOrganizationOwner && clubMemberships.length > 0) {
         const now = new Date();
-        const hasActive = clubMemberships.some(cm =>
+        const hasActive = clubMemberships.some((cm: typeof clubMemberships[number]) =>
           cm.paymentStatus === 'active' &&
           cm.role !== 'inactive' &&
           (!cm.suspendedUntil || cm.suspendedUntil <= now)
         );
 
         if (!hasActive) {
-          const isSuspended = clubMemberships.some(cm => cm.suspendedUntil && cm.suspendedUntil > now);
-          const isDismissed = clubMemberships.some(cm => cm.role === 'inactive' && cm.paymentStatus === 'inactive');
+          const isSuspended = clubMemberships.some((cm: typeof clubMemberships[number]) => cm.suspendedUntil && cm.suspendedUntil > now);
+          const isDismissed = clubMemberships.some((cm: typeof clubMemberships[number]) => cm.role === 'inactive' && cm.paymentStatus === 'inactive');
 
           let message = 'Your account is currently inactive. Please contact your organization admin.';
           if (isSuspended) message = 'Your membership is suspended. Contact your organization admin for reactivation.';

@@ -4,6 +4,9 @@ import React, { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import Link from 'next/link';
+import { FindNearbyPeople } from '@/components/FindNearbyPeople';
+import { FindNearbyCourts } from '@/components/FindNearbyCourts';
+import { chatUrlForUser, sendChallengeRequest } from '@/lib/nearby';
 
 const G = {
   dark: '#0f1f0f', sidebar: '#152515', card: '#1a3020', cardBorder: '#2d5a35',
@@ -41,6 +44,25 @@ export const FinanceDashboard: React.FC = () => {
 
   // Read active tab from URL, default to 'Overview'
   const activeTab = (searchParams.get('tab') as string) || 'Overview';
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+
+  const handleMessageClick = (personId: string, personName: string) => {
+    router.push(chatUrlForUser(personId, personName));
+  };
+
+  const handleChallenge = async (personId: string, personName: string) => {
+    if (!user?.id) {
+      setStatusMessage('Please sign in to send a challenge.');
+      return;
+    }
+
+    try {
+      await sendChallengeRequest(user.id, personId);
+      setStatusMessage(`Challenge request sent to ${personName}.`);
+    } catch (error: any) {
+      setStatusMessage(error?.message || 'Failed to send challenge request.');
+    }
+  };
   
   // Handle tab change
   const handleTabChange = (tab: string) => {
@@ -154,7 +176,15 @@ export const FinanceDashboard: React.FC = () => {
           ))}
         </div>
 
-        {/* Revenue Chart + Breakdown */}
+        {statusMessage && (
+          <div style={{ background: '#122212', border: `1px solid ${G.lime}`, borderRadius: 10, padding: 12, marginBottom: 16, color: G.lime }}>
+            {statusMessage}
+          </div>
+        )}
+        <div className="grid gap-4 lg:grid-cols-2 mb-6">
+          <FindNearbyPeople onMessageClick={handleMessageClick} onChallengeClick={handleChallenge} />
+          <FindNearbyCourts />
+        </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-12" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           {/* Revenue Chart */}
           <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 14 }}>

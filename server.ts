@@ -12,6 +12,14 @@ import { parse } from 'url';
 import next from 'next';
 import { initializeSocketIO } from './src/lib/socket.js';
 
+declare global {
+  namespace NodeJS {
+    interface Process {
+      metricsInterval?: NodeJS.Timeout;
+    }
+  }
+}
+
 const dev = process.env.NODE_ENV !== 'production';
 const hostname = process.env.HOSTNAME || 'localhost';
 const port = parseInt(process.env.PORT || '3000', 10);

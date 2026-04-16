@@ -1,9 +1,5 @@
 import { NextResponse, NextRequest } from 'next/server';
-import { PrismaClient } from '@/generated/prisma';
-
-const globalForPrisma = global as unknown as { prisma: PrismaClient };
-const prisma = globalForPrisma.prisma || new PrismaClient();
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+import prisma from '@/lib/prisma';
 
 export async function GET(
   req: NextRequest,
@@ -30,7 +26,7 @@ export async function GET(
       },
     });
 
-    const thisMonth = completedSessions.reduce((sum, s) => sum + (s.price || 0), 0);
+    const thisMonth = completedSessions.reduce((sum: number, s: typeof completedSessions[number]) => sum + (s.price || 0), 0);
 
     // Get wallet info
     const wallet = await prisma.coachWallet.findUnique({
