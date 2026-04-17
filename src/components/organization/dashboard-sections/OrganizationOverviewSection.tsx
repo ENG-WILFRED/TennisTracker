@@ -30,12 +30,11 @@ interface OverviewSectionProps {
   staffRoles: any[];
   announcements: any[];
   pendingTasks: any[];
-  systemStatus: any[];
 }
 
 export default function OrganizationOverviewSection({
   kpiData, activeTab, setActiveTab, tabs, revenueTrend,
-  scheduleItems, staffRoles, announcements, pendingTasks, systemStatus
+  scheduleItems, staffRoles, announcements, pendingTasks
 }: OverviewSectionProps) {
   const priorityColor = (p: string) => p === 'High' ? '#ff6b6b' : p === 'Medium' ? G.yellow : G.muted;
   const priorityBg = (p: string) => p === 'High' ? '#ff6b6b33' : p === 'Medium' ? G.yellow + '33' : G.muted + '33';
@@ -163,22 +162,6 @@ export default function OrganizationOverviewSection({
           ))}
         </div>
 
-        {/* System Status */}
-        <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 14 }}>
-          <div style={{ fontWeight: 800, fontSize: 13, marginBottom: 8 }}>⚙️ System Status</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 6 }}>
-            {systemStatus.map((s: any, i: number) => (
-              <div key={i} style={{ background: '#0f1f0f', borderRadius: 8, padding: '10px 8px', textAlign: 'center', border: `1px solid ${G.cardBorder}` }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, marginBottom: 4 }}>
-                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: s.color }} />
-                  <span style={{ fontSize: 9, fontWeight: 700, color: G.muted }}>{s.status}</span>
-                </div>
-                <div style={{ fontSize: 10, fontWeight: 600, marginBottom: 2 }}>{s.name}</div>
-                <div style={{ fontSize: 8, color: G.muted }}>Uptime {s.uptime}</div>
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
     </>
   );

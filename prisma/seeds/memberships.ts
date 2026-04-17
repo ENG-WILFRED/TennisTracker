@@ -269,6 +269,14 @@ export async function seedMemberships(organizations: any[], users: any[]) {
     }
   }
 
+  // Ensure seeded users with organization assignments get membership records.
+  for (const user of users) {
+    if (!user.organizationId) continue;
+    if (user.role === 'spectator') continue;
+
+    await upsertOrganizationMembership(user.id, user.organizationId, user.role);
+  }
+
   const clubMembers = await prisma.clubMember.findMany({
     where: {
       organizationId: { in: organizations.map((org) => org.id) },
@@ -278,14 +286,6 @@ export async function seedMemberships(organizations: any[], users: any[]) {
   for (const clubMember of clubMembers) {
     const role = roleMap[clubMember.role] || 'player';
     await upsertOrganizationMembership(clubMember.playerId, clubMember.organizationId, role);
-  }
-
-  for (const user of users) {
-    if (!user.organizationId) continue;
-    if (user.role === 'spectator') continue;
-
-    // Ensure seeded users with organization roles also have a membership record.
-    await upsertOrganizationMembership(user.id, user.organizationId, user.role);
   }
 
   // Ensure organization owners get an accepted org-level membership too.

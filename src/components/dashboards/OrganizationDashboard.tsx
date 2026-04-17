@@ -38,6 +38,8 @@ export const OrganizationDashboard: React.FC = () => {
   // Define nav items at the top for easy access
   const navItems = [
     { label: 'Overview', icon: '🏢', section: 'overview' },
+    { label: 'Find Player', icon: '🔎', section: 'find-player' },
+    { label: 'Find Court', icon: '📍', section: 'find-court' },
     { label: 'My Players', icon: '👨‍🏫', section: 'players' },
     { label: 'Staff', icon: '👥', section: 'staff' },
     { label: 'Tasks', icon: '📋', section: 'tasks' },
@@ -130,6 +132,7 @@ export const OrganizationDashboard: React.FC = () => {
         if (json.members) {
           const normalized = json.members.map((cm: any) => {
             const role = cm.role === 'member' ? 'player' : cm.role === 'officer' ? 'admin' : cm.role || 'member';
+            const paymentStatus = cm.paymentStatus || 'active';
             return {
               id: cm.id,
               firstName: cm.player?.user?.firstName || cm.player?.user?.email?.split('@')[0] || 'Unknown',
@@ -137,7 +140,8 @@ export const OrganizationDashboard: React.FC = () => {
               email: cm.player?.user?.email || '',
               role,
               tier: cm.membershipTier?.name || cm.tier || 'Basic',
-              status: cm.paymentStatus === 'active' ? 'active' : 'inactive',
+              paymentStatus,
+              status: paymentStatus === 'active' ? 'active' : paymentStatus === 'pending' ? 'pending' : 'inactive',
               joinDate: cm.joinDate || undefined,
               visits: cm.attendanceCount || 0,
               player: cm.player ? { userId: cm.player.userId, user: cm.player.user } : undefined,
@@ -151,19 +155,6 @@ export const OrganizationDashboard: React.FC = () => {
         }
 
         // Fetch activities
-        if (json && user?.id) {
-          try {
-            const actRes = await authenticatedFetch(`/api/organization/activities?userId=${user.id}`);
-            if (actRes.ok) {
-              const actData = await actRes.json();
-              setActivities(Array.isArray(actData.activities) ? actData.activities.slice(0, 5) : []);
-            }
-          } catch (err) {
-            console.error('Failed to fetch activities:', err);
-          }
-        }
-
-        // Initialize edit form with user data (including synced data)
         const userData = user as any;
         setEditForm({
           firstName: userData?.firstName || '',
@@ -335,15 +326,6 @@ export const OrganizationDashboard: React.FC = () => {
     { task: 'Tournament prize distribution', owner: 'Finance', due: 'Mar 27', priority: 'Low' },
   ];
 
-  const systemStatus = [
-    { name: 'Web Platform', status: 'OK', uptime: '99.8%', color: G.lime },
-    { name: 'Mobile App', status: 'OK', uptime: '99.5%', color: G.lime },
-    { name: 'Booking System', status: 'Degraded', uptime: '95.2%', color: G.yellow },
-    { name: 'Analytics', status: 'OK', uptime: '98.9%', color: G.lime },
-    { name: 'Chat', status: 'OK', uptime: '99.9%', color: G.lime },
-    { name: 'API Gateway', status: 'OK', uptime: '99.6%', color: G.lime },
-  ];
-
   const priorityColor = (p: string) => p === 'High' ? '#ff6b6b' : p === 'Medium' ? G.yellow : G.muted;
   const priorityBg = (p: string) => p === 'High' ? '#ff6b6b33' : p === 'Medium' ? G.yellow + '33' : G.muted + '33';
 
@@ -360,7 +342,7 @@ export const OrganizationDashboard: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row" style={{ fontFamily: "'Segoe UI', system-ui, sans-serif", background: G.dark, color: G.text, overflow: 'hidden' }}>
+    <div className="min-h-screen flex flex-col lg:flex-row" style={{ fontFamily: "'Segoe UI', system-ui, sans-serif", background: G.dark, color: G.text, overflow: 'hidden', height: '100vh' }}>
 
       {/* Mobile top bar */}
       <div className="lg:hidden flex items-center justify-between px-4 py-3 border-b" style={{ background: G.sidebar, borderColor: G.cardBorder }}>
@@ -383,7 +365,7 @@ export const OrganizationDashboard: React.FC = () => {
 
       <aside
         className={`fixed inset-y-0 left-0 z-40 w-64 transform border-r lg:relative lg:translate-x-0 transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
-        style={{ background: G.sidebar, borderColor: G.cardBorder, display: 'flex', flexDirection: 'column', flexShrink: 0, overflowY: 'auto', paddingBottom: 14 }}
+        style={{ background: G.sidebar, borderColor: G.cardBorder, display: 'flex', flexDirection: 'column', flexShrink: 0, overflowY: 'auto', paddingBottom: 14, height: '100vh' }}
       >
         <div style={{ padding: '15px 14px 10px', borderBottom: `1px solid ${G.cardBorder}`, display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
           <span style={{ fontSize: 20 }}>🎾</span>
@@ -496,29 +478,34 @@ export const OrganizationDashboard: React.FC = () => {
       </aside>
 
       {/* MAIN */}
-      <main className="flex-1 overflow-y-auto p-4 lg:p-6" style={{ minWidth: 0 }}>
+      <main className="flex-1 overflow-y-auto p-4 lg:p-6" style={{ minWidth: 0, height: '100vh' }}>
 
 
         {/* Conditional Content Rendering */}
         {activeNav === 'Overview' && (
-          <>
-            <div className="grid gap-4 lg:grid-cols-2 mb-5">
-              <FindNearbyPeople onMessageClick={handleMessageClick} onChallengeClick={handleChallenge} />
-              <FindNearbyCourts />
-            </div>
-            <OrganizationOverviewSection
-              kpiData={kpiData}
-              activeTab={activeTab}
-              setActiveTab={handleTabChange}
-              tabs={tabs}
-              revenueTrend={revenueTrend}
-              scheduleItems={scheduleItems}
-              staffRoles={staffRoles}
-              announcements={announcements}
-              pendingTasks={pendingTasks}
-              systemStatus={systemStatus}
-            />
-          </>
+          <OrganizationOverviewSection
+            kpiData={kpiData}
+            activeTab={activeTab}
+            setActiveTab={handleTabChange}
+            tabs={tabs}
+            revenueTrend={revenueTrend}
+            scheduleItems={scheduleItems}
+            staffRoles={staffRoles}
+            announcements={announcements}
+            pendingTasks={pendingTasks}
+          />
+        )}
+
+        {activeNav === 'Find Player' && (
+          <div className="grid gap-4 lg:grid-cols-2 mb-5">
+            <FindNearbyPeople onMessageClick={handleMessageClick} onChallengeClick={handleChallenge} />
+          </div>
+        )}
+
+        {activeNav === 'Find Court' && (
+          <div className="grid gap-4 lg:grid-cols-2 mb-5">
+            <FindNearbyCourts />
+          </div>
         )}
 
         {activeNav === 'Members' && (

@@ -36,6 +36,9 @@ export default function FloatingMessagesPanel() {
     description: '',
     severity: 'medium'
   })
+  const [guestName, setGuestName] = useState('')
+  const [guestEmail, setGuestEmail] = useState('')
+  const [pageContext, setPageContext] = useState({ pageUrl: '', userAgent: '', timestamp: '' })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { user, isLoggedIn } = useAuth()
   const { showToast } = useToast()
@@ -180,9 +183,21 @@ export default function FloatingMessagesPanel() {
     })
   }, [isOpen, position, isMobileViewport])
 
+  useEffect(() => {
+    setPageContext({
+      pageUrl: window.location.href,
+      userAgent: navigator.userAgent,
+      timestamp: new Date().toLocaleString(),
+    })
+  }, [])
+
   const handleSubmitBug = async (e: FormEvent) => {
     e.preventDefault()
-    if (!user) return
+
+    if (!user && (!guestName.trim() || !guestEmail.trim())) {
+      showToast('Please provide your name and email before submitting a bug.', 'error')
+      return
+    }
 
     setIsSubmitting(true)
 
@@ -191,14 +206,13 @@ export default function FloatingMessagesPanel() {
         title: bugReport.title,
         description: bugReport.description,
         severity: bugReport.severity,
-        pageUrl: window.location.href,
-        userAgent: navigator.userAgent,
-        username: user.username,
-        email: user.email,
-        timestamp: new Date().toISOString()
+        pageUrl: pageContext.pageUrl || window.location.href,
+        userAgent: pageContext.userAgent || navigator.userAgent,
+        username: user?.username || guestName || 'Guest',
+        email: user?.email || guestEmail || 'guest@vico.app',
+        timestamp: pageContext.timestamp || new Date().toISOString()
       }
 
-      // Save to database
       const response = await fetch('/api/bugs', {
         method: 'POST',
         headers: {
@@ -211,22 +225,18 @@ export default function FloatingMessagesPanel() {
         throw new Error('Failed to submit bug report')
       }
 
-      // Reset form and close panel
       setBugReport({ title: '', description: '', severity: 'medium' })
+      setGuestName('')
+      setGuestEmail('')
       setIsOpen(false)
 
       showToast('Bug report submitted successfully! Thank you for helping us improve.', 'success')
-
     } catch (error) {
       console.error('Error submitting bug report:', error)
       showToast('Failed to submit bug report. Please try again.', 'error')
     } finally {
       setIsSubmitting(false)
     }
-  }
-
-  if (!isLoggedIn) {
-    return null
   }
 
   return (
@@ -379,13 +389,40 @@ export default function FloatingMessagesPanel() {
                 />
               </div>
 
+              {!isLoggedIn && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                    <input
+                      type="text"
+                      required
+                      value={guestName}
+                      onChange={(e) => setGuestName(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                      placeholder="Your name"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <input
+                      type="email"
+                      required
+                      value={guestEmail}
+                      onChange={(e) => setGuestEmail(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                      placeholder="Your email"
+                    />
+                  </div>
+                </div>
+              )}
+
               {/* Page Info */}
               <div className="bg-gray-50 p-3 rounded-md">
                 <h4 className="text-sm font-medium text-gray-700 mb-2">Page Information</h4>
                 <div className="text-xs text-gray-600 space-y-1">
-                  <div><strong>URL:</strong> {window.location.href}</div>
-                  <div><strong>Browser:</strong> {navigator.userAgent.split(' ').pop()}</div>
-                  <div><strong>Time:</strong> {new Date().toLocaleString()}</div>
+                  <div><strong>URL:</strong> {pageContext.pageUrl || 'Loading...'}</div>
+                  <div><strong>Browser:</strong> {pageContext.userAgent ? pageContext.userAgent.split(' ').pop() : 'Loading...'}</div>
+                  <div><strong>Time:</strong> {pageContext.timestamp || 'Loading...'}</div>
                 </div>
               </div>
 

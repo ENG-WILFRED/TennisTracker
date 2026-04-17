@@ -373,6 +373,11 @@ export async function seedUsers(organizations: any[]) {
           phone: userData.phone,
           firstName: userData.firstName,
           lastName: userData.lastName,
+          gender: userData.gender,
+          dateOfBirth: userData.dateOfBirth,
+          nationality: userData.nationality,
+          bio: userData.bio,
+          photo: userData.photo,
         },
         create: {
           username: userData.username,
@@ -386,56 +391,6 @@ export async function seedUsers(organizations: any[]) {
           nationality: userData.nationality,
           bio: userData.bio,
           photo: userData.photo,
-          player:
-            userData.role === 'player'
-              ? {
-                  create: {
-                    matchesPlayed: userData.playerStats?.matchesPlayed || 0,
-                    matchesWon: userData.playerStats?.matchesWon || 0,
-                    matchesLost: userData.playerStats?.matchesLost || 0,
-                    organizationId: userData.organizationId,
-                  },
-                }
-              : userData.role === 'admin' || userData.role === 'finance_officer'
-                ? {
-                    create: {
-                      matchesPlayed: 0,
-                      matchesWon: 0,
-                      matchesLost: 0,
-                      organizationId: userData.organizationId,
-                    },
-                  }
-                : undefined,
-          staff:
-            userData.role === 'coach'
-              ? {
-                  create: {
-                    role: 'Head Coach',
-                    contact: userData.email,
-                    yearsOfExperience: userData.staffData?.yearsOfExperience || 0,
-                    expertise: userData.staffData?.expertise,
-                    coachingLevel: userData.staffData?.coachingLevel,
-                    organizationId: userData.organizationId,
-                    certifications: {
-                      createMany: {
-                        data: userData.staffData?.certifications || [],
-                      },
-                    },
-                  },
-                }
-              : undefined,
-          referee:
-            userData.role === 'referee'
-              ? {
-                  create: {
-                    matchesRefereed: userData.refereeData?.matchesRefereed || 0,
-                    ballCrewMatches: userData.refereeData?.ballCrewMatches || 0,
-                    experience: userData.refereeData?.experience,
-                    certifications: userData.refereeData?.certifications || [],
-                  },
-                }
-              : undefined,
-          spectator: userData.role === 'spectator' ? { create: {} } : undefined,
         },
         include: {
           player: true,
@@ -444,6 +399,90 @@ export async function seedUsers(organizations: any[]) {
           spectator: true,
         },
       });
+
+      // Sync role-specific relation data for existing users.
+      if (userData.role !== 'spectator') {
+        await prisma.spectator.deleteMany({ where: { userId: user.id } });
+      }
+      if (userData.role !== 'referee') {
+        await prisma.referee.deleteMany({ where: { userId: user.id } });
+      }
+
+      if (userData.role === 'player' || userData.role === 'admin' || userData.role === 'finance_officer') {
+        await prisma.player.upsert({
+          where: { userId: user.id },
+          update: {
+            organizationId: userData.organizationId,
+            matchesPlayed: userData.playerStats?.matchesPlayed ?? 0,
+            matchesWon: userData.playerStats?.matchesWon ?? 0,
+            matchesLost: userData.playerStats?.matchesLost ?? 0,
+          },
+          create: {
+            userId: user.id,
+            organizationId: userData.organizationId,
+            matchesPlayed: userData.playerStats?.matchesPlayed || 0,
+            matchesWon: userData.playerStats?.matchesWon || 0,
+            matchesLost: userData.playerStats?.matchesLost || 0,
+          },
+        });
+      }
+
+      if (userData.role === 'coach') {
+        await prisma.staff.upsert({
+          where: { userId: user.id },
+          update: {
+            role: 'Head Coach',
+            contact: userData.email,
+            yearsOfExperience: userData.staffData?.yearsOfExperience || 0,
+            expertise: userData.staffData?.expertise,
+            coachingLevel: userData.staffData?.coachingLevel,
+            organizationId: userData.organizationId,
+          },
+          create: {
+            userId: user.id,
+            role: 'Head Coach',
+            contact: userData.email,
+            yearsOfExperience: userData.staffData?.yearsOfExperience || 0,
+            expertise: userData.staffData?.expertise,
+            coachingLevel: userData.staffData?.coachingLevel,
+            organizationId: userData.organizationId,
+            certifications: {
+              createMany: {
+                data: userData.staffData?.certifications || [],
+              },
+            },
+          },
+        });
+      }
+
+      if (userData.role === 'referee') {
+        await prisma.referee.upsert({
+          where: { userId: user.id },
+          update: {
+            matchesRefereed: userData.refereeData?.matchesRefereed || 0,
+            ballCrewMatches: userData.refereeData?.ballCrewMatches || 0,
+            experience: userData.refereeData?.experience,
+            certifications: userData.refereeData?.certifications || [],
+          },
+          create: {
+            userId: user.id,
+            matchesRefereed: userData.refereeData?.matchesRefereed || 0,
+            ballCrewMatches: userData.refereeData?.ballCrewMatches || 0,
+            experience: userData.refereeData?.experience,
+            certifications: userData.refereeData?.certifications || [],
+          },
+        });
+      }
+
+      if (userData.role === 'spectator') {
+        await prisma.spectator.upsert({
+          where: { userId: user.id },
+          update: {},
+          create: {
+            userId: user.id,
+          },
+        });
+      }
 
       createdUsers.push(user);
       console.log(`  ✓ ${userData.role.toUpperCase()}: ${user.email}`);

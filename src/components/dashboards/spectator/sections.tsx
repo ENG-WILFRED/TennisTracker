@@ -680,8 +680,8 @@ export function MatchesSection({
   );
 }
 
-export function MessagesSection({ userId }: { userId: string }) {
-  return <MessagingPanel userId={userId} userType="spectator" />;
+export function MessagesSection({ userId, initialChatUserId }: { userId: string; initialChatUserId?: string }) {
+  return <MessagingPanel userId={userId} userType="spectator" initialChatUserId={initialChatUserId} />;
 }
 
 export function MembershipSection({

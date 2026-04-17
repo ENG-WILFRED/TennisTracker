@@ -30,6 +30,7 @@ model User {
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
   memberships  Membership[]
+  createdOrganizations Organization[] @relation("OrganizationCreator")
   player       Player?
   referee      Referee?
   spectator    Spectator?
@@ -237,6 +238,8 @@ model Organization {
   logo                    String?
   primaryColor            String?
   createdBy               String?
+  status                  String                   @default("pending")
+  creator                 User?                    @relation("OrganizationCreator", fields: [createdBy], references: [id])
   createdAt               DateTime                 @default(now())
   updatedAt               DateTime                 @updatedAt
   activityScore           Int                      @default(0)
@@ -278,6 +281,16 @@ model Organization {
 
   @@index([createdAt])
   @@index([slug])
+}
+
+model SeedRun {
+  id         String   @id @default(uuid())
+  name       String   @unique
+  label      String?
+  status     String   @default("completed")
+  executedAt DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  details    String?
 }
 
 model ProviderProfile {

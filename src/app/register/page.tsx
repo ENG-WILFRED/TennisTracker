@@ -26,13 +26,9 @@ const G = {
   muted2: "#5e8e50",
 };
 
-type Role = "player" | "coach" | "referee" | "staff" | "spectator" | "org";
+type Role = "spectator" | "org";
 
 const roles: { value: Role; label: string; icon: string }[] = [
-  { value: "player",    label: "Player",    icon: "🎾" },
-  { value: "coach",     label: "Coach",     icon: "🏅" },
-  { value: "referee",   label: "Referee",   icon: "🟡" },
-  { value: "staff",     label: "Staff",     icon: "🛠️" },
   { value: "spectator", label: "Spectator", icon: "👁️" },
   { value: "org",       label: "Org",       icon: "🏢" },
 ];
@@ -90,7 +86,7 @@ export default function RegisterPage() {
   const [email, setEmail]           = useState("");
   const [password, setPassword]     = useState("");
   const [identifier, setIdentifier] = useState("");
-  const [role, setRole]             = useState<Role>("player");
+  const [role, setRole]             = useState<Role>("spectator");
   const [alreadyRegistered, setAlreadyRegistered] = useState(false);
   const [orgName, setOrgName]       = useState("");
   const [orgDescription, setOrgDescription] = useState("");
@@ -187,7 +183,7 @@ export default function RegisterPage() {
           throw new Error(orgData.error || 'Organization creation failed.');
         }
 
-        addToast(`Organization created: ${orgData.name}. You are now linked as the organization admin.`, 'success');
+        addToast(`Organization created: ${orgData.name}. Your organization is now pending approval by our developers. You will be notified once it's approved.`, 'success');
         if (!isExistingOrgUser) {
           setFirstName("");
           setLastName("");
@@ -409,7 +405,7 @@ export default function RegisterPage() {
             </div>
 
             <p style={{ fontSize: 14, color: G.muted, lineHeight: 1.7, maxWidth: 320, marginBottom: "2.5rem" }}>
-              Create your free account and unlock tournaments, coaching sessions, court bookings, live rankings, and real-time chat.
+              Create your free spectator account and unlock tournaments, coaching sessions, court bookings, live rankings, and real-time chat. Once registered, you can apply for other roles like coach or referee within organizations.
             </p>
 
             {/* Role preview */}
@@ -418,21 +414,31 @@ export default function RegisterPage() {
               borderRadius: 12, padding: "1.2rem", marginBottom: "2rem",
             }}>
               <div style={{ fontSize: 11, color: G.muted2, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 12 }}>
-                Who can join?
+                Registration Process
               </div>
-              {roles.map((r) => (
-                <div
-                  key={r.value}
-                  style={{
-                    display: "flex", alignItems: "center", gap: 10,
-                    padding: "6px 0",
-                    borderBottom: r.value !== "org" ? `1px solid ${G.border}` : "none",
-                  }}
-                >
-                  <span style={{ fontSize: 16 }}>{r.icon}</span>
-                  <span style={{ fontSize: 13, color: G.text2 }}>{r.label}</span>
-                </div>
-              ))}
+              <div style={{
+                display: "flex", alignItems: "center", gap: 10,
+                padding: "6px 0",
+                borderBottom: `1px solid ${G.border}`,
+              }}>
+                <span style={{ fontSize: 16 }}>👁️</span>
+                <span style={{ fontSize: 13, color: G.text2 }}>All users start as Spectators</span>
+              </div>
+              <div style={{
+                display: "flex", alignItems: "center", gap: 10,
+                padding: "6px 0",
+                borderBottom: `1px solid ${G.border}`,
+              }}>
+                <span style={{ fontSize: 16 }}>📝</span>
+                <span style={{ fontSize: 13, color: G.text2 }}>Apply for other roles within organizations</span>
+              </div>
+              <div style={{
+                display: "flex", alignItems: "center", gap: 10,
+                padding: "6px 0",
+              }}>
+                <span style={{ fontSize: 16 }}>🏢</span>
+                <span style={{ fontSize: 13, color: G.text2 }}>Organizations pending developer approval</span>
+              </div>
             </div>
           </div>
 
@@ -528,6 +534,27 @@ export default function RegisterPage() {
                   </div>
                 </div>
               )}
+
+              {/* Disclaimer */}
+              <div style={{
+                marginBottom: "1.5rem",
+                padding: "1rem",
+                border: `1px solid ${G.border}`,
+                borderRadius: 12,
+                background: G.card2,
+                fontSize: 13,
+                color: G.text2,
+                lineHeight: 1.5,
+              }}>
+                <div style={{ fontWeight: 600, color: G.lime, marginBottom: 8 }}>📋 What happens next?</div>
+                <div style={{ fontSize: 12, color: G.muted }}>
+                  {isOrg ? (
+                    <>Your organization will be created and submitted for developer approval. You'll receive a notification once approved, then you can invite members and manage your organization.</>
+                  ) : (
+                    <>Your spectator account will be created immediately. You can then apply for other roles (coach, player, referee) within approved organizations.</>
+                  )}
+                </div>
+              </div>
 
               {(!isOrg || !isExistingOrgUser) && (
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: "1rem" }}>

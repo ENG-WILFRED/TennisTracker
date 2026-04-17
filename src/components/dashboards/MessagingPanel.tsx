@@ -59,7 +59,7 @@ const Tag = ({ children, red }: { children: React.ReactNode; red?: boolean }) =>
   </span>
 );
 
-export default function MessagingPanel({ userId, userType }: { userId: string; userType: 'coach' | 'player' | 'referee' | 'admin' | 'spectator' }) {
+export default function MessagingPanel({ userId, userType, initialChatUserId }: { userId: string; userType: 'coach' | 'player' | 'referee' | 'admin' | 'spectator'; initialChatUserId?: string }) {
   const [chatRooms, setChatRooms] = useState<ChatRoom[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeRoom, setActiveRoom] = useState<ChatRoom | null>(null);
@@ -178,6 +178,16 @@ export default function MessagingPanel({ userId, userType }: { userId: string; u
 
     if (userId) loadContactsAndRooms();
   }, [userId, userType, roleFilter]);
+
+  // Auto-open chat with initialChatUserId if provided
+  useEffect(() => {
+    if (initialChatUserId && chatRooms.length > 0 && !activeRoom) {
+      const targetRoom = chatRooms.find(room => room.id === initialChatUserId);
+      if (targetRoom) {
+        openChatRoom(targetRoom);
+      }
+    }
+  }, [initialChatUserId, chatRooms, activeRoom]);
 
   const openChatRoom = useCallback(async (room: ChatRoom) => {
     try {

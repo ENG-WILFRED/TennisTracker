@@ -15,6 +15,7 @@ export interface RoleContextType {
   currentOrgName: string;
   availableMemberships: Membership[];
   setCurrentRole: (role: UserRole) => void;
+  setCurrentMembership: (membership: Membership) => void;
   hasPermission: (permission: string) => boolean;
   getRoleConfig: (role?: UserRole) => any;
   getRoleColor: (role?: UserRole) => any;
@@ -31,7 +32,7 @@ export interface RoleProviderProps {
 }
 
 export const RoleProvider: React.FC<RoleProviderProps> = ({ children, defaultRole = 'player' }) => {
-  const [currentRole, setCurrentRole] = useState<UserRole | null>(defaultRole);
+  const [currentRole, setCurrentRoleState] = useState<UserRole | null>(defaultRole);
   const [currentOrgId, setCurrentOrgId] = useState<string | null>(null);
   const [currentOrgName, setCurrentOrgName] = useState<string>('Platform');
   const [userMemberships, setUserMemberships] = useState<Membership[]>([{ role: defaultRole, orgId: '', orgName: 'Platform' }]);
@@ -45,7 +46,7 @@ export const RoleProvider: React.FC<RoleProviderProps> = ({ children, defaultRol
     const storedMemberships = localStorage.getItem('userMemberships');
 
     if (storedRole && ROLES[storedRole]) {
-      setCurrentRole(storedRole);
+      setCurrentRoleState(storedRole);
     }
 
     if (storedOrgId) {
@@ -71,9 +72,21 @@ export const RoleProvider: React.FC<RoleProviderProps> = ({ children, defaultRol
   // Save role to localStorage when it changes
   const handleSetCurrentRole = useCallback((role: UserRole) => {
     if (ROLES[role]) {
-      setCurrentRole(role);
+      setCurrentRoleState(role);
       localStorage.setItem('userRole', role);
     }
+  }, []);
+
+  const handleSetCurrentMembership = useCallback((membership: Membership) => {
+    if (!ROLES[membership.role]) return;
+
+    setCurrentRoleState(membership.role);
+    setCurrentOrgId(membership.orgId || null);
+    setCurrentOrgName(membership.orgName || 'Platform');
+
+    localStorage.setItem('userRole', membership.role);
+    localStorage.setItem('userOrgId', membership.orgId);
+    localStorage.setItem('userOrgName', membership.orgName || 'Platform');
   }, []);
 
   const handleSetUserMemberships = useCallback((memberships: Membership[]) => {
@@ -118,6 +131,7 @@ export const RoleProvider: React.FC<RoleProviderProps> = ({ children, defaultRol
     currentOrgName,
     availableMemberships: userMemberships,
     setCurrentRole: handleSetCurrentRole,
+    setCurrentMembership: handleSetCurrentMembership,
     hasPermission: handleHasPermission,
     getRoleConfig: getRoleConfigWithDefault,
     getRoleColor: getRoleColorWithDefault,

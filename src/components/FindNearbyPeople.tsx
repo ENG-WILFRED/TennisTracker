@@ -23,6 +23,30 @@ interface FindNearbyPeopleProps {
   radius?: number;
 }
 
+// Spectator dashboard green theme colors
+const G = {
+  dark: '#0f1f0f',
+  sidebar: '#152515',
+  card: '#1a3020',
+  card2: '#1b2f1b',
+  card3: '#203520',
+  cardBorder: '#2d5a35',
+  border: '#243e24',
+  mid: '#2d5a27',
+  bright: '#3a7230',
+  lime: '#7dc142',
+  accent: '#a8d84e',
+  yellow: '#f0c040',
+  blue: '#4a9eff',
+  red: '#d94f4f',
+  text: '#e8f5e0',
+  text2: '#c2dbb0',
+  muted: '#7aaa6a',
+  muted2: '#5e8e50',
+  success: '#5fc45f',
+  danger: '#e57373',
+};
+
 export const FindNearbyPeople: React.FC<FindNearbyPeopleProps> = ({
   onSelectPerson,
   onMessageClick,
@@ -81,32 +105,45 @@ export const FindNearbyPeople: React.FC<FindNearbyPeopleProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-      <div className="flex items-center justify-between mb-4">
+    <div
+      className="rounded-2xl p-5 flex flex-col gap-4"
+      style={{ background: G.card, border: `1px solid ${G.cardBorder}` }}
+    >
+      <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <MapPin className="w-6 h-6 text-blue-600" />
-          <h2 className="text-xl font-bold text-gray-800">Find People Near You</h2>
+          <MapPin className="w-6 h-6" style={{ color: G.lime }} />
+          <h2 className="text-xl font-bold" style={{ color: G.lime }}>Find People Near You</h2>
         </div>
       </div>
 
       {/* Location and Radius Controls */}
-      <div className="mb-4 space-y-3">
-        <div className="flex gap-2">
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center gap-2">
           <input
             type="range"
             min="1"
             max="50"
             value={radiusKm}
             onChange={(e) => setRadiusKm(Number(e.target.value))}
-            className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+            className="flex-1 h-2 rounded-lg appearance-none cursor-pointer"
+            style={{
+              background: G.card2,
+              outline: 'none',
+            }}
           />
-          <span className="text-sm font-semibold text-gray-600 w-20">{radiusKm} km</span>
+          <span className="text-sm font-semibold w-20" style={{ color: G.text }}>{radiusKm} km</span>
         </div>
 
         <button
           onClick={fetchNearbyPeople}
           disabled={loading}
-          className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200"
+          className="w-full rounded-xl px-4 py-3 text-sm font-bold transition-opacity disabled:opacity-50"
+          style={{
+            background: G.lime,
+            color: G.dark,
+            border: 'none',
+            cursor: loading ? 'not-allowed' : 'pointer'
+          }}
         >
           {loading ? 'Finding People...' : 'Find People Near Me'}
         </button>
@@ -114,19 +151,26 @@ export const FindNearbyPeople: React.FC<FindNearbyPeopleProps> = ({
 
       {/* Error Message */}
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-4">
-          <p className="text-sm">{error}</p>
+        <div
+          className="rounded-xl p-4 text-sm"
+          style={{
+            background: 'rgba(217,79,79,.1)',
+            border: `1px solid ${G.danger}`,
+            color: G.danger,
+          }}
+        >
+          <p>{error}</p>
         </div>
       )}
 
       {/* Results */}
       {hasLocation && (
-        <div className="mt-4">
+        <div className="flex flex-col gap-3">
           {nearbyPeople.length > 0 ? (
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 mb-3">
-                <Users className="w-5 h-5 text-green-600" />
-                <span className="font-semibold text-gray-700">
+            <>
+              <div className="flex items-center gap-2">
+                <Users className="w-5 h-5" style={{ color: G.success }} />
+                <span className="font-semibold" style={{ color: G.text }}>
                   {nearbyPeople.length} people found nearby
                 </span>
               </div>
@@ -135,70 +179,78 @@ export const FindNearbyPeople: React.FC<FindNearbyPeopleProps> = ({
                 {nearbyPeople.map((person) => (
                   <div
                     key={person.id}
-                    className="bg-gradient-to-r from-gray-50 to-white border border-gray-200 rounded-lg p-3 hover:shadow-md transition-shadow duration-200"
+                    className="rounded-xl p-4 flex flex-col sm:flex-row sm:items-start gap-3"
+                    style={{ background: G.card2, border: `1px solid ${G.border}` }}
                   >
-                    <div className="flex items-start gap-3">
-                      <img
-                        src={person.photo}
-                        alt={person.name}
-                        className="w-12 h-12 rounded-full object-cover"
-                      />
+                    <img
+                      src={person.photo}
+                      alt={person.name}
+                      className="w-12 h-12 rounded-full object-cover flex-shrink-0"
+                    />
 
-                      <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
                         <div className="flex items-center gap-2">
-                          <h3 className="font-semibold text-gray-800 truncate">
+                          <h3 className="font-semibold truncate" style={{ color: G.text }}>
                             {person.name}
                           </h3>
-                          <span className="inline-block bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-1 rounded">
+                          <span
+                            className="inline-block text-xs font-semibold px-2 py-1 rounded-full whitespace-nowrap"
+                            style={{ background: `${G.blue}22`, color: G.blue }}
+                          >
                             {person.level}
                           </span>
                         </div>
-                        <p className="text-sm text-gray-600">@{person.username}</p>
-                        <div className="flex items-center gap-2 text-sm text-gray-500 mt-1">
-                          <MapPin className="w-4 h-4" />
-                          <span>{person.city}</span>
-                          <span className="font-semibold text-blue-600">
-                            {person.distance} km away
-                          </span>
-                        </div>
-                        <div className="flex gap-4 text-xs text-gray-600 mt-1">
-                          <span>{person.wins}W / {person.matchesPlayed}P</span>
-                          <span>{person.nationality}</span>
-                        </div>
+                        <span className="text-xs font-semibold whitespace-nowrap" style={{ color: G.accent }}>
+                          {person.distance} km away
+                        </span>
                       </div>
 
-                      <div className="flex flex-col gap-2">
-                        {onMessageClick && (
-                          <button
-                            onClick={() => onMessageClick(person.id, person.name)}
-                            className="flex items-center gap-1 bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-xs font-medium transition-colors"
-                            title="Send Direct Message"
-                          >
-                            <MessageCircle className="w-3 h-3" />
-                            <span>DM</span>
-                          </button>
-                        )}
-                        {onChallengeClick && (
-                          <button
-                            onClick={() => onChallengeClick(person.id, person.name)}
-                            className="flex items-center gap-1 bg-orange-500 hover:bg-orange-600 text-white px-3 py-1 rounded text-xs font-medium transition-colors"
-                            title="Send Challenge"
-                          >
-                            <Zap className="w-3 h-3" />
-                            <span>Challenge</span>
-                          </button>
-                        )}
+                      <p className="text-sm" style={{ color: G.muted }}>@{person.username}</p>
+
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-xs mt-2">
+                        <div className="flex items-center gap-1">
+                          <MapPin className="w-3 h-3" style={{ color: G.muted }} />
+                          <span style={{ color: G.muted }}>{person.city}</span>
+                        </div>
+                        <span style={{ color: G.muted }}>{person.wins}W / {person.matchesPlayed}P</span>
+                        <span style={{ color: G.muted }}>{person.nationality}</span>
                       </div>
+                    </div>
+
+                    <div className="flex flex-row sm:flex-col gap-2">
+                      {onMessageClick && (
+                        <button
+                          onClick={() => onMessageClick(person.id, person.name)}
+                          className="flex items-center justify-center gap-1 rounded-lg px-3 py-2 text-xs font-medium transition-all hover:opacity-90"
+                          style={{ background: G.success, color: '#fff' }}
+                          title="Send Direct Message"
+                        >
+                          <MessageCircle className="w-3 h-3" />
+                          <span className="hidden sm:inline">DM</span>
+                        </button>
+                      )}
+                      {onChallengeClick && (
+                        <button
+                          onClick={() => onChallengeClick(person.id, person.name)}
+                          className="flex items-center justify-center gap-1 rounded-lg px-3 py-2 text-xs font-medium transition-all hover:opacity-90"
+                          style={{ background: G.yellow, color: G.dark }}
+                          title="Send Challenge"
+                        >
+                          <Zap className="w-3 h-3" />
+                          <span className="hidden sm:inline">Challenge</span>
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}
               </div>
-            </div>
+            </>
           ) : !loading ? (
-            <div className="text-center py-6 text-gray-500">
-              <Users className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-              <p>No players found within {radiusKm} km</p>
-              <p className="text-xs mt-1">Try increasing the radius</p>
+            <div className="text-center py-8">
+              <Users className="w-8 h-8 mx-auto mb-2" style={{ color: G.muted2 }} />
+              <p style={{ color: G.muted }}>No players found within {radiusKm} km</p>
+              <p className="text-xs mt-1" style={{ color: G.muted2 }}>Try increasing the radius</p>
             </div>
           ) : null}
         </div>

@@ -62,7 +62,8 @@ export type Member = {
   email: string;
   role: 'player' | 'coach' | 'referee' | 'admin' | 'member' | 'inactive';
   tier?: string;
-  status?: 'active' | 'inactive';
+  paymentStatus?: string;
+  status?: 'active' | 'inactive' | 'pending';
   joinDate?: string;
   visits?: number;
   ranking?: number;
@@ -222,6 +223,10 @@ export default function OrganizationMembersSection({
   const [actionLoading, setActionLoading] = useState(false);
   const [loadingAction, setLoadingAction] = useState<string | null>(null); // Track which specific action is loading
   const [notify, setNotify] = useState<string | null>(null);
+  const [approvalTarget, setApprovalTarget] = useState<Member | null>(null);
+  const [approvalAction, setApprovalAction] = useState<'approve' | 'reject' | null>(null);
+  const [approvalReason, setApprovalReason] = useState('');
+  const [showApprovalModal, setShowApprovalModal] = useState(false);
 
   useEffect(() => {
     const isSameById = memberData.length === incomingMembers.length && incomingMembers.every((m, idx) => m.id === memberData[idx]?.id);
@@ -249,6 +254,8 @@ export default function OrganizationMembersSection({
         case 'suspend': return 'Suspending...';
         case 'dismiss': return 'Dismissing...';
         case 'delete': return 'Deleting...';
+        case 'approve': return 'Approving...';
+        case 'reject': return 'Rejecting...';
         case 'message': return 'Sending...';
         default: return `${defaultText}...`;
       }
@@ -258,7 +265,7 @@ export default function OrganizationMembersSection({
 
   const updateMemberStatus = async (
     member: Member,
-    action: 'activate' | 'deactivate' | 'suspend' | 'dismiss' | 'delete',
+    action: 'activate' | 'deactivate' | 'suspend' | 'dismiss' | 'delete' | 'approve' | 'reject',
     extra?: { until?: string; reason?: string }
   ) => {
     if (!organizationId || !member?.id) {
@@ -352,7 +359,10 @@ export default function OrganizationMembersSection({
       } else {
         setMemberData(prev => prev.map(m => (m.id === member.id ? { ...m, ...updatedMember } : m)));
         if (selectedMember?.id === member.id) setSelectedMember({ ...selectedMember, ...updatedMember as any });
-        const actionLabel = action === 'suspend' ? 'suspended' : 'activated';
+        let actionLabel = 'updated';
+        if (action === 'suspend') actionLabel = 'suspended';
+        else if (action === 'activate' || action === 'approve') actionLabel = 'activated';
+        else if (action === 'reject') actionLabel = 'rejected';
         setNotify(`✅ ${member.firstName} ${member.lastName} has been ${actionLabel} successfully`);
       }
     } catch (error: any) {
@@ -362,6 +372,31 @@ export default function OrganizationMembersSection({
       setActionLoading(false);
       setLoadingAction(null); // Clear specific loading action
     }
+  };
+
+  const beginApprovalAction = (member: Member, action: 'approve' | 'reject') => {
+    setApprovalTarget(member);
+    setApprovalAction(action);
+    setApprovalReason('');
+    setShowApprovalModal(true);
+  };
+
+  const confirmApprovalAction = async () => {
+    if (!approvalTarget || !approvalAction) {
+      setNotify('❌ Please select a member and action');
+      return;
+    }
+
+    if (approvalAction === 'reject' && !approvalReason.trim()) {
+      setNotify('❌ Please enter a reason for rejection');
+      return;
+    }
+
+    await updateMemberStatus(approvalTarget, approvalAction, { reason: approvalReason.trim() || undefined });
+    setShowApprovalModal(false);
+    setApprovalTarget(null);
+    setApprovalAction(null);
+    setApprovalReason('');
   };
 
   const sendMessageToMember = async (member: Member) => {
@@ -589,9 +624,12 @@ export default function OrganizationMembersSection({
     totalVisits: memberData.reduce((s: number, m: Member) => s + (m.visits || 0), 0),
   };
 
+  const pendingMembers = memberData.filter((m: Member) => m.status === 'pending');
+
   const statCards = [
     { label: 'Total Members', value: stats.total, color: G.lime, icon: '👥' },
     { label: 'Active', value: stats.active, color: G.bright, icon: '✅' },
+    { label: 'Pending Approval', value: pendingMembers.length, color: G.yellow, icon: '⏳' },
     { label: '🎾 Players', value: stats.players, color: G.lime, icon: null },
     { label: '🏆 Coaches', value: stats.coaches, color: G.blue, icon: null },
     { label: '⚖️ Referees', value: stats.referees, color: G.yellow, icon: null },
@@ -728,6 +766,38 @@ export default function OrganizationMembersSection({
         </div>
       </div>
 
+      {pendingMembers.length > 0 && (
+        <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 12, padding: 16, marginTop: 8 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, marginBottom: 12 }}>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 800, color: G.text }}>Pending Membership Approvals</div>
+              <div style={{ fontSize: 11, color: G.muted, marginTop: 2 }}>Review requests before they become active members.</div>
+            </div>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 999, background: '#2b2d1f', color: G.lime, fontSize: 11, fontWeight: 700 }}>
+              ⏳ {pendingMembers.length} Pending
+            </div>
+          </div>
+          <div style={{ display: 'grid', gap: 10 }}>
+            {pendingMembers.map(member => (
+              <div key={member.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, background: '#0f1f0f', border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: '12px 14px' }}>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: G.text }}>{member.firstName} {member.lastName}</div>
+                  <div style={{ fontSize: 10, color: G.muted, marginTop: 2 }}>{member.email} · {member.role}</div>
+                </div>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <button onClick={() => beginApprovalAction(member, 'approve')} style={{ padding: '8px 14px', borderRadius: 8, border: 'none', background: G.lime, color: G.dark, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
+                    Approve
+                  </button>
+                  <button onClick={() => beginApprovalAction(member, 'reject')} style={{ padding: '8px 14px', borderRadius: 8, border: `1px solid ${G.red}`, background: 'transparent', color: G.red, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
+                    Reject
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {notify && (
         <div style={{ background: '#153015', border: `1px solid ${G.lime}`, color: G.lime, borderRadius: 8, padding: '8px 10px', fontSize: 11, marginBottom: 4 }}>
           {notify}
@@ -766,6 +836,7 @@ export default function OrganizationMembersSection({
         <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} style={{ padding: '7px 10px', background: G.dark, border: `1px solid ${G.cardBorder}`, borderRadius: 7, color: G.text, fontSize: 11, fontFamily: "'Raleway', sans-serif" }}>
           <option value="all">All Status</option>
           <option value="active">✅ Active</option>
+          <option value="pending">⏳ Pending</option>
           <option value="inactive">⏸ Inactive</option>
         </select>
 
@@ -962,6 +1033,40 @@ export default function OrganizationMembersSection({
                   }}
                 >
                   {getButtonText('invite', 'Send Invitation')}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showApprovalModal && approvalTarget && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 210, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => { setShowApprovalModal(false); setApprovalTarget(null); setApprovalAction(null); setApprovalReason(''); }}>
+          <div style={{ background: G.sidebar, border: `1px solid ${G.cardBorder}`, borderRadius: 16, padding: 24, width: 420, maxWidth: '92vw' }} onClick={e => e.stopPropagation()}>
+            <div style={{ fontSize: 16, fontWeight: 800, color: G.text, marginBottom: 6 }}>
+              {approvalAction === 'approve' ? 'Approve membership' : 'Reject membership'}
+            </div>
+            <div style={{ fontSize: 11, color: G.muted, marginBottom: 18 }}>
+              {approvalAction === 'approve'
+                ? `Confirm approval for ${approvalTarget.firstName} ${approvalTarget.lastName}. Add an optional note for the record.`
+                : `Provide a reason for rejecting ${approvalTarget.firstName}'s membership request.`}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div>
+                <label style={{ fontSize: 10, color: G.muted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6, display: 'block' }}>Reason</label>
+                <textarea
+                  value={approvalReason}
+                  onChange={(e) => setApprovalReason(e.target.value)}
+                  placeholder={approvalAction === 'approve' ? 'Optional approval note' : 'Required rejection reason'}
+                  style={{ width: '100%', minHeight: 100, padding: '10px 12px', background: G.dark, border: `1px solid ${G.cardBorder}`, borderRadius: 10, color: G.text, fontSize: 11, fontFamily: "'Raleway', sans-serif", resize: 'vertical' }}
+                />
+              </div>
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                <button onClick={() => { setShowApprovalModal(false); setApprovalTarget(null); setApprovalAction(null); setApprovalReason(''); }} style={{ padding: '10px 14px', borderRadius: 10, border: `1px solid ${G.cardBorder}`, background: 'transparent', color: G.muted, cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>
+                  Cancel
+                </button>
+                <button onClick={confirmApprovalAction} disabled={actionLoading} style={{ padding: '10px 14px', borderRadius: 10, border: 'none', background: approvalAction === 'approve' ? G.lime : G.red, color: G.dark, cursor: actionLoading ? 'not-allowed' : 'pointer', fontSize: 12, fontWeight: 700, opacity: actionLoading ? 0.7 : 1 }}>
+                  {getButtonText(approvalAction || 'approve', approvalAction === 'approve' ? 'Approve' : 'Reject')}
                 </button>
               </div>
             </div>

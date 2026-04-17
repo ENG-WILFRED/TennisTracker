@@ -26,8 +26,10 @@ export const RoleSelection: React.FC<RoleSelectionProps> = ({
   onRoleSelect,
   isLoading = false,
 }) => {
-  // Only show accepted memberships and always offer spectator as an extra option.
-  const rolesFiltered = availableMemberships.filter((membership) => membership.status === 'accepted' && membership.role in ROLES);
+  // Only show accepted memberships (or memberships without explicit status) and always offer spectator as an extra option.
+  const rolesFiltered = availableMemberships.filter(
+    (membership) => (!membership.status || membership.status === 'accepted') && membership.role in ROLES
+  );
   if (!rolesFiltered.some((membership) => membership.role === 'spectator')) {
     rolesFiltered.push({ role: 'spectator', orgId: '', orgName: 'All Platform', status: 'accepted' });
   }

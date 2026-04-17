@@ -1,5 +1,5 @@
 // seed-courts.mjs - Seed courts, bookings, comments and complaints
-import { PrismaClient } from './src/generated/prisma/index.js';
+import { PrismaClient } from '../../src/generated/prisma/index.js';
 
 const prisma = new PrismaClient();
 

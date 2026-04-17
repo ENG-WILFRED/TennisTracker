@@ -18,7 +18,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ or
     const action = body?.action;
     console.log(`Action: ${action}, body:`, body);
 
-    if (!['dismiss', 'suspend', 'deactivate', 'activate'].includes(action)) {
+    if (!['dismiss', 'suspend', 'deactivate', 'activate', 'approve', 'reject'].includes(action)) {
       return new Response(JSON.stringify({ error: 'Invalid action' }), { status: 400 });
     }
 
@@ -48,6 +48,20 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ or
       updateData = {
         paymentStatus: 'inactive',
         suspensionReason: 'Deactivated by organization admin',
+        suspendedUntil: null,
+        role: 'inactive',
+      };
+    } else if (action === 'approve') {
+      updateData = {
+        paymentStatus: 'active',
+        suspensionReason: null,
+        suspendedUntil: null,
+        role: body?.role || member.role || 'member',
+      };
+    } else if (action === 'reject') {
+      updateData = {
+        paymentStatus: 'rejected',
+        suspensionReason: body?.reason || 'Rejected by organization admin',
         suspendedUntil: null,
         role: 'inactive',
       };

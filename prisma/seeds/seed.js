@@ -1,5 +1,5 @@
 "use strict";
-import { PrismaClient } from "./src/generated/prisma/index.js";
+import { PrismaClient } from "../../src/generated/prisma/index.js";
 import bcrypt from "bcryptjs";
 const prisma = new PrismaClient();
 async function main() {

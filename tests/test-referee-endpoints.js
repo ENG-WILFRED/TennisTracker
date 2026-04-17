@@ -1,4 +1,4 @@
-import { PrismaClient } from './src/generated/prisma/index.js';
+import { PrismaClient } from '../src/generated/prisma/index.js';
 import jwt from 'jsonwebtoken';
 
 const prisma = new PrismaClient();

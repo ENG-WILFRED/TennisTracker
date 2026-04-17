@@ -62,6 +62,8 @@ export const SpectatorDashboard: React.FC = () => {
   const [followingUsers, setFollowingUsers] = useState<Set<string>>(new Set());
   const [suggestedUsers, setSuggestedUsers] = useState<any[]>([]);
 
+  const [initialChatUserId, setInitialChatUserId] = useState<string | undefined>(undefined);
+
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -345,6 +347,10 @@ export const SpectatorDashboard: React.FC = () => {
   const handleSectionChange = (section: string) => {
     setActiveSection(section);
     setMobileNavOpen(false);
+    // Clear initial chat user ID when switching sections
+    if (section !== 'Messages') {
+      setInitialChatUserId(undefined);
+    }
   };
 
   const handleApplyRole = (orgId: string, role: string) => {
@@ -362,7 +368,8 @@ export const SpectatorDashboard: React.FC = () => {
   };
 
   const handleMessageClick = (personId: string, personName: string) => {
-    router.push(chatUrlForUser(personId, personName));
+    setInitialChatUserId(personId);
+    setActiveSection('Messages');
   };
 
   const handleChallenge = async (personId: string, personName: string) => {
@@ -468,7 +475,7 @@ export const SpectatorDashboard: React.FC = () => {
         );
       case 'Messages':
         return user?.id ? (
-          <MessagesSection userId={user.id} />
+          <MessagesSection userId={user.id} initialChatUserId={initialChatUserId} />
         ) : (
           <SectionCard title="Messages" subtitle="Loading your messaging panel">
             <p style={{ color: G.muted }}>Initializing messages...</p>

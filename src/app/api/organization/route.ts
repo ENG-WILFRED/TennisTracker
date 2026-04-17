@@ -1,9 +1,24 @@
 import prisma from '@/lib/prisma';
 import { verifyApiAuth } from '@/lib/authMiddleware';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const auth = verifyApiAuth(request);
+    let isDeveloper = false;
+
+    if (auth) {
+      // Check if user is a developer
+      const userWithRole = await prisma.player.findFirst({
+        where: { userId: auth.playerId },
+      });
+      isDeveloper = userWithRole?.role === 'developer';
+    }
+
+    // Only show approved organizations to non-developers
+    const whereClause = isDeveloper ? {} : { status: 'approved' };
+
     const orgs = await prisma.organization.findMany({
+      where: whereClause,
       orderBy: { createdAt: 'desc' },
       take: 50,
       include: {
@@ -105,6 +120,7 @@ export async function POST(request: Request) {
         primaryColor,
         logo: logoUrl,
         createdBy: auth.playerId,
+        status: 'pending', // Organizations start as pending approval
       },
     });
 
