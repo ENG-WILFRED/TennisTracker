@@ -90,7 +90,9 @@ export default function LoginPage() {
         sessionStorage.removeItem('pendingTokens');
         const user = { ...data.user, acceptedTerms: true };
         const memberships = user?.memberships?.filter((m: any) => m.status === 'accepted') || [];
-        if (memberships.length > 1) {
+        const shouldShowRoleSelection = memberships.length > 1 || (memberships.length === 1 && memberships[0].role !== 'spectator');
+
+        if (shouldShowRoleSelection) {
           setAvailableMemberships(memberships);
           setPendingUser(user);
           setTokens(tokens);
@@ -128,7 +130,9 @@ export default function LoginPage() {
       }
 
       const memberships = data.user?.memberships?.filter((m: any) => m.status === 'accepted') || data.availableRoles || [];
-      if (memberships.length > 1) {
+      const shouldShowRoleSelection = memberships.length > 1 || (memberships.length === 1 && memberships[0].role !== 'spectator');
+
+      if (shouldShowRoleSelection) {
         setAvailableMemberships(memberships);
         setPendingUser({ ...data.user, memberships });
         setTokens({ accessToken: data.accessToken, refreshToken: data.refreshToken });

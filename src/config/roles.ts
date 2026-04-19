@@ -3,7 +3,7 @@
  * Centralized configuration for all user roles in the system
  */
 
-export type UserRole = 'player' | 'coach' | 'admin' | 'finance_officer' | 'referee' | 'org' | 'spectator' | 'developer';
+export type UserRole = 'player' | 'coach' | 'admin' | 'finance_officer' | 'referee' | 'org' | 'member' | 'spectator' | 'developer';
 
 export interface RoleConfig {
   id: UserRole;
@@ -65,6 +65,13 @@ export const ROLE_COLORS: Record<UserRole, RoleConfig['color']> = {
     text: 'text-indigo-700',
     border: 'border-indigo-300',
     badge: 'bg-indigo-200',
+  },
+  member: {
+    primary: 'bg-cyan-600',
+    secondary: 'bg-cyan-100',
+    text: 'text-cyan-700',
+    border: 'border-cyan-300',
+    badge: 'bg-cyan-200',
   },
   spectator: {
     primary: 'bg-gray-600',
@@ -185,6 +192,23 @@ export const ROLES: Record<UserRole, RoleConfig> = {
       'Team Management',
       'Billing & Plans',
       'Advanced Features',
+    ],
+  },
+  member: {
+    id: 'member',
+    name: 'Membership Center',
+    displayName: 'Member Dashboard',
+    description: 'Manage your organization memberships, billing, and membership access',
+    color: ROLE_COLORS.member,
+    icon: '💳',
+    permissions: ['view_memberships', 'manage_memberships', 'view_billing', 'contact_support'],
+    dashboardRoute: '/dashboard/member',
+    features: [
+      'Membership Status',
+      'Access & Entitlements',
+      'Billing Summary',
+      'Upgrade Opportunities',
+      'Support Requests',
     ],
   },
   spectator: {

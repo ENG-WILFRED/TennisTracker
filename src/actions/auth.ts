@@ -3,6 +3,22 @@
 import prisma from '@/lib/prisma';
 import bcrypt from "bcryptjs";
 
+async function generateUsernameFromEmail(email: string): Promise<string> {
+  const base = email
+    .split('@')[0]
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '')
+    .replace(/(^-+|-+$)/g, '') || 'user';
+
+  let candidate = base;
+  let index = 1;
+  while (await prisma.user.findUnique({ where: { username: candidate } })) {
+    candidate = `${base}${index++}`;
+  }
+
+  return candidate;
+}
+
 export async function registerPlayer({
   username,
   email,
@@ -17,7 +33,7 @@ export async function registerPlayer({
   phone,
   acceptedTerms,
 }: {
-  username: string;
+  username?: string;
   email: string;
   password: string;
   firstName: string;
@@ -31,21 +47,30 @@ export async function registerPlayer({
   acceptedTerms?: boolean;
 }) {
   // Check required fields
-  if (!username || !email || !password || !firstName || !lastName) {
+  if (!email || !password || !firstName || !lastName) {
     throw new Error("Please fill all required fields.");
   }
 
-  // Check for existing user
+  const normalizedUsername = username?.trim() || await generateUsernameFromEmail(email);
+
+  // Check for existing user by email, phone, or username
   const exists = await prisma.user.findFirst({
     where: {
       OR: [
-        { username },
+        { username: normalizedUsername },
         { email },
         ...(phone ? [{ phone }] : []),
       ],
     },
   });
+
   if (exists) {
+    if (exists.email === email) {
+      throw new Error("User with this email already exists.");
+    }
+    if (exists.username === normalizedUsername) {
+      throw new Error("A user with this username already exists. Please use another email address or contact support.");
+    }
     throw new Error("User with this username/email/phone already exists.");
   }
 
@@ -72,10 +97,10 @@ export async function registerPlayer({
     photoUrl = photo || null;
   }
 
-  // Create user and associated player profile
+  // Create user without role-specific profile records.
   await prisma.user.create({
     data: {
-      username,
+      username: normalizedUsername,
       email,
       phone: phone || null,
       passwordHash,
@@ -87,9 +112,6 @@ export async function registerPlayer({
       nationality: nationality || null,
       bio: bio || null,
       acceptedTermsAt: acceptedTerms ? new Date() : null,
-      player: {
-        create: {}
-      }
     },
   });
 }

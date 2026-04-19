@@ -10,6 +10,7 @@ import { BookingView } from '@/components/booking/BookingViewNew';
 import { CommunityView } from '@/components/community/CommunityView';
 import { TournamentsView } from '@/components/players/TournamentsView';
 import { StatsView } from '@/components/stats/StatsView';
+import { ProgressView } from '@/components/stats/ProgressView';
 import { SettingsView } from '@/components/settings/SettingsView';
 import { DashboardHome, ProfileSnapshot } from '@/components/dashboards/DashboardHome';
 import MessagingPanel from '@/components/dashboards/MessagingPanel';
@@ -33,6 +34,7 @@ export const PlayerDashboard: React.FC = () => {
   const showCommunity = searchParams.get('community') === 'true';
   const showTournaments = searchParams.get('tournaments') === 'true';
   const showStats = searchParams.get('stats') === 'true';
+  const showProgress = searchParams.get('progress') === 'true';
   const showMessages = searchParams.get('messages') === 'true';
   const showSettings = searchParams.get('settings') === 'true';
   const [activeNav, setActiveNav] = useState('Home');
@@ -54,6 +56,8 @@ export const PlayerDashboard: React.FC = () => {
       setActiveNav('Tournaments');
     } else if (showStats) {
       setActiveNav('Stats');
+    } else if (showProgress) {
+      setActiveNav('Progress');
     } else if (showMessages) {
       setActiveNav('Messages');
     } else if (showSettings) {
@@ -61,16 +65,32 @@ export const PlayerDashboard: React.FC = () => {
     } else {
       setActiveNav('Home');
     }
-  }, [showProfile, showBooking, showCommunity, showTournaments, showStats, showMessages, showSettings]);
+  }, [showProfile, showBooking, showCommunity, showTournaments, showStats, showProgress, showMessages, showSettings]);
 
   useEffect(() => {
     if (user?.id) {
+      const cacheKey = `player-dashboard-cache:${user.id}`;
       const fetchData = async () => {
         try {
+          if (typeof window !== 'undefined') {
+            const cachedData = window.localStorage.getItem(cacheKey);
+            if (cachedData) {
+              try {
+                setPlayerData(JSON.parse(cachedData));
+              } catch (error) {
+                console.warn('Failed to parse cached player data', error);
+              }
+            }
+          }
+
           const res = await fetch(`/api/dashboard?playerId=${user.id}`);
           const data = await res.json();
           setPlayerData(data);
-          
+
+          if (typeof window !== 'undefined') {
+            window.localStorage.setItem(cacheKey, JSON.stringify(data));
+          }
+
           // Try to get organization ID (first club membership)
           const orgRes = await fetch(`/api/player/organization?playerId=${user.id}`);
           const orgData = await orgRes.json();
@@ -92,6 +112,7 @@ export const PlayerDashboard: React.FC = () => {
     { label: 'My Profile', icon: '👤', href: '?profile=true' },
     { label: 'Tournaments', icon: '🏆', href: '?tournaments=true' }, 
     { label: 'Court Booking', icon: '📅', href: '?booking=true' },
+    { label: 'Progress', icon: '📈', href: '?progress=true' },
     { label: 'Services', icon: '🛠️', href: '/services' },
     { label: 'Messages', icon: '💬', href: '?messages=true' },
     { label: 'Stats', icon: '📊', href: '?stats=true' }, 
@@ -150,6 +171,19 @@ export const PlayerDashboard: React.FC = () => {
       console.error('Challenge error:', error);
       alert(error instanceof Error ? error.message : 'Failed to send challenge.');
     }
+  };
+
+  const handleCourtBooking = (courtId: string, courtName: string) => {
+    if (!user?.id) {
+      alert('Please sign in to book a court.');
+      return;
+    }
+    if (!organizationId) {
+      alert('Please connect a club first before booking a court.');
+      return;
+    }
+
+    router.push(`/player/booking/details?court=${courtId}&org=${organizationId}&type=singles`);
   };
 
   const friendsOnline: { name: string; status: 'online' | 'away' | 'offline'; avatar: string }[] = [
@@ -306,6 +340,8 @@ export const PlayerDashboard: React.FC = () => {
             <TournamentsView isEmbedded={true} playerId={params.id as string} />
           ) : showStats ? (
             <StatsView isEmbedded={true} playerData={playerData} />
+          ) : showProgress ? (
+            <ProgressView isEmbedded={true} playerId={user?.id} />
           ) : showSettings ? (
             <SettingsView isEmbedded={true} />
           ) : (
@@ -316,7 +352,7 @@ export const PlayerDashboard: React.FC = () => {
                   onMessageClick={(personId, personName) => router.push(chatUrlForUser(personId, personName))}
                   onChallengeClick={handleChallenge}
                 />
-                <FindNearbyCourts />
+                <FindNearbyCourts onBookClick={handleCourtBooking} />
               </div>
             </div>
           )}

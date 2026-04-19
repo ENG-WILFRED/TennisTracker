@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useRole } from '@/context/RoleContext';
 import { useToast } from '@/components/ui/ToastContext';
@@ -41,7 +42,9 @@ const statusOrder = ['open', 'in_progress', 'resolved'] as const;
 
 const NAV_TABS = [
   { key: 'overview', label: 'Overview', icon: '◈' },
+  { key: 'organizations', label: 'Organizations', icon: '🏢' },
   { key: 'bugs', label: 'Bug Triage', icon: '⬡' },
+  { key: 'reports', label: 'Test Reports', icon: '📊' },
   { key: 'timeline', label: 'Timeline', icon: '◎' },
   { key: 'alerts', label: 'Alerts', icon: '◆' },
 ] as const;
@@ -72,6 +75,7 @@ export function DeveloperDashboard() {
   const { user } = useAuth();
   const { currentRole } = useRole();
   const { addToast } = useToast();
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<NavTab>('overview');
   const [bugs, setBugs] = useState<DeveloperBug[]>([]);
   const [metrics, setMetrics] = useState<DeveloperMetrics | null>(null);
@@ -91,15 +95,19 @@ export function DeveloperDashboard() {
   const [isSendingResponse, setIsSendingResponse] = useState(false);
   const [wsConnected, setWsConnected] = useState(false);
   const [cachedMetrics, setCachedMetrics] = useState<DeveloperMetrics | null>(null);
+  const [organizations, setOrganizations] = useState<any[]>([]);
+  const [testReports, setTestReports] = useState<any[]>([]);
   const wsRef = useRef<Socket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [metricsRes, bugsRes] = await Promise.all([
+        const [metricsRes, bugsRes, orgsRes, reportsRes] = await Promise.all([
           fetch('/api/developer/metrics'),
           fetch('/api/developer/bugs?limit=20'),
+          fetch('/api/developer/organizations'),
+          fetch('/api/developer/test-reports'),
         ]);
         if (metricsRes.ok) {
           const metricsData = await metricsRes.json();
@@ -109,6 +117,14 @@ export function DeveloperDashboard() {
         if (bugsRes.ok) {
           const d = await bugsRes.json();
           setBugs(d.bugReports || []);
+        }
+        if (orgsRes.ok) {
+          const orgsData = await orgsRes.json();
+          setOrganizations(orgsData.pending || []);
+        }
+        if (reportsRes.ok) {
+          const reportsData = await reportsRes.json();
+          setTestReports(reportsData.reports || []);
         }
       } catch {
         addToast('Failed to load developer dashboard data', 'error');
@@ -307,6 +323,56 @@ export function DeveloperDashboard() {
     }
   };
 
+  const handleOrganizationAction = async (orgId: string, action: 'approve' | 'reject') => {
+    try {
+      const response = await fetch('/api/developer/organizations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: orgId, action }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (action === 'approve') {
+          addToast(`Organization "${result.organization.name}" approved successfully`, 'success');
+          setNotificationLog(p => [`Approved organization: ${result.organization.name}`, ...p.slice(0, 7)]);
+        } else {
+          addToast(`Organization "${result.organization.name}" rejected`, 'success');
+          setNotificationLog(p => [`Rejected organization: ${result.organization.name}`, ...p.slice(0, 7)]);
+        }
+        // Refresh organizations list
+        const orgsResponse = await fetch('/api/developer/organizations');
+        if (orgsResponse.ok) {
+          const orgsData = await orgsResponse.json();
+          setOrganizations(orgsData.pending || []);
+        }
+      } else {
+        const error = await response.json();
+        addToast(`Failed to ${action} organization: ${error.error}`, 'error');
+      }
+    } catch (error) {
+      addToast(`Failed to ${action} organization`, 'error');
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      const response = await fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (response.ok) {
+        addToast('Logged out successfully', 'success');
+        router.push('/login');
+      } else {
+        addToast('Failed to logout', 'error');
+      }
+    } catch (error) {
+      addToast('Failed to logout', 'error');
+    }
+  };
+
   const getMetricValue = (key: string): number => {
     if (!metrics) return 0;
     switch (key) {
@@ -431,6 +497,13 @@ export function DeveloperDashboard() {
             <div className="rounded-xl border border-slate-700/50 bg-slate-900/60 px-3 py-2 text-xs text-slate-400">
               <span className="text-white font-bold">{openBugs.length}</span> open
             </div>
+            {/* Logout button */}
+            <button
+              onClick={handleLogout}
+              className="rounded-xl border border-red-700/60 bg-red-900/40 hover:bg-red-900/60 px-3 py-2 text-xs font-semibold text-red-300 hover:text-red-200 transition-all"
+            >
+              Logout
+            </button>
           </div>
         </header>
 
@@ -685,6 +758,75 @@ export function DeveloperDashboard() {
         )}
 
         {/* ══════════════════════════════════════════
+            TAB: ORGANIZATIONS
+        ══════════════════════════════════════════ */}
+        {activeTab === 'organizations' && (
+          <div className="space-y-4 animate-fadeIn">
+            {/* Summary row */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-2xl border border-slate-800/70 bg-slate-900/60 p-4 text-center">
+                <p className="text-xl sm:text-2xl font-bold text-amber-400">{organizations.length}</p>
+                <p className="text-[10px] tracking-widest uppercase text-slate-500 mt-1">Pending Approval</p>
+              </div>
+              <div className="rounded-2xl border border-slate-800/70 bg-slate-900/60 p-4 text-center">
+                <p className="text-xl sm:text-2xl font-bold text-emerald-400">{metrics?.organizations.total ?? 0}</p>
+                <p className="text-[10px] tracking-widest uppercase text-slate-500 mt-1">Total Approved</p>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {organizations.length === 0 ? (
+                <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-8 text-center text-slate-500 text-sm">
+                  No organizations pending approval.
+                </div>
+              ) : (
+                organizations.map((org: any) => (
+                  <div
+                    key={org.id}
+                    className="rounded-2xl border border-slate-800/70 bg-slate-900/60 backdrop-blur p-4 hover:border-slate-700 transition-colors"
+                  >
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-2">
+                          <h3 className="text-lg font-bold text-white truncate">{org.name}</h3>
+                          <span className="inline-block bg-amber-950/70 text-amber-400 border border-amber-800/50 text-[10px] font-bold tracking-widest px-2 py-0.5 rounded-full">
+                            PENDING
+                          </span>
+                        </div>
+                        <p className="text-sm text-slate-400 mb-1">{org.description}</p>
+                        <div className="flex flex-wrap gap-4 text-xs text-slate-500">
+                          <span>📍 {org.city}, {org.country}</span>
+                          <span>👤 {org.creator?.firstName} {org.creator?.lastName}</span>
+                          <span>📧 {org.creator?.email}</span>
+                          {org.phone && <span>📞 {org.phone}</span>}
+                        </div>
+                        <p className="text-xs text-slate-600 mt-2">
+                          Created: {new Date(org.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <div className="flex gap-2 flex-shrink-0">
+                        <button
+                          onClick={() => handleOrganizationAction(org.id, 'approve')}
+                          className="rounded-xl border border-emerald-700/60 bg-emerald-900/40 hover:bg-emerald-900/60 px-4 py-2 text-sm font-semibold text-emerald-300 hover:text-emerald-200 transition-all"
+                        >
+                          ✓ Approve
+                        </button>
+                        <button
+                          onClick={() => handleOrganizationAction(org.id, 'reject')}
+                          className="rounded-xl border border-red-700/60 bg-red-900/40 hover:bg-red-900/60 px-4 py-2 text-sm font-semibold text-red-300 hover:text-red-200 transition-all"
+                        >
+                          ✗ Reject
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ══════════════════════════════════════════
             TAB: TIMELINE
         ══════════════════════════════════════════ */}
         {activeTab === 'timeline' && (
@@ -778,6 +920,36 @@ export function DeveloperDashboard() {
                   ◎ Ping Timeline
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* ══════════════════════════════════════════
+            TAB: REPORTS
+        ══════════════════════════════════════════ */}
+        {activeTab === 'reports' && (
+          <div className="animate-fadeIn space-y-4">
+            {/* Test reports list */}
+            <div className="rounded-2xl border border-slate-800/70 bg-slate-900/60 p-5 space-y-3">
+              <p className="text-[10px] tracking-widest uppercase text-slate-500">Test Reports</p>
+              {testReports.length === 0 && (
+                <p className="text-sm text-slate-600">No test reports available.</p>
+              )}
+              {testReports.map((report: any, i: number) => (
+                <div key={i} className="rounded-xl border border-slate-800/70 bg-slate-900/70 p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-semibold text-slate-300">{report.name || `Report ${i + 1}`}</span>
+                    <span className="text-xs text-slate-500">{new Date(report.timestamp || Date.now()).toLocaleString()}</span>
+                  </div>
+                  <p className="text-sm text-slate-400">{report.summary || 'No summary available'}</p>
+                  {report.details && (
+                    <details className="mt-2">
+                      <summary className="text-xs text-cyan-400 cursor-pointer">View Details</summary>
+                      <pre className="text-xs text-slate-500 mt-2 whitespace-pre-wrap">{JSON.stringify(report.details, null, 2)}</pre>
+                    </details>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
         )}

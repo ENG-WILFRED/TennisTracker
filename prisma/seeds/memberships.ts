@@ -202,9 +202,10 @@ export async function seedMemberships(organizations: any[], users: any[]) {
 
       const member = await prisma.clubMember.upsert({
         where: {
-          organizationId_playerId: {
+          organizationId_playerId_role: {
             organizationId: membershipData.organizationId,
             playerId: user.id,
+            role: membershipData.role,
           },
         },
         update: {

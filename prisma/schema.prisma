@@ -781,7 +781,7 @@ model ClubMember {
   tournamentMatchesB     TournamentMatch[]    @relation("matchPlayerB")
   amenityBookings        AmenityBooking[]
 
-  @@unique([organizationId, playerId])
+  @@unique([organizationId, playerId, role])
   @@index([organizationId])
   @@index([playerId])
   @@index([createdAt])
@@ -1128,7 +1128,7 @@ model CommunityPost {
   id             String         @id @default(uuid())
   authorId       String
   content        String
-  visibility     String         @default("public")
+  visibility     String?        @default("public")
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
   type           String         @default("post")

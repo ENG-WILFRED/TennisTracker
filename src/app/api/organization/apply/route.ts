@@ -24,26 +24,25 @@ export async function POST(request: Request) {
       return new Response(JSON.stringify({ error: 'Organization not found' }), { status: 404, headers: { 'Content-Type': 'application/json' } });
     }
 
-    const existingMembership = await prisma.clubMember.findUnique({
+    const existingMembership = await prisma.membership.findFirst({
       where: {
-        organizationId_playerId: {
-          organizationId: orgId,
-          playerId: auth.playerId,
-        },
+        orgId: orgId,
+        userId: auth.playerId,
+        role: role,
       },
     });
 
     if (existingMembership) {
-      return new Response(JSON.stringify({ error: 'You have already applied or are already a member of this organization' }), { status: 409, headers: { 'Content-Type': 'application/json' } });
+      return new Response(JSON.stringify({ error: `You have already applied for the ${role} role at this organization` }), { status: 409, headers: { 'Content-Type': 'application/json' } });
     }
 
-    const membership = await prisma.clubMember.create({
+    const membership = await prisma.membership.create({
       data: {
-        organizationId: orgId,
-        playerId: auth.playerId,
+        userId: auth.playerId,
+        orgId: orgId,
         role,
-        paymentStatus: 'pending',
-        joinDate: new Date(),
+        status: 'pending',
+        joinedAt: new Date(),
       },
     });
 

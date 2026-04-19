@@ -52,12 +52,10 @@ export async function createMembershipPurchase(
 ) {
   try {
     // Check if player already a member
-    const existingMember = await prisma.clubMember.findUnique({
+    const existingMember = await prisma.clubMember.findFirst({
       where: {
-        organizationId_playerId: {
-          organizationId,
-          playerId,
-        },
+        organizationId,
+        playerId,
       },
     });
 
@@ -132,12 +130,10 @@ export async function confirmMembershipPurchase(
     }
 
     // Check if already a member
-    const existingMember = await prisma.clubMember.findUnique({
+    const existingMember = await prisma.clubMember.findFirst({
       where: {
-        organizationId_playerId: {
-          organizationId,
-          playerId,
-        },
+        organizationId,
+        playerId,
       },
     });
 

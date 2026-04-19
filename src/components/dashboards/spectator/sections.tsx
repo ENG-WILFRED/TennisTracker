@@ -5,6 +5,7 @@ import { Match, Player, Organization, MatchFilter, MembershipApplication, MEMBER
 import { FindNearbyPeople } from '@/components/FindNearbyPeople';
 import { FindNearbyCourts } from '@/components/FindNearbyCourts';
 import MessagingPanel from '@/components/dashboards/MessagingPanel';
+import { CommunityView } from '@/components/community/CommunityView';
 import { Badge, SectionCard, StatPill, ActionBtn, FormField, inputStyle } from './ui';
 
 type MembershipTierOption = {
@@ -110,6 +111,14 @@ export function HomeSection({
               <p className="text-xs mt-1" style={{ color: '#7aaa6a' }}>As {currentMembership.role}</p>
             </div>
           )}
+          <button
+            type="button"
+            onClick={() => setActiveSection('Membership')}
+            className="mt-4 rounded-xl px-4 py-3 text-sm font-semibold"
+            style={{ background: '#243e24', color: '#e8f5e0', border: '1px solid #7dc142' }}
+          >
+            Open Membership Dashboard
+          </button>
         </SectionCard>
 
         <div className="grid gap-4">
@@ -153,11 +162,6 @@ export function HomeSection({
             )}
           </SectionCard>
         </div>
-      </div>
-
-      <div className="grid gap-4 xl:grid-cols-2">
-        <FindNearbyPeople onMessageClick={onMessageClick} onChallengeClick={onChallengeClick} />
-        <FindNearbyCourts />
       </div>
 
     </div>
@@ -361,10 +365,13 @@ export function OrgsSection({
 
           <button
             onClick={() => onViewFullDetails(selectedOrg.id)}
-            className="rounded-xl px-4 py-3 font-semibold w-full"
+            className="rounded-xl px-4 py-3 font-semibold w-full text-left"
             style={{ background: '#243e24', color: '#e8f5e0' }}
           >
-            View full details
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+              <span>View full details</span>
+              <span style={{ color: '#7aaa6a', fontSize: 12 }}>/organization/{selectedOrg.id}</span>
+            </div>
           </button>
         </div>
       </SectionCard>
@@ -443,6 +450,24 @@ export function OrgsSection({
   );
 }
 
+const ROLE_DETAILS: Record<string, string[]> = {
+  player: [
+    'Join a team or club roster and access match schedules.',
+    'Receive event invites, training updates, and court booking priority.',
+    'Ideal for athletes who want a more active role in the club.',
+  ],
+  coach: [
+    'Lead training sessions, clinics, and player development programs.',
+    'Manage schedules, communicate with athletes, and support coaching operations.',
+    'Best for experienced coaches or trainers wanting club membership access.',
+  ],
+  referee: [
+    'Officiate matches, manage scorekeeping, and support tournament operations.',
+    'Receive referee assignments and event notifications from the organization.',
+    'Perfect for certified officials or those interested in match oversight.',
+  ],
+};
+
 export function ApplySection({
   orgs,
   applyOrg,
@@ -453,6 +478,8 @@ export function ApplySection({
   setApplyEmail,
   handleApply,
   applicationResult,
+  applications = [],
+  onRemind,
 }: {
   orgs: Organization[];
   applyOrg: string;
@@ -463,68 +490,180 @@ export function ApplySection({
   setApplyEmail: (value: string) => void;
   handleApply: () => void;
   applicationResult: string;
+  applications?: Array<{ id: string; organizationId: string; organizationName?: string; position: string; status: string; appliedAt: string }>;
+  onRemind?: (application: any) => void;
 }) {
-  return (
-    <SectionCard title="Apply to Join" subtitle="Submit your application to any listed organization">
-      <div className="flex flex-col gap-4">
-        <FormField label="Choose Organization">
-          <select value={applyOrg} onChange={(event) => setApplyOrg(event.target.value)} style={inputStyle}>
-            <option value="">Select an organization...</option>
-            {orgs.map((org) => (
-              <option key={org.id} value={org.id}>{org.name}</option>
-            ))}
-          </select>
-        </FormField>
+  const [remindingId, setRemindingId] = React.useState<string | null>(null);
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          {POSITIONS.map((position) => (
-            <button
-              key={position.value}
-              onClick={() => setApplyPosition(position.value)}
-              className="flex flex-col gap-1 rounded-3xl p-4 text-left transition-all duration-150"
+  const handleRemindClick = async (app: any) => {
+    setRemindingId(app.id);
+    try {
+      if (onRemind) {
+        await onRemind(app);
+      }
+    } finally {
+      setRemindingId(null);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-4">
+      {/* Applied Organizations Section */}
+      {applications && applications.length > 0 && (
+        <SectionCard title="Your Applications" subtitle={`${applications.length} active`}>
+          <div className="space-y-3">
+            {applications.map((app) => (
+              <div
+                key={app.id}
+                className="rounded-2xl p-4"
+                style={{
+                  background: '#132917',
+                  border: `1px solid ${app.status === 'approved' ? '#7dc142' : '#243e24'}`,
+                }}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold" style={{ color: '#e8f5e0' }}>
+                      {app.organizationName || 'Organization'}
+                    </p>
+                    <p className="text-xs mt-1" style={{ color: '#7aaa6a' }}>
+                      Role: <span style={{ color: '#a7d16c' }}>{app.position}</span>
+                    </p>
+                    <p className="text-xs mt-1" style={{ color: '#7aaa6a' }}>
+                      Applied: {new Date(app.appliedAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge
+                      color={app.status === 'approved' ? '#7dc142' : '#7aaa6a'}
+                    >
+                      {app.status === 'approved' ? '✓ Approved' : '⏳ Pending'}
+                    </Badge>
+                    {app.status === 'pending' && (
+                      <button
+                        onClick={() => handleRemindClick(app)}
+                        disabled={remindingId === app.id}
+                        className="px-3 py-1 rounded-lg text-xs font-semibold transition-all"
+                        style={{
+                          background: remindingId === app.id ? '#0f1f0f' : '#2d5a27',
+                          color: remindingId === app.id ? '#7aaa6a' : '#e8f5e0',
+                          border: `1px solid ${remindingId === app.id ? '#243e24' : '#7dc142'}`,
+                          cursor: remindingId === app.id ? 'not-allowed' : 'pointer',
+                        }}
+                      >
+                        {remindingId === app.id ? 'Sending...' : 'Remind'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </SectionCard>
+      )}
+
+      {/* Apply Form Section */}
+      <SectionCard
+        title="Apply to Join"
+        subtitle="Select an organization and choose your role. You can apply for multiple roles in the same organization."
+      >
+        <div className="flex flex-col gap-4">
+          <p className="text-sm leading-relaxed" style={{ color: '#d8e8c2' }}>
+            Complete the form below to request membership with the organization. You can apply for different roles (player, coach, referee) in the same organization. Once submitted, your application is sent to the organization for review and confirmation.
+          </p>
+
+          <FormField label="Organization">
+            <select value={applyOrg} onChange={(event) => setApplyOrg(event.target.value)} style={inputStyle}>
+              <option value="">Select an organization...</option>
+              {orgs.map((org) => (
+                <option key={org.id} value={org.id}>{org.name}</option>
+              ))}
+            </select>
+          </FormField>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm font-semibold" style={{ color: '#e8f5e0' }}>Role Selection</div>
+                <div className="text-xs" style={{ color: '#a7d16c' }}>
+                  Choose the role that best matches how you want to participate with the organization.
+                </div>
+              </div>
+              <div className="text-[11px] uppercase tracking-[0.12em]" style={{ color: '#7dc142' }}>
+                {applyPosition ? `Selected: ${applyPosition}` : 'Choose one'}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              {POSITIONS.map((position) => (
+                <button
+                  key={position.value}
+                  onClick={() => setApplyPosition(position.value)}
+                  className="flex flex-col gap-3 rounded-3xl p-4 text-left transition-all duration-150"
+                  style={{
+                    background: applyPosition === position.value ? '#2d5a27' : '#132915',
+                    border: `1px solid ${applyPosition === position.value ? '#7dc142' : '#243e24'}`,
+                    color: '#e8f5e0',
+                    minHeight: 150,
+                  }}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-sm font-semibold">{position.label}</span>
+                    <span className="text-[11px] uppercase tracking-[0.16em]" style={{ color: '#a7d16c' }}>
+                      {applyPosition === position.value ? 'Selected' : 'Tap to select'}
+                    </span>
+                  </div>
+                  <p className="text-xs" style={{ color: '#b8d48a' }}>{position.description}</p>
+                  <ul className="list-disc pl-4 text-[11px] leading-snug" style={{ color: '#c8e3a1' }}>
+                    {ROLE_DETAILS[position.value]?.map((detail) => (
+                      <li key={detail}>{detail}</li>
+                    ))}
+                  </ul>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <FormField label="Your Email">
+            <input
+              type="email"
+              disabled
+              value={applyEmail}
+              placeholder="you@example.com"
+              onChange={(event) => setApplyEmail(event.target.value)}
+              style={inputStyle}
+            />
+          </FormField>
+
+          <ActionBtn fullWidth onClick={handleApply}>Submit Application</ActionBtn>
+
+          {applicationResult ? (
+            <div
+              className="rounded-3xl p-4 text-sm font-medium"
               style={{
-                background: applyPosition === position.value ? '#2d5a27' : '#132915',
-                border: `1px solid ${applyPosition === position.value ? '#7dc142' : '#243e24'}`,
-                color: '#e8f5e0',
-                minHeight: 110,
+                background: applicationResult.includes('✓') || applicationResult.toLowerCase().includes('reminder') ? '#5fc45f18' : '#ff44441a',
+                border: `1px solid ${applicationResult.includes('✓') || applicationResult.toLowerCase().includes('reminder') ? '#5fc45f' : '#ff4444'}`,
+                color: applicationResult.includes('✓') || applicationResult.toLowerCase().includes('reminder') ? '#a8d84e' : '#ff8888',
               }}
             >
-              <span className="text-sm font-bold">{position.label}</span>
-              <span className="text-xs" style={{ color: '#a7d16c' }}>{position.description}</span>
-            </button>
-          ))}
-        </div>
+              {applicationResult}
+            </div>
+          ) : null}
 
-        <FormField label="Your Email">
-          <input
-            type="email"
-            value={applyEmail}
-            placeholder="you@example.com"
-            onChange={(event) => setApplyEmail(event.target.value)}
-            style={inputStyle}
-          />
-        </FormField>
-
-        <ActionBtn fullWidth onClick={handleApply}>Submit Application</ActionBtn>
-
-        {applicationResult ? (
-          <div
-            className="rounded-3xl p-4 text-sm"
-            style={{
-              background: applicationResult.toLowerCase().includes('success') ? '#5fc45f18' : '#152b17',
-              border: `1px solid ${applicationResult.toLowerCase().includes('success') ? '#5fc45f' : '#2d5a35'}`,
-              color: applicationResult.toLowerCase().includes('success') ? '#a8d84e' : '#b7d6a7',
-            }}
-          >
-            {applicationResult}
+          <div className="rounded-3xl border p-4 text-sm" style={{ background: '#0e2212', borderColor: '#243e24', color: '#c7d9a4' }}>
+            <div className="font-semibold" style={{ color: '#e2f1c7' }}>What happens after you apply</div>
+            <ol className="mt-3 space-y-2 list-decimal pl-5 text-xs leading-relaxed">
+              <li>We save your request and send it to the selected organization.</li>
+              <li>The organization reviews your email, role choice, and membership request.</li>
+              <li>Once approved, the organization will confirm your membership and notify you here.</li>
+            </ol>
+            <div className="mt-3 text-[11px]" style={{ color: '#9cc87d' }}>
+              If approved, you may receive instructions for any membership payment or next steps required to complete the join process.
+            </div>
           </div>
-        ) : null}
-
-        <p className="text-xs leading-relaxed rounded-3xl p-4" style={{ background: '#142d17', color: '#9dc877', border: `1px solid #243e24` }}>
-          Your application will be saved to the database and reviewed by the organization. Approved applications may require membership payment to complete the join process.
-        </p>
-      </div>
-    </SectionCard>
+        </div>
+      </SectionCard>
+    </div>
   );
 }
 
@@ -690,54 +829,148 @@ export function MembershipSection({
   purchaseMembership,
   loadingPayment,
   paymentStatus,
+  applications = [],
+  onViewOrg,
 }: {
   selectedOrg: Organization | null;
   selectedOrgDetails?: Organization | null;
   purchaseMembership: (tier: MembershipTierOption) => void;
   loadingPayment: boolean;
   paymentStatus: string;
+  applications?: MembershipApplication[];
+  onViewOrg?: (orgId: string) => void;
 }) {
   const membershipTiers = (selectedOrgDetails?.membershipTiers ?? MEMBERSHIP_TIERS).map(normalizeMembershipTier);
+  const activeMemberships = applications.filter((app) => app.status === 'approved');
+  const pendingApplications = applications.filter((app) => app.status === 'pending');
+  const selectedOrgMembership = selectedOrg ? activeMemberships.find((app) => app.organizationId === selectedOrg.id) : undefined;
+  const selectedOrgPending = selectedOrg ? pendingApplications.find((app) => app.organizationId === selectedOrg.id) : undefined;
 
   return (
     <SectionCard
-      title="Membership"
-      subtitle={selectedOrg ? `Choose a tier for ${selectedOrg.name}` : 'Select an organization to view membership options'}
+      title="Membership Dashboard"
+      subtitle="Approved memberships, role access, and next actions"
     >
       <div className="flex flex-col gap-4">
-        {selectedOrg ? (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {membershipTiers.map((tier) => (
-              <div
-                key={tier.id}
-                className="rounded-xl p-4 flex flex-col gap-3"
-                style={{ background: '#1b2f1b', border: `1px solid #243e24` }}
-              >
-                <div className="flex items-center justify-between gap-2">
+        <div className="rounded-xl p-4" style={{ background: '#111f12', border: `1px solid #243e24` }}>
+          <p className="text-sm font-semibold" style={{ color: '#7aaa6a' }}>Membership summary</p>
+          <p className="text-lg font-bold mt-2" style={{ color: '#e8f5e0' }}>
+            {activeMemberships.length > 0
+              ? `You belong to ${activeMemberships.length} organization${activeMemberships.length === 1 ? '' : 's'}`
+              : 'You are not yet an active member of any organization.'}
+          </p>
+          <p className="text-sm mt-2" style={{ color: '#7aaa6a' }}>
+            {activeMemberships.length > 0
+              ? 'Manage your memberships, open the organization portal, and track role-specific access from one place.'
+              : 'Pick an organization, choose a membership tier, or submit a role application to get started.'}
+          </p>
+        </div>
+
+        {activeMemberships.length > 0 && (
+          <div className="grid gap-3">
+            {activeMemberships.map((membership) => (
+              <div key={membership.id} className="rounded-xl p-4" style={{ background: '#132917', border: `1px solid #243e24` }}>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <div>
-                    <h3 className="text-sm font-bold" style={{ color: '#e8f5e0' }}>{tier.name}</h3>
-                    <p className="text-xs" style={{ color: '#7aaa6a' }}>${tier.monthlyPrice.toFixed(0)} / month</p>
+                    <p className="text-xs uppercase tracking-widest" style={{ color: '#7aaa6a' }}>Active membership</p>
+                    <p className="text-xl font-semibold mt-2" style={{ color: '#e8f5e0' }}>{membership.organizationName}</p>
+                    <p className="text-xs mt-1" style={{ color: '#7aaa6a' }}>Role: {membership.position}</p>
+                    <p className="text-xs mt-1" style={{ color: '#7aaa6a' }}>Status: Approved</p>
                   </div>
-                  <span className="h-2 w-2 rounded-full" style={{ background: '#7dc142' }} />
+                  {onViewOrg ? (
+                    <ActionBtn
+                      variant="secondary"
+                      onClick={() => onViewOrg(membership.organizationId)}
+                    >
+                      Open organization
+                    </ActionBtn>
+                  ) : null}
                 </div>
-                <div className="space-y-1 text-xs" style={{ color: '#7aaa6a' }}>
-                  {(Array.isArray(tier.benefits) ? tier.benefits : []).map((perk) => (
-                    <div key={perk}>• {perk}</div>
-                  ))}
-                </div>
-                <ActionBtn
-                  fullWidth
-                  variant="secondary"
-                  disabled={loadingPayment}
-                  onClick={() => purchaseMembership(tier)}
-                >
-                  {loadingPayment ? 'Processing…' : `Choose ${tier.name}`}
-                </ActionBtn>
               </div>
             ))}
           </div>
+        )}
+
+        {pendingApplications.length > 0 && (
+          <div className="rounded-xl p-4" style={{ background: '#111f12', border: `1px solid #243e24` }}>
+            <p className="text-sm font-semibold" style={{ color: '#f3d55b' }}>Pending applications</p>
+            <div className="space-y-3 mt-3">
+              {pendingApplications.map((app) => (
+                <div key={app.id} className="rounded-2xl p-3" style={{ background: '#0f1f0f', border: `1px solid #243e24` }}>
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    <div>
+                      <p className="text-sm font-semibold" style={{ color: '#e8f5e0' }}>{app.organizationName}</p>
+                      <p className="text-xs mt-1" style={{ color: '#7aaa6a' }}>Role: {app.position}</p>
+                      <p className="text-xs mt-1" style={{ color: '#7aaa6a' }}>Applied: {new Date(app.appliedAt).toLocaleDateString()}</p>
+                    </div>
+                    {onViewOrg ? (
+                      <ActionBtn variant="secondary" onClick={() => onViewOrg(app.organizationId)}>
+                        View organization
+                      </ActionBtn>
+                    ) : null}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {selectedOrg ? (
+          selectedOrgMembership ? (
+            <div className="rounded-xl p-4" style={{ background: '#132917', border: `1px solid #243e24` }}>
+              <p className="text-sm font-semibold" style={{ color: '#7aaa6a' }}>Already a member</p>
+              <p className="text-lg font-bold mt-2" style={{ color: '#e8f5e0' }}>
+                {selectedOrg.name}
+              </p>
+              <p className="text-xs mt-1" style={{ color: '#7aaa6a' }}>Role: {selectedOrgMembership.position}</p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {onViewOrg && (
+                  <ActionBtn variant="secondary" onClick={() => onViewOrg(selectedOrg.id)}>
+                    View organization portal
+                  </ActionBtn>
+                )}
+              </div>
+            </div>
+          ) : selectedOrgPending ? (
+            <div className="rounded-xl p-4" style={{ background: '#111f12', border: `1px solid #243e24` }}>
+              <p className="text-sm font-semibold" style={{ color: '#f3d55b' }}>Application in review</p>
+              <p className="text-lg font-bold mt-2" style={{ color: '#e8f5e0' }}>{selectedOrg.name}</p>
+              <p className="text-xs mt-1" style={{ color: '#7aaa6a' }}>Role: {selectedOrgPending.position}</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {membershipTiers.map((tier) => (
+                <div
+                  key={tier.id}
+                  className="rounded-xl p-4 flex flex-col gap-3"
+                  style={{ background: '#1b2f1b', border: `1px solid #243e24` }}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <h3 className="text-sm font-bold" style={{ color: '#e8f5e0' }}>{tier.name}</h3>
+                      <p className="text-xs" style={{ color: '#7aaa6a' }}>${tier.monthlyPrice.toFixed(0)} / month</p>
+                    </div>
+                    <span className="h-2 w-2 rounded-full" style={{ background: '#7dc142' }} />
+                  </div>
+                  <div className="space-y-1 text-xs" style={{ color: '#7aaa6a' }}>
+                    {(Array.isArray(tier.benefits) ? tier.benefits : []).map((perk) => (
+                      <div key={perk}>• {perk}</div>
+                    ))}
+                  </div>
+                  <ActionBtn
+                    fullWidth
+                    variant="secondary"
+                    disabled={loadingPayment}
+                    onClick={() => purchaseMembership(tier)}
+                  >
+                    {loadingPayment ? 'Processing…' : `Choose ${tier.name}`}
+                  </ActionBtn>
+                </div>
+              ))}
+            </div>
+          )
         ) : (
-          <p style={{ color: '#7aaa6a' }}>Pick an organization from the Organizations tab to review available membership tiers.</p>
+          <p style={{ color: '#7aaa6a' }}>Select an organization from the Organizations tab to review member access options and membership tiers.</p>
         )}
 
         {paymentStatus ? (
@@ -757,120 +990,323 @@ export function MembershipSection({
   );
 }
 
-export function CommunitySection({
-  suggestedUsers,
-  followingUsers,
-  onFollow,
-}: {
-  suggestedUsers: any[];
-  followingUsers: Set<string>;
-  onFollow: (userId: string) => void;
-}) {
-  const mockUsers = suggestedUsers.length > 0 ? suggestedUsers : [
-    { id: '1', name: 'James Kipchoge', role: 'Elite Player', followers: 1250, following: 89, img: '👤', verified: true },
-    { id: '2', name: 'Elena Rodriguez', role: 'Coach', followers: 890, following: 145, img: '👤', verified: true },
-    { id: '3', name: 'Maria Santos', role: 'Tennis Trainer', followers: 456, following: 234, img: '👤', verified: false },
-    { id: '4', name: 'Ibrahim Hassan', role: 'Player', followers: 234, following: 567, img: '👤', verified: false },
-    { id: '5', name: 'Priya Patel', role: 'Coach', followers: 2100, following: 312, img: '👤', verified: true },
-    { id: '6', name: 'David Kim', role: 'Pro Player', followers: 3450, following: 198, img: '👤', verified: true },
-  ];
-
+export function CommunitySection() {
   return (
     <div className="flex flex-col gap-4">
-      <SectionCard title="Community" subtitle="Connect with players, coaches, and enthusiasts">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {mockUsers.map((user) => (
-            <div
-              key={user.id}
-              className="rounded-xl p-5 flex flex-col gap-4 "
-              style={{ background: '#1b2f1b', border: `1px solid #243e24` }}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div
-                    className="w-12 h-12 rounded-full flex items-center justify-center text-xl flex-shrink-0"
-                    style={{ background: '#2d5a27' }}
-                  >
-                    {user.img}
+      <SectionCard
+        title="Community"
+        subtitle="Share posts, react, and comment on the same experience as other dashboards"
+      >
+        <CommunityView isEmbedded={true} />
+      </SectionCard>
+
+      <SectionCard
+        title="Groups"
+        subtitle="Community groups coming soon"
+      >
+        <div className="rounded-xl p-4" style={{ background: '#111f12', border: `1px solid #243e24` }}>
+          <p className="text-sm" style={{ color: '#e8f5e0' }}>
+            Community groups are coming soon. For now, you can view and comment on all public posts here.
+          </p>
+        </div>
+      </SectionCard>
+    </div>
+  );
+}
+
+export function CreateOrgSection({
+  orgFormData,
+  setOrgFormData,
+  handleCreateOrg,
+  orgLoading,
+  orgError,
+  orgSuccess,
+  setOrgSuccess,
+}: {
+  orgFormData: {
+    name: string;
+    description: string;
+    city: string;
+    country: string;
+    phone: string;
+    email: string;
+  };
+  setOrgFormData: (data: any) => void;
+  handleCreateOrg: () => void;
+  orgLoading: boolean;
+  orgError: string;
+  orgSuccess: boolean;
+  setOrgSuccess: (value: boolean) => void;
+}) {
+  return (
+    <SectionCard title="Create Your Organization" subtitle="Start your own sports organization or club">
+      <div className="flex flex-col gap-4">
+        {!orgSuccess ? (
+          <>
+            <div className="rounded-xl p-4" style={{ background: '#0f1f0f', border: `1px solid #243e24` }}>
+              <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: '#7dc142', marginBottom: 12 }}>
+                📋 Basic Information
+              </p>
+              
+              <div className="space-y-3">
+                <div>
+                  <label style={{ fontSize: 11, color: '#7aaa6a', fontWeight: 600, display: 'block', marginBottom: 6 }}>
+                    Organization Name *
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Elite Tennis Club"
+                    value={orgFormData.name}
+                    onChange={(e) => setOrgFormData({ ...orgFormData, name: e.target.value })}
+                    style={{
+                      ...inputStyle,
+                      background: '#132915',
+                      border: '1px solid #243e24',
+                      color: '#e8f5e0',
+                      padding: '10px 12px',
+                      borderRadius: 8,
+                      fontSize: 12,
+                    }}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label style={{ fontSize: 11, color: '#7aaa6a', fontWeight: 600, display: 'block', marginBottom: 6 }}>
+                      City
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Nairobi"
+                      value={orgFormData.city}
+                      onChange={(e) => setOrgFormData({ ...orgFormData, city: e.target.value })}
+                      style={{
+                        ...inputStyle,
+                        background: '#132915',
+                        border: '1px solid #243e24',
+                        color: '#e8f5e0',
+                        padding: '10px 12px',
+                        borderRadius: 8,
+                        fontSize: 12,
+                      }}
+                    />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1">
-                      <h3 className="text-sm font-bold truncate" style={{ color: '#e8f5e0' }}>
-                        {user.name}
-                      </h3>
-                      {user.verified && <span style={{ color: '#7dc142' }}>✓</span>}
-                    </div>
-                    <p className="text-xs" style={{ color: '#7aaa6a' }}>
-                      {user.role}
-                    </p>
+                  <div>
+                    <label style={{ fontSize: 11, color: '#7aaa6a', fontWeight: 600, display: 'block', marginBottom: 6 }}>
+                      Country
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Kenya"
+                      value={orgFormData.country}
+                      onChange={(e) => setOrgFormData({ ...orgFormData, country: e.target.value })}
+                      style={{
+                        ...inputStyle,
+                        background: '#132915',
+                        border: '1px solid #243e24',
+                        color: '#e8f5e0',
+                        padding: '10px 12px',
+                        borderRadius: 8,
+                        fontSize: 12,
+                      }}
+                    />
                   </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label style={{ fontSize: 11, color: '#7aaa6a', fontWeight: 600, display: 'block', marginBottom: 6 }}>
+                      Email
+                    </label>
+                    <input
+                      type="email"
+                      placeholder="contact@org.com"
+                      value={orgFormData.email}
+                      onChange={(e) => setOrgFormData({ ...orgFormData, email: e.target.value })}
+                      style={{
+                        ...inputStyle,
+                        background: '#132915',
+                        border: '1px solid #243e24',
+                        color: '#e8f5e0',
+                        padding: '10px 12px',
+                        borderRadius: 8,
+                        fontSize: 12,
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 11, color: '#7aaa6a', fontWeight: 600, display: 'block', marginBottom: 6 }}>
+                      Phone
+                    </label>
+                    <input
+                      type="tel"
+                      placeholder="+254700000000"
+                      value={orgFormData.phone}
+                      onChange={(e) => setOrgFormData({ ...orgFormData, phone: e.target.value })}
+                      style={{
+                        ...inputStyle,
+                        background: '#132915',
+                        border: '1px solid #243e24',
+                        color: '#e8f5e0',
+                        padding: '10px 12px',
+                        borderRadius: 8,
+                        fontSize: 12,
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: 11, color: '#7aaa6a', fontWeight: 600, display: 'block', marginBottom: 6 }}>
+                    Description
+                  </label>
+                  <textarea
+                    placeholder="Tell us about your organization..."
+                    value={orgFormData.description}
+                    onChange={(e) => setOrgFormData({ ...orgFormData, description: e.target.value })}
+                    rows={4}
+                    style={{
+                      ...inputStyle,
+                      background: '#132915',
+                      border: '1px solid #243e24',
+                      color: '#e8f5e0',
+                      padding: '10px 12px',
+                      borderRadius: 8,
+                      fontSize: 12,
+                      fontFamily: 'inherit',
+                      resize: 'vertical',
+                    }}
+                  />
                 </div>
               </div>
+            </div>
 
-              <div className="grid grid-cols-2 gap-2">
-                <div className="rounded-lg p-2 text-center" style={{ background: '#132915' }}>
-                  <div className="text-xs font-bold" style={{ color: '#7dc142' }}>
-                    {user.followers}
-                  </div>
-                  <div className="text-[10px]" style={{ color: '#7aaa6a' }}>
-                    Followers
-                  </div>
-                </div>
-                <div className="rounded-lg p-2 text-center" style={{ background: '#132915' }}>
-                  <div className="text-xs font-bold" style={{ color: '#4a9eff' }}>
-                    {user.following}
-                  </div>
-                  <div className="text-[10px]" style={{ color: '#7aaa6a' }}>
-                    Following
-                  </div>
-                </div>
-              </div>
-
-              <ActionBtn
-                fullWidth
-                variant={followingUsers.has(user.id) ? 'ghost' : 'primary'}
-                onClick={() => !followingUsers.has(user.id) && onFollow(user.id)}
+            {orgError && (
+              <div
+                className="rounded-xl p-4 text-sm"
+                style={{
+                  background: '#ff5e5e18',
+                  border: '1px solid #d94f4f',
+                  color: '#ff8a8a',
+                }}
               >
-                {followingUsers.has(user.id) ? '✓ Following' : '+ Follow'}
-              </ActionBtn>
-            </div>
-          ))}
-        </div>
-      </SectionCard>
+                {orgError}
+              </div>
+            )}
 
-      <SectionCard title="Featured Communities" subtitle="Join these active communities">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {[
-            { name: 'Tennis Enthusiasts', members: 5234, topic: 'General discussion' },
-            { name: 'Competitive Players', members: 2109, topic: 'Tournament tips & strategy' },
-            { name: 'Coaching Resources', members: 1856, topic: 'Training methods & drills' },
-            { name: 'Match Analysis', members: 3421, topic: 'Game breakdowns & replays' },
-          ].map((community) => (
-            <div
-              key={community.name}
-              className="rounded-xl p-4 flex flex-col gap-3"
-              style={{ background: '#1b2f1b', border: `1px solid #243e24` }}
+            <ActionBtn
+              fullWidth
+              disabled={orgLoading || !orgFormData.name.trim()}
+              onClick={handleCreateOrg}
             >
-              <div>
-                <h4 className="text-sm font-bold" style={{ color: '#e8f5e0' }}>
-                  {community.name}
-                </h4>
-                <p className="text-xs mt-1" style={{ color: '#7aaa6a' }}>
-                  {community.topic}
-                </p>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-xs" style={{ color: '#7aaa6a' }}>
-                  👥 {community.members.toLocaleString()} members
-                </span>
-                <ActionBtn variant="ghost" onClick={() => {}}>
-                  Join
-                </ActionBtn>
-              </div>
+              {orgLoading ? 'Creating Organization...' : '✨ Create Organization'}
+            </ActionBtn>
+
+            <div className="rounded-xl p-3" style={{ background: '#142d17', border: '1px solid #243e24' }}>
+              <p className="text-xs" style={{ color: '#7aaa6a', lineHeight: 1.5 }}>
+                💡 Once created, your organization will appear in the developer portal for confirmation. You'll be set as the admin and can start managing courts, events, and members.
+              </p>
             </div>
-          ))}
-        </div>
-      </SectionCard>
+          </>
+        ) : (
+          <div>
+            <div
+              className="rounded-xl p-6 text-center"
+              style={{
+                background: '#5fc45f18',
+                border: '1px solid #5fc45f',
+              }}
+            >
+              <div style={{ fontSize: 48, marginBottom: 12 }}>✅</div>
+              <h3 className="text-lg font-bold" style={{ color: '#5fc45f', marginBottom: 8 }}>
+                Organization Created Successfully!
+              </h3>
+              <p style={{ color: '#a8d84e', marginBottom: 12, fontSize: 13, lineHeight: 1.6 }}>
+                {orgFormData.name} has been created. It will appear in the developer portal for confirmation. You've been set as the organization admin.
+              </p>
+              <div className="grid grid-cols-2 gap-3 mt-4">
+                <div className="rounded-lg p-3" style={{ background: '#0f1f0f', border: '1px solid #243e24' }}>
+                  <div style={{ fontSize: 11, color: '#7aaa6a', fontWeight: 600 }}>LOCATION</div>
+                  <div style={{ fontSize: 13, color: '#e8f5e0', marginTop: 4 }}>
+                    {orgFormData.city}, {orgFormData.country}
+                  </div>
+                </div>
+                <div className="rounded-lg p-3" style={{ background: '#0f1f0f', border: '1px solid #243e24' }}>
+                  <div style={{ fontSize: 11, color: '#7aaa6a', fontWeight: 600 }}>EMAIL</div>
+                  <div style={{ fontSize: 13, color: '#e8f5e0', marginTop: 4 }}>
+                    {orgFormData.email || 'Not provided'}
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setOrgSuccess(false);
+                  setOrgFormData({ name: '', description: '', city: '', country: '', phone: '', email: '' });
+                }}
+                className="mt-4 rounded-lg px-4 py-2 text-sm font-semibold"
+                style={{ background: '#5fc45f', color: '#0a180a', border: 'none', cursor: 'pointer' }}
+              >
+                Create Another Organization
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </SectionCard>
+  );
+}
+
+export function FindPeopleSection({ 
+  onMessageClick, 
+  onChallengeClick 
+}: { 
+  onMessageClick: (personId: string, personName: string) => void;
+  onChallengeClick: (personId: string, personName: string) => void;
+}) {
+  return (
+    <div style={{ padding: '20px' }}>
+      <div style={{ marginBottom: 20 }}>
+        <h2 style={{ fontSize: 28, fontWeight: 'bold', color: '#7dc142', marginBottom: 8 }}>
+          👥 Find People Near You
+        </h2>
+        <p style={{ color: '#6a8a6a', fontSize: 14 }}>
+          Discover and connect with tennis players in your area
+        </p>
+      </div>
+      <div style={{ 
+        background: '#0f1f0f', 
+        borderRadius: 12, 
+        padding: 20, 
+        border: '1px solid #2d5a35' 
+      }}>
+        <FindNearbyPeople 
+          onMessageClick={onMessageClick} 
+          onChallengeClick={onChallengeClick}
+        />
+      </div>
+    </div>
+  );
+}
+
+export function FindCourtsSection() {
+  return (
+    <div style={{ padding: '20px' }}>
+      <div style={{ marginBottom: 20 }}>
+        <h2 style={{ fontSize: 28, fontWeight: 'bold', color: '#7dc142', marginBottom: 8 }}>
+          🎾 Find Courts Near You
+        </h2>
+        <p style={{ color: '#6a8a6a', fontSize: 14 }}>
+          Find and book available tennis courts in your area
+        </p>
+      </div>
+      <div style={{ 
+        background: '#0f1f0f', 
+        borderRadius: 12, 
+        padding: 20, 
+        border: '1px solid #2d5a35' 
+      }}>
+        <FindNearbyCourts />
+      </div>
     </div>
   );
 }

@@ -21,47 +21,94 @@ export async function GET(req: Request) {
     const url = new URL(req.url);
     const latitude = url.searchParams.get('latitude');
     const longitude = url.searchParams.get('longitude');
-    const radiusKm = url.searchParams.get('radius') || '5'; // Default 5km
+    const radiusKm = url.searchParams.get('radius') || '10';
     const userId = url.searchParams.get('userId');
     const excludeUserId = url.searchParams.get('excludeUserId') || userId;
-    const limit = Math.min(parseInt(url.searchParams.get('limit') || '20'), 100); // Max 100
+    const limit = Math.min(parseInt(url.searchParams.get('limit') || '20'), 100);
+    const query = url.searchParams.get('query')?.trim();
+    const location = url.searchParams.get('location')?.trim();
+    const nearest = url.searchParams.get('nearest') === 'true';
 
-    // Validate coordinates
-    if (!latitude || !longitude) {
-      return NextResponse.json({ error: 'latitude and longitude are required' }, { status: 400 });
-    }
-
-    const lat = parseFloat(latitude);
-    const lon = parseFloat(longitude);
+    const lat = latitude ? parseFloat(latitude) : NaN;
+    const lon = longitude ? parseFloat(longitude) : NaN;
     const radius = parseFloat(radiusKm);
+    const hasCoords = !isNaN(lat) && !isNaN(lon);
 
-    if (isNaN(lat) || isNaN(lon) || isNaN(radius)) {
-      return NextResponse.json({ error: 'Invalid coordinate values' }, { status: 400 });
+    if (!hasCoords && !location && !query) {
+      return NextResponse.json({ error: 'Please provide coordinates, location or query' }, { status: 400 });
     }
 
-    // Bounding box for initial filtering (optimization to reduce DB queries)
-    // Approximate: 1 degree of latitude ≈ 111km, 1 degree of longitude varies by latitude
-    const latDelta = radius / 111;
-    const lonDelta = radius / (111 * Math.cos((lat * Math.PI) / 180));
-
-    // Get all players with location data within bounding box
-    const potentialPlayers = await prisma.player.findMany({
-      where: {
-        isClub: false,
-        user: {
-          latitude: {
-            gte: lat - latDelta,
-            lte: lat + latDelta,
-          },
-          longitude: {
-            gte: lon - lonDelta,
-            lte: lon + lonDelta,
-          },
-          id: {
-            not: excludeUserId || '',
-          },
+    const baseWhere: any = {
+      isClub: false,
+      user: {
+        id: {
+          not: excludeUserId || '',
         },
       },
+    };
+
+    const searchClauses: any[] = [];
+
+    if (query) {
+      const numericQuery = Number(query);
+      const queryConditions: any[] = [
+        { firstName: { contains: query, mode: 'insensitive' } },
+        { lastName: { contains: query, mode: 'insensitive' } },
+        { username: { contains: query, mode: 'insensitive' } },
+        { city: { contains: query, mode: 'insensitive' } },
+        { nationality: { contains: query, mode: 'insensitive' } },
+      ];
+
+      if (!Number.isNaN(numericQuery)) {
+        queryConditions.push({ matchesWon: numericQuery });
+        queryConditions.push({ matchesPlayed: numericQuery });
+      }
+
+      searchClauses.push({
+        user: {
+          OR: queryConditions,
+        },
+      });
+    }
+
+    if (location) {
+      searchClauses.push({
+        user: {
+          OR: [
+            { city: { contains: location, mode: 'insensitive' } },
+            { username: { contains: location, mode: 'insensitive' } },
+            { firstName: { contains: location, mode: 'insensitive' } },
+            { lastName: { contains: location, mode: 'insensitive' } },
+            { nationality: { contains: location, mode: 'insensitive' } },
+          ],
+        },
+      });
+    }
+
+    if (searchClauses.length > 0) {
+      baseWhere.AND = searchClauses;
+    }
+
+    const maxRadius = Math.min(Math.max(radius, 1), 1000);
+    const distanceRadius = nearest && hasCoords ? 1000 : maxRadius;
+
+    const playerWhere = { ...baseWhere };
+
+    if (hasCoords && !nearest) {
+      const latDelta = distanceRadius / 111;
+      const lonDelta = distanceRadius / (111 * Math.cos((lat * Math.PI) / 180));
+      playerWhere.user.latitude = {
+        gte: lat - latDelta,
+        lte: lat + latDelta,
+      };
+      playerWhere.user.longitude = {
+        gte: lon - lonDelta,
+        lte: lon + lonDelta,
+      };
+    }
+
+    const potentialPlayers = await prisma.player.findMany({
+      where: playerWhere,
       select: {
         userId: true,
         matchesWon: true,
@@ -80,28 +127,15 @@ export async function GET(req: Request) {
           },
         },
       },
-      take: limit * 2, // Get more to account for filtering
+      take: limit * 3,
     });
 
-    // Calculate actual distances and filter
     const nearbyPlayers = potentialPlayers
-      .filter((p: typeof potentialPlayers[number]) => {
-        if (!p.user.latitude || !p.user.longitude) return false;
-        const distance = calculateDistance(
-          lat,
-          lon,
-          p.user.latitude,
-          p.user.longitude
-        );
-        return distance <= radius;
-      })
-      .map((p: typeof potentialPlayers[number]) => {
-        const distance = calculateDistance(
-          lat,
-          lon,
-          p.user.latitude!,
-          p.user.longitude!
-        );
+      .map((p) => {
+        const distance = hasCoords && p.user.latitude !== null && p.user.longitude !== null
+          ? calculateDistance(lat, lon, p.user.latitude, p.user.longitude)
+          : 0;
+
         return {
           id: p.userId,
           name: `${p.user.firstName} ${p.user.lastName}`,
@@ -115,7 +149,11 @@ export async function GET(req: Request) {
           distance: parseFloat(distance.toFixed(2)),
         };
       })
-      .sort((a: { distance: number }, b: { distance: number }) => a.distance - b.distance)
+      .filter((p) => {
+        if (!hasCoords || nearest) return true;
+        return p.distance <= maxRadius;
+      })
+      .sort((a, b) => a.distance - b.distance)
       .slice(0, limit);
 
     return NextResponse.json(nearbyPlayers, {

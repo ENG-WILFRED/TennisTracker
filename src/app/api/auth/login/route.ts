@@ -20,14 +20,45 @@ async function getUserAvailableRoles(userId: string): Promise<{ role: UserRole; 
     }
   });
 
-  const roles: { role: UserRole; orgId: string; orgName: string; status: string }[] = memberships.map((membership: typeof memberships[number]) => ({
-    role: membership.role as UserRole,
-    orgId: membership.orgId,
-    orgName: membership.organization.name,
-    status: membership.status,
-  }));
+  const clubMemberships = await prisma.clubMember.findMany({
+    where: {
+      playerId: userId,
+      paymentStatus: 'active',
+      role: { not: 'inactive' }
+    },
+    include: {
+      organization: true
+    }
+  });
 
-  // If no active memberships, default to spectator
+  const rolesMap = new Map<string, { role: UserRole; orgId: string; orgName: string; status: string }>();
+
+  for (const membership of memberships) {
+    const key = `${membership.orgId}:${membership.role}`;
+    if (!rolesMap.has(key)) {
+      rolesMap.set(key, {
+        role: membership.role as UserRole,
+        orgId: membership.orgId,
+        orgName: membership.organization.name,
+        status: membership.status,
+      });
+    }
+  }
+
+  for (const clubMember of clubMemberships) {
+    const key = `${clubMember.organizationId}:member`;
+    if (!rolesMap.has(key)) {
+      rolesMap.set(key, {
+        role: 'member',
+        orgId: clubMember.organizationId,
+        orgName: clubMember.organization.name,
+        status: 'accepted',
+      });
+    }
+  }
+
+  const roles = Array.from(rolesMap.values());
+
   if (roles.length === 0) {
     roles.push({
       role: 'spectator',

@@ -151,13 +151,18 @@ export async function getCommunityFeed(
   offset: number = 0,
   organizationId?: string
 ) {
+  if (!userId) {
+    throw new Error('User ID is required to fetch community feed.');
+  }
+
   try {
-    let whereCondition: any = { visibility: "public" };
+    const publicVisibilityFilter = [{ visibility: 'public' }, { visibility: null }];
+    let whereCondition: any = { OR: publicVisibilityFilter };
 
     if (organizationId) {
       whereCondition = {
-        visibility: "public",
         organizationId,
+        OR: publicVisibilityFilter,
       };
     } else if (includeFollowersOnly) {
       // Get posts from users you follow and your own posts
@@ -171,11 +176,16 @@ export async function getCommunityFeed(
 
       whereCondition = {
         OR: [
-          { authorId: { in: followingIds }, visibility: "public" },
-          { authorId: { in: followingIds }, visibility: "followers-only" },
+          { authorId: { in: followingIds }, OR: publicVisibilityFilter },
+          { authorId: { in: followingIds }, visibility: 'followers-only' },
           {
             authorId: userId,
-            visibility: { in: ["public", "followers-only", "private"] },
+            OR: [
+              { visibility: 'public' },
+              { visibility: 'followers-only' },
+              { visibility: null },
+              { visibility: 'private' },
+            ],
           },
         ],
       };
@@ -217,7 +227,7 @@ export async function getCommunityFeed(
 
     return posts;
   } catch (error: any) {
-    throw new Error(`Failed to fetch feed: ${error.message}`);
+    throw new Error(`Failed to fetch feed: ${error?.message || 'Unknown error'}`);
   }
 }
 

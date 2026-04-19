@@ -68,12 +68,10 @@ export async function seedTournamentPlayers() {
 
     // Ensure all players are club members
     for (const player of players) {
-      const existingMember = await prisma.clubMember.findUnique({
+      const existingMember = await prisma.clubMember.findFirst({
         where: {
-          organizationId_playerId: {
-            organizationId: org.id,
-            playerId: player.userId,
-          },
+          organizationId: org.id,
+          playerId: player.userId,
         },
       });
 

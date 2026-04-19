@@ -21,6 +21,40 @@ interface Player {
   level?: string;
   lastSession?: string;
   upcomingSessions?: number;
+  progress?: {
+    stats: {
+      totalMatches: number;
+      wins: number;
+      losses: number;
+      winRate: number;
+      coachSessions: number;
+      attendanceRate: number;
+      badgesEarned: number;
+    };
+    progress: {
+      monthly: Array<{
+        month: string;
+        matches: number;
+        wins: number;
+        losses: number;
+        winRate: number;
+      }>;
+      recentWinRate: number;
+      overallWinRate: number;
+      improvement: number;
+    };
+    badges: Array<{
+      id: string;
+      name: string;
+      description: string;
+      icon: string;
+      earnedAt: string;
+    }>;
+    attendance: Array<{
+      date: string;
+      present: boolean;
+    }>;
+  };
 }
 
 const SectionLabel = ({ children }: { children: React.ReactNode }) => (
@@ -50,6 +84,7 @@ export default function PlayerManagement({ coachId }: { coachId: string }) {
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
+  const [loadingProgress, setLoadingProgress] = useState(false);
   const [noteForm, setNoteForm] = useState({ title: '', content: '', category: 'general' });
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
@@ -93,6 +128,22 @@ export default function PlayerManagement({ coachId }: { coachId: string }) {
     try {
       await fetch(`/api/coaches/players/${playerId}/notes`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ coachId, ...noteForm }) });
     } catch { }
+  };
+
+  const selectPlayer = async (player: Player) => {
+    setSelectedPlayer(player);
+    setLoadingProgress(true);
+    try {
+      const res = await fetch(`/api/player/progress?playerId=${player.id}`);
+      if (res.ok) {
+        const progressData = await res.json();
+        setSelectedPlayer(prev => prev ? { ...prev, progress: progressData } : null);
+      }
+    } catch (error) {
+      console.error('Error fetching player progress:', error);
+    } finally {
+      setLoadingProgress(false);
+    }
   };
 
   const filtered = players.filter(p => {
@@ -155,6 +206,63 @@ export default function PlayerManagement({ coachId }: { coachId: string }) {
                 </div>
                 <ProgressBar value={sessionProgress} />
               </div>
+
+              {/* Progress Stats */}
+              {sp.progress && (
+                <div style={{ marginTop: 14, paddingTop: 12, borderTop: `1px solid ${G.border}` }}>
+                  <SectionLabel>Performance Progress</SectionLabel>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 12 }}>
+                    <div style={{ background: G.dark, borderRadius: 6, padding: '8px 10px', textAlign: 'center' }}>
+                      <div style={{ fontSize: 16, fontWeight: 900, color: G.lime2 }}>{sp.progress.stats.winRate}%</div>
+                      <div style={{ fontSize: 8, color: G.muted, textTransform: 'uppercase' }}>Win Rate</div>
+                    </div>
+                    <div style={{ background: G.dark, borderRadius: 6, padding: '8px 10px', textAlign: 'center' }}>
+                      <div style={{ fontSize: 16, fontWeight: 900, color: G.lime2 }}>{sp.progress.stats.totalMatches}</div>
+                      <div style={{ fontSize: 8, color: G.muted, textTransform: 'uppercase' }}>Matches</div>
+                    </div>
+                    <div style={{ background: G.dark, borderRadius: 6, padding: '8px 10px', textAlign: 'center' }}>
+                      <div style={{ fontSize: 16, fontWeight: 900, color: G.lime2 }}>{sp.progress.stats.badgesEarned}</div>
+                      <div style={{ fontSize: 8, color: G.muted, textTransform: 'uppercase' }}>Badges</div>
+                    </div>
+                  </div>
+
+                  {sp.progress.progress.monthly.length > 0 && (
+                    <div style={{ marginTop: 12 }}>
+                      <div style={{ fontSize: 9.5, color: G.muted2, marginBottom: 6 }}>Recent Monthly Performance</div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        {sp.progress.progress.monthly.slice(-3).map((month, i) => (
+                          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: G.dark, borderRadius: 4, padding: '4px 8px' }}>
+                            <span style={{ fontSize: 9, color: G.text2 }}>{month.month}</span>
+                            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                              <span style={{ fontSize: 8, color: G.muted }}>{month.wins}W-{month.losses}L</span>
+                              <span style={{ fontSize: 9, fontWeight: 700, color: month.winRate >= 50 ? G.lime : G.yellow }}>{month.winRate}%</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {sp.progress.badges.length > 0 && (
+                    <div style={{ marginTop: 12 }}>
+                      <div style={{ fontSize: 9.5, color: G.muted2, marginBottom: 6 }}>Recent Achievements</div>
+                      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                        {sp.progress.badges.slice(0, 3).map((badge, i) => (
+                          <span key={i} style={{ fontSize: 8, background: G.mid, color: G.lime, borderRadius: 10, padding: '2px 6px' }}>
+                            {badge.icon} {badge.name}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {loadingProgress && (
+                <div style={{ marginTop: 14, paddingTop: 12, borderTop: `1px solid ${G.border}`, textAlign: 'center', color: G.muted }}>
+                  Loading progress data...
+                </div>
+              )}
             </div>
 
             {/* Add Note */}
@@ -248,7 +356,7 @@ export default function PlayerManagement({ coachId }: { coachId: string }) {
             return (
               <div
                 key={player.id}
-                onClick={() => setSelectedPlayer(player)}
+                onClick={() => selectPlayer(player)}
                 style={{ background: G.card, border: `1px solid ${G.border}`, borderRadius: 11, padding: 13, cursor: 'pointer', transition: 'all .15s' }}
                 onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = G.border2; (e.currentTarget as HTMLDivElement).style.background = G.card2; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = G.border; (e.currentTarget as HTMLDivElement).style.background = G.card; }}

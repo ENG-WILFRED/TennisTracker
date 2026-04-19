@@ -207,9 +207,10 @@ export async function seedOrganizations() {
     // Add admin as ClubMember with admin role
     await prisma.clubMember.upsert({
       where: {
-        organizationId_playerId: {
+        organizationId_playerId_role: {
           playerId: adminUser.id,
           organizationId: updatedOrg.id,
+          role: 'admin',
         },
       },
       update: { role: 'admin' },
@@ -224,9 +225,10 @@ export async function seedOrganizations() {
     // Add finance officer as ClubMember with officer role
     await prisma.clubMember.upsert({
       where: {
-        organizationId_playerId: {
+        organizationId_playerId_role: {
           playerId: financeUser.id,
           organizationId: updatedOrg.id,
+          role: 'officer',
         },
       },
       update: { role: 'officer' },

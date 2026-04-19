@@ -12,6 +12,7 @@ import { RefereeDashboard } from '@/components/dashboards/referee/RefereeDashboa
 import { OrganizationDashboard } from '@/components/dashboards/OrganizationDashboard';
 import { SpectatorDashboard } from '@/components/dashboards/spectator';
 import { DeveloperDashboard } from '@/components/dashboards/DeveloperDashboard';
+import { MemberDashboard } from '@/components/dashboards/MemberDashboard';
 import { UserRole } from '@/config/roles';
 
 export default function DashboardRoleIdPage() {
@@ -31,17 +32,15 @@ export default function DashboardRoleIdPage() {
 
   // Validate and set role from URL
   useEffect(() => {
-    if (isRoleLoaded && currentRole && roleFromURL && user?.id) {
-      // Check if the role in URL matches the current role
-      if (currentRole !== roleFromURL) {
-        // If roles don't match, redirect to correct role URL with user ID
+    if (isRoleLoaded && roleFromURL && user?.id) {
+      // Allow the dedicated member dashboard to render even if the current role is not member.
+      if (roleFromURL !== 'member' && currentRole && currentRole !== roleFromURL) {
         router.push(`/dashboard/${currentRole}/${user.id}`);
       }
-      
+
       // Check if the user ID in URL matches the current user
       if (user.id !== userIdFromURL) {
-        // If user ID doesn't match, redirect to correct user's dashboard
-        router.push(`/dashboard/${currentRole}/${user.id}`);
+        router.push(`/dashboard/${currentRole || 'spectator'}/${user.id}`);
       }
     }
   }, [currentRole, roleFromURL, userIdFromURL, isRoleLoaded, router, user?.id]);
@@ -78,11 +77,12 @@ export default function DashboardRoleIdPage() {
       {currentRole === 'finance_officer' && <FinanceDashboard />}
       {currentRole === 'referee' && <RefereeDashboard />}
       {currentRole === 'org' && <OrganizationDashboard />}
+      {(currentRole === 'member' || roleFromURL === 'member') && <MemberDashboard />}
       {currentRole === 'spectator' && <SpectatorDashboard />}
       {currentRole === 'developer' && <DeveloperDashboard />}
 
       {/* Fallback for unknown roles */}
-      {!['player', 'coach', 'admin', 'finance_officer', 'referee', 'org', 'spectator', 'developer'].includes(currentRole || '') && (
+      {!['player', 'coach', 'admin', 'finance_officer', 'referee', 'org', 'member', 'spectator', 'developer'].includes(currentRole || '') && (
         <div className="min-h-screen flex items-center justify-center">
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 max-w-md">
             <h2 className="text-xl font-bold text-yellow-800 mb-2">Role Not Configured</h2>

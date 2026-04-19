@@ -73,12 +73,24 @@ export const RoleProvider: React.FC<RoleProviderProps> = ({ children, defaultRol
     if (ROLES[role]) {
       setCurrentRole(role);
       localStorage.setItem('userRole', role);
+
+      if (role === 'member') {
+        setCurrentOrgId('');
+        setCurrentOrgName('Membership Center');
+        localStorage.setItem('userOrgId', '');
+        localStorage.setItem('userOrgName', 'Membership Center');
+      }
     }
   }, []);
 
   const handleSetUserMemberships = useCallback((memberships: Membership[]) => {
     setUserMemberships(memberships);
     localStorage.setItem('userMemberships', JSON.stringify(memberships));
+
+    // If current role is member, preserve it as the membership dashboard role.
+    if (currentRole === 'member') {
+      return;
+    }
 
     // If current role is not in available memberships, switch to first available
     if (memberships.length > 0 && !memberships.some(m => m.role === currentRole)) {

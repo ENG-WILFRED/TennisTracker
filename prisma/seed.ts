@@ -2,10 +2,9 @@ import { seedOrganizations } from './seeds/organizations.js';
 import { seedUsers } from './seeds/users.js';
 import { seedCourts } from './seeds/courts.js';
 import { seedMemberships } from './seeds/memberships.js';
-import { seedMatches } from './seeds/matches.js';
-import { seedBookings } from './seeds/bookings.js';
 import { seedEnhancedBookings } from './seeds/bookings-enhanced.js';
 import { seedPaymentRecords } from './seeds/payments.js';
+import { seedMatches } from './seeds/matches.js';
 import { seedCommunity } from './seeds/community.js';
 import { seedTournaments } from './seeds/tournaments.js';
 import { seedStats } from './seeds/stats.js';
@@ -14,24 +13,13 @@ import { seedStaffForAllOrgs } from './seeds/staff.js';
 import { seedTournamentTasks } from './seeds/tournament-tasks.js';
 import { seedTaskTemplates } from './seeds/task-templates-complete.js';
 import { seedTournamentPlayers } from './seeds/tournament-players-seeding.js';
+import { seedKenyaPlayersAndCourts } from './seeds/kenya-tennis-seed.js';
 import { PrismaClient } from '../src/generated/prisma/index.js';
 
 const prisma = new PrismaClient();
 
 async function main() {
   try {
-    // Check if database is already seeded
-    const existingOrganizations = await prisma.organization.count();
-    if (existingOrganizations > 0) {
-      console.log('═══════════════════════════════════════════════════════════════');
-      console.log('ℹ️  DATABASE ALREADY SEEDED');
-      console.log('═══════════════════════════════════════════════════════════════');
-      console.log('Skipping seeding as data already exists in the database.');
-      console.log(`Found ${existingOrganizations} organizations.`);
-      console.log('═══════════════════════════════════════════════════════════════\n');
-      return;
-    }
-
     console.log('═══════════════════════════════════════════════════════════════');
     console.log('🌱 TENNIS TRACKER DATABASE SEEDING');
     console.log('═══════════════════════════════════════════════════════════════\n');
@@ -51,23 +39,23 @@ async function main() {
     console.log('───────────────────────────────────────────────────────────────');
     const courts = await seedCourts(organizations);
 
+    // 3B. Create comprehensive Kenya tennis network
+    console.log('📍 STEP 3B: Kenya Tennis Network');
+    console.log('───────────────────────────────────────────────────────────────');
+    const kenyaData = await seedKenyaPlayersAndCourts();
+
     // 4. Create membership tiers and add members to organizations
     console.log('📍 STEP 4: Memberships');
     console.log('───────────────────────────────────────────────────────────────');
     const { tiers, members } = await seedMemberships(organizations, users);
 
-    // 5. Create court bookings for testing
-    console.log('📍 STEP 5: Court Bookings');
-    console.log('───────────────────────────────────────────────────────────────');
-    const bookings = await seedBookings(organizations, users, courts);
-
-    // 5B. Create enhanced bookings with realistic patterns
-    console.log('📍 STEP 5B: Enhanced Booking Data (Realistic Patterns)');
+    // 5. Create enhanced bookings with realistic patterns
+    console.log('📍 STEP 5: Enhanced Booking Data (Realistic Patterns)');
     console.log('───────────────────────────────────────────────────────────────');
     const enhancedBookings = await seedEnhancedBookings(organizations, users, courts);
 
-    // 5C. Create payment records
-    console.log('📍 STEP 5C: Payment Records');
+    // 6. Create payment records
+    console.log('📍 STEP 6: Payment Records');
     console.log('───────────────────────────────────────────────────────────────');
     const payments = await seedPaymentRecords();
 
@@ -102,6 +90,24 @@ async function main() {
     console.log('───────────────────────────────────────────────────────────────');
     await seedStaffForAllOrgs();
 
+    // 12. Seed task templates
+    console.log('📍 STEP 12: Task Templates');
+    console.log('───────────────────────────────────────────────────────────────');
+    await seedTaskTemplates();
+
+    // 13. Seed tournament tasks
+    console.log('📍 STEP 13: Tournament Tasks');
+    console.log('───────────────────────────────────────────────────────────────');
+    await seedTournamentTasks();
+
+    // 14. Seed tournament players
+    console.log('📍 STEP 14: Tournament Players');
+    console.log('───────────────────────────────────────────────────────────────');
+    await seedTournamentPlayers();
+    console.log('📍 STEP 11: Staff Members');
+    console.log('───────────────────────────────────────────────────────────────');
+    await seedStaffForAllOrgs();
+
     // 12. Seed tournament tasks (referee assignments with matches)
     console.log('📍 STEP 12: Tournament Tasks');
     console.log('───────────────────────────────────────────────────────────────');
@@ -123,9 +129,13 @@ async function main() {
     console.log(`  • Organizations: ${organizations.length}`);
     console.log(`  • Users: ${users.length}`);
     console.log(`  • Courts: ${courts.length}`);
+    console.log(`  • Kenya Players: ${kenyaData.players.length}`);
+    console.log(`  • Kenya Courts: ${kenyaData.courts.length}`);
+    console.log(`  • Kenya Bookings: ${kenyaData.bookings}`);
+    console.log(`  • Kenya Comments: ${kenyaData.comments}`);
+    console.log(`  • Kenya Complaints: ${kenyaData.complaints}`);
     console.log(`  • Membership Tiers: ${tiers.length}`);
     console.log(`  • Club Members: ${members.length}`);
-    console.log(`  • Court Bookings (Basic): ${bookings.length}`);
     console.log(`  • Court Bookings (Enhanced): ${enhancedBookings.length}`);
     console.log(`  • Payment Records: ${payments.length}`);
     console.log(`  • Matches: ${matches.length}`);

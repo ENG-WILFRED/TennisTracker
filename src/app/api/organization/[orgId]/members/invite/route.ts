@@ -15,9 +15,97 @@ export async function POST(request: Request, { params }: { params: Promise<{ org
       return new Response(JSON.stringify({ error: 'Full name, email, and role are required' }), { status: 400 });
     }
 
-    // Validate role
-    if (!['player', 'coach', 'referee'].includes(role)) {
-      return new Response(JSON.stringify({ error: 'Invalid role. Must be player, coach, or referee' }), { status: 400 });
+    // Validate role - staff roles don't need membership tiers
+    if (!['player', 'coach', 'referee', 'member'].includes(role)) {
+      return new Response(JSON.stringify({ error: 'Invalid role. Must be player, coach, referee, or member' }), { status: 400 });
+    }
+
+    // Find or create the invited user
+    const existingUser = await prisma.user.findUnique({
+      where: { email: email.toLowerCase() },
+      include: { player: true },
+    });
+
+    type InvitedUser = { id: string; player?: { userId: string } | null };
+    let invitedUser: InvitedUser | null = existingUser
+      ? { id: existingUser.id, player: existingUser.player ? { userId: existingUser.player.userId } : null }
+      : null;
+    let playerId: string;
+
+    if (!invitedUser) {
+      const [firstName, ...lastNameParts] = fullName.trim().split(' ');
+      const lastName = lastNameParts.join(' ') || '';
+
+      const newUser = await prisma.user.create({
+        data: {
+          username: `${email.toLowerCase().split('@')[0]}${Date.now()}`,
+          email: email.toLowerCase(),
+          firstName,
+          lastName,
+          passwordHash: '',
+        },
+      });
+
+      invitedUser = { id: newUser.id, player: null };
+      playerId = newUser.id;
+    } else {
+      playerId = invitedUser.player?.userId || invitedUser.id;
+    }
+
+    if (!invitedUser) {
+      return new Response(JSON.stringify({ error: 'Unable to create or find invited user' }), { status: 500 });
+    }
+
+    // For staff roles (player, coach, referee), create organizational membership
+    if (['player', 'coach', 'referee'].includes(role)) {
+      // Ensure player record exists for player role
+      if (role === 'player' && !existingUser?.player) {
+        const player = await prisma.player.create({
+          data: {
+            userId: invitedUser.id,
+            organizationId: orgId,
+          },
+        });
+        playerId = player.userId;
+      }
+
+      // Check if user already has this organizational role
+      const existingMembership = await prisma.membership.findUnique({
+        where: {
+          userId_orgId: {
+            userId: invitedUser.id,
+            orgId,
+          },
+        },
+      });
+
+      if (existingMembership) {
+        return new Response(JSON.stringify({ error: `User already has a role in this organization` }), { status: 409 });
+      }
+
+      // Create organizational membership
+      const membership = await prisma.membership.create({
+        data: {
+          userId: invitedUser.id,
+          orgId,
+          role,
+          status: 'accepted', // Staff roles are auto-approved
+          joinedAt: new Date(),
+          approvedAt: new Date(),
+          approvedBy: auth.playerId,
+        },
+      });
+
+      return new Response(JSON.stringify({
+        success: true,
+        message: `${role} role assigned to ${email}`,
+        membershipId: membership.id,
+      }), { status: 200 });
+    }
+
+    // For regular members, require a membership tier
+    if (!tier) {
+      return new Response(JSON.stringify({ error: 'Membership tier is required for member role' }), { status: 400 });
     }
 
     // Check if organization exists
@@ -43,54 +131,26 @@ export async function POST(request: Request, { params }: { params: Promise<{ org
       return new Response(JSON.stringify({ error: 'You do not have permission to invite members' }), { status: 403 });
     }
 
-    // Check if user already exists
-    const existingUser = await prisma.user.findUnique({
-      where: { email: email.toLowerCase() },
-      include: { player: true },
-    });
-
-    let playerId: string;
-
-    if (existingUser) {
-      playerId = existingUser.player?.userId || existingUser.id;
-
-      // Check if user is already a member of this organization
-      const existingMembership = await prisma.clubMember.findUnique({
-        where: {
-          organizationId_playerId: {
-            organizationId: orgId,
-            playerId: playerId,
-          },
-        },
-      });
-
-      if (existingMembership) {
-        return new Response(JSON.stringify({ error: 'This email is already a member of the organization' }), { status: 409 });
-      }
-    } else {
-      // Create new user account
-      const [firstName, ...lastNameParts] = fullName.trim().split(' ');
-      const lastName = lastNameParts.join(' ') || '';
-
-      const newUser = await prisma.user.create({
-        data: {
-          username: email.toLowerCase().split('@')[0] + Date.now(), // Temporary username
-          email: email.toLowerCase(),
-          firstName,
-          lastName,
-          passwordHash: '', // Will be set when user accepts invitation
-        },
-      });
-
-      // Create player record
+    // Ensure player record exists for membership creation
+    if (!existingUser?.player) {
       const player = await prisma.player.create({
         data: {
-          userId: newUser.id,
+          userId: invitedUser.id,
           organizationId: orgId,
         },
       });
+      playerId = player.userId;
+    }
 
-      playerId = newUser.id;
+    const existingMembership = await prisma.clubMember.findFirst({
+      where: {
+        organizationId: orgId,
+        playerId,
+      },
+    });
+
+    if (existingMembership) {
+      return new Response(JSON.stringify({ error: 'This email is already a member of the organization' }), { status: 409 });
     }
 
     // Get membership tier
@@ -105,14 +165,26 @@ export async function POST(request: Request, { params }: { params: Promise<{ org
       return new Response(JSON.stringify({ error: `Membership tier '${tier}' not found` }), { status: 400 });
     }
 
+    // Check if user is already a paying member
+    const existingMember = await prisma.clubMember.findFirst({
+      where: {
+        organizationId: orgId,
+        playerId: playerId,
+      },
+    });
+
+    if (existingMember) {
+      return new Response(JSON.stringify({ error: 'User is already a paying member of this organization' }), { status: 409 });
+    }
+
     // Create club membership with pending status
     const membership = await prisma.clubMember.create({
       data: {
         organizationId: orgId,
         playerId: playerId,
         tierId: membershipTier.id,
-        role: role,
-        paymentStatus: 'pending', // Pending until invitation is accepted
+        role: 'member', // Regular paying members have 'member' role
+        paymentStatus: 'pending', // Pending until invitation is accepted and payment is made
         joinDate: new Date(),
       },
     });

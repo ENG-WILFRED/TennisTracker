@@ -30,8 +30,11 @@ export async function GET(request: NextRequest) {
 
       if (organizationId) {
         whereClause = {
-          visibility: 'public',
           organizationId,
+          OR: [
+            { visibility: 'public' },
+            { visibility: null },
+          ],
         };
       } else {
         const followedUserIds = await prisma.userFollower
@@ -112,7 +115,12 @@ export async function GET(request: NextRequest) {
       const skip = (page - 1) * pageSize;
 
       const allPosts = await prisma.communityPost.findMany({
-        where: { visibility: 'public' },
+        where: {
+          OR: [
+            { visibility: 'public' },
+            { visibility: null },
+          ],
+        },
         include: {
           author: {
             include: {

@@ -84,12 +84,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify player is member of organization
-    const clubMember = await prisma.clubMember.findUnique({
+    const clubMember = await prisma.clubMember.findFirst({
       where: {
-        organizationId_playerId: {
-          organizationId,
-          playerId,
-        },
+        organizationId,
+        playerId,
       },
     });
 

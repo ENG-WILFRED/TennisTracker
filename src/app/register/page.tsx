@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useToast } from "@/components/ui/ToastContext";
 
@@ -26,15 +27,11 @@ const G = {
   muted2: "#5e8e50",
 };
 
-type Role = "player" | "coach" | "referee" | "staff" | "spectator" | "org";
-
-const roles: { value: Role; label: string; icon: string }[] = [
-  { value: "player",    label: "Player",    icon: "🎾" },
-  { value: "coach",     label: "Coach",     icon: "🏅" },
-  { value: "referee",   label: "Referee",   icon: "🟡" },
-  { value: "staff",     label: "Staff",     icon: "🛠️" },
-  { value: "spectator", label: "Spectator", icon: "👁️" },
-  { value: "org",       label: "Org",       icon: "🏢" },
+const roles: { label: string; icon: string; description: string }[] = [
+  { label: "Player",    icon: "🎾", description: "Compete in tournaments and book courts" },
+  { label: "Coach",     icon: "🏅", description: "Offer coaching sessions and guide players" },
+  { label: "Referee",   icon: "🟡", description: "Officiate matches and manage events" },
+  { label: "Staff",     icon: "🛠️", description: "Manage court operations and logistics" },
 ];
 
 const courtLines = [
@@ -84,28 +81,30 @@ function getPasswordStrength(pw: string): { score: number; label: string; color:
 }
 
 export default function RegisterPage() {
+  const router = useRouter();
   const [firstName, setFirstName]   = useState("");
   const [lastName, setLastName]     = useState("");
-  const [username, setUsername]     = useState("");
   const [email, setEmail]           = useState("");
   const [password, setPassword]     = useState("");
-  const [identifier, setIdentifier] = useState("");
-  const [role, setRole]             = useState<Role>("player");
-  const [alreadyRegistered, setAlreadyRegistered] = useState(false);
-  const [orgName, setOrgName]       = useState("");
-  const [orgDescription, setOrgDescription] = useState("");
-  const [orgCity, setOrgCity]       = useState("");
-  const [orgCountry, setOrgCountry] = useState("");
-  const [orgPhone, setOrgPhone]     = useState("");
-  const [orgEmail, setOrgEmail]     = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
   const [error, setError]           = useState("");
   const [agreed, setAgreed]         = useState(false);
+  const [navigatingToLogin, setNavigatingToLogin] = useState(false);
   const { addToast } = useToast();
   const [loading, setLoading]       = useState(false);
 
-  const isOrg = role === "org";
-  const isExistingOrgUser = isOrg && alreadyRegistered;
   const strength = getPasswordStrength(password);
+
+  const handleNavigateToLogin = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    setNavigatingToLogin(true);
+    // Delay navigation to show spinner
+    setTimeout(() => {
+      router.push('/login');
+    }, 600);
+  };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -117,112 +116,55 @@ export default function RegisterPage() {
       return;
     }
 
+    if (password !== passwordConfirm) {
+      const errMsg = "Passwords do not match.";
+      setError(errMsg);
+      addToast(errMsg, 'error');
+      return;
+    }
+
+    if (!firstName || !lastName || !email || !password) {
+      const errMsg = "Please complete all required fields.";
+      setError(errMsg);
+      addToast(errMsg, 'error');
+      return;
+    }
+
     setLoading(true);
     try {
-      if (isOrg) {
-        if (!orgName || !orgEmail || !orgCity || !orgCountry) {
-          throw new Error("Complete all organization fields to continue.");
-        }
-
-        let token = "";
-        if (isExistingOrgUser) {
-          if (!identifier || !password) {
-            throw new Error("Please provide your username/email and password.");
-          }
-
-          const loginRes = await fetch('/api/auth/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ usernameOrEmail: identifier, password, selectedRole: 'org' }),
-          });
-          const loginData = await loginRes.json();
-          if (!loginRes.ok || loginData.error) {
-            throw new Error(loginData.error || 'Login failed.');
-          }
-          token = loginData.accessToken;
-        } else {
-          if (!firstName || !lastName || !username || !email || !password) {
-            throw new Error("Please complete all required account fields.");
-          }
-
-          const registerRes = await fetch('/api/auth/register', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, email, password, firstName, lastName, acceptedTerms: true }),
-          });
-          const registerData = await registerRes.json();
-          if (!registerRes.ok || registerData.error) {
-            throw new Error(registerData.error || 'Registration failed.');
-          }
-
-          const loginRes = await fetch('/api/auth/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ usernameOrEmail: username, password, selectedRole: 'org' }),
-          });
-          const loginData = await loginRes.json();
-          if (!loginRes.ok || loginData.error) {
-            throw new Error(loginData.error || 'Login failed after registration.');
-          }
-          token = loginData.accessToken;
-        }
-
-        const orgRes = await fetch('/api/organization', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            name: orgName,
-            description: orgDescription,
-            city: orgCity,
-            country: orgCountry,
-            phone: orgPhone,
-            email: orgEmail,
-          }),
-        });
-        const orgData = await orgRes.json();
-        if (!orgRes.ok || orgData.error) {
-          throw new Error(orgData.error || 'Organization creation failed.');
-        }
-
-        addToast(`Organization created: ${orgData.name}. You are now linked as the organization admin.`, 'success');
-        if (!isExistingOrgUser) {
-          setFirstName("");
-          setLastName("");
-          setUsername("");
-          setEmail("");
-          setPassword("");
-        }
-        setOrgName("");
-        setOrgDescription("");
-        setOrgCity("");
-        setOrgCountry("");
-        setOrgPhone("");
-        setOrgEmail("");
-      } else {
-        if (!firstName || !lastName || !username || !email || !password) {
-          throw new Error("Please complete all required account fields.");
-        }
-
-        const registerRes = await fetch('/api/auth/register', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, email, password, firstName, lastName, acceptedTerms: true }),
-        });
-        const registerData = await registerRes.json();
-        if (!registerRes.ok || registerData.error) {
-          throw new Error(registerData.error || 'Registration failed.');
-        }
-
-        addToast('Your account was created successfully. You can now sign in.', 'success');
-        setFirstName("");
-        setLastName("");
-        setUsername("");
-        setEmail("");
-        setPassword("");
+      // Generate username from first and last name
+      const baseUsername = `${firstName.toLowerCase()}.${lastName.toLowerCase()}`.replace(/\s+/g, '');
+      
+      const registerRes = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          username: baseUsername,
+          email, 
+          password, 
+          firstName, 
+          lastName, 
+          acceptedTerms: true 
+        }),
+      });
+      const registerData = await registerRes.json();
+      if (!registerRes.ok || registerData.error) {
+        throw new Error(registerData.error || 'Registration failed.');
       }
+
+      addToast('Your account was created successfully. Redirecting to login...', 'success');
+      
+      // Clear form
+      setFirstName("");
+      setLastName("");
+      setEmail("");
+      setPassword("");
+      setPasswordConfirm("");
+      
+      // Redirect to login after a short delay
+      setTimeout(() => {
+        router.push('/login');
+      }, 1500);
     } catch (err: any) {
       const errMsg = err.message || 'An unexpected error occurred.';
       setError(errMsg);
@@ -281,32 +223,27 @@ export default function RegisterPage() {
           transition: width 0.3s, background 0.3s;
         }
 
-        .role-card {
+        .eye-icon {
+          cursor: pointer;
           display: flex;
-          flex-direction: column;
           align-items: center;
           justify-content: center;
-          gap: 4px;
-          padding: 10px 6px;
-          background: ${G.card2};
-          border: 1px solid ${G.border};
-          border-radius: 8px;
-          cursor: pointer;
-          transition: all 0.2s;
-          font-family: 'DM Sans', sans-serif;
-          font-size: 11px;
-          color: ${G.muted};
-          text-align: center;
-          user-select: none;
+          transition: color 0.2s;
         }
-        .role-card:hover {
-          border-color: ${G.muted2};
-          color: ${G.text2};
-        }
-        .role-card.selected {
-          background: ${G.mid};
-          border-color: ${G.lime};
+
+        .eye-icon:hover {
           color: ${G.lime};
+        }
+
+        .disclaimer-box {
+          background: rgba(125, 193, 66, 0.08);
+          border: 1px solid ${G.border2};
+          border-radius: 10px;
+          padding: 12px;
+          margin-bottom: 1.25rem;
+          font-size: 12px;
+          color: ${G.text2};
+          line-height: 1.5;
         }
 
         .brand-panel-stripe {
@@ -422,15 +359,18 @@ export default function RegisterPage() {
               </div>
               {roles.map((r) => (
                 <div
-                  key={r.value}
+                  key={r.label}
                   style={{
-                    display: "flex", alignItems: "center", gap: 10,
-                    padding: "6px 0",
-                    borderBottom: r.value !== "org" ? `1px solid ${G.border}` : "none",
+                    display: "flex", alignItems: "flex-start", gap: 10,
+                    padding: "8px 0",
+                    borderBottom: r.label !== "Staff" ? `1px solid ${G.border}` : "none",
                   }}
                 >
-                  <span style={{ fontSize: 16 }}>{r.icon}</span>
-                  <span style={{ fontSize: 13, color: G.text2 }}>{r.label}</span>
+                  <span style={{ fontSize: 16, flexShrink: 0 }}>{r.icon}</span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, color: G.text2, fontWeight: 500 }}>{r.label}</div>
+                    <div style={{ fontSize: 11, color: G.muted, marginTop: 2 }}>{r.description}</div>
+                  </div>
                 </div>
               ))}
             </div>
@@ -473,121 +413,22 @@ export default function RegisterPage() {
             </p>
 
             <form onSubmit={handleRegister}>
-              {/* Role selector */}
-              <div style={{ marginBottom: "1rem" }}>
-                <label style={{
-                  display: "block", fontSize: 11, fontWeight: 600, color: G.muted,
-                  letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 6,
-                }}>Your Role</label>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
-                  {roles.map((r) => (
-                    <div
-                      key={r.value}
-                      className={`role-card${role === r.value ? " selected" : ""}`}
-                      onClick={() => {
-                        setRole(r.value);
-                        if (r.value !== "org") {
-                          setAlreadyRegistered(false);
-                        }
-                      }}
-                    >
-                      <span style={{ fontSize: 18 }}>{r.icon}</span>
-                      <span>{r.label}</span>
-                    </div>
-                  ))}
-                </div>
+              {/* Disclaimer */}
+              <div className="disclaimer-box">
+                📝 You're signing up as a user. After login, you can explore organizations, apply for roles (Player/Coach/Referee), or create your own organization.
               </div>
 
-              {isOrg && (
-                <div style={{ marginBottom: "1.25rem", padding: "1rem", border: `1px solid ${G.border}`, borderRadius: 14, background: G.card2 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: G.lime, marginBottom: 10 }}>Organization Registration</div>
-                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                    {[
-                      { label: "New to VICO", value: false },
-                      { label: "Already registered", value: true },
-                    ].map((option) => (
-                      <button
-                        key={option.label}
-                        type="button"
-                        onClick={() => setAlreadyRegistered(option.value)}
-                        style={{
-                          flex: 1,
-                          minWidth: 120,
-                          padding: "10px 12px",
-                          borderRadius: 12,
-                          border: `1px solid ${alreadyRegistered === option.value ? G.lime : G.border}`,
-                          background: alreadyRegistered === option.value ? G.lime : G.card,
-                          color: alreadyRegistered === option.value ? G.dark : G.text,
-                          fontWeight: 700,
-                          cursor: "pointer",
-                        }}
-                      >
-                        {option.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {(!isOrg || !isExistingOrgUser) && (
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: "1rem" }}>
-                  {[
-                    { label: "First Name", value: firstName, setter: setFirstName, placeholder: "First name" },
-                    { label: "Last Name",  value: lastName,  setter: setLastName,  placeholder: "Last name" },
-                  ].map(({ label, value, setter, placeholder }) => (
-                    <div key={label}>
-                      <label style={{
-                        display: "block", fontSize: 11, fontWeight: 600, color: G.muted,
-                        letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 6,
-                      }}>{label}</label>
-                      <div style={{ position: "relative" }}>
-                        <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: G.muted2 }}>
-                          <UserIcon />
-                        </span>
-                        <input
-                          className="auth-input"
-                          type="text"
-                          placeholder={placeholder}
-                          value={value}
-                          onChange={(e) => setter(e.target.value)}
-                          required
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {isExistingOrgUser && (
-                <div style={{ marginBottom: "1rem" }}>
-                  <label style={{
-                    display: "block", fontSize: 11, fontWeight: 600, color: G.muted,
-                    letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 6,
-                  }}>Username or Email</label>
-                  <div style={{ position: "relative" }}>
-                    <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: G.muted2 }}>
-                      <UserIcon />
-                    </span>
-                    <input
-                      className="auth-input"
-                      type="text"
-                      placeholder="your.username or email@example.com"
-                      value={identifier}
-                      onChange={(e) => setIdentifier(e.target.value)}
-                      autoComplete="username"
-                      required
-                    />
-                  </div>
-                </div>
-              )}
-
-              {(!isExistingOrgUser || !isOrg) && (
-                <>
-                  <div style={{ marginBottom: "1rem" }}>
+              {/* First and Last Name */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: "1rem" }}>
+                {[
+                  { label: "First Name", value: firstName, setter: setFirstName, placeholder: "First name" },
+                  { label: "Last Name",  value: lastName,  setter: setLastName,  placeholder: "Last name" },
+                ].map(({ label, value, setter, placeholder }) => (
+                  <div key={label}>
                     <label style={{
                       display: "block", fontSize: 11, fontWeight: 600, color: G.muted,
                       letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 6,
-                    }}>Username</label>
+                    }}>{label}</label>
                     <div style={{ position: "relative" }}>
                       <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: G.muted2 }}>
                         <UserIcon />
@@ -595,58 +436,87 @@ export default function RegisterPage() {
                       <input
                         className="auth-input"
                         type="text"
-                        placeholder="Choose a unique username"
-                        value={username}
-                        onChange={(e) => setUsername(e.target.value)}
-                        autoComplete="username"
+                        placeholder={placeholder}
+                        value={value}
+                        onChange={(e) => setter(e.target.value)}
                         required
                       />
                     </div>
                   </div>
+                ))}
+              </div>
 
-                  <div style={{ marginBottom: "1rem" }}>
-                    <label style={{
-                      display: "block", fontSize: 11, fontWeight: 600, color: G.muted,
-                      letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 6,
-                    }}>Email Address</label>
-                    <div style={{ position: "relative" }}>
-                      <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: G.muted2 }}>
-                        <MailIcon />
-                      </span>
-                      <input
-                        className="auth-input"
-                        type="email"
-                        placeholder="your@email.com"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        autoComplete="email"
-                        required
-                      />
-                    </div>
-                  </div>
-                </>
-              )}
-
+              {/* Email */}
               <div style={{ marginBottom: "1rem" }}>
                 <label style={{
                   display: "block", fontSize: 11, fontWeight: 600, color: G.muted,
                   letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 6,
-                }}>{isExistingOrgUser ? "Password to connect your existing account" : "Password"}</label>
+                }}>Email Address</label>
+                <div style={{ position: "relative" }}>
+                  <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: G.muted2 }}>
+                    <MailIcon />
+                  </span>
+                  <input
+                    className="auth-input"
+                    type="email"
+                    placeholder="your@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    autoComplete="email"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Password */}
+              <div style={{ marginBottom: "1rem" }}>
+                <label style={{
+                  display: "block", fontSize: 11, fontWeight: 600, color: G.muted,
+                  letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 6,
+                }}>Password</label>
                 <div style={{ position: "relative" }}>
                   <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: G.muted2 }}>
                     <LockIcon />
                   </span>
                   <input
                     className="auth-input"
-                    type="password"
-                    placeholder={isExistingOrgUser ? "Enter your account password" : "Create a strong password"}
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Create a strong password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    autoComplete={isExistingOrgUser ? "current-password" : "new-password"}
+                    autoComplete="new-password"
                     required
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="eye-icon"
+                    style={{
+                      position: "absolute",
+                      right: 12,
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      background: "none",
+                      border: "none",
+                      color: G.muted2,
+                      padding: 0,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {showPassword ? (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                        <circle cx="12" cy="12" r="3" />
+                      </svg>
+                    ) : (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                        <line x1="1" y1="1" x2="23" y2="23" />
+                      </svg>
+                    )}
+                  </button>
                 </div>
-                {(!isExistingOrgUser && password.length > 0) && (
+                {password.length > 0 && (
                   <div style={{ marginTop: 6 }}>
                     <div style={{ height: 3, background: G.border, borderRadius: 2, overflow: "hidden" }}>
                       <div
@@ -661,76 +531,65 @@ export default function RegisterPage() {
                 )}
               </div>
 
-              {isOrg && (
-                <div style={{ marginBottom: "1rem", padding: "1rem", border: `1px solid ${G.border}`, borderRadius: 14, background: G.card2 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: G.lime, marginBottom: 10 }}>Organization details</div>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12, marginBottom: 12 }}>
-                    {[{
-                      label: "Organization Name",
-                      value: orgName,
-                      setter: setOrgName,
-                      placeholder: "Club or academy name",
-                    }, {
-                      label: "Organization Email",
-                      value: orgEmail,
-                      setter: setOrgEmail,
-                      placeholder: "contact@org.com",
-                    }, {
-                      label: "City",
-                      value: orgCity,
-                      setter: setOrgCity,
-                      placeholder: "City",
-                    }, {
-                      label: "Country",
-                      value: orgCountry,
-                      setter: setOrgCountry,
-                      placeholder: "Country",
-                    }].map(({ label, value, setter, placeholder }) => (
-                      <div key={label}>
-                        <label style={{
-                          display: "block", fontSize: 11, fontWeight: 600, color: G.muted,
-                          letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 6,
-                        }}>{label}</label>
-                        <input
-                          className="auth-input"
-                          type="text"
-                          placeholder={placeholder}
-                          value={value}
-                          onChange={(e) => setter(e.target.value)}
-                          required
-                        />
-                      </div>
-                    ))}
-                  </div>
-                  <div style={{ marginBottom: 12 }}>
-                    <label style={{
-                      display: "block", fontSize: 11, fontWeight: 600, color: G.muted,
-                      letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 6,
-                    }}>Phone</label>
-                    <input
-                      className="auth-input"
-                      type="text"
-                      placeholder="+254 700 000000"
-                      value={orgPhone}
-                      onChange={(e) => setOrgPhone(e.target.value)}
-                    />
-                  </div>
-                  <div style={{ marginBottom: 12 }}>
-                    <label style={{
-                      display: "block", fontSize: 11, fontWeight: 600, color: G.muted,
-                      letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 6,
-                    }}>About Organization</label>
-                    <textarea
-                      className="auth-input"
-                      rows={3}
-                      placeholder="Brief description of your organization"
-                      value={orgDescription}
-                      onChange={(e) => setOrgDescription(e.target.value)}
-                      style={{ resize: "vertical" }}
-                    />
-                  </div>
+              {/* Confirm Password */}
+              <div style={{ marginBottom: "1rem" }}>
+                <label style={{
+                  display: "block", fontSize: 11, fontWeight: 600, color: G.muted,
+                  letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 6,
+                }}>Confirm Password</label>
+                <div style={{ position: "relative" }}>
+                  <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: G.muted2 }}>
+                    <LockIcon />
+                  </span>
+                  <input
+                    className="auth-input"
+                    type={showPasswordConfirm ? "text" : "password"}
+                    placeholder="Confirm your password"
+                    value={passwordConfirm}
+                    onChange={(e) => setPasswordConfirm(e.target.value)}
+                    autoComplete="new-password"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPasswordConfirm(!showPasswordConfirm)}
+                    className="eye-icon"
+                    style={{
+                      position: "absolute",
+                      right: 12,
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      background: "none",
+                      border: "none",
+                      color: G.muted2,
+                      padding: 0,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {showPasswordConfirm ? (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                        <circle cx="12" cy="12" r="3" />
+                      </svg>
+                    ) : (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                        <line x1="1" y1="1" x2="23" y2="23" />
+                      </svg>
+                    )}
+                  </button>
                 </div>
-              )}
+                {passwordConfirm.length > 0 && password !== passwordConfirm && (
+                  <span style={{ fontSize: 11, color: G.red, marginTop: 4, display: "block" }}>
+                    Passwords do not match
+                  </span>
+                )}
+                {passwordConfirm.length > 0 && password === passwordConfirm && (
+                  <span style={{ fontSize: 11, color: G.lime, marginTop: 4, display: "block" }}>
+                    ✓ Passwords match
+                  </span>
+                )}
+              </div>
 
               {error && (
                 <div style={{ marginBottom: "1rem", padding: "14px", borderRadius: 14, background: "rgba(217,79,79,0.12)", color: G.text, border: `1px solid ${G.red}` }}>
@@ -757,15 +616,15 @@ export default function RegisterPage() {
 
               <button
                 type="submit"
-                disabled={loading || !agreed}
+                disabled={loading || !agreed || password !== passwordConfirm || !password}
                 style={{
                   width: "100%", padding: 13,
-                  background: loading || !agreed ? G.mid : G.lime,
+                  background: loading || !agreed || password !== passwordConfirm || !password ? G.mid : G.lime,
                   border: "none", borderRadius: 8,
                   fontFamily: "'DM Sans', sans-serif", fontSize: 15, fontWeight: 600,
-                  color: G.dark, cursor: loading || !agreed ? "not-allowed" : "pointer",
+                  color: G.dark, cursor: loading || !agreed || password !== passwordConfirm || !password ? "not-allowed" : "pointer",
                   letterSpacing: 0.5, transition: "all 0.2s",
-                  opacity: loading || !agreed ? 0.7 : 1,
+                  opacity: loading || !agreed || password !== passwordConfirm || !password ? 0.7 : 1,
                 }}
               >
                 {loading ? "Creating your account…" : "Create My VICO Account"}
@@ -774,13 +633,53 @@ export default function RegisterPage() {
 
             <p style={{ textAlign: "center", fontSize: 12, color: G.muted2, marginTop: "1.2rem" }}>
               Already have an account?{" "}
-              <Link href="/login" style={{ color: G.lime, textDecoration: "none", fontWeight: 500 }}>
+              <a 
+                href="/login" 
+                onClick={handleNavigateToLogin}
+                style={{ color: G.lime, textDecoration: "none", fontWeight: 500, cursor: "pointer" }}
+              >
                 Sign in here
-              </Link>
+              </a>
             </p>
           </div>
         </div>
       </div>
+
+      {/* Navigation Spinner Overlay */}
+      {navigatingToLogin && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(10, 24, 10, 0.8)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          backdropFilter: 'blur(2px)',
+        }}>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{
+              width: 56,
+              height: 56,
+              borderRadius: '50%',
+              border: `3px solid ${G.cardBorder}`,
+              borderTopColor: G.lime,
+              animation: 'spin 0.8s linear infinite',
+              margin: '0 auto 16px',
+            }} />
+            <p style={{ color: G.text, fontSize: 14, fontWeight: 600, letterSpacing: 0.5 }}>
+              Navigating to Login...
+            </p>
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </>
   );
 }

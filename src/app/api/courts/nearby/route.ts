@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
-// Haversine formula to calculate distance between two coordinates in kilometers
 function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371; // Earth's radius in kilometers
+  const R = 6371;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
   const dLon = ((lon2 - lon1) * Math.PI) / 180;
   const a =
@@ -21,39 +20,71 @@ export async function GET(req: Request) {
     const url = new URL(req.url);
     const latitude = url.searchParams.get('latitude');
     const longitude = url.searchParams.get('longitude');
-    const radiusKm = url.searchParams.get('radius') || '10'; // Default 10km for courts
-    const limit = Math.min(parseInt(url.searchParams.get('limit') || '15'), 50); // Max 50
+    const radiusKm = url.searchParams.get('radius') || '10';
+    const limit = Math.min(parseInt(url.searchParams.get('limit') || '20'), 50);
+    const query = url.searchParams.get('query')?.trim();
+    const location = url.searchParams.get('location')?.trim();
+    const nearest = url.searchParams.get('nearest') === 'true';
 
-    // Validate coordinates
-    if (!latitude || !longitude) {
-      return NextResponse.json({ error: 'latitude and longitude are required' }, { status: 400 });
-    }
-
-    const lat = parseFloat(latitude);
-    const lon = parseFloat(longitude);
+    const lat = latitude ? parseFloat(latitude) : NaN;
+    const lon = longitude ? parseFloat(longitude) : NaN;
     const radius = parseFloat(radiusKm);
+    const hasCoords = !isNaN(lat) && !isNaN(lon);
 
-    if (isNaN(lat) || isNaN(lon) || isNaN(radius)) {
-      return NextResponse.json({ error: 'Invalid coordinate values' }, { status: 400 });
+    if (!hasCoords && !location && !query) {
+      return NextResponse.json({ error: 'Please provide coordinates, location or query' }, { status: 400 });
     }
 
-    // Bounding box for initial filtering (optimization)
-    const latDelta = radius / 111;
-    const lonDelta = radius / (111 * Math.cos((lat * Math.PI) / 180));
+    const where: any = {
+      status: 'available',
+    };
 
-    // Get all courts with location data within bounding box
+    const searchClauses: any[] = [];
+
+    if (query) {
+      searchClauses.push({
+        OR: [
+          { name: { contains: query, mode: 'insensitive' } },
+          { address: { contains: query, mode: 'insensitive' } },
+          { city: { contains: query, mode: 'insensitive' } },
+          { surface: { contains: query, mode: 'insensitive' } },
+          { indoorOutdoor: { contains: query, mode: 'insensitive' } },
+          { organization: { is: { name: { contains: query, mode: 'insensitive' } } } },
+        ],
+      });
+    }
+
+    if (location) {
+      searchClauses.push({
+        OR: [
+          { city: { contains: location, mode: 'insensitive' } },
+          { address: { contains: location, mode: 'insensitive' } },
+          { name: { contains: location, mode: 'insensitive' } },
+          { organization: { is: { name: { contains: location, mode: 'insensitive' } } } },
+        ],
+      });
+    }
+
+    if (searchClauses.length > 0) {
+      where.AND = searchClauses;
+    }
+
+    const searchRadius = Math.min(Math.max(radius, 1), 1000);
+    if (hasCoords && !nearest) {
+      const latDelta = searchRadius / 111;
+      const lonDelta = searchRadius / (111 * Math.cos((lat * Math.PI) / 180));
+      where.latitude = {
+        gte: lat - latDelta,
+        lte: lat + latDelta,
+      };
+      where.longitude = {
+        gte: lon - lonDelta,
+        lte: lon + lonDelta,
+      };
+    }
+
     const potentialCourts = await prisma.court.findMany({
-      where: {
-        latitude: {
-          gte: lat - latDelta,
-          lte: lat + latDelta,
-        },
-        longitude: {
-          gte: lon - lonDelta,
-          lte: lon + lonDelta,
-        },
-        status: 'available',
-      },
+      where,
       select: {
         id: true,
         name: true,
@@ -72,41 +103,32 @@ export async function GET(req: Request) {
           },
         },
       },
-      take: limit * 2,
+      take: limit * 3,
     });
 
-    // Calculate actual distances and filter
     const nearbyCourts = potentialCourts
-      .filter((c: typeof potentialCourts[number]) => {
-        if (!c.latitude || !c.longitude) return false;
-        const distance = calculateDistance(
-          lat,
-          lon,
-          c.latitude,
-          c.longitude
-        );
-        return distance <= radius;
-      })
-      .map((c: typeof potentialCourts[number]) => {
-        const distance = calculateDistance(
-          lat,
-          lon,
-          c.latitude!,
-          c.longitude!
-        );
+      .map((court) => {
+        const distance = hasCoords && court.latitude !== null && court.longitude !== null
+          ? calculateDistance(lat, lon, court.latitude, court.longitude)
+          : 0;
+
         return {
-          id: c.id,
-          name: c.name,
-          address: c.address,
-          city: c.city,
-          surface: c.surface,
-          lights: c.lights,
-          indoorOutdoor: c.indoorOutdoor,
-          image: c.imageUrl || 'https://images.unsplash.com/photo-1554224311-beee415c15f7?w=400&q=80',
-          organization: c.organization.name,
-          organizationLogo: c.organization.logo,
+          id: court.id,
+          name: court.name,
+          address: court.address,
+          city: court.city,
+          surface: court.surface,
+          lights: court.lights,
+          indoorOutdoor: court.indoorOutdoor,
+          image: court.imageUrl || 'https://images.unsplash.com/photo-1554224311-beee415c15f7?w=400&q=80',
+          organization: court.organization.name,
+          organizationLogo: court.organization.logo,
           distance: parseFloat(distance.toFixed(2)),
         };
+      })
+      .filter((court) => {
+        if (!hasCoords || nearest) return true;
+        return court.distance <= searchRadius;
       })
       .sort((a, b) => a.distance - b.distance)
       .slice(0, limit);

@@ -6,6 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useRole } from '@/context/RoleContext';
 import { authenticatedFetch } from '@/lib/authenticatedFetch';
 import { chatUrlForUser, sendChallengeRequest } from '@/lib/nearby';
+import { useToast } from '@/components/ToastProvider';
 import { FindNearbyPeople } from '@/components/FindNearbyPeople';
 import { FindNearbyCourts } from '@/components/FindNearbyCourts';
 import { Badge, ActionBtn, SectionCard, G } from './ui';
@@ -15,6 +16,7 @@ import {
   Organization,
   MatchFilter,
   NAV_SECTIONS,
+  MembershipApplication,
 } from './types';
 import {
   HomeSection,
@@ -26,12 +28,16 @@ import {
   MessagesSection,
   MembershipSection,
   CommunitySection,
+  CreateOrgSection,
+  FindPeopleSection,
+  FindCourtsSection,
 } from './sections';
 
 export const SpectatorDashboard: React.FC = () => {
   const router = useRouter();
   const { user, logout } = useAuth();
   const { userMemberships, currentRole } = useRole();
+  const { showToast } = useToast();
   const [activeSection, setActiveSection] = useState('Home');
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -56,11 +62,22 @@ export const SpectatorDashboard: React.FC = () => {
   const [applyPosition, setApplyPosition] = useState('player');
   const [applyEmail, setApplyEmail] = useState(user?.email || '');
   const [applicationResult, setApplicationResult] = useState('');
+  const [applications, setApplications] = useState<MembershipApplication[]>([]);
 
   const [paymentStatus, setPaymentStatus] = useState('');
   const [loadingPayment, setLoadingPayment] = useState(false);
-  const [followingUsers, setFollowingUsers] = useState<Set<string>>(new Set());
-  const [suggestedUsers, setSuggestedUsers] = useState<any[]>([]);
+
+  const [orgFormData, setOrgFormData] = useState({
+    name: '',
+    description: '',
+    city: '',
+    country: '',
+    phone: '',
+    email: '',
+  });
+  const [orgLoading, setOrgLoading] = useState(false);
+  const [orgError, setOrgError] = useState('');
+  const [orgSuccess, setOrgSuccess] = useState(false);
 
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -133,6 +150,21 @@ export const SpectatorDashboard: React.FC = () => {
     }
   };
 
+  const fetchUserApplications = async () => {
+    try {
+      const response = await authenticatedFetch('/api/user/organization-applications');
+      if (response.ok) {
+        const data = await response.json();
+        setApplications(data || []);
+      } else {
+        setApplications([]);
+      }
+    } catch (error) {
+      console.error('Failed to fetch user applications:', error);
+      setApplications([]);
+    }
+  };
+
   const fetchOrganizationDetails = async (orgId: string) => {
     try {
       const response = await authenticatedFetch(`/api/organization/${orgId}`);
@@ -196,7 +228,7 @@ export const SpectatorDashboard: React.FC = () => {
   useEffect(() => {
     const initializeData = async () => {
       setLoading(true);
-      await Promise.all([fetchMatches(1, matchSort), fetchPlayers(), fetchOrganizations()]);
+      await Promise.all([fetchMatches(1, matchSort), fetchPlayers(), fetchOrganizations(), fetchUserApplications()]);
       setLoading(false);
     };
 
@@ -204,6 +236,34 @@ export const SpectatorDashboard: React.FC = () => {
       initializeData();
     }
   }, [user?.id, matchSort]);
+
+  const handleRemind = async (application: MembershipApplication) => {
+    const orgName = application.organizationName || 'the organization';
+    
+    try {
+      const response = await authenticatedFetch('/api/user/organization-applications/remind', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          membershipId: application.id,
+          organizationId: application.organizationId,
+        }),
+      });
+
+      const result = await response.json();
+      if (!response.ok) {
+        setApplicationResult(result.error || 'Failed to send reminder.');
+        showToast(result.error || 'Failed to send reminder.', 'error');
+      } else {
+        setApplicationResult(`✓ Reminder sent to ${orgName} for your ${application.position} application.`);
+        showToast(`Reminder sent! ${orgName} has been notified.`, 'success');
+      }
+    } catch (error: any) {
+      const errorMsg = error?.message || 'Failed to send reminder.';
+      setApplicationResult(errorMsg);
+      showToast(errorMsg, 'error');
+    }
+  };
 
   useEffect(() => {
     if (activeSection === 'Matches') {
@@ -229,6 +289,14 @@ export const SpectatorDashboard: React.FC = () => {
   const searchParams = useSearchParams();
   const orgViewId = searchParams?.get('org');
   const viewFullDetails = searchParams?.get('view') === 'full';
+  const sectionParam = searchParams?.get('section');
+
+  useEffect(() => {
+    const validSection = NAV_SECTIONS.find((section) => section.label === sectionParam)?.label;
+    if (validSection) {
+      setActiveSection(validSection);
+    }
+  }, [sectionParam]);
 
   useEffect(() => {
     if (!orgViewId || !organizations.length) return;
@@ -268,6 +336,18 @@ export const SpectatorDashboard: React.FC = () => {
       return;
     }
 
+    const existingApplication = applications.find(
+      (app) => app.organizationId === applyOrg && app.position === applyPosition
+    );
+
+    if (existingApplication) {
+      const orgName = existingApplication.organizationName || 'this organization';
+      const message = `⏳ You already have a pending ${applyPosition} application at ${orgName}. You can apply for a different role or use the Remind button to follow up on this application.`;
+      setApplicationResult(message);
+      showToast(`You're already applying for ${applyPosition} at ${orgName}. You can apply for a different role!`, 'info');
+      return;
+    }
+
     setApplicationResult('Submitting application…');
 
     try {
@@ -285,11 +365,21 @@ export const SpectatorDashboard: React.FC = () => {
       const result = await response.json();
       if (!response.ok) {
         setApplicationResult(result.error || 'Application submission failed.');
+        if (response.status === 409) {
+          showToast('You have already applied for this role at this organization.', 'info');
+        } else {
+          showToast(result.error || 'Application submission failed.', 'error');
+        }
       } else {
-        setApplicationResult(result.message || 'Application submitted successfully.');
+        const orgName = organizations.find(o => o.id === applyOrg)?.name || 'the organization';
+        const message = `✓ Application submitted to ${orgName} as ${applyPosition}`;
+        setApplicationResult(message);
+        showToast('Application sent! The organization will review and confirm soon.', 'success');
+        await fetchUserApplications();
       }
     } catch (error: any) {
       setApplicationResult(error?.message || 'Application submission failed.');
+      showToast(error?.message || 'Application submission failed.', 'error');
     }
   };
 
@@ -342,9 +432,58 @@ export const SpectatorDashboard: React.FC = () => {
     }
   };
 
+  const handleCreateOrg = async () => {
+    if (!orgFormData.name.trim()) {
+      setOrgError('Organization name is required.');
+      return;
+    }
+
+    setOrgLoading(true);
+    setOrgError('');
+
+    try {
+      const response = await authenticatedFetch('/api/organization', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orgFormData),
+      });
+
+      const result = await response.json();
+      if (!response.ok || result.error) {
+        setOrgError(result.error || 'Failed to create organization.');
+        return;
+      }
+
+      // Success - show success screen
+      setOrgSuccess(true);
+      
+      // Refresh organizations list
+      const orgsResponse = await authenticatedFetch('/api/organizations');
+      if (orgsResponse.ok) {
+        const orgsData = await orgsResponse.json();
+        setOrganizations(orgsData.organizations || []);
+      }
+    } catch (error: any) {
+      setOrgError(error?.message || 'Failed to create organization.');
+    } finally {
+      setOrgLoading(false);
+    }
+  };
+
   const handleSectionChange = (section: string) => {
+    if (section === 'Membership' && user?.id && userMemberships.some((membership) => membership.role !== 'spectator')) {
+      router.push(`/dashboard/member/${user.id}`);
+      return;
+    }
+
     setActiveSection(section);
     setMobileNavOpen(false);
+
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      params.set('section', section);
+      router.replace(`${window.location.pathname}?${params.toString()}`);
+    }
   };
 
   const handleApplyRole = (orgId: string, role: string) => {
@@ -358,6 +497,10 @@ export const SpectatorDashboard: React.FC = () => {
   };
 
   const handleViewFullDetails = (orgId: string) => {
+    router.push(`/organization/${orgId}`);
+  };
+
+  const handleOpenOrganization = (orgId: string) => {
     router.push(`/organization/${orgId}`);
   };
 
@@ -442,6 +585,18 @@ export const SpectatorDashboard: React.FC = () => {
             paymentStatus={paymentStatus}
           />
         );
+      case 'Create Organization':
+        return (
+          <CreateOrgSection
+            orgFormData={orgFormData}
+            setOrgFormData={setOrgFormData}
+            handleCreateOrg={handleCreateOrg}
+            orgLoading={orgLoading}
+            orgError={orgError}
+            orgSuccess={orgSuccess}
+            setOrgSuccess={setOrgSuccess}
+          />
+        );
       case 'Apply':
         return (
           <ApplySection
@@ -454,6 +609,8 @@ export const SpectatorDashboard: React.FC = () => {
             setApplyEmail={setApplyEmail}
             handleApply={handleApply}
             applicationResult={applicationResult}
+            applications={applications}
+            onRemind={handleRemind}
           />
         );
       case 'Membership':
@@ -464,6 +621,8 @@ export const SpectatorDashboard: React.FC = () => {
             purchaseMembership={purchaseMembership}
             loadingPayment={loadingPayment}
             paymentStatus={paymentStatus}
+            applications={applications}
+            onViewOrg={handleOpenOrganization}
           />
         );
       case 'Messages':
@@ -476,16 +635,17 @@ export const SpectatorDashboard: React.FC = () => {
         );
       case 'Community':
         return (
-          <CommunitySection
-            suggestedUsers={suggestedUsers}
-            followingUsers={followingUsers}
-            onFollow={(userId: string) => {
-              const newFollowing = new Set(followingUsers);
-              newFollowing.add(userId);
-              setFollowingUsers(newFollowing);
-            }}
+          <CommunitySection />
+        );
+      case 'Find People':
+        return (
+          <FindPeopleSection
+            onMessageClick={handleMessageClick}
+            onChallengeClick={handleChallenge}
           />
         );
+      case 'Find Courts':
+        return <FindCourtsSection />;
       default:
         return (
           <HomeSection

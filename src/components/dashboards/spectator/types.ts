@@ -101,6 +101,7 @@ export interface MembershipApplication {
   id: string;
   userId: string;
   organizationId: string;
+  organizationName?: string;
   position: string;
   status: 'pending' | 'approved' | 'rejected';
   appliedAt: string;
@@ -121,10 +122,13 @@ export const NAV_SECTIONS: NavSection[] = [
   { label: 'Matches', icon: '📊' },
   { label: 'Players', icon: '👤' },
   { label: 'Organizations', icon: '🏢' },
+  { label: 'Create Organization', icon: '✨' },
   { label: 'Community', icon: '👥' },
   { label: 'Apply', icon: '📝' },
   { label: 'Membership', icon: '💳' },
   { label: 'Messages', icon: '💬' },
+  { label: 'Find People', icon: '👥 🔍' },
+  { label: 'Find Courts', icon: '🎾 🔍' },
 ];
 
 export const MEMBERSHIP_TIERS = [

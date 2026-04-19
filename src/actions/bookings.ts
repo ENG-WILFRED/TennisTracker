@@ -279,12 +279,10 @@ export async function createBookingPreview(
   organizationId: string
 ) {
   try {
-    const clubMember = await prisma.clubMember.findUnique({
+    const clubMember = await prisma.clubMember.findFirst({
       where: {
-        organizationId_playerId: {
-          organizationId,
-          playerId,
-        },
+        organizationId,
+        playerId,
       },
     });
 
@@ -328,12 +326,10 @@ export async function createCourtBooking(
 ) {
   try {
     // Check if player is a member of this organization
-    const clubMember = await prisma.clubMember.findUnique({
+    const clubMember = await prisma.clubMember.findFirst({
       where: {
-        organizationId_playerId: {
-          organizationId,
-          playerId,
-        },
+        organizationId,
+        playerId,
       },
     });
 
@@ -436,12 +432,10 @@ export async function createCourtBooking(
 export async function getPlayerBookings(playerId: string, organizationId: string) {
   try {
     // Get the club member record if it exists
-    const clubMember = await prisma.clubMember.findUnique({
+    const clubMember = await prisma.clubMember.findFirst({
       where: {
-        organizationId_playerId: {
-          organizationId,
-          playerId,
-        },
+        organizationId,
+        playerId,
       },
     });
 
