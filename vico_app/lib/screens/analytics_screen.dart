@@ -1,26 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
-class DashboardScreen extends StatefulWidget {
-  final String? role;
-
-  const DashboardScreen({Key? key, this.role}) : super(key: key);
+class AnalyticsScreen extends StatefulWidget {
+  const AnalyticsScreen({Key? key}) : super(key: key);
 
   @override
-  State<DashboardScreen> createState() => _DashboardScreenState();
+  State<AnalyticsScreen> createState() => _AnalyticsScreenState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen> {
+class _AnalyticsScreenState extends State<AnalyticsScreen> {
   late final WebViewController controller;
 
   @override
   void initState() {
     super.initState();
-    final rolePath = widget.role != null ? '/${widget.role}' : '';
     controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setUserAgent('Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Mobile Safari/537.36')
-      ..loadRequest(Uri.parse('https://vicotennis.onrender.com/dashboard$rolePath'));
+      ..loadRequest(Uri.parse('https://vicotennis.onrender.com/analytics'));
   }
 
   @override

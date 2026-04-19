@@ -9,6 +9,7 @@ class AuthService extends ChangeNotifier {
   String? _accessToken;
   String? _userId;
   String? _userEmail;
+  String? _userRole;
   bool _isLoading = false;
   String? _error;
 
@@ -17,15 +18,16 @@ class AuthService extends ChangeNotifier {
   String? get error => _error;
   String? get userId => _userId;
   String? get userEmail => _userEmail;
+  String? get userRole => _userRole;
 
   AuthService() {
     _initAuth();
   }
 
   Future<void> _initAuth() async {
-    await _apiService._initToken();
-    if (_apiService._authToken != null) {
-      _accessToken = _apiService._authToken;
+    await _apiService.initToken();
+    if (_apiService.authToken != null) {
+      _accessToken = _apiService.authToken;
       notifyListeners();
     }
   }
@@ -49,6 +51,7 @@ class AuthService extends ChangeNotifier {
       _accessToken = token;
       _userEmail = email;
       _userId = response['userId'] as String?;
+      _userRole = response['role'] as String?;
 
       await _apiService.setAuthToken(token);
 
@@ -81,6 +84,7 @@ class AuthService extends ChangeNotifier {
       _accessToken = token;
       _userEmail = data['email'] as String?;
       _userId = response['userId'] as String?;
+      _userRole = response['role'] as String?;
 
       await _apiService.setAuthToken(token);
 
@@ -103,6 +107,7 @@ class AuthService extends ChangeNotifier {
       _accessToken = null;
       _userId = null;
       _userEmail = null;
+      _userRole = null;
       _error = null;
       _logger.i('Logout successful');
       notifyListeners();

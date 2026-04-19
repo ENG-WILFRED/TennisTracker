@@ -43,7 +43,7 @@ dependencies:
   geocoding: ^2.1.0
   
   # Payments
-  stripe_flutter: ^6.0.0
+  flutter_stripe: ^10.0.0
   
   # Real-time
   socket_io_client: ^2.0.1
@@ -56,6 +56,7 @@ dependencies:
   
   # Date & Time
   table_calendar: ^3.0.9
+  webview_flutter: ^4.13.1
 
 dev_dependencies:
   flutter_test:
@@ -64,16 +65,12 @@ dev_dependencies:
   flutter_lints: ^3.0.0
   json_serializable: ^6.7.1
   build_runner: ^2.4.6
+  flutter_launcher_icons: ^0.11.0
+
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "web/icons/Icon-512.png"
 
 flutter:
   uses-material-design: true
-  
-  assets:
-    - assets/images/
-    - assets/icons/
-    - assets/fonts/
-  
-  fonts:
-    - family: Bebas Neue
-      fonts:
-        - asset: assets/fonts/BebasNeue-Regular.ttf

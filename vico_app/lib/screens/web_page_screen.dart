@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
-class CommunityScreen extends StatefulWidget {
-  const CommunityScreen({Key? key}) : super(key: key);
+class WebPageScreen extends StatefulWidget {
+  final String path;
+  const WebPageScreen({Key? key, required this.path}) : super(key: key);
 
   @override
-  State<CommunityScreen> createState() => _CommunityScreenState();
+  State<WebPageScreen> createState() => _WebPageScreenState();
 }
 
-class _CommunityScreenState extends State<CommunityScreen> {
+class _WebPageScreenState extends State<WebPageScreen> {
   late final WebViewController controller;
 
   @override
@@ -16,7 +17,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
     super.initState();
     controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..loadRequest(Uri.parse('https://vicotennis.onrender.com/community'));
+      ..loadRequest(Uri.parse('https://vicotennis.onrender.com/${widget.path}'));
   }
 
   @override
