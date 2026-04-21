@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import Link from 'next/link';
@@ -23,12 +23,38 @@ import OrganizationPlayersSection from '@/components/organization/dashboard-sect
 import MessagingPanel from '@/components/dashboards/MessagingPanel';
 import { authenticatedFetch } from '@/lib/authenticatedFetch';
 import { clearTokens, getStoredTokens } from '@/lib/tokenManager';
+import { getCachedData, setCachedData, clearCacheEntry, fetchWithCache } from '@/lib/dashboardCache';
 
 const G = {
   dark: '#0f1f0f', sidebar: '#152515', card: '#1a3020', cardBorder: '#2d5a35',
   mid: '#2d5a27', bright: '#3d7a32', lime: '#7dc142', accent: '#a8d84e',
   text: '#e8f5e0', muted: '#7aaa6a', yellow: '#f0c040',
 };
+
+/**
+ * Helper function to normalize members data
+ */
+function normalizeMembersData(membersRaw: any[]) {
+  return membersRaw.map((cm: any) => {
+    const role = cm.role === 'member' ? 'player' : cm.role === 'officer' ? 'admin' : cm.role || 'member';
+    return {
+      id: cm.id,
+      firstName: cm.player?.user?.firstName || cm.player?.user?.email?.split('@')[0] || 'Unknown',
+      lastName: cm.player?.user?.lastName || '',
+      email: cm.player?.user?.email || '',
+      role,
+      tier: cm.membershipTier?.name || cm.tier || 'Basic',
+      status: cm.paymentStatus === 'active' ? 'active' : 'inactive',
+      joinDate: cm.joinDate || undefined,
+      visits: cm.attendanceCount || 0,
+      player: cm.player ? { userId: cm.player.userId, user: cm.player.user } : undefined,
+      coach: cm.coach || '',
+      nationality: cm.player?.user?.nationality || '',
+      age: cm.player?.user?.dateOfBirth ? new Date(cm.player.user.dateOfBirth).getFullYear() : undefined,
+    };
+  });
+}
+
 
 export const OrganizationDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -38,6 +64,8 @@ export const OrganizationDashboard: React.FC = () => {
   // Define nav items at the top for easy access
   const navItems = [
     { label: 'Overview', icon: '🏢', section: 'overview' },
+    { label: 'Find People', icon: '👥', section: 'find-people' },
+    { label: 'Find Courts', icon: '🎾', section: 'find-courts' },
     { label: 'My Players', icon: '👨‍🏫', section: 'players' },
     { label: 'Staff', icon: '👥', section: 'staff' },
     { label: 'Tasks', icon: '📋', section: 'tasks' },
@@ -54,26 +82,26 @@ export const OrganizationDashboard: React.FC = () => {
   const sectionParam = searchParams.get('section') || 'overview';
   const activeNav = navItems.find(item => item.section === sectionParam)?.label || 'Overview';
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const mobileNavItems = navItems.filter((item) => !['Reports', 'Messages'].includes(item.label));
+  const mobileNavItems = useMemo(() => navItems.filter((item) => !['Reports', 'Messages'].includes(item.label)), [navItems]);
   const displayedNav = sidebarOpen ? mobileNavItems : navItems;
 
   // Handle navigation to a new section
-  const handleNavigation = (section: string) => {
-    const params = new URLSearchParams(searchParams.toString());
+  const handleNavigation = useCallback((section: string) => {
+    const params = new URLSearchParams();
     params.set('section', section);
-    params.delete('tab');
     router.push(`?${params.toString()}`, { scroll: false });
-  };
+    toast.success(`Navigating to ${section}...`, { duration: 1000 });
+  }, [router]);
 
   // Read active tab from URL, default to 'Overview'
   const activeTab = (searchParams.get('tab') as string) || 'Overview';
   
   // Handle tab change
-  const handleTabChange = (tab: string) => {
+  const handleTabChange = useCallback((tab: string) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set('tab', tab);
     router.push(`?${params.toString()}`, { scroll: false });
-  };
+  }, [searchParams, router]);
 
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [members, setMembers] = useState<any[]>([]);
@@ -101,7 +129,37 @@ export const OrganizationDashboard: React.FC = () => {
 
     const fetchDashboard = async () => {
       setIsLoading(true);
+      const cacheKey = `dashboard_${user.id}`;
+      
       try {
+        // Check if we have cached data
+        const cached = getCachedData(cacheKey);
+        if (cached) {
+          const json = cached as any;
+          setDashboardData(json);
+          setMembers(normalizeMembersData(json.members));
+          setMembersLoading(false);
+          
+          // Sync user data silently from cache
+          if (json.manager && user) {
+            Object.assign(user, {
+              firstName: json.manager.firstName,
+              lastName: json.manager.lastName,
+              email: json.manager.email,
+              phone: json.manager.phone,
+              photo: json.manager.photo,
+              nationality: json.manager.nationality,
+              gender: json.manager.gender,
+              bio: json.manager.bio,
+              dateOfBirth: json.manager.dateOfBirth,
+            });
+          }
+          
+          setIsLoading(false);
+          toast.success('Dashboard loaded from cache', { duration: 1000 });
+          return;
+        }
+
         const res = await authenticatedFetch(`/api/dashboard/role?role=organization&userId=${user.id}`);
         const json = await res.json();
 
@@ -109,6 +167,8 @@ export const OrganizationDashboard: React.FC = () => {
           throw new Error(json?.error || 'Failed to load dashboard');
         }
 
+        // Cache the response
+        setCachedData(cacheKey, json);
         setDashboardData(json);
 
         // Sync manager data with user in auth context
@@ -128,42 +188,33 @@ export const OrganizationDashboard: React.FC = () => {
 
         // Set members from dashboard data
         if (json.members) {
-          const normalized = json.members.map((cm: any) => {
-            const role = cm.role === 'member' ? 'player' : cm.role === 'officer' ? 'admin' : cm.role || 'member';
-            return {
-              id: cm.id,
-              firstName: cm.player?.user?.firstName || cm.player?.user?.email?.split('@')[0] || 'Unknown',
-              lastName: cm.player?.user?.lastName || '',
-              email: cm.player?.user?.email || '',
-              role,
-              tier: cm.membershipTier?.name || cm.tier || 'Basic',
-              status: cm.paymentStatus === 'active' ? 'active' : 'inactive',
-              joinDate: cm.joinDate || undefined,
-              visits: cm.attendanceCount || 0,
-              player: cm.player ? { userId: cm.player.userId, user: cm.player.user } : undefined,
-              coach: cm.coach || '',
-              nationality: cm.player?.user?.nationality || '',
-              age: cm.player?.user?.dateOfBirth ? new Date(cm.player.user.dateOfBirth).getFullYear() : undefined,
-            };
-          });
-          setMembers(normalized);
+          setMembers(normalizeMembersData(json.members));
           setMembersLoading(false);
         }
 
-        // Fetch activities
-        if (json && user?.id) {
-          try {
-            const actRes = await authenticatedFetch(`/api/organization/activities?userId=${user.id}`);
-            if (actRes.ok) {
-              const actData = await actRes.json();
-              setActivities(Array.isArray(actData.activities) ? actData.activities.slice(0, 5) : []);
+        // Fetch activities for the resolved organization
+        if (json?.organizationId) {
+          const activitiesCacheKey = `activities_${json.organizationId}`;
+          const cachedActivities = getCachedData(activitiesCacheKey);
+          
+          if (cachedActivities) {
+            setActivities(Array.isArray(cachedActivities) ? (cachedActivities as any[]).slice(0, 5) : []);
+          } else {
+            try {
+              const actRes = await authenticatedFetch(`/api/organization/${json.organizationId}/activities`);
+              if (actRes.ok) {
+                const actData = await actRes.json();
+                const activitiesArray = Array.isArray(actData) ? actData.slice(0, 5) : [];
+                setCachedData(activitiesCacheKey, activitiesArray);
+                setActivities(activitiesArray);
+              }
+            } catch (err) {
+              console.error('Failed to fetch activities:', err);
             }
-          } catch (err) {
-            console.error('Failed to fetch activities:', err);
           }
         }
 
-        // Initialize edit form with user data (including synced data)
+        // Initialize edit form with user data
         const userData = user as any;
         setEditForm({
           firstName: userData?.firstName || '',
@@ -176,8 +227,11 @@ export const OrganizationDashboard: React.FC = () => {
           bio: userData?.bio || '',
           photo: userData?.photo || '',
         });
+
+        toast.success('Dashboard data loaded successfully', { duration: 2000 });
       } catch (err: any) {
         setError(err?.message || 'Unknown error');
+        toast.error(`Error loading dashboard: ${err?.message || 'Unknown error'}`, { duration: 3000 });
       } finally {
         setIsLoading(false);
       }
@@ -185,26 +239,63 @@ export const OrganizationDashboard: React.FC = () => {
     fetchDashboard();
   }, [user?.id]);
 
-  const fetchActivities = async () => {
+  const fetchActivities = useCallback(async () => {
+    if (!dashboardData?.organizationId) {
+      toast.error('Organization not found', { duration: 2000 });
+      return;
+    }
+    const activitiesCacheKey = `activities_${dashboardData.organizationId}`;
+    
     try {
-      const res = await authenticatedFetch(`/api/organization/activities?userId=${user?.id}`);
+      // Check cache first
+      const cached = getCachedData(activitiesCacheKey);
+      if (cached) {
+        setActivities(Array.isArray(cached) ? (cached as any[]).slice(0, 5) : []);
+        return;
+      }
+
+      const res = await authenticatedFetch(`/api/organization/${dashboardData.organizationId}/activities`);
       if (res.ok) {
         const data = await res.json();
-        setActivities(Array.isArray(data.activities) ? data.activities.slice(0, 5) : []);
+        const activitiesArray = Array.isArray(data) ? data.slice(0, 5) : [];
+        setCachedData(activitiesCacheKey, activitiesArray);
+        setActivities(activitiesArray);
+        toast.success('Activities refreshed', { duration: 1500 });
+      } else {
+        toast.error('Failed to fetch activities', { duration: 2000 });
       }
     } catch (err) {
       console.error('Failed to fetch activities:', err);
+      toast.error('Error loading activities', { duration: 2000 });
     }
-  };
+  }, [dashboardData?.organizationId]);
 
   const handleEditFormChange = (e: any) => {
     const { name, value } = e.target;
     setEditForm((prev: any) => ({ ...prev, [name]: value }));
   };
 
+  const handleOpenEditModal = useCallback(() => {
+    const userData = user as any;
+    setEditForm({
+      firstName: user?.firstName || '',
+      lastName: user?.lastName || '',
+      email: user?.email || '',
+      phone: userData?.phone || '',
+      gender: userData?.gender || '',
+      dateOfBirth: userData?.dateOfBirth || '',
+      nationality: userData?.nationality || '',
+      bio: userData?.bio || '',
+      photo: user?.photo || '',
+    });
+    setShowEditModal(true);
+    toast.success('Edit mode activated', { duration: 1000 });
+  }, [user]);
+
   const handleSaveProfile = async (e: any) => {
     e.preventDefault();
     setProfileSaving(true);
+    const savingToast = toast.loading('Saving profile...', { duration: Infinity });
     try {
       const res = await authenticatedFetch(`/api/user/profile/${user?.id}`, {
         method: 'PUT',
@@ -221,10 +312,14 @@ export const OrganizationDashboard: React.FC = () => {
 
       const updatedUserData = await res.json();
 
-      // Update the auth context with the new user data (including phone, nationality, etc.)
+      // Update the auth context with the new user data
       if (user) {
         Object.assign(user, updatedUserData);
       }
+
+      // Clear cache to force refresh
+      clearCacheEntry(`dashboard_${user?.id}`);
+      clearCacheEntry(`activities_${dashboardData?.organizationId}`);
 
       // Log the activity
       await authenticatedFetch(`/api/organization/activities`, {
@@ -240,33 +335,41 @@ export const OrganizationDashboard: React.FC = () => {
 
       setShowEditModal(false);
       fetchActivities();
-      toast.success('Profile updated successfully!');
+      
+      toast.dismiss(savingToast);
+      toast.success('Profile updated successfully! 🎉', { duration: 3000 });
     } catch (err: any) {
-      toast.error(err.message || 'Failed to save profile');
+      toast.dismiss(savingToast);
+      toast.error(`Failed to save profile: ${err.message || 'Unknown error'}`, { duration: 3000 });
     } finally {
       setProfileSaving(false);
     }
   };
 
-  const handleMessageClick = (personId: string, personName: string) => {
+  const handleMessageClick = useCallback((personId: string, personName: string) => {
+    toast.loading(`Opening chat with ${personName}...`, { duration: 1000 });
     router.push(chatUrlForUser(personId, personName));
-  };
+  }, [router]);
 
-  const handleChallenge = async (personId: string, personName: string) => {
+  const handleChallenge = useCallback(async (personId: string, personName: string) => {
     if (!user?.id) {
-      toast.error('Please sign in to send a challenge.');
+      toast.error('Please sign in to send a challenge.', { duration: 2000 });
       return;
     }
 
+    const challengeToast = toast.loading(`Sending challenge to ${personName}...`, { duration: Infinity });
     try {
       await sendChallengeRequest(user.id, personId);
-      toast.success(`Challenge request sent to ${personName}.`);
+      toast.dismiss(challengeToast);
+      toast.success(`Challenge request sent to ${personName}! 🎾`, { duration: 3000 });
     } catch (error: any) {
-      toast.error(error?.message || 'Failed to send challenge request.');
+      toast.dismiss(challengeToast);
+      toast.error(`Failed to send challenge: ${error?.message || 'Unknown error'}`, { duration: 3000 });
     }
-  };
+  }, [user?.id]);
 
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async () => {
+    const logoutToast = toast.loading('Logging out...', { duration: Infinity });
     try {
       const storedTokens = getStoredTokens();
       const response = await fetch('/api/auth/logout', {
@@ -280,72 +383,37 @@ export const OrganizationDashboard: React.FC = () => {
 
       if (response.ok) {
         clearTokens();
+        toast.dismiss(logoutToast);
+        toast.success('Logged out successfully! 👋', { duration: 2000 });
         router.push('/');
       } else {
         console.error('Logout failed', await response.text());
         clearTokens();
+        toast.dismiss(logoutToast);
+        toast.success('Logged out', { duration: 2000 });
         router.push('/');
       }
     } catch (err) {
       console.error('Logout error:', err);
       clearTokens();
+      toast.dismiss(logoutToast);
+      toast.error('Error during logout, but session cleared', { duration: 2000 });
       router.push('/');
     }
-  };
+  }, [router]);
 
   // Rest of component body below
 
-  const tabs = ['Overview', 'Team', 'Roadmap', 'Resources', 'Chat 💬'];
+  const tabs = useMemo(() => ['Overview', 'Team', 'Roadmap', 'Resources', 'Chat 💬'], []);
 
-  const kpiData = dashboardData?.kpi ?? [
-    { label: 'Team Members', value: 0, max: 30, color: G.lime },
-    { label: 'Events This Month', value: 0, max: 8, color: G.accent },
-    { label: 'Courts Available', value: 0, max: 8, color: G.bright },
-    { label: 'Avg Rating', value: 0, max: 5, color: G.yellow },
-  ];
-
-  const revenueTrend = dashboardData?.revenueTrend ?? [2100, 2400, 2200, 2800, 2600, 2950, 3100, 3200, 3400, 3600, 3500, 3750];
-
-  const scheduleItems = dashboardData?.schedule ?? [
-    { day: 'Mon', time: '10:00 AM', event: 'Open Tournament', status: 'Active' },
-    { day: 'Tue', time: '6:00 PM', event: 'Coaching Group', status: 'Scheduled' },
-    { day: 'Wed', time: '7:00 AM', event: 'Morning Drills', status: 'Scheduled' },
-    { day: 'Fri', time: '3:00 PM', event: 'Friendly Match', status: 'Scheduled' },
-    { day: 'Sat', time: '9:00 AM', event: 'BBQ Social', status: 'Scheduled' },
-  ];
-
-  const staffRoles = dashboardData?.staff ?? [
-    { name: 'Elena Rodriguez', role: 'Head Coach', status: 'Active', sessions: 12 },
-    { name: 'James Kipchoge', role: 'Court Manager', status: 'Active', sessions: 24 },
-    { name: 'Maria Santos', role: 'Referee', status: 'Available', sessions: 18 },
-    { name: 'Ibrahim Hassan', role: 'Instructor', status: 'Active', sessions: 8 },
-  ];
-
-  const announcements = dashboardData?.announcements ?? [
-    { title: 'Court Maintenance Completed', date: 'Mar 20', priority: 'info', msg: 'Courts 1-3 maintenance finished' },
-    { title: 'New Membership Tier Available', date: 'Mar 19', priority: 'success', msg: 'Platinum tier with exclusive benefits' },
-    { title: 'Tournament Registrations Open', date: 'Mar 18', priority: 'info', msg: 'Spring Tournament · Deadline Apr 15' },
-    { title: 'Staff Appreciation Event', date: 'Mar 17', priority: 'info', msg: 'Friday 6 PM at the pavilion' },
-  ];
-
-  const pendingTasks = [
-    { task: 'Approve 3 membership requests', owner: 'Admin', due: 'Today', priority: 'High' },
-    { task: 'Update event schedule', owner: 'Elena', due: 'Tomorrow', priority: 'High' },
-    { task: 'Court booking system audit', owner: 'James', due: 'Mar 25', priority: 'Medium' },
-    { task: 'Tournament prize distribution', owner: 'Finance', due: 'Mar 27', priority: 'Low' },
-  ];
-
-  const systemStatus = [
-    { name: 'Web Platform', status: 'OK', uptime: '99.8%', color: G.lime },
-    { name: 'Mobile App', status: 'OK', uptime: '99.5%', color: G.lime },
-    { name: 'Booking System', status: 'Degraded', uptime: '95.2%', color: G.yellow },
-    { name: 'Analytics', status: 'OK', uptime: '98.9%', color: G.lime },
-    { name: 'Chat', status: 'OK', uptime: '99.9%', color: G.lime },
-    { name: 'API Gateway', status: 'OK', uptime: '99.6%', color: G.lime },
-  ];
-
-  const priorityColor = (p: string) => p === 'High' ? '#ff6b6b' : p === 'Medium' ? G.yellow : G.muted;
-  const priorityBg = (p: string) => p === 'High' ? '#ff6b6b33' : p === 'Medium' ? G.yellow + '33' : G.muted + '33';
+  const kpiData = useMemo(() => dashboardData?.kpi ?? [], [dashboardData?.kpi]);
+  const revenueTrend = useMemo(() => dashboardData?.revenueTrend ?? [], [dashboardData?.revenueTrend]);
+  const revenueSummary = useMemo(() => dashboardData?.revenueSummary, [dashboardData?.revenueSummary]);
+  const scheduleItems = useMemo(() => dashboardData?.schedule ?? [], [dashboardData?.schedule]);
+  const staffRoles = useMemo(() => dashboardData?.staff ?? [], [dashboardData?.staff]);
+  const announcements = useMemo(() => dashboardData?.announcements ?? [], [dashboardData?.announcements]);
+  const pendingTasks = useMemo(() => dashboardData?.pendingTasks ?? [], [dashboardData?.pendingTasks]);
+  const systemStatus = useMemo(() => dashboardData?.systemStatus ?? [], [dashboardData?.systemStatus]);
 
   if (isLoading) {
     return <LoadingState icon="🏢" message="Loading organization dashboard..." />;
@@ -360,7 +428,7 @@ export const OrganizationDashboard: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row" style={{ fontFamily: "'Segoe UI', system-ui, sans-serif", background: G.dark, color: G.text, overflow: 'hidden' }}>
+    <div className="h-screen flex flex-col lg:flex-row overflow-hidden" style={{ fontFamily: "'Segoe UI', system-ui, sans-serif", background: G.dark, color: G.text }}>
 
       {/* Mobile top bar */}
       <div className="lg:hidden flex items-center justify-between px-4 py-3 border-b" style={{ background: G.sidebar, borderColor: G.cardBorder }}>
@@ -382,8 +450,8 @@ export const OrganizationDashboard: React.FC = () => {
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-40 w-64 transform border-r lg:relative lg:translate-x-0 transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
-        style={{ background: G.sidebar, borderColor: G.cardBorder, display: 'flex', flexDirection: 'column', flexShrink: 0, overflowY: 'auto', paddingBottom: 14 }}
+        className={`fixed inset-y-0 left-0 z-40 w-64 transform border-r lg:sticky lg:top-0 lg:h-screen lg:relative lg:translate-x-0 transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
+        style={{ background: G.sidebar, borderColor: G.cardBorder, display: 'flex', flexDirection: 'column', flexShrink: 0, overflowY: 'auto', paddingBottom: 14, height: '100vh' }}
       >
         <div style={{ padding: '15px 14px 10px', borderBottom: `1px solid ${G.cardBorder}`, display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
           <span style={{ fontSize: 20 }}>🎾</span>
@@ -465,21 +533,7 @@ export const OrganizationDashboard: React.FC = () => {
             <div className="hidden sm:block" style={{ color: G.muted, fontSize: 8 }}>{(user as any)?.nationality ? `🌍 ${(user as any).nationality}` : ''}</div>
             <div style={{ marginTop: 6, display: 'flex', gap: 6 }}>
               <button 
-                onClick={() => {
-                  const userData = user as any;
-                  setEditForm({
-                    firstName: user?.firstName || '',
-                    lastName: user?.lastName || '',
-                    email: user?.email || '',
-                    phone: userData?.phone || '',
-                    gender: userData?.gender || '',
-                    dateOfBirth: userData?.dateOfBirth || '',
-                    nationality: userData?.nationality || '',
-                    bio: userData?.bio || '',
-                    photo: user?.photo || '',
-                  });
-                  setShowEditModal(true);
-                }}
+                onClick={handleOpenEditModal}
                 style={{ flex: 1, background: G.dark, color: G.lime, border: `1px solid ${G.lime}`, borderRadius: 6, padding: '4px 0', fontSize: 9, fontWeight: 700, cursor: 'pointer' }}
               >
                 Edit
@@ -496,29 +550,42 @@ export const OrganizationDashboard: React.FC = () => {
       </aside>
 
       {/* MAIN */}
-      <main className="flex-1 overflow-y-auto p-4 lg:p-6" style={{ minWidth: 0 }}>
+      <main className="flex-1 min-h-screen overflow-y-auto p-4 lg:p-6" style={{ minWidth: 0 }}>
 
 
         {/* Conditional Content Rendering */}
         {activeNav === 'Overview' && (
-          <>
-            <div className="grid gap-4 lg:grid-cols-2 mb-5">
-              <FindNearbyPeople onMessageClick={handleMessageClick} onChallengeClick={handleChallenge} />
-              <FindNearbyCourts />
+          <div className="min-h-screen flex flex-col">
+            <div className="flex-1 overflow-y-auto">
+              <OrganizationOverviewSection
+                kpiData={kpiData}
+                activeTab={activeTab}
+                setActiveTab={handleTabChange}
+                tabs={tabs}
+                revenueTrend={revenueTrend}
+                revenueSummary={revenueSummary}
+                scheduleItems={scheduleItems}
+                staffRoles={staffRoles}
+                announcements={announcements}
+                pendingTasks={pendingTasks}
+                systemStatus={systemStatus}
+              />
             </div>
-            <OrganizationOverviewSection
-              kpiData={kpiData}
-              activeTab={activeTab}
-              setActiveTab={handleTabChange}
-              tabs={tabs}
-              revenueTrend={revenueTrend}
-              scheduleItems={scheduleItems}
-              staffRoles={staffRoles}
-              announcements={announcements}
-              pendingTasks={pendingTasks}
-              systemStatus={systemStatus}
-            />
-          </>
+          </div>
+        )}
+
+        {activeNav === 'Find People' && (
+          <div className="w-full min-h-screen overflow-y-auto">
+            <h2 className="text-2xl font-bold mb-6" style={{ color: G.lime }}>Find Nearby People</h2>
+            <FindNearbyPeople onMessageClick={handleMessageClick} onChallengeClick={handleChallenge} />
+          </div>
+        )}
+
+        {activeNav === 'Find Courts' && (
+          <div className="w-full min-h-screen overflow-y-auto">
+            <h2 className="text-2xl font-bold mb-6" style={{ color: G.lime }}>Find Nearby Courts</h2>
+            <FindNearbyCourts />
+          </div>
         )}
 
         {activeNav === 'Members' && (
@@ -573,7 +640,10 @@ export const OrganizationDashboard: React.FC = () => {
         show={showEditModal}
         editForm={editForm}
         onChange={handleEditFormChange}
-        onClose={() => setShowEditModal(false)}
+        onClose={() => {
+          setShowEditModal(false);
+          toast('Edit cancelled', { icon: '✖️', duration: 1000 });
+        }}
         onSubmit={handleSaveProfile}
         saving={profileSaving}
       />
