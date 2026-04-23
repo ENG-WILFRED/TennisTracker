@@ -445,14 +445,21 @@ export const usePDFDownload = () => {
         cloneElement.insertBefore(headerElement, cloneElement.firstChild);
       }
       
-      // Create a temporary container
+      // Create a temporary container - completely hidden from view
       const tempContainer = document.createElement('div');
-      tempContainer.style.position = 'absolute';
-      tempContainer.style.left = '-9999px';
-      tempContainer.style.top = '-9999px';
-      tempContainer.style.width = '1200px';
-      tempContainer.style.backgroundColor = 'white';
-      tempContainer.style.padding = '0';
+      tempContainer.style.cssText = `
+        position: fixed;
+        left: -9999px;
+        top: -9999px;
+        width: 1200px;
+        height: 1600px;
+        background-color: white;
+        padding: 0;
+        margin: 0;
+        visibility: hidden;
+        pointer-events: none;
+        z-index: -9999;
+      `;
       tempContainer.appendChild(cloneElement);
       document.body.appendChild(tempContainer);
 
