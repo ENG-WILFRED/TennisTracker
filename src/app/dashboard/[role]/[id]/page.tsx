@@ -16,12 +16,15 @@ import { MemberDashboard } from '@/components/dashboards/MemberDashboard';
 import { UserRole } from '@/config/roles';
 
 export default function DashboardRoleIdPage() {
-  const { currentRole, currentOrgId, availableMemberships, isRoleLoaded, setCurrentRole } = useRole();
+  const { currentRole, isRoleLoaded } = useRole();
   const { isLoggedIn, user } = useAuth();
   const router = useRouter();
   const params = useParams();
   const roleFromURL = params?.role as string;
   const userIdFromURL = params?.id as string;
+  const validRoles: UserRole[] = ['player', 'coach', 'admin', 'finance_officer', 'referee', 'org', 'member', 'spectator', 'developer'];
+  const routeRole = validRoles.includes(roleFromURL as UserRole) ? (roleFromURL as UserRole) : null;
+  const activeRole = routeRole || currentRole;
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -30,23 +33,29 @@ export default function DashboardRoleIdPage() {
     }
   }, [isLoggedIn, router]);
 
-  // Validate and set role from URL
+  // Validate the requested dashboard route before rendering
   useEffect(() => {
-    if (isRoleLoaded && roleFromURL && user?.id) {
-      // Allow the dedicated member dashboard to render even if the current role is not member.
-      if (roleFromURL !== 'member' && currentRole && currentRole !== roleFromURL) {
-        router.push(`/dashboard/${currentRole}/${user.id}`);
-      }
+    if (!isRoleLoaded || !user?.id) return;
 
-      // Check if the user ID in URL matches the current user
-      if (user.id !== userIdFromURL) {
-        router.push(`/dashboard/${currentRole || 'spectator'}/${user.id}`);
-      }
+    if (userIdFromURL && user.id !== userIdFromURL) {
+      router.push(`/dashboard/${currentRole || 'spectator'}/${user.id}`);
+      return;
     }
-  }, [currentRole, roleFromURL, userIdFromURL, isRoleLoaded, router, user?.id]);
 
-  // Show loading while role is being loaded
-  if (!isRoleLoaded) {
+    if (routeRole && routeRole !== 'member' && currentRole && currentRole !== routeRole) {
+      router.push(`/dashboard/${currentRole}/${user.id}`);
+      return;
+    }
+
+    if (!routeRole && currentRole) {
+      router.push(`/dashboard/${currentRole}/${user.id}`);
+      return;
+    }
+  }, [currentRole, routeRole, userIdFromURL, isRoleLoaded, router, user?.id]);
+
+  const canRenderDashboard = isRoleLoaded && user?.id && userIdFromURL === user.id && (!routeRole || routeRole === 'member' || currentRole === routeRole);
+
+  if (!canRenderDashboard) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
         <div className="text-center">
@@ -60,7 +69,7 @@ export default function DashboardRoleIdPage() {
               />
             </svg>
           </div>
-          <p className="mt-4 text-gray-600">Loading your dashboard...</p>
+          <p className="mt-4 text-gray-600">Verifying dashboard access...</p>
         </div>
       </div>
     );
@@ -71,18 +80,18 @@ export default function DashboardRoleIdPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       {/* Role-Specific Dashboard */}
-      {currentRole === 'player' && <PlayerDashboard />}
-      {currentRole === 'coach' && <CoachDashboard />}
-      {currentRole === 'admin' && <AdminDashboard />}
-      {currentRole === 'finance_officer' && <FinanceDashboard />}
-      {currentRole === 'referee' && <RefereeDashboard />}
-      {currentRole === 'org' && <OrganizationDashboard />}
-      {(currentRole === 'member' || roleFromURL === 'member') && <MemberDashboard />}
-      {currentRole === 'spectator' && <SpectatorDashboard />}
-      {currentRole === 'developer' && <DeveloperDashboard />}
+      {activeRole === 'player' && <PlayerDashboard />}
+      {activeRole === 'coach' && <CoachDashboard />}
+      {activeRole === 'admin' && <AdminDashboard />}
+      {activeRole === 'finance_officer' && <FinanceDashboard />}
+      {activeRole === 'referee' && <RefereeDashboard />}
+      {activeRole === 'org' && <OrganizationDashboard />}
+      {activeRole === 'member' && <MemberDashboard />}
+      {activeRole === 'spectator' && <SpectatorDashboard />}
+      {activeRole === 'developer' && <DeveloperDashboard />}
 
       {/* Fallback for unknown roles */}
-      {!['player', 'coach', 'admin', 'finance_officer', 'referee', 'org', 'member', 'spectator', 'developer'].includes(currentRole || '') && (
+      {!['player', 'coach', 'admin', 'finance_officer', 'referee', 'org', 'member', 'spectator', 'developer'].includes(activeRole || '') && (
         <div className="min-h-screen flex items-center justify-center">
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 max-w-md">
             <h2 className="text-xl font-bold text-yellow-800 mb-2">Role Not Configured</h2>

@@ -1,12 +1,14 @@
 'use client';
 
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useRole } from '@/context/RoleContext';
 import { authenticatedFetch } from '@/lib/authenticatedFetch';
 import { LoadingState } from '@/components/LoadingState';
 import { processMPesaPayment, processPayPalPayment, processStripePayment } from '@/actions/payments';
+import { usePDFDownload } from '@/hooks/usePDFDownload';
+import { generateMembershipCardHTML } from '@/utils/generateMembershipCardPDF';
 import toast from 'react-hot-toast';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
@@ -266,38 +268,62 @@ const NAV_ACCOUNT: { id: NavSection; label: string }[] = [
 
 // ─── Main component ───────────────────────────────────────────────────────────
 const MemberDashboardComponent: React.FC = () => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { currentRole } = useRole();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   // Add responsive styles
   useEffect(() => {
     const style = document.createElement('style');
     style.textContent = `
+      body, html { margin: 0; padding: 0; }
+      .dashboard-container { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; background: ${G.bg}; }
+      .sidebar { width: 220px; position: relative; border-right: 1px solid ${G.border}; padding: 24px 0; display: flex; flex-direction: column; }
+      .main-content { padding: 28px 24px; overflow-y: auto; }
+      .mobile-menu-btn { display: none !important; }
+
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+
       @media (max-width: 768px) {
-        .mobile-menu-btn { display: block !important; }
-        .sidebar { left: -220px !important; }
+        .dashboard-container { grid-template-columns: 1fr; }
+        .mobile-menu-btn { display: flex !important; position: fixed; top: 20px; left: 20px; z-index: 1001; background: ${G.surface}; border: 1px solid ${G.border}; border-radius: 8px; padding: 8px; cursor: pointer; color: ${G.text}; align-items: center; justify-content: center; }
+        .main-content { padding: 90px 16px 24px !important; }
+        .sidebar { position: fixed; left: -280px; top: 0; height: 100vh; z-index: 1000; width: min(280px, 85vw); transition: left 0.3s ease; }
         .sidebar.open { left: 0 !important; }
-        .main-content { padding-left: 24px !important; }
-        .main-content.menu-open { padding-left: 244px !important; }
+        .sidebar-overlay.open { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 999; }
         .stat-grid { grid-template-columns: 1fr !important; }
         .two-col { grid-template-columns: 1fr !important; }
         .card-grid { grid-template-columns: 1fr !important; }
         .table-responsive { overflow-x: auto; }
-      }
-      @media (min-width: 769px) {
-        .mobile-menu-btn { display: none !important; }
-        .sidebar { position: relative !important; left: 0 !important; }
-        .main-content { padding-left: 24px !important; }
       }
     `;
     document.head.appendChild(style);
     return () => { document.head.removeChild(style); };
   }, []);
 
+  const handleLogout = useCallback(async () => {
+    try {
+      await authenticatedFetch('/api/auth/logout', { method: 'POST' });
+    } catch (err) {
+      console.error('Logout failed', err);
+    } finally {
+      await logout();
+      router.push('/login');
+    }
+  }, [logout, router]);
+
   const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState<string | null>(null);
-  const [section, setSection]   = useState<NavSection>('overview');
+  // Initialize section from URL parameter, fallback to 'overview'
+  const [section, setSection]   = useState<NavSection>(() => {
+    const tabParam = searchParams.get('tab');
+    const validSections: NavSection[] = ['overview', 'memberships', 'entrycards', 'family', 'billing', 'notifications', 'organizations', 'support'];
+    return (tabParam && validSections.includes(tabParam as NavSection)) ? (tabParam as NavSection) : 'overview';
+  });
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [data, setData]         = useState<DashboardData>({
     memberships: [], entryCards: [], familyMembers: [],
@@ -305,6 +331,15 @@ const MemberDashboardComponent: React.FC = () => {
   });
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<Record<string, string>>({});
   const [newFamilyMember, setNewFamilyMember] = useState({ name: '', email: '', relation: '' });
+  const [generatingPDFFor, setGeneratingPDFFor] = useState<string | null>(null);
+
+  const handleTabChange = useCallback((tabId: NavSection) => {
+    setSection(tabId);
+    // Update URL with the selected tab
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('tab', tabId);
+    router.push(`?${params.toString()}`);
+  }, [router, searchParams]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -507,46 +542,48 @@ const MemberDashboardComponent: React.FC = () => {
     }
   }, [data.organizations]);
 
+  const { downloadPDF } = usePDFDownload();
+
   // PDF generation function
-  const generateAccessPDF = useCallback((membership: Membership) => {
+  const generateAccessPDF = useCallback(async (membership: Membership) => {
     try {
-      const org = data.organizations[membership.orgId];
-      const pdfContent = `
-        VICO TENNIS - MEMBER ACCESS CARD
-        ================================
-        Organization: ${org?.name || membership.orgName}
-        Member Name: ${user?.firstName} ${user?.lastName || ''}
-        Member ID: ${user?.id}
-        Role: ${cap(membership.role)}
-        Membership Status: ${cap(membership.status)}
-        Access Level: ${membership.clubMember?.membershipTier?.name || 'Standard'}
-        Valid From: ${formatDate(membership.joinedAt)}
-        Approved On: ${formatDate(membership.approvedAt)}
+      setGeneratingPDFFor(membership.id);
+      const org = data.organizations[membership.orgId] as any;
+      const sanitizedOrgName = (membership.orgName || org?.name || 'Membership').replace(/[^a-z0-9]/gi, '_');
+      const filename = `VicoTennis_${sanitizedOrgName}_access_${String(user?.id || 'member')}.pdf`;
 
-        Organization Contact:
-        Email: ${org?.contactEmail || 'N/A'}
-        Phone: ${org?.phoneNumber || 'N/A'}
+      // Generate the membership card HTML using the utility
+      const cardHTML = await generateMembershipCardHTML({
+        memberName: `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'Member',
+        memberId: String(user?.id || 'N/A'),
+        organizationName: org?.name || membership.orgName || '—',
+        organizationEmail: org?.email || undefined,
+        organizationPhone: org?.phone || undefined,
+        role: cap(membership.role) || 'Member',
+        status: cap(membership.status) || '—',
+        accessLevel: membership.clubMember?.membershipTier?.name || 'Standard',
+        joinedDate: formatDate(membership.joinedAt),
+        approvedDate: formatDate(membership.approvedAt),
+        expiryDate: formatDate(new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()), // 1 year from now
+        qrCodeData: `https://vicotennis.com/verify/${user?.id}?org=${membership.orgId}`,
+      });
 
-        Please present this document at the facility.
-        Generated: ${new Date().toLocaleString()}
+      // Download the single-page PDF
+      await downloadPDF(cardHTML, {
+        filename,
+        orientation: 'portrait',
+        format: 'a4',
+        margin: 0, // No extra margin needed for full-page design
+      });
 
-        ---
-        VICO TENNIS - WATERMARK
-        ---
-      `;
-
-      const element = document.createElement('a');
-      const file = new Blob([pdfContent], { type: 'text/plain' });
-      element.href = URL.createObjectURL(file);
-      element.download = `VicoTennis_${membership.orgName}_access_${user?.id}.txt`;
-      document.body.appendChild(element);
-      element.click();
-      document.body.removeChild(element);
-      toast.success('Vico Tennis access document generated');
+      toast.success('Vico Tennis member access card generated');
     } catch (e) {
+      console.error(e);
       toast.error('Failed to generate access document');
+    } finally {
+      setGeneratingPDFFor(null);
     }
-  }, [data.organizations, user]);
+  }, [data.organizations, downloadPDF, user]);
 
   // Receipt generation function
   const generateReceipt = useCallback((transaction: Transaction) => {
@@ -603,7 +640,7 @@ const MemberDashboardComponent: React.FC = () => {
   // ── Sidebar ───────────────────────────────────────────────────────────────
   const NavItem: React.FC<{ id: NavSection; label: string; badge?: { count: number; color?: string } | null }> = ({ id, label, badge }) => (
     <button
-      onClick={() => setSection(id)}
+      onClick={() => handleTabChange(id)}
       style={{
         display: 'flex', alignItems: 'center', gap: 10,
         padding: '9px 12px', margin: '2px 8px', borderRadius: 10,
@@ -697,7 +734,7 @@ const MemberDashboardComponent: React.FC = () => {
               <div style={{ fontSize: 10, letterSpacing: '0.15em', textTransform: 'uppercase', color: G.accent, marginBottom: 4 }}>Monthly estimate</div>
               <div style={{ fontSize: 14, fontWeight: 500, color: G.text }}>{data.billing?.monthlyEstimate ?? 'See org details'}</div>
             </div>
-            <Btn style={{ width: '100%', marginTop: 4 }} onClick={() => setSection('billing')}>View all invoices</Btn>
+            <Btn style={{ width: '100%', marginTop: 4 }} onClick={() => handleTabChange('billing')}>View all invoices</Btn>
           </Card>
           {rebillAlerts.length > 0 && (
             <Card>
@@ -714,7 +751,7 @@ const MemberDashboardComponent: React.FC = () => {
                 </div>
               ))}
               <Btn variant="primary" size="sm" style={{ width: '100%', marginTop: 4 }}
-                onClick={() => setSection('entrycards')}>
+                onClick={() => handleTabChange('entrycards')}>
                 Manage entry cards
               </Btn>
             </Card>
@@ -781,7 +818,21 @@ const MemberDashboardComponent: React.FC = () => {
                 )}
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   <Btn variant="primary" size="sm" onClick={() => router.push(`/organization/${m.orgId}`)}>Open org</Btn>
-                  <Btn size="sm" onClick={() => generateAccessPDF(m)}>Generate PDF</Btn>
+                  <Btn 
+                    size="sm" 
+                    onClick={() => generateAccessPDF(m)}
+                    disabled={generatingPDFFor === m.id}
+                    style={{ opacity: generatingPDFFor === m.id ? 0.7 : 1, cursor: generatingPDFFor === m.id ? 'not-allowed' : 'pointer' }}
+                  >
+                    {generatingPDFFor === m.id ? (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ display: 'inline-block', width: '10px', height: '10px', border: '2px solid currentColor', borderRadius: '50%', borderTopColor: 'transparent', animation: 'spin 0.8s linear infinite' }} />
+                        Generating...
+                      </span>
+                    ) : (
+                      'Generate PDF'
+                    )}
+                  </Btn>
                   <Btn size="sm" variant="ghost" onClick={() => handleMembershipTermination(m)} style={{ color: G.danger }}>Terminate</Btn>
                   <Btn size="sm" onClick={() => router.push('/support')}>Support</Btn>
                 </div>
@@ -1357,7 +1408,7 @@ const MemberDashboardComponent: React.FC = () => {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: mobileMenuOpen ? '220px 1fr' : '0px 1fr', minHeight: '100vh', background: G.bg }}>
+    <div className="dashboard-container">
       {/* ── Sidebar ── */}
       <nav className={`sidebar ${mobileMenuOpen ? 'open' : ''}`} style={{
         background: G.surface,
@@ -1365,13 +1416,6 @@ const MemberDashboardComponent: React.FC = () => {
         padding: '24px 0',
         display: 'flex',
         flexDirection: 'column',
-        width: '220px',
-        position: 'fixed',
-        left: mobileMenuOpen ? 0 : '-220px',
-        top: 0,
-        height: '100vh',
-        zIndex: 1000,
-        transition: 'left 0.3s ease',
       }}>
         {/* Logo */}
         <div style={{ padding: '0 20px 24px', borderBottom: `1px solid ${G.border}` }}>
@@ -1383,7 +1427,7 @@ const MemberDashboardComponent: React.FC = () => {
               </svg>
             </div>
             <div>
-              <div style={{ fontSize: 14, fontWeight: 500, color: G.text }}>SportSpace</div>
+              <div style={{ fontSize: 14, fontWeight: 500, color: G.text }}>Vico Sports</div>
               <div style={{ fontSize: 11, color: G.accent, marginTop: 1 }}>Member portal</div>
             </div>
           </div>
@@ -1399,11 +1443,11 @@ const MemberDashboardComponent: React.FC = () => {
         {NAV_ACCOUNT.map(n => <NavItem key={n.id} {...n} />)}
 
         {/* User pill */}
-        <div style={{ marginTop: 'auto', padding: '16px 12px 0', borderTop: `1px solid ${G.border}` }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 8 }}>
-            <div style={{ width: 32, height: 32, borderRadius: '50%', background: G.deep,
+        <div style={{ marginTop: 'auto', padding: '16px 12px 20px', borderTop: `1px solid ${G.border}` }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 8, marginBottom: 12, background: G.surfaceAlt, borderRadius: 14 }}>
+            <div style={{ width: 36, height: 36, borderRadius: '50%', background: G.deep,
               border: `1px solid ${G.border}`, display: 'flex', alignItems: 'center',
-              justifyContent: 'center', fontSize: 12, fontWeight: 500, color: G.light, flexShrink: 0 }}>
+              justifyContent: 'center', fontSize: 13, fontWeight: 700, color: G.light, flexShrink: 0 }}>
               {(user!.firstName ?? user!.email ?? 'U').split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
             </div>
             <div>
@@ -1413,30 +1457,23 @@ const MemberDashboardComponent: React.FC = () => {
               </div>
             </div>
           </div>
+          <Btn
+            onClick={handleLogout}
+            variant="ghost"
+            size="sm"
+            style={{ width: '100%', background: '#d94f4f', color: '#fff', border: 'none' }}
+          >
+            Logout
+          </Btn>
         </div>
       </nav>
 
       {/* ── Main content ── */}
-      <div className={`main-content ${mobileMenuOpen ? 'menu-open' : ''}`} style={{ background: G.bg, padding: '28px 24px', overflowY: 'auto', marginLeft: '220px' }}>
+      <div className="main-content" style={{ background: G.bg }}>
         {/* Mobile menu button */}
         <button
           className="mobile-menu-btn"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          style={{
-            position: 'fixed',
-            top: 20,
-            left: 20,
-            zIndex: 1001,
-            background: G.surface,
-            border: `1px solid ${G.border}`,
-            borderRadius: 8,
-            padding: 8,
-            cursor: 'pointer',
-            color: G.text,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
         >
           <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
             <path d="M3 5h14a1 1 0 010 2H3a1 1 0 110-2zM3 9h14a1 1 0 010 2H3a1 1 0 010-2zM3 13h14a1 1 0 010 2H3a1 1 0 010-2z"/>
@@ -1445,15 +1482,10 @@ const MemberDashboardComponent: React.FC = () => {
 
         {/* Mobile overlay */}
         {mobileMenuOpen && (
-          <div style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0,0,0,0.5)',
-            zIndex: 999,
-          }} onClick={() => setMobileMenuOpen(false)} />
+          <div 
+            className="sidebar-overlay open"
+            onClick={() => setMobileMenuOpen(false)} 
+          />
         )}
 
         {error ? (
@@ -1464,13 +1496,17 @@ const MemberDashboardComponent: React.FC = () => {
         ) : (
           <>
             <div style={{ marginBottom: 24 }}>
-              <div style={{ fontSize: 10, letterSpacing: '0.2em', textTransform: 'uppercase',
-                color: G.green, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ width: 5, height: 5, borderRadius: '50%', background: G.green, display: 'inline-block' }} />
-                {PAGE_EYEBROW[section]}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 10, letterSpacing: '0.2em', textTransform: 'uppercase',
+                    color: G.green, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ width: 5, height: 5, borderRadius: '50%', background: G.green, display: 'inline-block' }} />
+                    {PAGE_EYEBROW[section]}
+                  </div>
+                  <h1 style={{ fontSize: 22, fontWeight: 500, color: G.text, marginBottom: 4 }}>{PAGE_TITLE[section]}</h1>
+                  <p style={{ fontSize: 13, color: G.accent, lineHeight: 1.5 }}>{PAGE_SUB[section]}</p>
+                </div>
               </div>
-              <h1 style={{ fontSize: 22, fontWeight: 500, color: G.text, marginBottom: 4 }}>{PAGE_TITLE[section]}</h1>
-              <p style={{ fontSize: 13, color: G.accent, lineHeight: 1.5 }}>{PAGE_SUB[section]}</p>
             </div>
             {section === 'overview'       && <SectionOverview />}
             {section === 'memberships'    && <SectionMemberships />}
