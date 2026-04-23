@@ -261,7 +261,7 @@ export default function OrganizationMembersSection({
   const updateMemberStatus = async (
     member: Member,
     action: 'activate' | 'deactivate' | 'suspend' | 'dismiss' | 'delete',
-    extra?: { until?: string; reason?: string }
+    extra?: { until?: string; reason?: string; role?: string }
   ) => {
     if (!organizationId || !member?.id) {
       setNotify('❌ Organization or member data missing');
