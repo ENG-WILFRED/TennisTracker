@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { verifyApiAuth } from '@/lib/authMiddleware';
+import { cacheResponse, clearCachePrefix } from '@/lib/apiCache';
 
 export async function GET(request: NextRequest) {
   try {
@@ -15,7 +16,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
     }
 
-    // Get user's organization
     const user = await prisma.user.findUnique({
       where: { id: userId },
       include: {
@@ -29,12 +29,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Get organization activities if organization exists
-    let activities: any[] = [];
-    if (user.player?.organizationId) {
+    const organizationId = user.player?.organizationId;
+    if (!organizationId) {
+      return NextResponse.json({ activities: [] });
+    }
+
+    const cacheKey = `organization:activities:${organizationId}`;
+    const response = await cacheResponse(cacheKey, async () => {
       const orgActivities = await prisma.organizationActivity.findMany({
         where: {
-          organizationId: user.player.organizationId,
+          organizationId,
         },
         orderBy: { createdAt: 'desc' },
         take: 10,
@@ -49,16 +53,19 @@ export async function GET(request: NextRequest) {
         },
       });
 
-      activities = orgActivities.map((activity: typeof orgActivities[number]) => ({
-        id: activity.id,
-        type: activity.action,
-        description: (activity.details as any)?.description || activity.action?.replace(/_/g, ' ') || 'Activity',
-        createdAt: activity.createdAt,
-        metadata: activity.metadata,
-      }));
-    }
+      return {
+        activities: orgActivities.map((activity: typeof orgActivities[number]) => ({
+          id: activity.id,
+          type: activity.action,
+          description:
+            (activity.details as any)?.description || activity.action?.replace(/_/g, ' ') || 'Activity',
+          createdAt: activity.createdAt,
+          metadata: activity.metadata,
+        })),
+      };
+    }, 30_000);
 
-    return NextResponse.json({ activities });
+    return NextResponse.json(response);
   } catch (error) {
     console.error('GET /api/organization/activities error:', error);
     return NextResponse.json({ error: 'Server error' }, { status: 500 });
@@ -77,7 +84,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User ID and type are required' }, { status: 400 });
     }
 
-    // Get user's organization and player
     const user = await prisma.user.findUnique({
       where: { id: userId },
       include: {
@@ -89,7 +95,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User or organization not found' }, { status: 404 });
     }
 
-    // Create activity record
     const activity = await prisma.organizationActivity.create({
       data: {
         organizationId: user.player.organizationId,
@@ -101,6 +106,8 @@ export async function POST(request: NextRequest) {
         metadata: metadata || {},
       },
     });
+
+    await clearCachePrefix(`organization:activities:${user.player.organizationId}`);
 
     return NextResponse.json(activity);
   } catch (error) {

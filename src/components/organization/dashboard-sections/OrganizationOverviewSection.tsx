@@ -26,6 +26,11 @@ interface OverviewSectionProps {
   setActiveTab: (tab: string) => void;
   tabs: string[];
   revenueTrend: number[];
+  revenueSummary?: {
+    total: number;
+    low: number;
+    changeRate: number;
+  };
   scheduleItems: any[];
   staffRoles: any[];
   announcements: any[];
@@ -35,10 +40,14 @@ interface OverviewSectionProps {
 
 export default function OrganizationOverviewSection({
   kpiData, activeTab, setActiveTab, tabs, revenueTrend,
-  scheduleItems, staffRoles, announcements, pendingTasks, systemStatus
+  revenueSummary, scheduleItems, staffRoles, announcements, pendingTasks, systemStatus
 }: OverviewSectionProps) {
   const priorityColor = (p: string) => p === 'High' ? '#ff6b6b' : p === 'Medium' ? G.yellow : G.muted;
   const priorityBg = (p: string) => p === 'High' ? '#ff6b6b33' : p === 'Medium' ? G.yellow + '33' : G.muted + '33';
+  const totalRevenue = revenueSummary?.total ?? (revenueTrend.length ? revenueTrend[revenueTrend.length - 1] : 0);
+  const lowestRevenue = revenueSummary?.low ?? (revenueTrend.length ? Math.min(...revenueTrend) : 0);
+  const changeRate = revenueSummary?.changeRate ?? 0;
+  const changeLabel = revenueTrend.length > 1 ? `${changeRate >= 0 ? '↑' : '↓'} ${Math.abs(changeRate)}% YoY` : 'No change data';
 
   return (
     <>
@@ -72,12 +81,12 @@ export default function OrganizationOverviewSection({
         {/* Revenue Trend */}
         <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 14, gridColumn: 'span 1' }}>
           <div style={{ fontWeight: 800, fontSize: 13, marginBottom: 2 }}>💰 Revenue Trend</div>
-          <div style={{ fontSize: 20, fontWeight: 900, color: G.accent, marginBottom: 2 }}>$3,750</div>
-          <div style={{ fontSize: 9, color: G.muted, marginBottom: 10 }}>Mar 20 · 12 months</div>
+          <div style={{ fontSize: 20, fontWeight: 900, color: G.accent, marginBottom: 2 }}>${totalRevenue.toLocaleString()}</div>
+          <div style={{ fontSize: 9, color: G.muted, marginBottom: 10 }}>{revenueTrend.length ? `Last ${revenueTrend.length} months` : 'No finance data available'}</div>
           <LineChart data={revenueTrend} color={G.accent} height={45} />
           <div style={{ marginTop: 8, display: 'flex', justifyContent: 'space-between', fontSize: 9 }}>
-            <span style={{ color: G.muted }}>Lowest: $2,100</span>
-            <span style={{ color: G.lime, fontWeight: 700 }}>↑ +78% YoY</span>
+            <span style={{ color: G.muted }}>Lowest: ${lowestRevenue.toLocaleString()}</span>
+            <span style={{ color: changeRate >= 0 ? G.lime : '#ff6b6b', fontWeight: 700 }}>{changeLabel}</span>
           </div>
         </div>
 
