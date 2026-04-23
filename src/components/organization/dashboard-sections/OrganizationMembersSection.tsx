@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { getAccessToken, refreshAccessToken } from '@/lib/tokenManager';
 
 const G = {
@@ -63,6 +63,7 @@ export type Member = {
   role: 'player' | 'coach' | 'referee' | 'admin' | 'member' | 'inactive';
   tier?: string;
   status?: 'active' | 'inactive';
+  paymentStatus?: 'active' | 'inactive' | 'pending';
   joinDate?: string;
   visits?: number;
   ranking?: number;
@@ -126,9 +127,10 @@ function RoleBadge({ role }: { role: string }) {
 
 function StatusDot({ status }: { status?: string }) {
   const valid = status || 'unknown';
+  const color = valid === 'active' ? G.lime : valid === 'pending' ? G.yellow : G.muted;
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 9, color: valid === 'active' ? G.lime : G.muted }}>
-      <span style={{ width: 6, height: 6, borderRadius: '50%', background: valid === 'active' ? G.lime : G.muted, display: 'inline-block', boxShadow: valid === 'active' ? `0 0 6px ${G.lime}` : 'none' }} />
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 9, color }}>
+      <span style={{ width: 6, height: 6, borderRadius: '50%', background: color, display: 'inline-block', boxShadow: valid === 'active' ? `0 0 6px ${G.lime}` : 'none' }} />
       {valid}
     </span>
   );
@@ -188,7 +190,7 @@ function MemberCard({ member, onClick }: { member: Member; onClick: () => void }
           </span>
           <RoleBadge role={member.role} />
           <TierBadge tier={member.tier} />
-          <StatusDot status={member.status} />
+          <StatusDot status={member.paymentStatus || member.status} />
         </div>
         <div style={{ fontSize: 10, color: G.muted, marginTop: 2 }}>{member.email}</div>
         {renderRoleDetail()}
@@ -549,19 +551,20 @@ export default function OrganizationMembersSection({
     tier: 'Basic',
   });
 
-  const filtered = memberData.filter((m: Member) => {
+  const filtered = useMemo(() => memberData.filter((m: Member) => {
     const search = searchTerm.toLowerCase();
     const matchSearch = !search ||
       m.firstName?.toLowerCase().includes(search) ||
       m.lastName?.toLowerCase().includes(search) ||
       m.email?.toLowerCase().includes(search);
+    const memberStatus = m.paymentStatus || m.status || 'unknown';
     const matchRole = roleFilter === 'all' || m.role === roleFilter;
     const matchTier = tierFilter === 'all' || m.tier?.toLowerCase() === tierFilter;
-    const matchStatus = statusFilter === 'all' || m.status === statusFilter;
+    const matchStatus = statusFilter === 'all' || memberStatus === statusFilter;
     return matchSearch && matchRole && matchTier && matchStatus;
-  });
+  }), [memberData, searchTerm, roleFilter, tierFilter, statusFilter]);
 
-  const sorted = [...filtered].sort((a: Member, b: Member) => {
+  const sorted = useMemo(() => [...filtered].sort((a: Member, b: Member) => {
     if (sortBy === 'name') return a.firstName.localeCompare(b.firstName);
     if (sortBy === 'visits') return (b.visits || 0) - (a.visits || 0);
     if (sortBy === 'joined') {
@@ -570,7 +573,7 @@ export default function OrganizationMembersSection({
       return bTime - aTime;
     }
     return 0;
-  });
+  }), [filtered, sortBy]);
 
   const roleCounts = memberData.reduce((acc: Record<string, number>, m: Member) => {
     const r = m.role || 'member';
@@ -580,7 +583,8 @@ export default function OrganizationMembersSection({
 
   const stats = {
     total: memberData.length,
-    active: memberData.filter((m: Member) => m.status === 'active').length,
+    active: memberData.filter((m: Member) => (m.paymentStatus || m.status) === 'active').length,
+    pending: memberData.filter((m: Member) => (m.paymentStatus || m.status) === 'pending').length,
     players: roleCounts.player || roleCounts.member || 0,
     coaches: roleCounts.coach || 0,
     referees: roleCounts.referee || 0,
@@ -592,6 +596,7 @@ export default function OrganizationMembersSection({
   const statCards = [
     { label: 'Total Members', value: stats.total, color: G.lime, icon: '👥' },
     { label: 'Active', value: stats.active, color: G.bright, icon: '✅' },
+    { label: 'Pending Requests', value: stats.pending, color: G.yellow, icon: '🕒' },
     { label: '🎾 Players', value: stats.players, color: G.lime, icon: null },
     { label: '🏆 Coaches', value: stats.coaches, color: G.blue, icon: null },
     { label: '⚖️ Referees', value: stats.referees, color: G.yellow, icon: null },
@@ -614,6 +619,12 @@ export default function OrganizationMembersSection({
     transition: 'all 0.15s',
     fontFamily: "'Raleway', sans-serif",
   });
+
+  const pendingRequests = memberData.filter((m: Member) => (m.paymentStatus || m.status) === 'pending');
+  const latestRecruits = [...memberData]
+    .filter((m: Member) => (m.paymentStatus || m.status) === 'active')
+    .sort((a, b) => new Date(b.joinDate || 0).getTime() - new Date(a.joinDate || 0).getTime())
+    .slice(0, 4);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14, fontFamily: "'Raleway', sans-serif" }}>
@@ -766,6 +777,7 @@ export default function OrganizationMembersSection({
         <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} style={{ padding: '7px 10px', background: G.dark, border: `1px solid ${G.cardBorder}`, borderRadius: 7, color: G.text, fontSize: 11, fontFamily: "'Raleway', sans-serif" }}>
           <option value="all">All Status</option>
           <option value="active">✅ Active</option>
+          <option value="pending">🕒 Pending</option>
           <option value="inactive">⏸ Inactive</option>
         </select>
 
@@ -777,6 +789,77 @@ export default function OrganizationMembersSection({
 
         <div style={{ fontSize: 10, color: G.muted, marginLeft: 'auto' }}>
           Showing <strong style={{ color: G.textSoft }}>{sorted.length}</strong> of {memberData.length}
+        </div>
+      </div>
+
+      {/* Pending Requests and Latest Recruits */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, alignItems: 'start' }}>
+        <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: G.text }}>Incoming Requests</div>
+              <div style={{ fontSize: 11, color: G.muted }}>Approve new membership requests and role applications.</div>
+            </div>
+            <span style={{ fontSize: 12, color: G.lime, fontWeight: 700 }}>{pendingRequests.length}</span>
+          </div>
+          {pendingRequests.length === 0 ? (
+            <div style={{ color: G.muted, fontSize: 12, padding: '18px 0' }}>No pending membership requests right now.</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {pendingRequests.map(member => (
+                <div key={member.id} style={{ background: G.dark, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 12 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
+                    <div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: G.text }}>{member.firstName} {member.lastName}</div>
+                      <div style={{ fontSize: 11, color: G.muted }}>{member.email}</div>
+                      <div style={{ marginTop: 4, display: 'flex', gap: 8, alignItems: 'center' }}>
+                        <RoleBadge role={member.role} />
+                        <StatusDot status={member.paymentStatus || member.status} />
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                      <button disabled={actionLoading && loadingAction === 'activate'} onClick={() => updateMemberStatus(member, 'activate', { role: member.role })} style={{ padding: '8px 12px', borderRadius: 8, border: 'none', background: G.lime, color: G.dark, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
+                        {getButtonText('activate', 'Approve')}
+                      </button>
+                      <button disabled={actionLoading && loadingAction === 'dismiss'} onClick={() => updateMemberStatus(member, 'dismiss')} style={{ padding: '8px 12px', borderRadius: 8, border: 'none', background: G.red, color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
+                        {getButtonText('dismiss', 'Reject')}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: G.text }}>Latest Recruits</div>
+              <div style={{ fontSize: 11, color: G.muted }}>Recently activated members in the organization.</div>
+            </div>
+            <span style={{ fontSize: 12, color: G.lime, fontWeight: 700 }}>{latestRecruits.length}</span>
+          </div>
+          {latestRecruits.length === 0 ? (
+            <div style={{ color: G.muted, fontSize: 12, padding: '18px 0' }}>No recent recruits available yet.</div>
+          ) : (
+            <div style={{ display: 'grid', gap: 10 }}>
+              {latestRecruits.map(member => (
+                <div key={member.id} style={{ background: G.dark, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 12 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
+                    <div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: G.text }}>{member.firstName} {member.lastName}</div>
+                      <div style={{ fontSize: 11, color: G.muted }}>{member.email}</div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: 11, color: G.muted }}>Joined</div>
+                      <div style={{ fontSize: 12, fontWeight: 700 }}>{member.joinDate ? new Date(member.joinDate).toLocaleDateString('en-GB', { month: 'short', day: 'numeric' }) : 'Unknown'}</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -810,7 +893,7 @@ export default function OrganizationMembersSection({
                 <div style={{ fontSize: 14, fontWeight: 700, color: G.text, marginBottom: 12 }}>Profile Information</div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                   <div><strong style={{ color: G.lime }}>Role:</strong> <RoleBadge role={selectedMember.role} /></div>
-                  <div><strong style={{ color: G.lime }}>Status:</strong> <StatusDot status={selectedMember.status} /></div>
+                  <div><strong style={{ color: G.lime }}>Status:</strong> <StatusDot status={selectedMember.paymentStatus || selectedMember.status} /></div>
                   <div><strong style={{ color: G.lime }}>Tier:</strong> <TierBadge tier={selectedMember.tier} /></div>
                   <div><strong style={{ color: G.lime }}>Age:</strong> {selectedMember.age || 'Unknown'}</div>
                   <div><strong style={{ color: G.lime }}>Nationality:</strong> {selectedMember.nationality || 'Unknown'}</div>
@@ -835,7 +918,7 @@ export default function OrganizationMembersSection({
                 </button>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                   {selectedMember.status !== 'active' || selectedMember.role === 'inactive' ? (
-                    <button disabled={actionLoading} onClick={() => updateMemberStatus(selectedMember as Member, 'activate')} style={{ padding: '10px', borderRadius: 8, border: `1px solid ${G.lime}`, background: G.mid, color: G.lime, fontWeight: 700, cursor: actionLoading ? 'not-allowed' : 'pointer', opacity: actionLoading ? 0.7 : 1 }}>
+                    <button disabled={actionLoading} onClick={() => updateMemberStatus(selectedMember as Member, 'activate', { role: selectedMember?.role })} style={{ padding: '10px', borderRadius: 8, border: `1px solid ${G.lime}`, background: G.mid, color: G.lime, fontWeight: 700, cursor: actionLoading ? 'not-allowed' : 'pointer', opacity: actionLoading ? 0.7 : 1 }}>
                       {getButtonText('activate', '▶ Activate')}
                     </button>
                   ) : (

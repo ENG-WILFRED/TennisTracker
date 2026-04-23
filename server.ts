@@ -11,6 +11,7 @@ import { createServer } from 'http';
 import { parse } from 'url';
 import next from 'next';
 import { initializeSocketIO } from './src/lib/socket.js';
+import { collectDeveloperMetrics } from './src/lib/developerMetrics.js';
 
 declare global {
   namespace NodeJS {
@@ -49,30 +50,23 @@ initializeSocketIO(server);
 // Set up metrics broadcast interval (every 5 seconds instead of polling every client)
 const broadcastMetrics = async () => {
   try {
-    const response = await fetch(`http://${hostname}:${port}/api/developer/metrics`, {
-      method: 'GET',
-    });
-    
-    if (response.ok) {
-      const metrics = await response.json();
-      // Use internal endpoint to broadcast
-      await fetch(`http://${hostname}:${port}/api/developer/metrics-broadcast`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.INTERNAL_API_TOKEN || 'internal-broadcast-token'}`
-        },
-        body: JSON.stringify({ metrics })
-      }).catch(err => console.warn('Failed to broadcast metrics:', err));
-    }
+    const metrics = await collectDeveloperMetrics();
+    await fetch(`http://${hostname}:${port}/api/developer/metrics-broadcast`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.INTERNAL_API_TOKEN || 'internal-broadcast-token'}`
+      },
+      body: JSON.stringify({ metrics })
+    }).catch(err => console.warn('Failed to broadcast metrics:', err));
   } catch (err) {
-    console.warn('Failed to fetch metrics for broadcast:', err);
+    console.warn('Failed to collect metrics for broadcast:', err);
   }
 };
 
-// Start metrics broadcast every 5 seconds
-const metricsInterval = setInterval(broadcastMetrics, 5000);
-console.log('📊 Metrics broadcast interval started (every 5 seconds)');
+// Start metrics broadcast every 15 seconds
+const metricsInterval = setInterval(broadcastMetrics, 15000);
+console.log('📊 Metrics broadcast interval started (every 15 seconds)');
 
 // Store interval reference for cleanup
 process.metricsInterval = metricsInterval;

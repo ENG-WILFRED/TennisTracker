@@ -595,7 +595,8 @@ export const FindNearbyCourts: React.FC<FindNearbyCourtsProps> = ({
         setResultLabel(label);
 
         if (typeof window !== 'undefined') {
-          window.history.replaceState(null, '', `${window.location.pathname}?${urlParams}`);
+          const currentSection = new URLSearchParams(window.location.search).get('section') || 'find-courts';
+          window.history.replaceState(null, '', `${window.location.pathname}?section=${currentSection}&${urlParams}`);
           const cacheKey = getCacheKey(mode, queryValue, locationValue, radiusValue);
           window.sessionStorage.setItem(cacheKey, JSON.stringify({ nearbyCourts: data, suggestedCourts: [], resultLabel: label }));
         }

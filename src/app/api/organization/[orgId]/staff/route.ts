@@ -53,8 +53,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ orgI
     const clubMembers = await prisma.clubMember.findMany({
       where: clubMemberWhere,
       select: {
+        id: true,
         playerId: true,
         role: true,
+        paymentStatus: true,
         player: {
           select: {
             user: {
@@ -91,6 +93,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ orgI
       .filter((cm: typeof clubMembers[number]) => !staffIds.has(cm.playerId))
       .map((cm: typeof clubMembers[number]) => ({
         id: cm.playerId,
+        memberId: cm.id,
         name: `${cm.player.user.firstName} ${cm.player.user.lastName}`,
         email: cm.player.user.email,
         photo: cm.player.user.photo,
@@ -98,7 +101,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ orgI
         expertise: null,
         coachingLevel: null,
         experience: 0,
-        status: 'Active',
+        status: cm.paymentStatus === 'pending' ? 'Pending' : 'Active',
         sessions: 0,
         source: 'member',
       }));

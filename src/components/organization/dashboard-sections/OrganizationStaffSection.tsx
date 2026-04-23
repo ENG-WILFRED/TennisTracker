@@ -79,12 +79,14 @@ export default function OrganizationStaffSection({ orgId }: StaffSectionProps) {
   );
 
   // Calculate stats
+  const pendingApplicants = staff.filter(s => s.source === 'member' && s.status === 'Pending');
   const stats = {
     total: staff.length,
     coaches: staff.filter(s => s.role === 'coach').length,
     referees: staff.filter(s => s.role === 'referee').length,
     admins: staff.filter(s => s.role === 'admin').length,
     active: staff.filter(s => s.status === 'Active').length,
+    pending: pendingApplicants.length,
     totalSessions: staff.reduce((sum, s) => sum + (s.sessions || 0), 0),
   };
 
@@ -119,6 +121,10 @@ export default function OrganizationStaffSection({ orgId }: StaffSectionProps) {
         <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 12 }}>
           <div style={{ fontSize: 10, color: G.muted, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Active</div>
           <div style={{ fontSize: 24, fontWeight: 900, color: G.bright }}>{loading ? '-' : stats.active}</div>
+        </div>
+        <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 12 }}>
+          <div style={{ fontSize: 10, color: G.muted, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Open Applicants</div>
+          <div style={{ fontSize: 24, fontWeight: 900, color: G.yellow }}>{loading ? '-' : stats.pending}</div>
         </div>
         <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 12 }}>
           <div style={{ fontSize: 10, color: G.muted, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Sessions</div>
@@ -161,6 +167,30 @@ export default function OrganizationStaffSection({ orgId }: StaffSectionProps) {
           className="w-full sm:w-auto min-w-0 sm:min-w-[200px] px-3 py-2 rounded-lg border border-gray-300 bg-white text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       </div>
+
+      {/* Staff Applicants */}
+      {pendingApplicants.length > 0 && (
+        <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 14, marginBottom: 14 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 800 }}>🕒 Role Applications</div>
+              <div style={{ fontSize: 11, color: G.muted }}>Users applying for coach/referee/admin roles.</div>
+            </div>
+            <span style={{ fontSize: 12, color: G.yellow, fontWeight: 700 }}>{pendingApplicants.length} waiting</span>
+          </div>
+          <div style={{ display: 'grid', gap: 10 }}>
+            {pendingApplicants.slice(0, 4).map(s => (
+              <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 12, borderRadius: 10, background: '#09160b', border: `1px solid ${G.cardBorder}` }}>
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: G.text }}>{s.name}</div>
+                  <div style={{ fontSize: 11, color: G.muted }}>{s.email} · {s.role}</div>
+                </div>
+                <span style={{ fontSize: 10, color: G.yellow, background: 'rgba(240,192,64,0.12)', padding: '5px 8px', borderRadius: 8, fontWeight: 700 }}>Pending</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Staff List */}
       <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 14 }}>
