@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { useRole } from '@/context/RoleContext';
 import { authenticatedFetch } from '@/lib/authenticatedFetch';
 import { useToast } from '@/components/ui/ToastContext';
 
@@ -43,6 +44,7 @@ interface OrganizationPublicDetailProps {
 export default function OrganizationPublicDetail({ organization }: OrganizationPublicDetailProps) {
   const router = useRouter();
   const { user, isLoggedIn } = useAuth();
+  const { currentRole, currentOrgId } = useRole();
   const { addToast } = useToast();
   const [paymentStatus, setPaymentStatus] = useState('');
   const [loadingPayment, setLoadingPayment] = useState(false);
@@ -50,7 +52,58 @@ export default function OrganizationPublicDetail({ organization }: OrganizationP
   const [mpesaPhoneNumber, setMpesaPhoneNumber] = useState('');
   const [selectedTier, setSelectedTier] = useState<MembershipTier | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [membershipTiers, setMembershipTiers] = useState<MembershipTier[]>(organization.membershipTiers || []);
+  const [announcements, setAnnouncements] = useState(organization.announcements || []);
+  const [showTierModal, setShowTierModal] = useState(false);
+  const [tierModalMode, setTierModalMode] = useState<'create' | 'edit'>('create');
+  const [tierForm, setTierForm] = useState<{
+    name: string;
+    description: string;
+    monthlyPrice: number;
+    courtHoursPerMonth: number;
+    maxConcurrentBookings: number;
+    discountPercentage: number;
+    benefits: string;
+  }>({
+    name: '',
+    description: '',
+    monthlyPrice: 0,
+    courtHoursPerMonth: 0,
+    maxConcurrentBookings: 0,
+    discountPercentage: 0,
+    benefits: '',
+  });
+  const [submittingTier, setSubmittingTier] = useState(false);
+  const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
+  const [announcementForm, setAnnouncementForm] = useState({
+    id: '',
+    title: '',
+    message: '',
+    announcementType: 'general',
+    isActive: true,
+  });
+  const [submittingAnnouncement, setSubmittingAnnouncement] = useState(false);
+  const [confirmationState, setConfirmationState] = useState<{
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  } | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editForm, setEditForm] = useState({
+    name: organization.name,
+    description: organization.description || '',
+    email: organization.email || '',
+    phone: organization.phone || '',
+    address: organization.address || '',
+    city: organization.city || '',
+    country: organization.country || '',
+    website: organization.website || '',
+  });
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Check if user is the org owner
+  const isOrgOwner = currentRole === 'org' && currentOrgId === organization.id;
 
   const coachCount = organization.members.filter((member) => member.role === 'coach').length;
   const refereeCount = organization.members.filter((member) => member.role === 'referee').length;
@@ -58,6 +111,303 @@ export default function OrganizationPublicDetail({ organization }: OrganizationP
   const totalStaff = organization.members.filter((member) => ['coach', 'referee', 'admin', 'staff'].includes(member.role ?? '')).length;
 
   const latestFinance = organization.finances?.[0];
+
+  const handleBackButtonClick = () => {
+    const dashboardRole = isOrgOwner ? (currentRole === 'org' ? 'org' : (user?.role === 'org' ? 'org' : 'org')) : 'spectator';
+    router.push(`/dashboard/${dashboardRole}/${user?.id}`);
+    addToast(`Returning to ${isOrgOwner ? 'organization' : 'spectator'} dashboard`, 'info');
+  };
+
+  const handleEditFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setEditForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSaveOrgData = async () => {
+    if (!isOrgOwner) {
+      addToast('You do not have permission to edit this organization', 'error');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const res = await authenticatedFetch(`/api/organization/${organization.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editForm),
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to update organization');
+      }
+
+      addToast('Organization data updated successfully!', 'success');
+      setIsEditMode(false);
+      router.refresh();
+    } catch (error: any) {
+      addToast(error?.message || 'Failed to save organization data', 'error');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const normalizeTierBenefits = (benefits: string[] | string | null | undefined) => {
+    if (!benefits) return '';
+    if (Array.isArray(benefits)) return benefits.join(', ');
+    if (typeof benefits === 'string') return benefits;
+    return '';
+  };
+
+  const handleTierFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setTierForm((prev) => ({
+      ...prev,
+      [name]: name === 'monthlyPrice' || name === 'courtHoursPerMonth' || name === 'maxConcurrentBookings' || name === 'discountPercentage'
+        ? Number(value)
+        : value,
+    }));
+  };
+
+  const openCreateTierModal = () => {
+    setTierModalMode('create');
+    setTierForm({
+      name: '',
+      description: '',
+      monthlyPrice: 0,
+      courtHoursPerMonth: 0,
+      maxConcurrentBookings: 0,
+      discountPercentage: 0,
+      benefits: '',
+    });
+    setShowTierModal(true);
+  };
+
+  const openEditTierModal = (tier: MembershipTier) => {
+    setTierModalMode('edit');
+    setTierForm({
+      name: tier.name || '',
+      description: tier.description || '',
+      monthlyPrice: tier.monthlyPrice ?? 0,
+      courtHoursPerMonth: tier.courtHoursPerMonth ?? 0,
+      maxConcurrentBookings: tier.maxConcurrentBookings ?? 0,
+      discountPercentage: tier.discountPercentage ?? 0,
+      benefits: normalizeTierBenefits(tier.benefits),
+    });
+    setSelectedTier(tier);
+    setShowTierModal(true);
+  };
+
+  const handleSaveTier = async () => {
+    if (!isOrgOwner) {
+      addToast('You do not have permission to manage membership tiers', 'error');
+      return;
+    }
+
+    if (!tierForm.name.trim()) {
+      addToast('Tier name is required', 'error');
+      return;
+    }
+
+    setSubmittingTier(true);
+
+    const payload = {
+      name: tierForm.name.trim(),
+      description: tierForm.description.trim(),
+      monthlyPrice: tierForm.monthlyPrice,
+      courtHoursPerMonth: tierForm.courtHoursPerMonth,
+      maxConcurrentBookings: tierForm.maxConcurrentBookings,
+      discountPercentage: tierForm.discountPercentage,
+      benefits: tierForm.benefits.split(',').map((benefit) => benefit.trim()).filter(Boolean),
+    };
+
+    try {
+      const endpoint = tierModalMode === 'create'
+        ? `/api/organization/${organization.id}/membership-tiers`
+        : `/api/organization/${organization.id}/membership-tiers/${selectedTier?.id}`;
+      const method = tierModalMode === 'create' ? 'POST' : 'PATCH';
+      const res = await authenticatedFetch(endpoint, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await res.json();
+      if (!res.ok) {
+        throw new Error(result?.error || 'Failed to save membership tier');
+      }
+
+      if (tierModalMode === 'create') {
+        setMembershipTiers((current) => [result, ...current]);
+        addToast('Membership tier added', 'success');
+      } else {
+        setMembershipTiers((current) => current.map((tier) => tier.id === result.id ? result : tier));
+        addToast('Membership tier updated', 'success');
+      }
+
+      setShowTierModal(false);
+      setSelectedTier(null);
+    } catch (error: any) {
+      addToast(error?.message || 'Unable to save membership tier', 'error');
+    } finally {
+      setSubmittingTier(false);
+    }
+  };
+
+  const handleDeleteTier = async (tierId: string) => {
+    if (!isOrgOwner) {
+      addToast('You do not have permission to remove membership tiers', 'error');
+      setConfirmationState(null);
+      return;
+    }
+
+    setSubmittingTier(true);
+    try {
+      const res = await authenticatedFetch(`/api/organization/${organization.id}/membership-tiers/${tierId}`, {
+        method: 'DELETE',
+      });
+
+      if (!res.ok) {
+        const result = await res.json().catch(() => null);
+        throw new Error(result?.error || 'Failed to delete membership tier');
+      }
+
+      setMembershipTiers((current) => current.filter((tier) => tier.id !== tierId));
+      addToast('Membership tier deleted', 'success');
+      setConfirmationState(null);
+    } catch (error: any) {
+      addToast(error?.message || 'Unable to delete membership tier', 'error');
+    } finally {
+      setSubmittingTier(false);
+    }
+  };
+
+  const handleAnnouncementFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value, type, checked } = e.target as HTMLInputElement;
+    setAnnouncementForm((prev) => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value,
+    }));
+  };
+
+  const openCreateAnnouncementModal = () => {
+    setAnnouncementForm({
+      id: '',
+      title: '',
+      message: '',
+      announcementType: 'general',
+      isActive: true,
+    });
+    setShowAnnouncementModal(true);
+  };
+
+  const openEditAnnouncementModal = (announcement: typeof organization.announcements[number]) => {
+    setAnnouncementForm({
+      id: announcement.id,
+      title: announcement.title,
+      message: announcement.message,
+      announcementType: announcement.announcementType || 'general',
+      isActive: announcement.isActive ?? true,
+    });
+    setShowAnnouncementModal(true);
+  };
+
+  const handleSaveAnnouncement = async () => {
+    if (!isOrgOwner) {
+      addToast('You do not have permission to manage announcements', 'error');
+      return;
+    }
+
+    if (!announcementForm.title.trim() || !announcementForm.message.trim()) {
+      addToast('Announcement title and message are required', 'error');
+      return;
+    }
+
+    setSubmittingAnnouncement(true);
+
+    try {
+      const endpoint = announcementForm.id
+        ? `/api/organization/${organization.id}/announcements/${announcementForm.id}`
+        : `/api/organization/${organization.id}/announcements`;
+      const method = announcementForm.id ? 'PATCH' : 'POST';
+      const res = await authenticatedFetch(endpoint, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: announcementForm.title.trim(),
+          message: announcementForm.message.trim(),
+          announcementType: announcementForm.announcementType,
+          isActive: announcementForm.isActive,
+        }),
+      });
+      const result = await res.json();
+
+      if (!res.ok) {
+        throw new Error(result?.error || 'Failed to save announcement');
+      }
+
+      if (announcementForm.id) {
+        setAnnouncements((current) => current.map((item) => item.id === result.id ? result : item));
+        addToast('Announcement updated', 'success');
+      } else {
+        setAnnouncements((current) => [result, ...current]);
+        addToast('Announcement added', 'success');
+      }
+
+      setShowAnnouncementModal(false);
+    } catch (error: any) {
+      addToast(error?.message || 'Unable to save announcement', 'error');
+    } finally {
+      setSubmittingAnnouncement(false);
+    }
+  };
+
+  const handleDeleteAnnouncement = async (announcementId: string) => {
+    if (!isOrgOwner) {
+      addToast('You do not have permission to delete announcements', 'error');
+      setConfirmationState(null);
+      return;
+    }
+
+    setSubmittingAnnouncement(true);
+    try {
+      const res = await authenticatedFetch(`/api/organization/${organization.id}/announcements/${announcementId}`, {
+        method: 'DELETE',
+      });
+
+      if (!res.ok) {
+        const result = await res.json().catch(() => null);
+        throw new Error(result?.error || 'Failed to delete announcement');
+      }
+
+      setAnnouncements((current) => current.filter((item) => item.id !== announcementId));
+      addToast('Announcement deleted', 'success');
+      setConfirmationState(null);
+    } catch (error: any) {
+      addToast(error?.message || 'Unable to delete announcement', 'error');
+    } finally {
+      setSubmittingAnnouncement(false);
+    }
+  };
+
+  const promptDeleteTier = (tier: MembershipTier) => {
+    setConfirmationState({
+      title: `Delete tier ${tier.name}?`,
+      message: 'This will permanently remove the membership tier from your organization.',
+      onConfirm: () => handleDeleteTier(tier.id),
+    });
+  };
+
+  const promptDeleteAnnouncement = (announcement: typeof organization.announcements[number]) => {
+    setConfirmationState({
+      title: `Delete announcement?`,
+      message: 'This announcement will be permanently removed from the organization.',
+      onConfirm: () => handleDeleteAnnouncement(announcement.id),
+    });
+  };
+
+  const handleCancelConfirmation = () => {
+    setConfirmationState(null);
+  };
 
   const handlePurchaseMembership = async (tier: MembershipTier, paymentMethod: 'stripe' | 'paypal' | 'mpesa' = 'stripe') => {
     if (!user || !organization?.id) {
@@ -138,17 +488,10 @@ export default function OrganizationPublicDetail({ organization }: OrganizationP
   return (
     <div style={{ minHeight: '100vh', padding: '24px', background: '#071008', color: '#e8f5e0' }}>
       <div style={{ maxWidth: "auto", width: '100%', margin: '0 auto', display: 'grid', gap: 24 }}>
-        {/* Back Button */}
+        {/* Back Button + Edit Button */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <button
-            onClick={() => {
-              if (user) {
-                router.push(`/dashboard/spectator/${user.id}`);
-                addToast('Returning to spectator dashboard', 'info');
-              } else {
-                addToast('Please sign in to access dashboard', 'warning');
-              }
-            }}
+            onClick={handleBackButtonClick}
             style={{
               background: '#1e3f28',
               border: '1px solid #243e24',
@@ -162,8 +505,24 @@ export default function OrganizationPublicDetail({ organization }: OrganizationP
               gap: 8
             }}
           >
-            ← Back to Spectator Dashboard
+            ← Back to {isOrgOwner ? 'Organization' : 'Spectator'} Dashboard
           </button>
+          {isOrgOwner && (
+            <button
+              onClick={() => setIsEditMode(!isEditMode)}
+              style={{
+                background: isEditMode ? '#ff6b6b' : '#7dc142',
+                border: 'none',
+                borderRadius: 12,
+                padding: '12px 16px',
+                color: isEditMode ? '#fff' : '#0f1f0f',
+                cursor: 'pointer',
+                fontWeight: 600,
+              }}
+            >
+              {isEditMode ? '✕ Cancel' : '✏️ Edit Organization'}
+            </button>
+          )}
         </div>
 
         {/* Organization Header */}
@@ -174,7 +533,24 @@ export default function OrganizationPublicDetail({ organization }: OrganizationP
                 🎾
               </div>
               <div style={{ minWidth: 0 }}>
-                <h1 style={{ margin: 0, fontSize: 36, fontWeight: 900, lineHeight: 1.05 }}>{organization.name}</h1>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <h1 style={{ margin: 0, fontSize: 36, fontWeight: 900, lineHeight: 1.05 }}>{organization.name}</h1>
+                  {!isOrgOwner && (
+                    <span style={{
+                      background: 'rgba(250, 204, 21, 0.1)',
+                      border: '1px solid #ffd700',
+                      borderRadius: 6,
+                      padding: '4px 12px',
+                      color: '#ffd700',
+                      fontSize: 11,
+                      fontWeight: 700,
+                      textTransform: 'uppercase',
+                      letterSpacing: 0.5
+                    }}>
+                      👁️ View Only
+                    </span>
+                  )}
+                </div>
                 <p style={{ margin: '10px 0 0', color: '#7aaa6a', fontSize: 14, display: 'flex', flexWrap: 'wrap', gap: 12 }}>
                   <span>{organization.city || 'City not set'}</span>
                   <span>{organization.country || 'Location not set'}</span>
@@ -220,6 +596,200 @@ export default function OrganizationPublicDetail({ organization }: OrganizationP
           </div>
         </section>
 
+        {/* Edit Organization Modal */}
+        {isEditMode && isOrgOwner && (
+          <section style={{ display: 'grid', gap: 20, padding: 28, borderRadius: 24, background: '#0f1f12', border: '2px solid #7dc142' }}>
+            <div>
+              <h2 style={{ margin: 0, fontSize: 20, fontWeight: 900, color: '#7dc142' }}>Edit Organization Details</h2>
+              <p style={{ margin: '8px 0 0', color: '#7aaa6a', fontSize: 12 }}>Update your organization information</p>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 16 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#7dc142', marginBottom: 8 }}>Organization Name</label>
+                <input
+                  type="text"
+                  name="name"
+                  value={editForm.name}
+                  onChange={handleEditFormChange}
+                  style={{
+                    width: '100%',
+                    background: '#0a1810',
+                    border: '1px solid #243e24',
+                    borderRadius: 8,
+                    padding: '10px 12px',
+                    color: '#e8f5e0',
+                    fontSize: 13,
+                  }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#7dc142', marginBottom: 8 }}>Email</label>
+                <input
+                  type="email"
+                  name="email"
+                  value={editForm.email}
+                  onChange={handleEditFormChange}
+                  style={{
+                    width: '100%',
+                    background: '#0a1810',
+                    border: '1px solid #243e24',
+                    borderRadius: 8,
+                    padding: '10px 12px',
+                    color: '#e8f5e0',
+                    fontSize: 13,
+                  }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#7dc142', marginBottom: 8 }}>Phone</label>
+                <input
+                  type="tel"
+                  name="phone"
+                  value={editForm.phone}
+                  onChange={handleEditFormChange}
+                  style={{
+                    width: '100%',
+                    background: '#0a1810',
+                    border: '1px solid #243e24',
+                    borderRadius: 8,
+                    padding: '10px 12px',
+                    color: '#e8f5e0',
+                    fontSize: 13,
+                  }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#7dc142', marginBottom: 8 }}>Website</label>
+                <input
+                  type="url"
+                  name="website"
+                  value={editForm.website}
+                  onChange={handleEditFormChange}
+                  style={{
+                    width: '100%',
+                    background: '#0a1810',
+                    border: '1px solid #243e24',
+                    borderRadius: 8,
+                    padding: '10px 12px',
+                    color: '#e8f5e0',
+                    fontSize: 13,
+                  }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#7dc142', marginBottom: 8 }}>City</label>
+                <input
+                  type="text"
+                  name="city"
+                  value={editForm.city}
+                  onChange={handleEditFormChange}
+                  style={{
+                    width: '100%',
+                    background: '#0a1810',
+                    border: '1px solid #243e24',
+                    borderRadius: 8,
+                    padding: '10px 12px',
+                    color: '#e8f5e0',
+                    fontSize: 13,
+                  }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#7dc142', marginBottom: 8 }}>Country</label>
+                <input
+                  type="text"
+                  name="country"
+                  value={editForm.country}
+                  onChange={handleEditFormChange}
+                  style={{
+                    width: '100%',
+                    background: '#0a1810',
+                    border: '1px solid #243e24',
+                    borderRadius: 8,
+                    padding: '10px 12px',
+                    color: '#e8f5e0',
+                    fontSize: 13,
+                  }}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#7dc142', marginBottom: 8 }}>Address</label>
+              <input
+                type="text"
+                name="address"
+                value={editForm.address}
+                onChange={handleEditFormChange}
+                style={{
+                  width: '100%',
+                  background: '#0a1810',
+                  border: '1px solid #243e24',
+                  borderRadius: 8,
+                  padding: '10px 12px',
+                  color: '#e8f5e0',
+                  fontSize: 13,
+                }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#7dc142', marginBottom: 8 }}>Description</label>
+              <textarea
+                name="description"
+                value={editForm.description}
+                onChange={handleEditFormChange}
+                rows={4}
+                style={{
+                  width: '100%',
+                  background: '#0a1810',
+                  border: '1px solid #243e24',
+                  borderRadius: 8,
+                  padding: '10px 12px',
+                  color: '#e8f5e0',
+                  fontSize: 13,
+                  fontFamily: 'inherit',
+                }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button
+                onClick={handleSaveOrgData}
+                disabled={isSaving}
+                style={{
+                  background: '#7dc142',
+                  border: 'none',
+                  borderRadius: 8,
+                  padding: '12px 24px',
+                  color: '#0f1f0f',
+                  cursor: isSaving ? 'not-allowed' : 'pointer',
+                  fontWeight: 700,
+                  opacity: isSaving ? 0.6 : 1,
+                }}
+              >
+                {isSaving ? 'Saving...' : '✓ Save Changes'}
+              </button>
+              <button
+                onClick={() => setIsEditMode(false)}
+                disabled={isSaving}
+                style={{
+                  background: 'transparent',
+                  border: '1px solid #243e24',
+                  borderRadius: 8,
+                  padding: '12px 24px',
+                  color: '#7aaa6a',
+                  cursor: isSaving ? 'not-allowed' : 'pointer',
+                  fontWeight: 700,
+                }}
+              >
+                ✕ Discard
+              </button>
+            </div>
+          </section>
+        )}
+
         {/* Tab Navigation */}
         <div style={{ borderBottom: '1px solid #243e24', paddingBottom: 16 }}>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -257,14 +827,33 @@ export default function OrganizationPublicDetail({ organization }: OrganizationP
           <div style={{ display: 'grid', gap: 24 }}>
             <section style={{ padding: 24, borderRadius: 24, background: '#0f1f12', border: '1px solid #243e24' }}>
               <div style={{ display: 'grid', gap: 18 }}>
-                <div>
-                  <h2 style={{ margin: 0, fontSize: 24, fontWeight: 800 }}>Memberships</h2>
-                  <p style={{ margin: '10px 0 0', color: '#7aaa6a', fontSize: 14 }}>Explore membership options and benefits for the club.</p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
+                  <div>
+                    <h2 style={{ margin: 0, fontSize: 24, fontWeight: 800 }}>Memberships</h2>
+                    <p style={{ margin: '10px 0 0', color: '#7aaa6a', fontSize: 14 }}>Explore membership options and benefits for the club.</p>
+                  </div>
+                  {isOrgOwner && (
+                    <button
+                      type="button"
+                      onClick={openCreateTierModal}
+                      style={{
+                        background: '#7dc142',
+                        border: 'none',
+                        borderRadius: 12,
+                        padding: '12px 18px',
+                        color: '#0f1f0f',
+                        cursor: 'pointer',
+                        fontWeight: 700,
+                      }}
+                    >
+                      + Add Membership Tier
+                    </button>
+                  )}
                 </div>
 
                 <div style={{ display: 'grid', gap: 14 }}>
-                  {organization.membershipTiers.length > 0 ? (
-                    organization.membershipTiers.map((tier) => (
+                  {membershipTiers.length > 0 ? (
+                    membershipTiers.map((tier) => (
                       <div key={tier.id} style={{ display: 'grid', gap: 16, padding: 20, borderRadius: 24, background: '#132915', border: '1px solid #243e24' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
                           <div>
@@ -278,19 +867,19 @@ export default function OrganizationPublicDetail({ organization }: OrganizationP
                         </div>
 
                         <div style={{ display: 'grid', gap: 8 }}>
-                          {tier.courtHoursPerMonth && (
+                          {tier.courtHoursPerMonth !== null && tier.courtHoursPerMonth !== undefined && (
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#c4d8b1' }}>
                               <span>⏰</span>
                               <span>{tier.courtHoursPerMonth} court hours per month</span>
                             </div>
                           )}
-                          {tier.maxConcurrentBookings && (
+                          {tier.maxConcurrentBookings !== null && tier.maxConcurrentBookings !== undefined && (
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#c4d8b1' }}>
                               <span>📅</span>
                               <span>Up to {tier.maxConcurrentBookings} concurrent bookings</span>
                             </div>
                           )}
-                          {tier.discountPercentage && (
+                          {tier.discountPercentage !== null && tier.discountPercentage !== undefined && (
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#c4d8b1' }}>
                               <span>💰</span>
                               <span>{tier.discountPercentage}% discount on bookings</span>
@@ -308,7 +897,7 @@ export default function OrganizationPublicDetail({ organization }: OrganizationP
                                 try {
                                   benefitsArray = JSON.parse(tier.benefits);
                                 } catch {
-                                  benefitsArray = tier.benefits.split(',').map(b => b.trim()).filter(b => b);
+                                  benefitsArray = tier.benefits.split(',').map((b) => b.trim()).filter(Boolean);
                                 }
                               }
                             }
@@ -320,27 +909,68 @@ export default function OrganizationPublicDetail({ organization }: OrganizationP
                           })()}
                         </div>
 
-                        <button
-                          type="button"
-                          onClick={() => openPaymentModal(tier)}
-                          disabled={loadingPayment}
-                          style={{
-                            width: '100%',
-                            border: 'none',
-                            borderRadius: 12,
-                            padding: '14px 18px',
-                            background: '#7dc142',
-                            color: '#0f1f0f',
-                            cursor: 'pointer',
-                            fontWeight: 700
-                          }}
-                        >
-                          {loadingPayment ? 'Processing...' : 'Choose Payment Method'}
-                        </button>
+                        {isOrgOwner ? (
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                            <button
+                              type="button"
+                              onClick={() => openEditTierModal(tier)}
+                              style={{
+                                flex: 1,
+                                minWidth: 120,
+                                border: '1px solid #7dc142',
+                                borderRadius: 12,
+                                padding: '14px 18px',
+                                background: 'transparent',
+                                color: '#7dc142',
+                                cursor: 'pointer',
+                                fontWeight: 700,
+                              }}
+                            >
+                              Edit Tier
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => promptDeleteTier(tier)}
+                              style={{
+                                flex: 1,
+                                minWidth: 120,
+                                border: 'none',
+                                borderRadius: 12,
+                                padding: '14px 18px',
+                                background: '#ff6b6b',
+                                color: '#fff',
+                                cursor: 'pointer',
+                                fontWeight: 700,
+                              }}
+                            >
+                              Delete Tier
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => openPaymentModal(tier)}
+                            disabled={loadingPayment}
+                            style={{
+                              width: '100%',
+                              border: 'none',
+                              borderRadius: 12,
+                              padding: '14px 18px',
+                              background: '#7dc142',
+                              color: '#0f1f0f',
+                              cursor: 'pointer',
+                              fontWeight: 700,
+                            }}
+                          >
+                            {loadingPayment ? 'Processing...' : 'Choose Payment Method'}
+                          </button>
+                        )}
                       </div>
                     ))
                   ) : (
-                    <div style={{ padding: 20, borderRadius: 20, background: '#132915', color: '#7aaa6a' }}>No membership tiers are published yet.</div>
+                    <div style={{ padding: 20, borderRadius: 20, background: '#132915', color: '#7aaa6a' }}>
+                      {isOrgOwner ? 'No membership tiers are published yet. Add a new tier to start selling memberships.' : 'No membership tiers are published yet.'}
+                    </div>
                   )}
                 </div>
 
@@ -500,37 +1130,92 @@ export default function OrganizationPublicDetail({ organization }: OrganizationP
 
             {/* Announcements Section */}
             <section style={{ padding: 20, borderRadius: 20, border: '1px solid #243e24', background: '#0f1f12' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
                 <div>
                   <h2 style={{ margin: 0, fontSize: 24, fontWeight: 800 }}>Announcements</h2>
                   <p style={{ margin: '8px 0 0', color: '#7aaa6a', fontSize: 14 }}>Latest news and updates from the club.</p>
                 </div>
-                <span style={{ color: '#7dc142', fontSize: 14, fontWeight: 700 }}>
-                  {organization.announcements.length} Announcements
-                </span>
+                <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <span style={{ color: '#7dc142', fontSize: 14, fontWeight: 700 }}>
+                    {announcements.length} Announcements
+                  </span>
+                  {isOrgOwner && (
+                    <button
+                      type="button"
+                      onClick={openCreateAnnouncementModal}
+                      style={{
+                        background: '#7dc142',
+                        border: 'none',
+                        borderRadius: 12,
+                        padding: '12px 18px',
+                        color: '#0f1f0f',
+                        cursor: 'pointer',
+                        fontWeight: 700,
+                      }}
+                    >
+                      + New Announcement
+                    </button>
+                  )}
+                </div>
               </div>
               <div style={{ display: 'grid', gap: 16 }}>
-                {organization.announcements.length > 0 ? (
-                  organization.announcements.map((announcement) => (
+                {announcements.length > 0 ? (
+                  announcements.map((announcement) => (
                     <div key={announcement.id} style={{ padding: 20, borderRadius: 16, background: '#132915' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 12 }}>
-                        <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#e8f5e0' }}>{announcement.title}</h3>
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
-                          <span style={{
-                            color: announcement.isActive ? '#7dc142' : '#7aaa6a',
-                            fontSize: 12,
-                            fontWeight: 700,
-                            textTransform: 'uppercase',
-                            padding: '4px 8px',
-                            borderRadius: 8,
-                            background: announcement.isActive ? '#1f3f22' : '#1f2f22'
-                          }}>
-                            {announcement.isActive ? 'Active' : 'Archived'}
-                          </span>
-                          <span style={{ color: '#7aaa6a', fontSize: 12 }}>
-                            {announcement.announcementType || 'General'}
-                          </span>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#e8f5e0' }}>{announcement.title}</h3>
+                          <div style={{ marginTop: 8, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                            <span style={{
+                              color: announcement.isActive ? '#7dc142' : '#7aaa6a',
+                              fontSize: 12,
+                              fontWeight: 700,
+                              textTransform: 'uppercase',
+                              padding: '4px 8px',
+                              borderRadius: 8,
+                              background: announcement.isActive ? '#1f3f22' : '#1f2f22'
+                            }}>
+                              {announcement.isActive ? 'Active' : 'Archived'}
+                            </span>
+                            <span style={{ color: '#7aaa6a', fontSize: 12 }}>
+                              {announcement.announcementType || 'General'}
+                            </span>
+                          </div>
                         </div>
+                        {isOrgOwner && (
+                          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                            <button
+                              type="button"
+                              onClick={() => openEditAnnouncementModal(announcement)}
+                              style={{
+                                border: '1px solid #7dc142',
+                                borderRadius: 12,
+                                padding: '10px 14px',
+                                background: 'transparent',
+                                color: '#7dc142',
+                                cursor: 'pointer',
+                                fontWeight: 700,
+                              }}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => promptDeleteAnnouncement(announcement)}
+                              style={{
+                                border: 'none',
+                                borderRadius: 12,
+                                padding: '10px 14px',
+                                background: '#ff6b6b',
+                                color: '#fff',
+                                cursor: 'pointer',
+                                fontWeight: 700,
+                              }}
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        )}
                       </div>
                       <p style={{ margin: '0 0 12px', color: '#c4d8b1', fontSize: 14, lineHeight: 1.6 }}>{announcement.message}</p>
                       <div style={{ color: '#7aaa6a', fontSize: 12 }}>
@@ -910,6 +1595,313 @@ export default function OrganizationPublicDetail({ organization }: OrganizationP
                   {paymentStatus}
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {showTierModal && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.75)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1100,
+            padding: 20,
+          }}>
+            <div style={{
+              background: '#0f1f12',
+              borderRadius: 20,
+              border: '1px solid #243e24',
+              padding: 24,
+              maxWidth: 560,
+              width: '100%',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#e8f5e0' }}>
+                    {tierModalMode === 'create' ? 'Create Membership Tier' : 'Edit Membership Tier'}
+                  </h3>
+                  <p style={{ margin: '8px 0 0', color: '#7aaa6a', fontSize: 13 }}>
+                    Manage the tier available to club members.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowTierModal(false)}
+                  style={{ background: 'none', border: 'none', color: '#7aaa6a', fontSize: 28, cursor: 'pointer' }}
+                >
+                  ×
+                </button>
+              </div>
+
+              <div style={{ display: 'grid', gap: 14 }}>
+                <div>
+                  <label style={{ display: 'block', color: '#7dc142', fontSize: 12, fontWeight: 700, marginBottom: 8 }}>Tier name</label>
+                  <input
+                    type="text"
+                    name="name"
+                    value={tierForm.name}
+                    onChange={handleTierFormChange}
+                    style={{ width: '100%', borderRadius: 10, border: '1px solid #243e24', background: '#132915', color: '#e8f5e0', padding: '12px 14px' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', color: '#7dc142', fontSize: 12, fontWeight: 700, marginBottom: 8 }}>Description</label>
+                  <textarea
+                    name="description"
+                    value={tierForm.description}
+                    onChange={handleTierFormChange}
+                    rows={3}
+                    style={{ width: '100%', borderRadius: 10, border: '1px solid #243e24', background: '#132915', color: '#e8f5e0', padding: '12px 14px', fontFamily: 'inherit' }}
+                  />
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div>
+                    <label style={{ display: 'block', color: '#7dc142', fontSize: 12, fontWeight: 700, marginBottom: 8 }}>Monthly price</label>
+                    <input
+                      type="number"
+                      name="monthlyPrice"
+                      value={tierForm.monthlyPrice}
+                      onChange={handleTierFormChange}
+                      style={{ width: '100%', borderRadius: 10, border: '1px solid #243e24', background: '#132915', color: '#e8f5e0', padding: '12px 14px' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', color: '#7dc142', fontSize: 12, fontWeight: 700, marginBottom: 8 }}>Court hours</label>
+                    <input
+                      type="number"
+                      name="courtHoursPerMonth"
+                      value={tierForm.courtHoursPerMonth}
+                      onChange={handleTierFormChange}
+                      style={{ width: '100%', borderRadius: 10, border: '1px solid #243e24', background: '#132915', color: '#e8f5e0', padding: '12px 14px' }}
+                    />
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div>
+                    <label style={{ display: 'block', color: '#7dc142', fontSize: 12, fontWeight: 700, marginBottom: 8 }}>Concurrent bookings</label>
+                    <input
+                      type="number"
+                      name="maxConcurrentBookings"
+                      value={tierForm.maxConcurrentBookings}
+                      onChange={handleTierFormChange}
+                      style={{ width: '100%', borderRadius: 10, border: '1px solid #243e24', background: '#132915', color: '#e8f5e0', padding: '12px 14px' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', color: '#7dc142', fontSize: 12, fontWeight: 700, marginBottom: 8 }}>Discount %</label>
+                    <input
+                      type="number"
+                      name="discountPercentage"
+                      value={tierForm.discountPercentage}
+                      onChange={handleTierFormChange}
+                      style={{ width: '100%', borderRadius: 10, border: '1px solid #243e24', background: '#132915', color: '#e8f5e0', padding: '12px 14px' }}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label style={{ display: 'block', color: '#7dc142', fontSize: 12, fontWeight: 700, marginBottom: 8 }}>Benefits (comma-separated)</label>
+                  <input
+                    type="text"
+                    name="benefits"
+                    value={tierForm.benefits}
+                    onChange={handleTierFormChange}
+                    style={{ width: '100%', borderRadius: 10, border: '1px solid #243e24', background: '#132915', color: '#e8f5e0', padding: '12px 14px' }}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 8 }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowTierModal(false)}
+                    style={{ flex: 1, minWidth: 120, borderRadius: 12, border: '1px solid #243e24', background: '#132915', color: '#7aaa6a', padding: '14px 18px', cursor: 'pointer', fontWeight: 700 }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSaveTier}
+                    disabled={submittingTier}
+                    style={{ flex: 1, minWidth: 120, borderRadius: 12, border: 'none', background: '#7dc142', color: '#0f1f0f', padding: '14px 18px', cursor: submittingTier ? 'not-allowed' : 'pointer', fontWeight: 700, opacity: submittingTier ? 0.6 : 1 }}
+                  >
+                    {submittingTier ? 'Saving...' : 'Save Tier'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showAnnouncementModal && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.75)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1100,
+            padding: 20,
+          }}>
+            <div style={{
+              background: '#0f1f12',
+              borderRadius: 20,
+              border: '1px solid #243e24',
+              padding: 24,
+              maxWidth: 560,
+              width: '100%',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#e8f5e0' }}>
+                    {announcementForm.id ? 'Edit Announcement' : 'New Announcement'}
+                  </h3>
+                  <p style={{ margin: '8px 0 0', color: '#7aaa6a', fontSize: 13 }}>
+                    Publish an update to your organization members.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowAnnouncementModal(false)}
+                  style={{ background: 'none', border: 'none', color: '#7aaa6a', fontSize: 28, cursor: 'pointer' }}
+                >
+                  ×
+                </button>
+              </div>
+
+              <div style={{ display: 'grid', gap: 14 }}>
+                <div>
+                  <label style={{ display: 'block', color: '#7dc142', fontSize: 12, fontWeight: 700, marginBottom: 8 }}>Title</label>
+                  <input
+                    type="text"
+                    name="title"
+                    value={announcementForm.title}
+                    onChange={handleAnnouncementFormChange}
+                    style={{ width: '100%', borderRadius: 10, border: '1px solid #243e24', background: '#132915', color: '#e8f5e0', padding: '12px 14px' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', color: '#7dc142', fontSize: 12, fontWeight: 700, marginBottom: 8 }}>Message</label>
+                  <textarea
+                    name="message"
+                    value={announcementForm.message}
+                    onChange={handleAnnouncementFormChange}
+                    rows={5}
+                    style={{ width: '100%', borderRadius: 10, border: '1px solid #243e24', background: '#132915', color: '#e8f5e0', padding: '12px 14px', fontFamily: 'inherit' }}
+                  />
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div>
+                    <label style={{ display: 'block', color: '#7dc142', fontSize: 12, fontWeight: 700, marginBottom: 8 }}>Type</label>
+                    <select
+                      name="announcementType"
+                      value={announcementForm.announcementType}
+                      onChange={handleAnnouncementFormChange}
+                      style={{ width: '100%', borderRadius: 10, border: '1px solid #243e24', background: '#132915', color: '#e8f5e0', padding: '12px 14px' }}
+                    >
+                      <option value="general">General</option>
+                      <option value="update">Update</option>
+                      <option value="alert">Alert</option>
+                    </select>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+                    <label style={{ display: 'flex', gap: 10, alignItems: 'center', color: '#7dc142', fontWeight: 700 }}>
+                      <input
+                        type="checkbox"
+                        name="isActive"
+                        checked={announcementForm.isActive}
+                        onChange={handleAnnouncementFormChange}
+                        style={{ width: 16, height: 16 }}
+                      />
+                      Publish active
+                    </label>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 8 }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowAnnouncementModal(false)}
+                    style={{ flex: 1, minWidth: 120, borderRadius: 12, border: '1px solid #243e24', background: '#132915', color: '#7aaa6a', padding: '14px 18px', cursor: 'pointer', fontWeight: 700 }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSaveAnnouncement}
+                    disabled={submittingAnnouncement}
+                    style={{ flex: 1, minWidth: 120, borderRadius: 12, border: 'none', background: '#7dc142', color: '#0f1f0f', padding: '14px 18px', cursor: submittingAnnouncement ? 'not-allowed' : 'pointer', fontWeight: 700, opacity: submittingAnnouncement ? 0.6 : 1 }}
+                  >
+                    {submittingAnnouncement ? 'Saving...' : announcementForm.id ? 'Update Announcement' : 'Create Announcement'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {confirmationState && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.75)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1200,
+            padding: 20,
+          }}>
+            <div style={{
+              background: '#0f1f12',
+              borderRadius: 20,
+              border: '1px solid #243e24',
+              padding: 24,
+              maxWidth: 520,
+              width: '100%',
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#e8f5e0' }}>{confirmationState.title}</h3>
+                </div>
+                <button
+                  onClick={handleCancelConfirmation}
+                  style={{ background: 'none', border: 'none', color: '#7aaa6a', fontSize: 28, cursor: 'pointer' }}
+                >
+                  ×
+                </button>
+              </div>
+              <p style={{ color: '#c4d8b1', fontSize: 14, lineHeight: 1.7, marginBottom: 24 }}>{confirmationState.message}</p>
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={handleCancelConfirmation}
+                  style={{ flex: 1, minWidth: 120, borderRadius: 12, border: '1px solid #243e24', background: '#132915', color: '#7aaa6a', padding: '14px 18px', cursor: 'pointer', fontWeight: 700 }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    confirmationState.onConfirm();
+                  }}
+                  style={{ flex: 1, minWidth: 120, borderRadius: 12, border: 'none', background: '#ff6b6b', color: '#fff', padding: '14px 18px', cursor: 'pointer', fontWeight: 700 }}
+                >
+                  Confirm Delete
+                </button>
+              </div>
             </div>
           </div>
         )}

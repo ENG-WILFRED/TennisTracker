@@ -157,7 +157,7 @@ export default function LoginPage() {
       orgName,
     };
 
-    setCurrentRole(selectedRole);
+    setCurrentRole(selectedRole, orgId, orgName);
     const memberships = data.user?.memberships?.filter((m: any) => m.status === 'accepted') || data.availableRoles || [];
     // Save memberships to context/localStorage for context switching
     setUserMemberships(memberships.length ? memberships : [{ role: selectedRole, orgId, orgName }]);

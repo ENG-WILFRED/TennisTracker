@@ -146,6 +146,26 @@ function TierBadge({ tier }: { tier?: string }) {
   );
 }
 
+function normalizeClubMember(clubMember: any): Member {
+  const user = clubMember?.player?.user;
+  return {
+    id: clubMember.id,
+    firstName: user?.firstName || user?.email?.split('@')[0] || 'Unknown',
+    lastName: user?.lastName || '',
+    email: user?.email || '',
+    role: clubMember.role === 'member' ? 'player' : clubMember.role === 'officer' ? 'admin' : clubMember.role || 'player',
+    tier: clubMember.membershipTier?.name || clubMember.tier || 'Basic',
+    status: clubMember.paymentStatus === 'active' ? 'active' : 'inactive',
+    paymentStatus: clubMember.paymentStatus,
+    joinDate: clubMember.joinDate ? clubMember.joinDate.toISOString() : undefined,
+    visits: clubMember.attendanceCount || 0,
+    nationality: user?.nationality || '',
+    age: user?.dateOfBirth ? new Date(user.dateOfBirth).getFullYear() : undefined,
+    photo: user?.photo || null,
+    player: clubMember.player ? { userId: clubMember.player.userId, user } : undefined,
+  };
+}
+
 function MemberCard({ member, onClick }: { member: Member; onClick: () => void }) {
   const renderRoleDetail = () => {
     if (member.role === 'player') return (
@@ -224,6 +244,7 @@ export default function OrganizationMembersSection({
   const [actionLoading, setActionLoading] = useState(false);
   const [loadingAction, setLoadingAction] = useState<string | null>(null); // Track which specific action is loading
   const [notify, setNotify] = useState<string | null>(null);
+  const [fetchLoading, setFetchLoading] = useState(false);
 
   useEffect(() => {
     const isSameById = memberData.length === incomingMembers.length && incomingMembers.every((m, idx) => m.id === memberData[idx]?.id);
@@ -241,6 +262,32 @@ export default function OrganizationMembersSection({
       return () => clearTimeout(timer);
     }
   }, [notify]);
+
+  useEffect(() => {
+    if (!organizationId) return;
+
+    const fetchMembers = async () => {
+      try {
+        setFetchLoading(true);
+        const res = await fetch(`/api/organization/${organizationId}/members`);
+        if (!res.ok) {
+          console.error('Failed to fetch members', res.status);
+          setFetchLoading(false);
+          return;
+        }
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setMemberData(data.map(normalizeClubMember));
+        }
+        setFetchLoading(false);
+      } catch (error) {
+        console.error('Error loading organization members:', error);
+        setFetchLoading(false);
+      }
+    };
+
+    fetchMembers();
+  }, [organizationId]);
 
   // Helper function to get button text based on loading state
   const getButtonText = (action: string, defaultText: string) => {
@@ -261,7 +308,7 @@ export default function OrganizationMembersSection({
   const updateMemberStatus = async (
     member: Member,
     action: 'activate' | 'deactivate' | 'suspend' | 'dismiss' | 'delete',
-    extra?: { until?: string; reason?: string }
+    extra?: { until?: string; reason?: string; role?: string }
   ) => {
     if (!organizationId || !member?.id) {
       setNotify('❌ Organization or member data missing');
@@ -864,7 +911,7 @@ export default function OrganizationMembersSection({
       </div>
 
       {/* Member List or Detail View */}
-      {loading ? (
+      {fetchLoading ? (
         <div style={{ padding: 40, textAlign: 'center', color: G.muted }}>
           <div style={{ fontSize: 32, marginBottom: 8 }}>🎾</div>
           <div>Loading members…</div>

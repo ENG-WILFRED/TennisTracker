@@ -554,102 +554,195 @@ export async function getOrganizationDashboard(orgManagerId: string, orgId?: str
 
   console.log(`🔍 Getting dashboard for user ${manager.firstName} ${manager.lastName} (${orgManagerId}), provided orgId: ${orgId}`);
 
-  // Get organization data - either from provided orgId or find the first organization managed by the user
-  let organization = null;
   let resolvedOrgId = orgId;
 
-  const organizationInclude = {
-    staff: { include: { user: true } },
-    players: { include: { user: true } },
-    courts: true,
-    events: true,
-    announcements: true,
-    finances: true,
-  };
-
-  if (orgId) {
-    organization = await prisma.organization.findUnique({
-      where: { id: orgId },
-      include: organizationInclude,
-    });
-  } else {
+  if (!resolvedOrgId) {
     const orgStaff = await prisma.staff.findFirst({
       where: {
         userId: orgManagerId,
         role: { in: ['Manager', 'Admin', 'Owner'] },
       },
-      include: {
-        organization: {
-          include: organizationInclude,
-        },
+      select: {
+        organizationId: true,
       },
     });
 
-    if (!orgStaff) {
-      console.log(`⚠️  No staff found, checking club members for user ${orgManagerId}...`);
-      const clubMember = await prisma.clubMember.findFirst({
-        where: {
-          playerId: orgManagerId,
-          role: { in: ['admin', 'manager', 'owner'] },
-        },
-        include: {
-          organization: {
-            include: organizationInclude,
-          },
-        },
-      });
-
-      if (clubMember) {
-        console.log(`✅ Club member found! Organization: ${clubMember.organization.name}`);
-        organization = clubMember.organization;
-        resolvedOrgId = organization.id;
-      } else {
-        console.log('❌ No club member found with admin role');
-      }
-    } else if (orgStaff.organization) {
-      console.log(`✅ Staff found! Organization: ${orgStaff.organization.name}`);
-      organization = orgStaff.organization;
-      resolvedOrgId = organization.id;
+    if (orgStaff?.organizationId) {
+      resolvedOrgId = orgStaff.organizationId;
+      console.log(`✅ Staff found! Resolved orgId: ${resolvedOrgId}`);
     }
+  }
+
+  if (!resolvedOrgId) {
+    const clubMember = await prisma.clubMember.findFirst({
+      where: {
+        playerId: orgManagerId,
+        role: { in: ['admin', 'manager', 'owner'] },
+      },
+      select: {
+        organizationId: true,
+      },
+    });
+
+    if (clubMember?.organizationId) {
+      resolvedOrgId = clubMember.organizationId;
+      console.log(`✅ Club member found! Resolved orgId: ${resolvedOrgId}`);
+    }
+  }
+
+  if (!resolvedOrgId) {
+    throw new Error('Organization not found');
   }
 
   console.log(`📍 Resolved org ID: ${resolvedOrgId}`);
 
   const now = new Date();
-  const upcomingEvents = organization?.events
-    .filter((event: any) => event.startDate && new Date(event.startDate) > now)
-    .sort((a: any, b: any) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())
-    .slice(0, 5) || [];
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+
+  const [organizationMeta, clubMembers, memberCount, organizationStaff, upcomingEvents, announcements, financeRows, courtCount, eventsThisMonth, taskGroups, eventTaskGroups, pendingTypedTasks, pendingEventTasks] = await Promise.all([
+    prisma.organization.findUnique({
+      where: { id: resolvedOrgId },
+      select: {
+        id: true,
+        rating: true,
+      },
+    }),
+    prisma.clubMember.findMany({
+      where: { organizationId: resolvedOrgId },
+      include: {
+        player: {
+          select: {
+            user: {
+              select: {
+                firstName: true,
+                lastName: true,
+                email: true,
+                photo: true,
+                nationality: true,
+                dateOfBirth: true,
+              },
+            },
+          },
+        },
+        membershipTier: {
+          select: { name: true },
+        },
+      },
+      orderBy: { joinDate: 'desc' },
+      take: 20,
+    }),
+    prisma.clubMember.count({ where: { organizationId: resolvedOrgId } }),
+    prisma.staff.findMany({
+      where: {
+        organizationId: resolvedOrgId,
+        isDeleted: false,
+      },
+      include: {
+        user: {
+          select: {
+            firstName: true,
+            lastName: true,
+            photo: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    }),
+    prisma.clubEvent.findMany({
+      where: {
+        organizationId: resolvedOrgId,
+        startDate: { gt: now },
+      },
+      select: {
+        id: true,
+        name: true,
+        startDate: true,
+        endDate: true,
+        eventType: true,
+        registrationCap: true,
+        entryFee: true,
+        location: true,
+      },
+      orderBy: { startDate: 'asc' },
+      take: 5,
+    }),
+    prisma.clubAnnouncement.findMany({
+      where: { organizationId: resolvedOrgId },
+      select: {
+        id: true,
+        title: true,
+        message: true,
+        announcementType: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 4,
+    }),
+    prisma.clubFinance.findMany({
+      where: { organizationId: resolvedOrgId },
+      select: {
+        year: true,
+        month: true,
+        totalRevenue: true,
+        membershipRevenue: true,
+        courtBookingRevenue: true,
+      },
+      orderBy: [{ year: 'asc' }, { month: 'asc' }],
+    }),
+    prisma.court.count({ where: { organizationId: resolvedOrgId } }),
+    prisma.clubEvent.count({
+      where: {
+        organizationId: resolvedOrgId,
+        startDate: { gte: monthStart, lt: nextMonthStart },
+      },
+    }),
+    prisma.task.groupBy({
+      by: ['assignedToId'],
+      where: { organizationId: resolvedOrgId },
+      _count: { _all: true },
+    }).catch(() => []),
+    prisma.eventTask.groupBy({
+      by: ['staffUserId'],
+      where: { organizationId: resolvedOrgId },
+      _count: { _all: true },
+    }).catch(() => []),
+    prisma.task.findMany({
+      where: {
+        organizationId: resolvedOrgId,
+        status: { not: 'COMPLETED' },
+      },
+      include: {
+        assignedTo: { select: { user: { select: { firstName: true, lastName: true } } } },
+        template: { select: { name: true } },
+      },
+      orderBy: [{ dueDate: 'asc' }, { createdAt: 'desc' }],
+      take: 4,
+    }),
+    prisma.eventTask.findMany({
+      where: {
+        organizationId: resolvedOrgId,
+        status: { not: 'COMPLETED' },
+      },
+      include: {
+        assignedTo: { select: { user: { select: { firstName: true, lastName: true } } } },
+      },
+      orderBy: [{ dueDate: 'asc' }, { createdAt: 'desc' }],
+      take: 4,
+    }),
+  ]);
 
   const scheduleItems = upcomingEvents.map((event: any) => {
     const start = new Date(event.startDate);
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     return {
+      eventId: event.id,
       day: days[start.getDay()],
       time: start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
       event: event.name || event.eventType || 'Upcoming event',
       status: start <= now ? 'Active' : 'Scheduled',
     };
   });
-
-  const organizationStaff = resolvedOrgId
-    ? await prisma.staff.findMany({
-        where: { organizationId: resolvedOrgId },
-        include: { user: true },
-      })
-    : [];
-
-  const taskGroups = await prisma.task.groupBy({
-    by: ['assignedToId'],
-    where: { organizationId: resolvedOrgId || '' },
-    _count: { _all: true },
-  }).catch(() => []);
-
-  const eventTaskGroups = await prisma.eventTask.groupBy({
-    by: ['staffUserId'],
-    where: { organizationId: resolvedOrgId || '' },
-    _count: { _all: true },
-  }).catch(() => []);
 
   const taskCountMap: Record<string, number> = {};
   taskGroups.forEach((group: any) => {
@@ -666,59 +759,25 @@ export async function getOrganizationDashboard(orgManagerId: string, orgId?: str
     sessions: taskCountMap[staff.userId] || 0,
   }));
 
-  const announcements = (organization?.announcements || [])
-    .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    .slice(0, 4)
-    .map((announcement: any) => ({
-      title: announcement.title,
-      date: announcement.createdAt ? new Date(announcement.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '',
-      priority: announcement.announcementType || 'general',
-      msg: announcement.message || announcement.title,
-    }));
-
-  const pendingTypedTasks = resolvedOrgId
-    ? await prisma.task.findMany({
-        where: {
-          organizationId: resolvedOrgId,
-          status: { not: 'COMPLETED' },
-        },
-        include: {
-          assignedTo: { select: { user: { select: { firstName: true, lastName: true } } } },
-          template: { select: { name: true } },
-        },
-        orderBy: [{ dueDate: 'asc' }, { createdAt: 'desc' }],
-        take: 4,
-      })
-    : [];
-
-  const pendingEventTasks = resolvedOrgId
-    ? await prisma.eventTask.findMany({
-        where: {
-          organizationId: resolvedOrgId,
-          status: { not: 'COMPLETED' },
-        },
-        include: {
-          assignedTo: { select: { user: { select: { firstName: true, lastName: true } } } },
-        },
-        orderBy: [{ dueDate: 'asc' }, { createdAt: 'desc' }],
-        take: 4,
-      })
-    : [];
+  const announcementsList = announcements.map((announcement: any) => ({
+    title: announcement.title,
+    date: announcement.createdAt ? new Date(announcement.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '',
+    priority: announcement.announcementType || 'general',
+    msg: announcement.message || announcement.title,
+  }));
 
   const pendingTasks = [...pendingTypedTasks, ...pendingEventTasks]
     .slice(0, 4)
     .map((task: any) => ({
+      id: task.id,
+      source: task.template ? 'typed' : 'event',
       task: task.title || task.template?.name || 'Task',
       owner: task.assignedTo?.user ? `${task.assignedTo.user.firstName} ${task.assignedTo.user.lastName}` : 'Unassigned',
       due: task.dueDate ? new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'No due date',
       priority: task.priority ? `${task.priority.charAt(0).toUpperCase()}${task.priority.slice(1)}` : 'Medium',
     }));
 
-  const financeRows = organization?.finances || [];
-  const sortedFinances = financeRows
-    .slice()
-    .sort((a: any, b: any) => a.year === b.year ? a.month - b.month : a.year - b.year);
-
+  const sortedFinances = financeRows;
   const revenueTrend = sortedFinances.map((row: any) =>
     Math.round((row.totalRevenue ?? ((row.membershipRevenue || 0) + (row.courtBookingRevenue || 0))) || 0)
   );
@@ -728,24 +787,27 @@ export async function getOrganizationDashboard(orgManagerId: string, orgId?: str
     ? Math.round(((revenueTrend[revenueTrend.length - 1] - revenueTrend[revenueTrend.length - 2]) / Math.max(revenueTrend[revenueTrend.length - 2], 1)) * 100)
     : 0;
 
+  const allPlayersCount = memberCount;
+  const allCourtsCount = courtCount;
+
   const systemStatus = [
     {
       name: 'Membership',
-      status: (organization?.players?.length || 0) > 0 ? 'Healthy' : 'Degraded',
-      uptime: `${((organization?.players?.length || 0) > 0 ? 99.8 : 86.2).toFixed(1)}%`,
-      color: (organization?.players?.length || 0) > 0 ? '#7dc142' : '#f0c040',
+      status: allPlayersCount > 0 ? 'Healthy' : 'Degraded',
+      uptime: `${(allPlayersCount > 0 ? 99.8 : 86.2).toFixed(1)}%`,
+      color: allPlayersCount > 0 ? '#7dc142' : '#f0c040',
     },
     {
       name: 'Courts',
-      status: (organization?.courts?.length || 0) > 0 ? 'Healthy' : 'Degraded',
-      uptime: `${((organization?.courts?.length || 0) > 0 ? 99.6 : 87.1).toFixed(1)}%`,
-      color: (organization?.courts?.length || 0) > 0 ? '#7dc142' : '#f0c040',
+      status: allCourtsCount > 0 ? 'Healthy' : 'Degraded',
+      uptime: `${(allCourtsCount > 0 ? 99.6 : 87.1).toFixed(1)}%`,
+      color: allCourtsCount > 0 ? '#7dc142' : '#f0c040',
     },
     {
       name: 'Events',
-      status: (organization?.events?.length || 0) > 0 ? 'Healthy' : 'Degraded',
-      uptime: `${((organization?.events?.length || 0) > 0 ? 99.2 : 89.0).toFixed(1)}%`,
-      color: (organization?.events?.length || 0) > 0 ? '#7dc142' : '#f0c040',
+      status: eventsThisMonth > 0 ? 'Healthy' : 'Degraded',
+      uptime: `${(eventsThisMonth > 0 ? 99.2 : 89.0).toFixed(1)}%`,
+      color: eventsThisMonth > 0 ? '#7dc142' : '#f0c040',
     },
     {
       name: 'Tasks',
@@ -755,19 +817,11 @@ export async function getOrganizationDashboard(orgManagerId: string, orgId?: str
     },
     {
       name: 'Announcements',
-      status: announcements.length > 0 ? 'Healthy' : 'Warning',
-      uptime: `${(announcements.length > 0 ? 98.9 : 94.2).toFixed(1)}%`,
-      color: announcements.length > 0 ? '#7dc142' : '#f0c040',
+      status: announcementsList.length > 0 ? 'Healthy' : 'Warning',
+      uptime: `${(announcementsList.length > 0 ? 98.9 : 94.2).toFixed(1)}%`,
+      color: announcementsList.length > 0 ? '#7dc142' : '#f0c040',
     },
   ];
-
-  const allPlayersCount = organization?.players?.length || 0;
-  const allCourtsCount = organization?.courts?.length || 0;
-  const eventsThisMonth = (organization?.events || []).filter((event: any) => {
-    if (!event.startDate) return false;
-    const start = new Date(event.startDate);
-    return start.getMonth() === now.getMonth() && start.getFullYear() === now.getFullYear();
-  }).length;
 
   return {
     organizationId: resolvedOrgId,
@@ -789,12 +843,12 @@ export async function getOrganizationDashboard(orgManagerId: string, orgId?: str
       { label: 'Team Members', value: allPlayersCount, max: Math.max(allPlayersCount, 10), color: '#7dc142' },
       { label: 'Events This Month', value: eventsThisMonth, max: Math.max(eventsThisMonth, 4), color: '#a8d84e' },
       { label: 'Courts Available', value: allCourtsCount, max: Math.max(allCourtsCount, 3), color: '#3d7a32' },
-      { label: 'Avg Rating', value: Math.round((organization?.rating || 4.8) * 10) / 10, max: 5, color: '#f0c040' },
+      { label: 'Avg Rating', value: Math.round((organizationMeta?.rating || 4.8) * 10) / 10, max: 5, color: '#f0c040' },
     ],
     schedule: scheduleItems,
     staff: staffList,
-    members: organization?.players || [],
-    announcements,
+    members: clubMembers,
+    announcements: announcementsList,
     pendingTasks,
     systemStatus,
     revenueTrend,

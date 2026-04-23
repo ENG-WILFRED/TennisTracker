@@ -32,18 +32,32 @@ export default function DashboardRoleIdPage() {
 
   // Validate and set role from URL
   useEffect(() => {
-    if (isRoleLoaded && roleFromURL && user?.id) {
-      // Allow the dedicated member dashboard to render even if the current role is not member.
-      if (roleFromURL !== 'member' && currentRole && currentRole !== roleFromURL) {
-        router.push(`/dashboard/${currentRole}/${user.id}`);
+    if (!isRoleLoaded || !roleFromURL || !user?.id) return;
+
+    if (user.id !== userIdFromURL) {
+      router.push(`/dashboard/${currentRole || 'spectator'}/${user.id}`);
+      return;
+    }
+
+    if (roleFromURL !== 'member' && currentRole !== roleFromURL) {
+      const membership = availableMemberships.find((m) => m.role === roleFromURL);
+      const isUserRoleMatch = user?.role === roleFromURL;
+
+      if (membership) {
+        setCurrentRole(roleFromURL as UserRole, membership.orgId, membership.orgName);
+        return;
       }
 
-      // Check if the user ID in URL matches the current user
-      if (user.id !== userIdFromURL) {
-        router.push(`/dashboard/${currentRole || 'spectator'}/${user.id}`);
+      if (isUserRoleMatch) {
+        setCurrentRole(roleFromURL as UserRole);
+        return;
+      }
+
+      if (currentRole) {
+        router.push(`/dashboard/${currentRole}/${user.id}`);
       }
     }
-  }, [currentRole, roleFromURL, userIdFromURL, isRoleLoaded, router, user?.id]);
+  }, [availableMemberships, currentRole, isRoleLoaded, roleFromURL, router, setCurrentRole, user?.id, user?.role, userIdFromURL]);
 
   // Show loading while role is being loaded
   if (!isRoleLoaded) {

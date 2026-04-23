@@ -193,7 +193,7 @@ export default function OrganizationStaffSection({ orgId }: StaffSectionProps) {
       )}
 
       {/* Staff List */}
-      <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 14 }}>
+      <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 14, minHeight: 0 }}>
         <div style={{ fontWeight: 800, fontSize: 13, marginBottom: 14 }}>👥 Team Members</div>
         {loading ? (
           <div style={{ textAlign: 'center', padding: 20, color: G.muted }}>Loading staff...</div>
@@ -202,7 +202,7 @@ export default function OrganizationStaffSection({ orgId }: StaffSectionProps) {
             {searchQuery ? 'No staff found matching your search' : 'No staff members found'}
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+          <div style={{ maxHeight: 520, overflowY: 'auto', paddingRight: 4, display: 'flex', flexDirection: 'column', gap: 1 }}>
             {filteredStaff.map((s, i) => (
               <div
                 key={s.id}
