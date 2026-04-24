@@ -1,23 +1,8 @@
 import prisma from '@/lib/prisma';
 import type { NextRequest } from 'next/server';
 
+// Optimized lightweight query - only essential org data
 const buildOrgQuery = () => ({
-  members: {
-    select: {
-      id: true,
-      playerId: true,
-      role: true,
-      joinDate: true,
-      paymentStatus: true,
-      attendanceCount: true,
-      player: {
-        select: {
-          user: { select: { firstName: true, lastName: true, email: true, photo: true } },
-        },
-      },
-    },
-    take: 10,
-  },
   courts: {
     select: {
       id: true,
@@ -28,6 +13,7 @@ const buildOrgQuery = () => ({
       lights: true,
       status: true,
     },
+    take: 5,
   },
   events: {
     select: {
@@ -38,26 +24,8 @@ const buildOrgQuery = () => ({
       registrationCap: true,
       entryFee: true,
     },
-    take: 5,
+    take: 3,
     orderBy: { startDate: 'asc' as const },
-  },
-  rankings: {
-    select: {
-      id: true,
-      currentRank: true,
-      ratingPoints: true,
-      member: {
-        select: {
-          player: {
-            select: {
-              user: { select: { firstName: true, lastName: true, email: true, photo: true } },
-            },
-          },
-        },
-      },
-    },
-    take: 5,
-    orderBy: { currentRank: 'asc' as const },
   },
   announcements: {
     select: {
@@ -68,32 +36,21 @@ const buildOrgQuery = () => ({
       isActive: true,
       createdAt: true,
     },
+    take: 3,
+    orderBy: { createdAt: 'desc' as const },
+  },
+  membershipTiers: {
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      monthlyPrice: true,
+      benefitsJson: true,
+      courtHoursPerMonth: true,
+      maxConcurrentBookings: true,
+      discountPercentage: true,
+    },
     take: 5,
-    orderBy: { createdAt: 'desc' as const },
-  },
-  finances: {
-    select: {
-      id: true,
-      month: true,
-      year: true,
-      membershipRevenue: true,
-      courtBookingRevenue: true,
-      totalRevenue: true,
-      netProfit: true,
-    },
-    orderBy: [{ year: 'desc' as const }, { month: 'desc' as const }],
-    take: 12,
-  },
-  ratings: {
-    select: {
-      id: true,
-      rating: true,
-      category: true,
-      comment: true,
-      createdAt: true,
-    },
-    take: 10,
-    orderBy: { createdAt: 'desc' as const },
   },
   _count: {
     select: {
@@ -112,32 +69,16 @@ export async function GET(
     const { orgId } = await params;
     const queryInclude = buildOrgQuery();
 
-    const orgInclude = {
-      ...queryInclude,
-      membershipTiers: {
-        select: {
-          id: true,
-          name: true,
-          description: true,
-          monthlyPrice: true,
-          benefitsJson: true,
-          courtHoursPerMonth: true,
-          maxConcurrentBookings: true,
-          discountPercentage: true,
-        },
-      },
-    };
-
     let org: any = await prisma.organization.findUnique({
       where: { id: orgId },
-      include: orgInclude,
+      include: queryInclude,
     });
 
     // If not found by id, try to resolve by slug (support both id and slug URLs)
     if (!org) {
       org = await prisma.organization.findUnique({
         where: { slug: orgId },
-        include: orgInclude,
+        include: queryInclude,
       });
     }
 
@@ -158,7 +99,7 @@ export async function GET(
         status: 200,
         headers: {
           'Content-Type': 'application/json',
-          'Cache-Control': 'public, max-age=5, s-maxage=5, stale-while-revalidate=10',
+          'Cache-Control': 'public, max-age=30, s-maxage=60, stale-while-revalidate=300',
         },
       }
     );
