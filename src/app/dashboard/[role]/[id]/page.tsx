@@ -16,7 +16,7 @@ import { MemberDashboard } from '@/components/dashboards/MemberDashboard';
 import { UserRole } from '@/config/roles';
 
 export default function DashboardRoleIdPage() {
-  const { currentRole, isRoleLoaded } = useRole();
+  const { currentRole, isRoleLoaded, availableMemberships, setCurrentRole } = useRole();
   const { isLoggedIn, user } = useAuth();
   const router = useRouter();
   const params = useParams();
@@ -43,7 +43,7 @@ export default function DashboardRoleIdPage() {
     }
 
     if (roleFromURL !== 'member' && currentRole !== roleFromURL) {
-      const membership = availableMemberships.find((m) => m.role === roleFromURL);
+      const membership = availableMemberships.find((m: { role: UserRole }) => m.role === roleFromURL);
       const isUserRoleMatch = user?.role === roleFromURL;
 
       if (membership) {
@@ -62,12 +62,13 @@ export default function DashboardRoleIdPage() {
     }
   }, [availableMemberships, currentRole, isRoleLoaded, roleFromURL, router, setCurrentRole, user?.id, user?.role, userIdFromURL]);
 
-    if (routeRole && routeRole !== 'member' && currentRole && currentRole !== routeRole) {
+  useEffect(() => {
+    if (routeRole && routeRole !== 'member' && currentRole && currentRole !== routeRole && user?.id) {
       router.push(`/dashboard/${currentRole}/${user.id}`);
       return;
     }
 
-    if (!routeRole && currentRole) {
+    if (!routeRole && currentRole && user?.id) {
       router.push(`/dashboard/${currentRole}/${user.id}`);
       return;
     }
