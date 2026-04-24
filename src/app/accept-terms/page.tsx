@@ -49,14 +49,15 @@ export default function AcceptTermsPage() {
 
   const completeLogin = async (data: any, selectedRole: UserRole) => {
     const memberships = data.user?.memberships?.filter((m: any) => m.status === 'accepted') || data.availableRoles || [];
+    const membership = memberships.find((m: any) => m.role === selectedRole);
     const finalUser = {
       ...data.user,
       role: selectedRole,
       memberships,
     };
 
-    setCurrentRole(selectedRole);
-    setUserMemberships(memberships.length ? memberships : [{ role: selectedRole, orgId: '', orgName: 'Platform' }]);
+    setCurrentRole(selectedRole, membership?.orgId, membership?.orgName);
+    setUserMemberships(memberships.length ? memberships : [{ role: selectedRole, orgId: membership?.orgId || '', orgName: membership?.orgName || 'Platform' }]);
 
     login(
       {

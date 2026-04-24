@@ -35,12 +35,32 @@ export default function DashboardRoleIdPage() {
 
   // Validate the requested dashboard route before rendering
   useEffect(() => {
-    if (!isRoleLoaded || !user?.id) return;
+    if (!isRoleLoaded || !roleFromURL || !user?.id) return;
 
-    if (userIdFromURL && user.id !== userIdFromURL) {
+    if (user.id !== userIdFromURL) {
       router.push(`/dashboard/${currentRole || 'spectator'}/${user.id}`);
       return;
     }
+
+    if (roleFromURL !== 'member' && currentRole !== roleFromURL) {
+      const membership = availableMemberships.find((m) => m.role === roleFromURL);
+      const isUserRoleMatch = user?.role === roleFromURL;
+
+      if (membership) {
+        setCurrentRole(roleFromURL as UserRole, membership.orgId, membership.orgName);
+        return;
+      }
+
+      if (isUserRoleMatch) {
+        setCurrentRole(roleFromURL as UserRole);
+        return;
+      }
+
+      if (currentRole) {
+        router.push(`/dashboard/${currentRole}/${user.id}`);
+      }
+    }
+  }, [availableMemberships, currentRole, isRoleLoaded, roleFromURL, router, setCurrentRole, user?.id, user?.role, userIdFromURL]);
 
     if (routeRole && routeRole !== 'member' && currentRole && currentRole !== routeRole) {
       router.push(`/dashboard/${currentRole}/${user.id}`);

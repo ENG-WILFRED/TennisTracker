@@ -404,7 +404,6 @@ export const OrganizationDashboard: React.FC = () => {
 
   // Rest of component body below
 
-  const tabs = useMemo(() => ['Overview', 'Team', 'Roadmap', 'Resources', 'Chat 💬'], []);
 
   const kpiData = useMemo(() => dashboardData?.kpi ?? [], [dashboardData?.kpi]);
   const revenueTrend = useMemo(() => dashboardData?.revenueTrend ?? [], [dashboardData?.revenueTrend]);
@@ -558,12 +557,13 @@ export const OrganizationDashboard: React.FC = () => {
           <div className="min-h-screen flex flex-col">
             <div className="flex-1 overflow-y-auto">
               <OrganizationOverviewSection
+                organizationId={dashboardData?.organizationId}
                 kpiData={kpiData}
                 activeTab={activeTab}
                 setActiveTab={handleTabChange}
-                tabs={tabs}
                 revenueTrend={revenueTrend}
                 revenueSummary={revenueSummary}
+                revenueBreakdown={dashboardData?.revenueBreakdown ?? []}
                 scheduleItems={scheduleItems}
                 staffRoles={staffRoles}
                 announcements={announcements}

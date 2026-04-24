@@ -14,7 +14,8 @@ export interface RoleContextType {
   currentOrgId: string | null;
   currentOrgName: string;
   availableMemberships: Membership[];
-  setCurrentRole: (role: UserRole) => void;
+  setCurrentRole: (role: UserRole, orgId?: string | null, orgName?: string) => void;
+  setCurrentOrgId: (orgId: string | null) => void;
   hasPermission: (permission: string) => boolean;
   getRoleConfig: (role?: UserRole) => any;
   getRoleColor: (role?: UserRole) => any;
@@ -69,7 +70,12 @@ export const RoleProvider: React.FC<RoleProviderProps> = ({ children, defaultRol
   }, []);
 
   // Save role to localStorage when it changes
-  const handleSetCurrentRole = useCallback((role: UserRole) => {
+  const handleSetCurrentOrgId = useCallback((orgId: string | null) => {
+    setCurrentOrgId(orgId);
+    localStorage.setItem('userOrgId', orgId || '');
+  }, []);
+
+  const handleSetCurrentRole = useCallback((role: UserRole, orgId?: string | null, orgName?: string) => {
     if (ROLES[role]) {
       setCurrentRole(role);
       localStorage.setItem('userRole', role);
@@ -79,6 +85,11 @@ export const RoleProvider: React.FC<RoleProviderProps> = ({ children, defaultRol
         setCurrentOrgName('Membership Center');
         localStorage.setItem('userOrgId', '');
         localStorage.setItem('userOrgName', 'Membership Center');
+      } else if (orgId != null) {
+        setCurrentOrgId(orgId);
+        setCurrentOrgName(orgName || 'Organization');
+        localStorage.setItem('userOrgId', orgId);
+        localStorage.setItem('userOrgName', orgName || 'Organization');
       }
     }
   }, []);
@@ -92,16 +103,23 @@ export const RoleProvider: React.FC<RoleProviderProps> = ({ children, defaultRol
       return;
     }
 
-    // If current role is not in available memberships, switch to first available
-    if (memberships.length > 0 && !memberships.some(m => m.role === currentRole)) {
-      const firstMembership = memberships[0];
-      handleSetCurrentRole(firstMembership.role);
-      setCurrentOrgId(firstMembership.orgId);
-      setCurrentOrgName(firstMembership.orgName);
-      localStorage.setItem('userOrgId', firstMembership.orgId);
-      localStorage.setItem('userOrgName', firstMembership.orgName);
+    const matchingMembership = memberships.find((m) => m.role === currentRole);
+    if (matchingMembership) {
+      if (currentOrgId !== matchingMembership.orgId) {
+        setCurrentOrgId(matchingMembership.orgId);
+        setCurrentOrgName(matchingMembership.orgName);
+        localStorage.setItem('userOrgId', matchingMembership.orgId);
+        localStorage.setItem('userOrgName', matchingMembership.orgName);
+      }
+      return;
     }
-  }, [currentRole, handleSetCurrentRole]);
+
+    // If current role is not in available memberships, switch to first available
+    if (memberships.length > 0) {
+      const firstMembership = memberships[0];
+      handleSetCurrentRole(firstMembership.role, firstMembership.orgId, firstMembership.orgName);
+    }
+  }, [currentRole, currentOrgId, handleSetCurrentRole]);
 
   const handleHasPermission = useCallback(
     (permission: string): boolean => {
@@ -130,6 +148,7 @@ export const RoleProvider: React.FC<RoleProviderProps> = ({ children, defaultRol
     currentOrgName,
     availableMemberships: userMemberships,
     setCurrentRole: handleSetCurrentRole,
+    setCurrentOrgId: handleSetCurrentOrgId,
     hasPermission: handleHasPermission,
     getRoleConfig: getRoleConfigWithDefault,
     getRoleColor: getRoleColorWithDefault,

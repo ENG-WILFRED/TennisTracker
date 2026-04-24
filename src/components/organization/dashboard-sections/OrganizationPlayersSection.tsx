@@ -48,7 +48,7 @@ export default function OrganizationPlayersSection({ orgId, coachUserId }: Organ
   const [allPlayers, setAllPlayers] = useState<Player[]>([]);
   const [managedPlayers, setManagedPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'all' | 'managed'>('managed');
+  const [activeTab, setActiveTab] = useState<'all' | 'managed'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [sendingMessage, setSendingMessage] = useState<string | null>(null);
 

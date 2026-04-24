@@ -111,57 +111,59 @@ export default function OrganizationEventsSection({ orgId }: EventsSectionProps)
         ) : events.length === 0 ? (
           <div style={{ textAlign: 'center', padding: 20, color: G.muted }}>No events found</div>
         ) : (
-          events.map((event: ClubEvent, i: number) => {
-            const registered = registeredCount(event);
-            const status = getEventStatus(event.startDate, event.endDate);
-            return (
-              <div key={event.id} style={{ background: '#0f1f0f', borderRadius: 8, padding: '12px', marginBottom: i < events.length - 1 ? 8 : 0 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: 8 }}>
-                  <div>
-                    <div style={{ fontSize: 12, fontWeight: 600 }}>{event.name}</div>
-                    <div style={{ fontSize: 9, color: G.muted, marginTop: 2 }}>📅 {new Date(event.startDate).toLocaleDateString()}</div>
+          <div style={{ maxHeight: 520, overflowY: 'auto', paddingRight: 4 }}>
+            {events.map((event: ClubEvent, i: number) => {
+              const registered = registeredCount(event);
+              const status = getEventStatus(event.startDate, event.endDate);
+              return (
+                <div key={event.id} style={{ background: '#0f1f0f', borderRadius: 8, padding: '12px', marginBottom: i < events.length - 1 ? 8 : 0 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: 8 }}>
+                    <div>
+                      <div style={{ fontSize: 12, fontWeight: 600 }}>{event.name}</div>
+                      <div style={{ fontSize: 9, color: G.muted, marginTop: 2 }}>📅 {new Date(event.startDate).toLocaleDateString()}</div>
+                    </div>
+                    <span style={{ fontSize: 9, padding: '4px 8px', background: G.lime + '33', color: G.lime, borderRadius: 4, fontWeight: 700 }}>
+                      {status}
+                    </span>
                   </div>
-                  <span style={{ fontSize: 9, padding: '4px 8px', background: G.lime + '33', color: G.lime, borderRadius: 4, fontWeight: 700 }}>
-                    {status}
-                  </span>
-                </div>
-                <div style={{ display: 'flex', gap: 12, marginBottom: 8 }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 9, color: G.muted, marginBottom: 2 }}>Registrations</div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <div style={{ flex: 1, height: 6, background: G.dark, borderRadius: 3, overflow: 'hidden' }}>
-                        <div style={{ height: '100%', width: `${(registered / event.registrationCap) * 100}%`, background: G.lime, borderRadius: 3 }} />
+                  <div style={{ display: 'flex', gap: 12, marginBottom: 8 }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 9, color: G.muted, marginBottom: 2 }}>Registrations</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <div style={{ flex: 1, height: 6, background: G.dark, borderRadius: 3, overflow: 'hidden' }}>
+                          <div style={{ height: '100%', width: `${(registered / event.registrationCap) * 100}%`, background: G.lime, borderRadius: 3 }} />
+                        </div>
+                        <span style={{ fontSize: 9, fontWeight: 600, minWidth: 40, textAlign: 'right' }}>{registered}/{event.registrationCap}</span>
                       </div>
-                      <span style={{ fontSize: 9, fontWeight: 600, minWidth: 40, textAlign: 'right' }}>{registered}/{event.registrationCap}</span>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: 9, color: G.muted, marginBottom: 2 }}>Entry Fee</div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: G.accent }}>${typeof event.entryFee === 'number' ? event.entryFee.toFixed(2) : '0.00'}</div>
                     </div>
                   </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: 9, color: G.muted, marginBottom: 2 }}>Entry Fee</div>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: G.accent }}>${typeof event.entryFee === 'number' ? event.entryFee.toFixed(2) : '0.00'}</div>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <Link href={`/organization/${orgId}/events/${event.id}`} style={{ flex: 1 }}>
+                      <button style={{ width: '100%', padding: '6px', background: G.bright, color: '#fff', border: 'none', borderRadius: 4, fontSize: 10, fontWeight: 600, cursor: 'pointer' }}>
+                        View Details
+                      </button>
+                    </Link>
+                    <button
+                      onClick={() => setSelectedEvent(event)}
+                      style={{ flex: 1, padding: '6px', background: G.mid, color: '#fff', border: 'none', borderRadius: 4, fontSize: 10, fontWeight: 600, cursor: 'pointer' }}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDeleteEvent(event.id)}
+                      style={{ flex: 1, padding: '6px', background: '#d32f2f', color: '#fff', border: 'none', borderRadius: 4, fontSize: 10, fontWeight: 600, cursor: 'pointer' }}
+                    >
+                      Delete
+                    </button>
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: 6 }}>
-                  <Link href={`/organization/${orgId}/events/${event.id}`} style={{ flex: 1 }}>
-                    <button style={{ width: '100%', padding: '6px', background: G.bright, color: '#fff', border: 'none', borderRadius: 4, fontSize: 10, fontWeight: 600, cursor: 'pointer' }}>
-                      View Details
-                    </button>
-                  </Link>
-                  <button
-                    onClick={() => setSelectedEvent(event)}
-                    style={{ flex: 1, padding: '6px', background: G.mid, color: '#fff', border: 'none', borderRadius: 4, fontSize: 10, fontWeight: 600, cursor: 'pointer' }}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDeleteEvent(event.id)}
-                    style={{ flex: 1, padding: '6px', background: '#d32f2f', color: '#fff', border: 'none', borderRadius: 4, fontSize: 10, fontWeight: 600, cursor: 'pointer' }}
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-            );
-          })
+              );
+            })}
+          </div>
         )}
         <button style={{ width: '100%', marginTop: 12, padding: '8px', background: G.lime, color: '#0f1f0f', border: 'none', borderRadius: 6, fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>
           + Create New Event
