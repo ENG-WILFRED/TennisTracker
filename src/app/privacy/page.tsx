@@ -90,8 +90,8 @@ Your continued use of VICO after updates constitutes acceptance of the revised p
         content: `If you have questions about privacy or data handling, contact us at:
 
 VICO Tennis Tracker
-Email: legal@vicotennis.com
-Address: Nairobi, Kenya`,
+Email: vicotennis0@gmail.com
+Address: Kilifi, Kenya`,
     },
 ];
 

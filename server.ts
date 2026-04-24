@@ -47,29 +47,8 @@ const server = createServer((req, res) => {
 // Initialize Socket.IO
 initializeSocketIO(server);
 
-// Set up metrics broadcast interval (every 5 seconds instead of polling every client)
-const broadcastMetrics = async () => {
-  try {
-    const metrics = await collectDeveloperMetrics();
-    await fetch(`http://${hostname}:${port}/api/developer/metrics-broadcast`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.INTERNAL_API_TOKEN || 'internal-broadcast-token'}`
-      },
-      body: JSON.stringify({ metrics })
-    }).catch(err => console.warn('Failed to broadcast metrics:', err));
-  } catch (err) {
-    console.warn('Failed to collect metrics for broadcast:', err);
-  }
-};
-
-// Start metrics broadcast every 15 seconds
-const metricsInterval = setInterval(broadcastMetrics, 15000);
-console.log('📊 Metrics broadcast interval started (every 15 seconds)');
-
-// Store interval reference for cleanup
-process.metricsInterval = metricsInterval;
+// Metrics are now pushed via websocket events when updates occur.
+// The internal broadcast endpoint remains available for external services to notify connected developers.
 
 // Start server
 server.listen(port, hostname, () => {

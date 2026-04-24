@@ -565,7 +565,7 @@ const MemberDashboardComponent: React.FC = () => {
         joinedDate: formatDate(membership.joinedAt),
         approvedDate: formatDate(membership.approvedAt),
         expiryDate: formatDate(new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()), // 1 year from now
-        qrCodeData: `https://vicotennis.com/verify/${user?.id}?org=${membership.orgId}`,
+        qrCodeData: `${typeof window !== 'undefined' && window.location.hostname === 'localhost' ? process.env.NEXT_PUBLIC_TEST_BASE_URL : process.env.NEXT_PUBLIC_SITE_URL}/api/verify/${user?.id}?org=${membership.orgId}`,
       });
 
       // Download the single-page PDF
