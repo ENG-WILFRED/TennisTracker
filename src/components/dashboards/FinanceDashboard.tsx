@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { FindNearbyPeople } from '@/components/FindNearbyPeople';
 import { FindNearbyCourts } from '@/components/FindNearbyCourts';
 import { chatUrlForUser, sendChallengeRequest } from '@/lib/nearby';
+import { MembershipSwitcher } from '@/components/MembershipSwitcher';
 
 const G = {
   dark: '#0f1f0f', sidebar: '#152515', card: '#1a3020', cardBorder: '#2d5a35',
@@ -310,6 +311,9 @@ export const FinanceDashboard: React.FC = () => {
             : <div style={{ width: 52, height: 52, borderRadius: '50%', background: G.bright, margin: '0 auto 6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26 }}>💰</div>}
           <div style={{ fontWeight: 800, fontSize: 13 }}>{user?.firstName ?? 'Finance'}</div>
           <div style={{ color: G.muted, fontSize: 10, marginTop: 2 }}>Finance Officer</div>
+          <div style={{ marginTop: 8 }}>
+            <MembershipSwitcher />
+          </div>
         </div>
 
         <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 9, padding: 12 }}>

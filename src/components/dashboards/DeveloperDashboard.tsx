@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useRole } from '@/context/RoleContext';
 import { useToast } from '@/components/ui/ToastContext';
+import { MembershipSwitcher } from '@/components/MembershipSwitcher';
 import type { Socket } from 'socket.io-client';
 
 type DeveloperMetrics = {
@@ -496,6 +497,10 @@ export function DeveloperDashboard() {
             {/* Open bugs counter */}
             <div className="rounded-xl border border-slate-700/50 bg-slate-900/60 px-3 py-2 text-xs text-slate-400">
               <span className="text-white font-bold">{openBugs.length}</span> open
+            </div>
+            {/* Membership Switcher */}
+            <div className="w-40">
+              <MembershipSwitcher />
             </div>
             {/* Logout button */}
             <button

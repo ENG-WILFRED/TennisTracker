@@ -10,6 +10,7 @@ import { processMPesaPayment, processPayPalPayment, processStripePayment } from 
 import { usePDFDownload } from '@/hooks/usePDFDownload';
 import { generateMembershipCardHTML } from '@/utils/generateMembershipCardPDF';
 import toast from 'react-hot-toast';
+import { MembershipSwitcher } from '@/components/MembershipSwitcher';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const G = {
@@ -1457,11 +1458,12 @@ const MemberDashboardComponent: React.FC = () => {
               </div>
             </div>
           </div>
+          <MembershipSwitcher />
           <Btn
             onClick={handleLogout}
             variant="ghost"
             size="sm"
-            style={{ width: '100%', background: '#d94f4f', color: '#fff', border: 'none' }}
+            style={{ width: '100%', background: '#d94f4f', color: '#fff', border: 'none', marginTop: 8 }}
           >
             Logout
           </Btn>

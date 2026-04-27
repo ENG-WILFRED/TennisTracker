@@ -144,6 +144,16 @@ function BookingDetailsContent() {
       // Process payment using server actions (creates payment record + gets checkout URL)
       let paymentResult: any = {};
 
+      const bookingMetadata = {
+        courtId,
+        organizationId: orgId,
+        startTime: startTime.toISOString(),
+        endTime: endTime.toISOString(),
+        matchType,
+        notes,
+        duration,
+      };
+
       if (paymentMethod === 'mpesa') {
         paymentResult = await processMPesaPayment(
           mobileNumber,
@@ -151,8 +161,9 @@ function BookingDetailsContent() {
           `BOOKING-${courtId.slice(0, 8)}`,
           'Court Booking Payment',
           user.id,
-          courtId, // Use courtId as eventId for payment record
-          'court_booking'
+          courtId,
+          'court_booking',
+          bookingMetadata
         );
       } else if (paymentMethod === 'paypal') {
         paymentResult = await processPayPalPayment(
@@ -161,7 +172,7 @@ function BookingDetailsContent() {
           user.id,
           courtId,
           'court_booking',
-          { courtId, organizationId: orgId, startTime: startTime.toISOString(), endTime: endTime.toISOString(), matchType }
+          bookingMetadata
         );
       } else if (paymentMethod === 'stripe') {
         paymentResult = await processStripePayment(
@@ -170,7 +181,7 @@ function BookingDetailsContent() {
           user.id,
           courtId,
           'court_booking',
-          { courtId, organizationId: orgId, startTime: startTime.toISOString(), endTime: endTime.toISOString(), matchType }
+          bookingMetadata
         );
       }
 

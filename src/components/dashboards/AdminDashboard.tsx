@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { FindNearbyPeople } from '@/components/FindNearbyPeople';
 import { FindNearbyCourts } from '@/components/FindNearbyCourts';
 import { chatUrlForUser, sendChallengeRequest } from '@/lib/nearby';
+import { MembershipSwitcher } from '@/components/MembershipSwitcher';
 
 const G = {
   dark: '#0f1f0f', sidebar: '#152515', card: '#1a3020', cardBorder: '#2d5a35',
@@ -183,6 +184,9 @@ export const AdminDashboard: React.FC = () => {
           <div style={{ fontWeight: 800, fontSize: 11, marginTop: 4 }}>{user?.firstName ?? 'Admin'} {user?.lastName || ''}</div>
           <div style={{ fontSize: 9, color: G.muted, marginTop: 2 }}>Platform Admin</div>
           {user?.email && <div style={{ fontSize: 8, color: G.muted, marginTop: 2, wordBreak: 'break-word' }}>📧 {user.email}</div>}
+          <div style={{ marginTop: 8 }}>
+            <MembershipSwitcher />
+          </div>
           <div style={{ marginTop: 6, display: 'flex', gap: 6 }}>
             <button 
               onClick={() => router.push('/admin/profile')}
