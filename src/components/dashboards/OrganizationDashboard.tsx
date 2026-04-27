@@ -24,6 +24,7 @@ import MessagingPanel from '@/components/dashboards/MessagingPanel';
 import { authenticatedFetch } from '@/lib/authenticatedFetch';
 import { clearTokens, getStoredTokens } from '@/lib/tokenManager';
 import { getCachedData, setCachedData, clearCacheEntry, fetchWithCache } from '@/lib/dashboardCache';
+import { MembershipSwitcher } from '@/components/MembershipSwitcher';
 
 const G = {
   dark: '#0f1f0f', sidebar: '#152515', card: '#1a3020', cardBorder: '#2d5a35',
@@ -530,6 +531,9 @@ export const OrganizationDashboard: React.FC = () => {
             <div className="hidden sm:block" style={{ color: G.muted, fontSize: 8, marginTop: 1, wordBreak: 'break-word' }}>📧 {user?.email}</div>
             <div className="hidden sm:block" style={{ color: G.muted, fontSize: 8 }}>{(user as any)?.phone ? `📱 ${(user as any).phone}` : ''}</div>
             <div className="hidden sm:block" style={{ color: G.muted, fontSize: 8 }}>{(user as any)?.nationality ? `🌍 ${(user as any).nationality}` : ''}</div>
+            <div style={{ marginTop: 8 }}>
+              <MembershipSwitcher />
+            </div>
             <div style={{ marginTop: 6, display: 'flex', gap: 6 }}>
               <button 
                 onClick={handleOpenEditModal}

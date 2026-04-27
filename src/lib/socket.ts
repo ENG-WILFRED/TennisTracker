@@ -20,6 +20,7 @@
 import { Server as SocketIOServer } from 'socket.io';
 import { verifyToken } from './jwt';
 import prisma from './prisma';
+import { getCachedDeveloperMetrics } from './developerMetrics';
 
 // In-memory connection maps
 const userSockets = new Map<string, Set<string>>(); // userId → Set of socket IDs
@@ -269,6 +270,12 @@ async function handleDeveloperSubscription(socket: any, playerId: string) {
   }
 
   socket.emit('developer_subscribed', { status: 'success' });
+
+  const cachedMetrics = getCachedDeveloperMetrics();
+  if (cachedMetrics) {
+    socket.emit('developer_metrics_update', cachedMetrics);
+  }
+
   console.log(`🔧 Developer ${playerId} subscribed to metrics`);
 }
 

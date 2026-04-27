@@ -2,6 +2,20 @@
 
 import prisma from '@/lib/prisma';
 
+// Get base URL for callbacks and cancellations
+const getBaseUrl = () => {
+  // Use NEXT_PUBLIC_TEST_BASE_URL for development/testing
+  if (process.env.NEXT_PUBLIC_TEST_BASE_URL) {
+    return process.env.NEXT_PUBLIC_TEST_BASE_URL;
+  }
+  // Fallback to NEXT_PUBLIC_SITE_URL for production
+  if (process.env.NEXT_PUBLIC_SITE_URL) {
+    return process.env.NEXT_PUBLIC_SITE_URL;
+  }
+  // Default fallback
+  return 'http://localhost:3020';
+};
+
 /**
  * M-Pesa STK Push Payment Action
  * Initiates an M-Pesa STK push that prompts user for PIN
@@ -13,7 +27,8 @@ export async function processMPesaPayment(
   transactionDesc: string,
   userId: string,
   eventId: string,
-  bookingType: 'tournament_entry' | 'amenity_booking' | 'court_booking'
+  bookingType: 'tournament_entry' | 'amenity_booking' | 'court_booking',
+  metadata: Record<string, any> = {}
 ) {
   try {
     if (!mobileNumber || !amount || amount <= 0) {
@@ -24,6 +39,10 @@ export async function processMPesaPayment(
       return { success: false, error: 'Invalid mobile number format. Use 254XXXXXXXXX' };
     }
 
+    const baseUrl = getBaseUrl();
+    const callbackUrl = `${baseUrl}/api/payments/callback/mpesa`;
+    const cancelUrl = `${baseUrl}/api/payments/cancel/mpesa`;
+
     const record = await prisma.paymentRecord.create({
       data: {
         userId,
@@ -33,7 +52,9 @@ export async function processMPesaPayment(
         currency: 'KES',
         provider: 'mpesa',
         providerStatus: 'pending',
-        metadata: JSON.stringify({ mobileNumber, accountReference, transactionDesc }),
+        callbackUrl,
+        cancelUrl,
+        metadata: JSON.stringify({ mobileNumber, accountReference, transactionDesc, ...metadata }),
       },
     });
 
@@ -49,6 +70,8 @@ export async function processMPesaPayment(
         accountReference,
         transactionDesc,
         transactionId: record.id,
+        callbackUrl,
+        cancelUrl,
       }),
     });
 
@@ -78,6 +101,8 @@ export async function processMPesaPayment(
       transactionId: record.id,
       checkoutRequestId: mpesaData.checkoutRequestId,
       message: 'M-Pesa STK push sent. Please complete the payment on your phone.',
+      callbackUrlRegistered: true,
+      cancelUrlRegistered: true,
     };
   } catch (error) {
     console.error('M-Pesa payment error:', error);
@@ -101,6 +126,10 @@ export async function processPayPalPayment(
       return { success: false, error: 'Invalid amount' };
     }
 
+    const baseUrl = getBaseUrl();
+    const callbackUrl = `${baseUrl}/api/payments/callback/paypal`;
+    const cancelUrl = `${baseUrl}/api/payments/cancel/paypal`;
+
     const record = await prisma.paymentRecord.create({
       data: {
         userId,
@@ -110,6 +139,8 @@ export async function processPayPalPayment(
         currency: currency.toUpperCase(),
         provider: 'paypal',
         providerStatus: 'pending',
+        callbackUrl,
+        cancelUrl,
         metadata: JSON.stringify(metadata),
       },
     });
@@ -124,6 +155,8 @@ export async function processPayPalPayment(
       body: JSON.stringify({
         amount: Math.round(amount * 100) / 100,
         currency: currency.toUpperCase(),
+        callbackUrl,
+        cancelUrl,
         metadata: {
           transactionId: record.id,
           eventId,
@@ -145,19 +178,25 @@ export async function processPayPalPayment(
 
     const paypalData = await paypalResponse.json();
 
+    const approveUrl = paypalData.approveUrl || 
+      (paypalData.links?.find((link: any) => link.rel === 'approve')?.href) || null;
+
     await prisma.paymentRecord.update({
       where: { id: record.id },
       data: {
         providerTransactionId: paypalData.orderId || null,
-        checkoutUrl: paypalData.approveUrl || null,
+        checkoutUrl: approveUrl,
       },
     });
 
     return {
       success: true,
       transactionId: record.id,
-      links: paypalData.links,
       orderId: paypalData.orderId,
+      checkoutUrl: approveUrl,
+      links: paypalData.links,
+      callbackUrlRegistered: true,
+      cancelUrlRegistered: true,
     };
   } catch (error) {
     console.error('PayPal payment error:', error);
@@ -178,6 +217,10 @@ export async function processStripePayment(
       return { success: false, error: 'Invalid amount' };
     }
 
+    const baseUrl = getBaseUrl();
+    const callbackUrl = `${baseUrl}/api/payments/callback/stripe`;
+    const cancelUrl = `${baseUrl}/api/payments/cancel/stripe`;
+
     const record = await prisma.paymentRecord.create({
       data: {
         userId,
@@ -187,6 +230,8 @@ export async function processStripePayment(
         currency: currency.toLowerCase(),
         provider: 'stripe',
         providerStatus: 'pending',
+        callbackUrl,
+        cancelUrl,
         metadata: JSON.stringify(metadata),
       },
     });
@@ -201,6 +246,8 @@ export async function processStripePayment(
       body: JSON.stringify({
         amount: Math.round(amount * 100),
         currency: currency.toLowerCase(),
+        callbackUrl,
+        cancelUrl,
         metadata: {
           transactionId: record.id,
           eventId,
@@ -222,11 +269,13 @@ export async function processStripePayment(
 
     const stripeData = await stripeResponse.json();
 
+    const checkoutUrl = stripeData.checkoutUrl || stripeData.url || null;
+
     await prisma.paymentRecord.update({
       where: { id: record.id },
       data: {
         providerTransactionId: stripeData.paymentIntentId || stripeData.sessionId || null,
-        checkoutUrl: stripeData.checkoutUrl || null,
+        checkoutUrl: checkoutUrl,
       },
     });
 
@@ -234,8 +283,10 @@ export async function processStripePayment(
       success: true,
       transactionId: record.id,
       sessionId: stripeData.sessionId,
-      checkoutUrl: stripeData.checkoutUrl,
+      checkoutUrl: checkoutUrl,
       clientSecret: stripeData.clientSecret,
+      callbackUrlRegistered: true,
+      cancelUrlRegistered: true,
     };
   } catch (error) {
     console.error('Stripe payment error:', error);
@@ -290,22 +341,28 @@ export async function completePayment(
       },
     });
 
-    if (status === 'success' && record.bookingType === 'tournament_entry' && record.eventId) {
-      const member = await prisma.clubMember.findFirst({ where: { playerId: record.userId } });
-      if (member) {
-        const latestRegistration = await prisma.eventRegistration.findFirst({
-          where: { eventId: record.eventId },
-          orderBy: { signupOrder: 'desc' },
-        });
-        const signupOrder = (latestRegistration?.signupOrder || 0) + 1;
-        await prisma.eventRegistration.create({
-          data: {
-            eventId: record.eventId,
-            memberId: member.id,
-            status: 'registered',
-            signupOrder,
-          },
-        });
+    if (status === 'success') {
+      // Handle different booking types
+      if (record.bookingType === 'tournament_entry' && record.eventId) {
+        const member = await prisma.clubMember.findFirst({ where: { playerId: record.userId } });
+        if (member) {
+          const latestRegistration = await prisma.eventRegistration.findFirst({
+            where: { eventId: record.eventId },
+            orderBy: { signupOrder: 'desc' },
+          });
+          const signupOrder = (latestRegistration?.signupOrder || 0) + 1;
+          await prisma.eventRegistration.create({
+            data: {
+              eventId: record.eventId,
+              memberId: member.id,
+              status: 'registered',
+              signupOrder,
+            },
+          });
+        }
+      } else if (record.bookingType === 'court_booking' && record.eventId) {
+        // Create court booking after successful payment
+        await createCourtBooking(record.userId, record.eventId, record);
       }
     }
 
@@ -313,5 +370,108 @@ export async function completePayment(
   } catch (error) {
     console.error('Complete payment error:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Payment completion failed' };
+  }
+}
+
+export async function createCourtBooking(
+  userId: string,
+  courtId: string,
+  paymentRecord: any
+) {
+  try {
+    const metadata = typeof paymentRecord.metadata === 'string' 
+      ? JSON.parse(paymentRecord.metadata) 
+      : paymentRecord.metadata || {};
+
+    // Extract booking details from metadata
+    const { startTime, endTime, organizationId, matchType } = metadata;
+
+    if (!startTime || !endTime || !organizationId) {
+      return { success: false, error: 'Missing booking details' };
+    }
+
+    // Create the booking record
+    const booking = await prisma.courtBooking.create({
+      data: {
+        playerId: userId,
+        courtId,
+        organizationId,
+        startTime: new Date(startTime),
+        endTime: new Date(endTime),
+        matchType: matchType || 'singles',
+        status: 'confirmed',
+        paymentStatus: 'completed',
+        paymentId: paymentRecord.id,
+        notes: metadata.notes || '',
+      },
+    });
+
+    return { success: true, bookingId: booking.id };
+  } catch (error) {
+    console.error('Create court booking error:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Booking creation failed' };
+  }
+}
+
+export async function getPaymentStatus(transactionId: string) {
+  try {
+    const record = await prisma.paymentRecord.findUnique({
+      where: { id: transactionId },
+      select: {
+        id: true,
+        providerStatus: true,
+        provider: true,
+        amount: true,
+        currency: true,
+        createdAt: true,
+        updatedAt: true,
+        bookingType: true,
+      },
+    });
+
+    if (!record) {
+      return { success: false, error: 'Transaction not found' };
+    }
+
+    return {
+      success: true,
+      payment: record,
+      isCompleted: record.providerStatus === 'completed',
+    };
+  } catch (error) {
+    console.error('Get payment status error:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to get payment status' };
+  }
+}
+
+export async function handlePaymentCallback(
+  provider: 'mpesa' | 'paypal' | 'stripe',
+  data: Record<string, any>
+) {
+  try {
+    let transactionId = '';
+    let status: 'success' | 'failed' = 'failed';
+
+    if (provider === 'mpesa') {
+      transactionId = data.transactionId;
+      status = data.resultCode === '0' ? 'success' : 'failed';
+    } else if (provider === 'paypal') {
+      transactionId = data.custom || data.transactionId;
+      status = ['COMPLETED', 'APPROVED'].includes(data.status) ? 'success' : 'failed';
+    } else if (provider === 'stripe') {
+      transactionId = data.metadata?.transactionId;
+      status = ['payment_intent.succeeded', 'charge.succeeded'].includes(data.type) ? 'success' : 'failed';
+    }
+
+    if (!transactionId) {
+      console.warn(`Missing transactionId in ${provider} callback`, data);
+      return { success: false, error: 'Missing transaction ID' };
+    }
+
+    const providerTransactionId = data.id || data.transactionId || data.orderId || data.sessionId || '';
+    return await completePayment(transactionId, providerTransactionId, status);
+  } catch (error) {
+    console.error('Payment callback error:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Callback processing failed' };
   }
 }

@@ -42,13 +42,10 @@ export async function GET(
     }) as any;
 
     if (!membership) {
-      return new Response(
-        JSON.stringify({
-          valid: false,
-          message: 'Membership not found or inactive'
-        }),
-        { status: 404 }
-      );
+      return new Response('invalid', {
+        status: 200,
+        headers: { 'Content-Type': 'text/plain' }
+      });
     }
 
     // Check if membership has expired (1 year from approval)
@@ -57,31 +54,17 @@ export async function GET(
 
     const isExpired = new Date() > expiryDate;
 
-    return new Response(
-      JSON.stringify({
-        valid: !isExpired,
-        member: {
-          name: `${membership.user.firstName} ${membership.user.lastName}`,
-          email: membership.user.email,
-          memberId: membership.userId,
-          role: membership.role,
-          status: membership.status,
-          organization: membership.organization.name,
-          accessLevel: 'Standard',
-          joinedDate: membership.joinedAt.toISOString().split('T')[0],
-          approvedDate: membership.approvedAt?.toISOString().split('T')[0],
-          expiryDate: expiryDate.toISOString().split('T')[0],
-          isExpired
-        },
-        verifiedAt: new Date().toISOString()
-      }),
-      {
+    if (isExpired) {
+      return new Response('invalid', {
         status: 200,
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      }
-    );
+        headers: { 'Content-Type': 'text/plain' }
+      });
+    }
+
+    return new Response('verified', {
+      status: 200,
+      headers: { 'Content-Type': 'text/plain' }
+    });
 
   } catch (error) {
     console.error('Verification error:', error);

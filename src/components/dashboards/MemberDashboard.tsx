@@ -10,6 +10,7 @@ import { processMPesaPayment, processPayPalPayment, processStripePayment } from 
 import { usePDFDownload } from '@/hooks/usePDFDownload';
 import { generateMembershipCardHTML } from '@/utils/generateMembershipCardPDF';
 import toast from 'react-hot-toast';
+import { MembershipSwitcher } from '@/components/MembershipSwitcher';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const G = {
@@ -565,7 +566,7 @@ const MemberDashboardComponent: React.FC = () => {
         joinedDate: formatDate(membership.joinedAt),
         approvedDate: formatDate(membership.approvedAt),
         expiryDate: formatDate(new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()), // 1 year from now
-        qrCodeData: `https://vicotennis.com/verify/${user?.id}?org=${membership.orgId}`,
+        qrCodeData: `${typeof window !== 'undefined' && window.location.hostname === 'localhost' ? process.env.NEXT_PUBLIC_TEST_BASE_URL : process.env.NEXT_PUBLIC_SITE_URL}/api/verify/${user?.id}?org=${membership.orgId}`,
       });
 
       // Download the single-page PDF
@@ -1457,11 +1458,12 @@ const MemberDashboardComponent: React.FC = () => {
               </div>
             </div>
           </div>
+          <MembershipSwitcher />
           <Btn
             onClick={handleLogout}
             variant="ghost"
             size="sm"
-            style={{ width: '100%', background: '#d94f4f', color: '#fff', border: 'none' }}
+            style={{ width: '100%', background: '#d94f4f', color: '#fff', border: 'none', marginTop: 8 }}
           >
             Logout
           </Btn>

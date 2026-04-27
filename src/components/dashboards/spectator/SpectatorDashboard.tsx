@@ -32,6 +32,7 @@ import {
   FindPeopleSection,
   FindCourtsSection,
 } from './sections';
+import { MembershipSwitcher } from '@/components/MembershipSwitcher';
 
 export const SpectatorDashboard: React.FC = () => {
   const router = useRouter();
@@ -774,6 +775,9 @@ export const SpectatorDashboard: React.FC = () => {
             <div style={{ color: G.muted, fontSize: 9, marginTop: 2 }}>Spectator</div>
             <div className="hidden sm:block" style={{ color: G.muted, fontSize: 8, marginTop: 1, wordBreak: 'break-word' }}>
               📧 {user?.email}
+            </div>
+            <div style={{ marginTop: 8 }}>
+              <MembershipSwitcher />
             </div>
             <div className="mt-4 flex gap-2">
               <button

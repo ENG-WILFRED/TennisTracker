@@ -14,6 +14,7 @@ import AssignedTasksWidget from '@/components/AssignedTasksWidget';
 import { FindNearbyPeople } from '@/components/FindNearbyPeople';
 import { FindNearbyCourts } from '@/components/FindNearbyCourts';
 import { chatUrlForUser, sendChallengeRequest } from '@/lib/nearby';
+import { MembershipSwitcher } from '@/components/MembershipSwitcher';
 
 const G = {
   dark: '#0a180a',
@@ -378,6 +379,9 @@ export const CoachDashboard: React.FC = () => {
               {['ITF L2', 'ATP', 'Active'].map(c => (
                 <span key={c} style={{ fontSize: 8.5, background: 'rgba(121,191,62,.12)', border: '1px solid rgba(121,191,62,.3)', color: G.lime, borderRadius: 4, padding: '2px 6px', fontWeight: 700 }}>{c}</span>
               ))}
+            </div>
+            <div style={{ marginTop: 8 }}>
+              <MembershipSwitcher />
             </div>
             <div style={{ marginTop: 6, display: 'flex', gap: 6 }}>
               <button 

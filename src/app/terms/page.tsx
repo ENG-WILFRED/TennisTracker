@@ -124,8 +124,8 @@ Your continued use of the Platform after changes become effective constitutes yo
     content: `If you have any questions about these Terms, please contact us at:
 
 VICO Tennis Tracker
-Email: kimaniwilfred95@gmail.com
-Address: Nairobi, Kenya`,
+Email: vicotennis0@gmail.com
+Address: Kilifi, Kenya`,
   },
 ];
 

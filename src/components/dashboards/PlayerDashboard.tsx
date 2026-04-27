@@ -17,6 +17,7 @@ import MessagingPanel from '@/components/dashboards/MessagingPanel';
 import { FindNearbyPeople } from '@/components/FindNearbyPeople';
 import { FindNearbyCourts } from '@/components/FindNearbyCourts';
 import { chatUrlForUser, sendChallengeRequest } from '@/lib/nearby';
+import { MembershipSwitcher } from '@/components/MembershipSwitcher';
 
 const G = {
   dark: '#0f1f0f', sidebar: '#152515', card: '#1a3020', cardBorder: '#2d5a35',
@@ -201,10 +202,10 @@ export const PlayerDashboard: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen text-court-text flex flex-col lg:flex-row" style={{ background: G.sidebar, color: G.text }}>
+    <div className="text-court-text flex flex-col lg:flex-row" style={{ height: '100vh', background: G.sidebar, color: G.text, overflow: 'hidden' }}>
 
       {/* ── Mobile top bar ── */}
-      <div className="lg:hidden flex items-center justify-between px-4 py-3 border-b border-[#2d5a35]" style={{ background: G.sidebar }}>
+      <div className="lg:hidden flex items-center justify-between px-4 py-3 border-b border-[#2d5a35] flex-shrink-0" style={{ background: G.sidebar }}>
         <button
           type="button"
           onClick={() => setSidebarOpen(true)}
@@ -221,7 +222,7 @@ export const PlayerDashboard: React.FC = () => {
         <div className="fixed inset-0 z-30 bg-black/40 lg:hidden" onClick={() => setSidebarOpen(false)} />
       )}
 
-      <aside className={`fixed inset-y-0 left-0 z-40 w-72 max-w-[80vw] transform border-r lg:relative lg:translate-x-0 transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:w-72 lg:translate-x-0`} style={{ background: G.sidebar, borderColor: G.cardBorder, display: 'flex', flexDirection: 'column', flexShrink: 0, minHeight: '100vh', overflow: 'hidden' }}>
+      <aside className={`fixed inset-y-0 left-0 z-40 w-72 max-w-[80vw] transform border-r lg:relative lg:translate-x-0 transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:w-72 lg:translate-x-0`} style={{ background: G.sidebar, borderColor: G.cardBorder, display: 'flex', flexDirection: 'column', flexShrink: 0, height: '100vh', overflow: 'hidden' }}>
         <div className="flex items-center justify-between gap-3 px-4 py-4 lg:hidden">
           <div className="flex items-center gap-2">
             <span className="text-2xl">🎾</span>
@@ -250,7 +251,7 @@ export const PlayerDashboard: React.FC = () => {
           <div className="text-xs text-[#7aaa6a] truncate">{user?.firstName ?? 'Player'}</div>
         </div>
 
-        <div className="flex-1 px-4 pb-4">
+        <div className="flex-1 px-4 pb-4 overflow-y-auto">
           <div className="flex flex-col gap-2">
             {navItems.map(item => {
               const isActive = activeNav === item.label;
@@ -298,6 +299,7 @@ export const PlayerDashboard: React.FC = () => {
           <div className="mt-4">
             <ProfileSnapshot user={user} playerData={playerData} showViewProfileButton={false} />
           </div>
+          <MembershipSwitcher style={{ marginTop: 8 }} />
           <div className="grid grid-cols-2 gap-2 mt-4">
             <button
               type="button"
@@ -326,7 +328,7 @@ export const PlayerDashboard: React.FC = () => {
       </aside>
 
       {/* ── MAIN CONTENT ── */}
-      <main className="flex-1 px-3 py-4 sm:px-5 sm:py-5">
+      <main className="flex-1 px-3 py-4 sm:px-5 sm:py-5 overflow-y-auto" style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
         <div className="space-y-4">
           {showProfile ? (
             <ProfileView isEmbedded={true} canEdit={true} />
