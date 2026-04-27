@@ -8,7 +8,7 @@ import { verifyApiAuth } from '@/lib/authMiddleware';
  */
 export async function GET(request: NextRequest) {
   try {
-    const auth = verifyApiAuth(request);
+    const auth = await verifyApiAuth(request);
     if (!auth) {
       return NextResponse.json(
         { error: 'Unauthorized' },

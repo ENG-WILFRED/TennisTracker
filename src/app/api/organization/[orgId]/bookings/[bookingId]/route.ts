@@ -7,7 +7,7 @@ export async function PUT(
 ) {
   try {
     const { orgId, bookingId } = await params;
-    const auth = verifyApiAuth(request);
+    const auth = await verifyApiAuth(request);
 
     if (!auth) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });

@@ -50,7 +50,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ orgI
 // PUT - Update event
 export async function PUT(request: Request, { params }: { params: Promise<{ orgId: string; eventId: string }> }) {
   try {
-    const auth = verifyApiAuth(request);
+    const auth = await verifyApiAuth(request);
     if (!auth) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
 
     const { orgId, eventId } = await params;
@@ -109,7 +109,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ orgI
 // DELETE - Delete event
 export async function DELETE(request: Request, { params }: { params: Promise<{ orgId: string; eventId: string }> }) {
   try {
-    const auth = verifyApiAuth(request);
+    const auth = await verifyApiAuth(request);
     if (!auth) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
 
     const { orgId, eventId } = await params;

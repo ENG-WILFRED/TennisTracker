@@ -5,7 +5,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ or
   try {
     console.log('PATCH /api/organization/[orgId]/members/[memberId] called');
 
-    const auth = verifyApiAuth(request);
+    const auth = await verifyApiAuth(request);
     if (!auth) {
       console.log('Authentication failed');
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
@@ -79,7 +79,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ o
   try {
     console.log('DELETE /api/organization/[orgId]/members/[memberId] called');
 
-    const auth = verifyApiAuth(request);
+    const auth = await verifyApiAuth(request);
     if (!auth) {
       console.log('Authentication failed');
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });

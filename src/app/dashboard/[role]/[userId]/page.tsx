@@ -21,7 +21,7 @@ export default function DashboardRoleIdPage() {
   const router = useRouter();
   const params = useParams();
   const roleFromURL = params?.role as string;
-  const userIdFromURL = params?.id as string;
+  const userIdFromURL = params?.userId as string;
   const validRoles: UserRole[] = ['player', 'coach', 'admin', 'finance_officer', 'referee', 'org', 'member', 'spectator', 'developer'];
   const routeRole = validRoles.includes(roleFromURL as UserRole) ? (roleFromURL as UserRole) : null;
   const activeRole = routeRole || currentRole;
@@ -37,7 +37,10 @@ export default function DashboardRoleIdPage() {
   useEffect(() => {
     if (!isRoleLoaded || !roleFromURL || !user?.id) return;
 
+    console.log('[Dashboard Page] Validating role:', { roleFromURL, currentRole, userRole: user?.role });
+
     if (user.id !== userIdFromURL) {
+      console.log('[Dashboard Page] User ID mismatch, redirecting');
       router.push(`/dashboard/${currentRole || 'spectator'}/${user.id}`);
       return;
     }

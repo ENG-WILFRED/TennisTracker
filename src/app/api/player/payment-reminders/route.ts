@@ -8,7 +8,7 @@ import { NextResponse } from 'next/server';
  */
 export async function GET(request: Request) {
   try {
-    const auth = verifyApiAuth(request);
+    const auth = await verifyApiAuth(request);
     if (!auth) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

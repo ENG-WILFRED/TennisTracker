@@ -9,6 +9,8 @@ export async function GET(req: Request) {
     const userId = url.searchParams.get('userId');
     const orgId = url.searchParams.get('orgId') || undefined;
 
+    console.log('[Dashboard API] Received request:', { role, userId, orgId });
+
     if (!userId) {
       return NextResponse.json({ error: 'userId is required' }, { status: 400 });
     }
@@ -36,13 +38,15 @@ export async function GET(req: Request) {
       }
     }, 10_000);
 
+    console.log('[Dashboard API] Successfully fetched dashboard data');
     return NextResponse.json(dashboard, {
       headers: {
         'Cache-Control': 'private, max-age=15, stale-while-revalidate=45',
       },
     });
   } catch (err) {
-    console.error('Dashboard API error:', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error('[Dashboard API] Error:', err instanceof Error ? err.message : err);
+    console.error('[Dashboard API] Full error:', err);
+    return NextResponse.json({ error: 'Internal server error', details: err instanceof Error ? err.message : 'Unknown error' }, { status: 500 });
   }
 }

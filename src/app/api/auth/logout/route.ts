@@ -7,12 +7,20 @@ export async function POST(request: Request) {
     const authHeader = request.headers.get('Authorization');
     const accessToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
 
+    // Blacklist tokens in parallel
+    const promises: Promise<void>[] = [];
+
     if (refreshToken) {
-      blacklistRefreshToken(refreshToken);
+      promises.push(blacklistRefreshToken(refreshToken));
     }
 
     if (accessToken) {
-      blacklistAccessToken(accessToken);
+      promises.push(blacklistAccessToken(accessToken));
+    }
+
+    // Wait for all blacklist operations to complete
+    if (promises.length > 0) {
+      await Promise.all(promises);
     }
 
     return new Response(

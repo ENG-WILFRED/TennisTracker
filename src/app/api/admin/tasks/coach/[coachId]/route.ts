@@ -23,7 +23,7 @@ export async function GET(
   { params }: { params: Promise<{ coachId: string }> }
 ) {
   try {
-    const auth = verifyApiAuth(request);
+    const auth = await verifyApiAuth(request);
     if (!auth) {
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),

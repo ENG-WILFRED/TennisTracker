@@ -258,7 +258,7 @@ export const PlayerDashboard: React.FC = () => {
               const buttonClasses = `w-full flex items-center gap-2 px-3 py-2 text-[11px] text-left rounded-xl transition-all ${isActive ? 'bg-[#2d5a27] border-l-4 border-[#7dc142] text-white' : 'bg-[#152515] text-[#7aaa6a] hover:border-l-4 hover:border-[#7dc142] hover:text-white'}`;
               const targetPath = item.href?.startsWith('/')
                 ? item.href
-                : `/dashboard/${params?.role || 'player'}/${params?.id || user?.id}${item.href || ''}`;
+                : `/dashboard/${params?.role || 'player'}/${params?.userId || user?.id}${item.href || ''}`;
 
               return (
                 <button
@@ -268,7 +268,7 @@ export const PlayerDashboard: React.FC = () => {
                     setActiveNav(item.label);
                     setSidebarOpen(false);
                     if (item.label === 'Home' && params?.role && params?.id) {
-                      router.push(`/dashboard/${params.role}/${params.id}`);
+                      router.push(`/dashboard/${params.role}/${params.userId}`);
                     } else {
                       router.push(targetPath);
                     }
@@ -289,7 +289,7 @@ export const PlayerDashboard: React.FC = () => {
               setActiveNav('Court Booking');
               setSidebarOpen(false);
               if (params?.role && params?.id) {
-                router.push(`/dashboard/${params.role}/${params.id}?booking=true`);
+                router.push(`/dashboard/${params.role}/${params.userId}?booking=true`);
               }
             }}
             className="w-full rounded-xl py-3 font-bold text-[12px] bg-gradient-to-r from-[#7dc142] to-[#a8d84e] text-[#0f1f0f] hover:opacity-90 transition-opacity"
@@ -307,7 +307,7 @@ export const PlayerDashboard: React.FC = () => {
                 setActiveNav('My Profile');
                 setSidebarOpen(false);
                 if (params?.role && params?.id) {
-                  router.push(`/dashboard/${params.role}/${params.id}?profile=true`);
+                  router.push(`/dashboard/${params.role}/${params.userId}?profile=true`);
                 } else {
                   router.push('?profile=true');
                 }
@@ -339,7 +339,7 @@ export const PlayerDashboard: React.FC = () => {
           ) : showCommunity ? (
             <CommunityView isEmbedded={true} />
           ) : showTournaments ? (
-            <TournamentsView isEmbedded={true} playerId={params.id as string} />
+            <TournamentsView isEmbedded={true} playerId={user?.id || ''} />
           ) : showStats ? (
             <StatsView isEmbedded={true} playerData={playerData} />
           ) : showProgress ? (

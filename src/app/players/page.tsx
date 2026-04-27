@@ -135,7 +135,7 @@ export default function PlayersPage() {
                 {/* Action Buttons */}
                 <div className="mt-5 flex gap-2">
                   <Link 
-                    href={`/players/${p.userId}`}
+                    href={`/players/profile/${p.userId}`}
                     className="flex-1 text-center px-4 py-2.5 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 transition-all shadow-sm font-medium text-sm"
                   >
                     View Profile

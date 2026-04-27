@@ -198,7 +198,17 @@ export const RefereeDashboard: React.FC = () => {
   useEffect(() => {
     const fetchRefereeDashboard = async () => {
       try {
-        if (!user?.id) return;
+        if (!user?.id) {
+          console.warn('[RefereeDashboard] User ID not available yet');
+          // Set dummy data to escape loading state when user not available
+          setDashboardData({
+            referee: { id: '', name: 'Referee', photo: null, role: 'Referee', bio: '' },
+            recentMatches: [],
+            incomingMatches: [],
+            stats: null,
+          });
+          return;
+        }
         const refereeId = user.id;
 
         const userRes = await authenticatedFetch(`/api/user/profile/${refereeId}`);

@@ -3,7 +3,7 @@ import prisma from '@/lib/prisma';
 import { verifyApiAuth } from '@/lib/authMiddleware';
 
 export async function POST(request: Request) {
-  const auth = verifyApiAuth(request);
+  const auth = await verifyApiAuth(request);
 
   if (!auth) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
