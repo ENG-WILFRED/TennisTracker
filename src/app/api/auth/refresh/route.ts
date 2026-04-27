@@ -16,9 +16,18 @@ export async function POST(request: Request) {
     // Verify the refresh token
     const payload = verifyToken(refreshToken) as TokenPayload | null;
 
-    if (!payload || isRefreshTokenBlacklisted(refreshToken)) {
+    if (!payload) {
       return new Response(
         JSON.stringify({ error: 'Invalid or expired refresh token' }),
+        { status: 401, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Check if refresh token is blacklisted (async)
+    const isBlacklisted = await isRefreshTokenBlacklisted(refreshToken);
+    if (isBlacklisted) {
+      return new Response(
+        JSON.stringify({ error: 'Refresh token has been revoked' }),
         { status: 401, headers: { 'Content-Type': 'application/json' } }
       );
     }

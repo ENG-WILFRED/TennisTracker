@@ -73,7 +73,34 @@ export async function getCoachDashboard(coachId: string) {
     },
   });
 
-  if (!coach || !coach.role.includes('Coach')) throw new Error('Coach not found');
+  if (!coach) {
+    console.warn(`[getCoachDashboard] No staff record found for coach: ${coachId}`);
+    // Return minimal dashboard data instead of throwing
+    const user = await prisma.user.findUnique({
+      where: { id: coachId },
+      select: { firstName: true, lastName: true, photo: true },
+    });
+    return {
+      coach: {
+        id: coachId,
+        name: user ? `${user.firstName} ${user.lastName}` : 'Coach',
+        photo: user?.photo || null,
+        role: 'Coach',
+        bio: '',
+      },
+      students: [],
+      nextSession: null,
+      earnings: { thisMonth: 0, pending: 0, perSession: 0, balance: 0, students: 0 },
+      drills: [],
+      activities: [],
+      stats: { studentCount: 0, rating: 0, totalSessions: 0 },
+    };
+  }
+
+  if (!coach.role.includes('Coach')) {
+    console.warn(`[getCoachDashboard] User ${coachId} is not a coach. Role: ${coach.role}`);
+    throw new Error('User is not a coach');
+  }
 
   const studentsList = coach.players.map((rel: any) => ({
     id: rel.playerId,

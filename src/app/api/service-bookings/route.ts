@@ -6,7 +6,7 @@ import { verifyApiAuth } from '@/lib/authMiddleware';
 // GET /api/service-bookings - Get bookings (for providers and users)
 export async function GET(request: NextRequest) {
   try {
-    const auth = verifyApiAuth(request);
+    const auth = await verifyApiAuth(request);
     if (!auth) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
 // POST /api/service-bookings - Create a new booking request
 export async function POST(request: NextRequest) {
   try {
-    const auth = verifyApiAuth(request);
+    const auth = await verifyApiAuth(request);
     if (!auth) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

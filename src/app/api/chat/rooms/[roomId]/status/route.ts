@@ -8,7 +8,7 @@ export async function POST(
   { params }: { params: Promise<{ roomId: string }> }
 ) {
   try {
-    const auth = verifyApiAuth(request);
+    const auth = await verifyApiAuth(request);
     if (!auth) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
     }
@@ -86,7 +86,7 @@ export async function DELETE(
   { params }: { params: Promise<{ roomId: string }> }
 ) {
   try {
-    const auth = verifyApiAuth(request);
+    const auth = await verifyApiAuth(request);
     if (!auth) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
     }

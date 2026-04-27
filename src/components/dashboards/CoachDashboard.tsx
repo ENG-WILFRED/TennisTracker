@@ -175,12 +175,44 @@ export const CoachDashboard: React.FC = () => {
     return <LoadingState icon="🎾" message="Loading coach dashboard..." />;
   }
 
+  // Fallback: if loading is false but dashboardData is still null, set empty state
+  if (!dashboardData) {
+    console.error('[CoachDashboard] Dashboard data is missing even after loading');
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 to-red-100">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-red-600 mb-2">Error Loading Dashboard</h2>
+          <p className="text-red-700 mb-4">Failed to load your coach dashboard. Please try refreshing the page.</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700"
+          >
+            Refresh Page
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   // Fetch real data on mount
   useEffect(() => {
     const fetchCoachDashboard = async () => {
       try {
-        if (!user?.id) return;
+        if (!user?.id) {
+          console.warn('[CoachDashboard] User ID not available yet');
+          // Set dummy data to escape loading state when user not available
+          setDashboardData({
+            coach: { id: '', name: 'Coach', photo: null, role: 'Coach', bio: '' },
+            students: [],
+            nextSession: null,
+            earnings: { thisMonth: 0, pending: 0, perSession: 0, balance: 0, students: 0 },
+            activities: [],
+            stats: { studentCount: 0, rating: 0, totalSessions: 0 },
+          });
+          return;
+        }
         const coachId = user.id;
+        console.log('[CoachDashboard] Fetching data for coach:', coachId);
 
         const userRes = await authenticatedFetch(`/api/user/profile/${coachId}`);
         if (userRes.ok) {
@@ -197,20 +229,46 @@ export const CoachDashboard: React.FC = () => {
             bio: fullUserData.bio || '',
             photo: fullUserData.photo || '',
           });
+        } else {
+          console.warn('[CoachDashboard] Failed to fetch user profile:', userRes.status);
         }
 
         const dashboardRes = await authenticatedFetch(`/api/dashboard/role?role=coach&userId=${coachId}`);
+        console.log('[CoachDashboard] Dashboard API response status:', dashboardRes.status);
+        
         if (dashboardRes.ok) {
           const data = await dashboardRes.json();
+          console.log('[CoachDashboard] Dashboard data received:', data);
           setDashboardData(data);
           setCoachData(data.coach);
           setPlayers(data.students || []);
           setEarnings(data.earnings || { thisMonth: 0, pending: 0, perSession: 0, balance: 0, students: 0 });
           setStats(data.stats || { studentCount: 0, rating: 0, totalSessions: 0 });
           setActivities(data.activities || []);
+        } else {
+          const errorText = await dashboardRes.text();
+          console.error('[CoachDashboard] Dashboard API failed:', dashboardRes.status, errorText);
+          // Set dummy data to escape loading state
+          setDashboardData({
+            coach: { id: coachId, name: 'Coach', photo: null, role: 'Coach', bio: '' },
+            students: [],
+            nextSession: null,
+            earnings: { thisMonth: 0, pending: 0, perSession: 0, balance: 0, students: 0 },
+            activities: [],
+            stats: { studentCount: 0, rating: 0, totalSessions: 0 },
+          });
         }
       } catch (error) {
-        console.error('Error fetching coach dashboard:', error);
+        console.error('[CoachDashboard] Error fetching coach dashboard:', error);
+        // Fallback to prevent infinite loading
+        setDashboardData({
+          coach: { id: user?.id || '', name: 'Coach', photo: null, role: 'Coach', bio: '' },
+          students: [],
+          nextSession: null,
+          earnings: { thisMonth: 0, pending: 0, perSession: 0, balance: 0, students: 0 },
+          activities: [],
+          stats: { studentCount: 0, rating: 0, totalSessions: 0 },
+        });
       } finally {
         setLoading(false);
       }

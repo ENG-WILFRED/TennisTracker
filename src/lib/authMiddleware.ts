@@ -8,9 +8,9 @@ export interface AuthenticatedRequest {
 }
 
 /**
- * Extract and verify token from Authorization header
+ * Extract and verify token from Authorization header (async - checks blacklist)
  */
-export function extractAndVerifyToken(authHeader: string | null): AuthenticatedRequest | null {
+export async function extractAndVerifyToken(authHeader: string | null): Promise<AuthenticatedRequest | null> {
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return null;
   }
@@ -18,7 +18,13 @@ export function extractAndVerifyToken(authHeader: string | null): AuthenticatedR
   const token = authHeader.slice(7); // Remove 'Bearer ' prefix
   const payload = verifyToken(token);
 
-  if (!payload || isAccessTokenBlacklisted(token)) {
+  if (!payload) {
+    return null;
+  }
+
+  // Check if token is blacklisted (async call)
+  const isBlacklisted = await isAccessTokenBlacklisted(token);
+  if (isBlacklisted) {
     return null;
   }
 
@@ -30,9 +36,9 @@ export function extractAndVerifyToken(authHeader: string | null): AuthenticatedR
 }
 
 /**
- * Middleware-like function to check authentication on API routes
+ * Middleware-like function to check authentication on API routes (async)
  */
-export function verifyApiAuth(request: Request): AuthenticatedRequest | null {
+export async function verifyApiAuth(request: Request): Promise<AuthenticatedRequest | null> {
   const authHeader = request.headers.get('Authorization');
   return extractAndVerifyToken(authHeader);
 }

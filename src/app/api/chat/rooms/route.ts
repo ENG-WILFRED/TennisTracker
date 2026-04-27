@@ -3,7 +3,7 @@ import { verifyApiAuth } from '@/lib/authMiddleware';
 
 export async function GET(request: Request) {
   try {
-    const auth = verifyApiAuth(request);
+    const auth = await verifyApiAuth(request);
     if (!auth) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
     }
@@ -84,7 +84,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const auth = verifyApiAuth(request);
+    const auth = await verifyApiAuth(request);
     if (!auth) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
     }

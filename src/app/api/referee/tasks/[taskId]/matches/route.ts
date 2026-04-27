@@ -19,7 +19,7 @@ export async function POST(
   { params }: { params: Promise<{ taskId: string }> }
 ) {
   try {
-    const auth = verifyApiAuth(request);
+    const auth = await verifyApiAuth(request);
     if (!auth) {
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
@@ -150,7 +150,7 @@ export async function PUT(
   { params }: { params: Promise<{ taskId: string }> }
 ) {
   try {
-    const auth = verifyApiAuth(request);
+    const auth = await verifyApiAuth(request);
     if (!auth) {
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),

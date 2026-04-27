@@ -4,7 +4,7 @@ import { verifyApiAuth } from '@/lib/authMiddleware';
 // Get announcements for all tournaments a player is registered for
 export async function GET(request: Request) {
   try {
-    const auth = verifyApiAuth(request);
+    const auth = await verifyApiAuth(request);
     if (!auth) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,

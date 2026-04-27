@@ -11,7 +11,7 @@ export async function PATCH(
   { params }: { params: Promise<{ reminderId: string }> }
 ) {
   try {
-    const auth = verifyApiAuth(request);
+    const auth = await verifyApiAuth(request);
     if (!auth) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

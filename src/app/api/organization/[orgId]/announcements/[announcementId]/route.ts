@@ -2,7 +2,7 @@ import prisma from '@/lib/prisma';
 import { verifyApiAuth } from '@/lib/authMiddleware';
 
 async function requireOrgManager(request: Request, orgId: string) {
-  const auth = verifyApiAuth(request);
+  const auth = await verifyApiAuth(request);
   if (!auth) return { error: 'Unauthorized', status: 401 };
 
   const organization = await prisma.organization.findUnique({ where: { id: orgId } });

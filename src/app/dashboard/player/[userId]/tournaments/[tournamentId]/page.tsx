@@ -17,7 +17,7 @@ import { TournamentDetailView } from '@/app/tournaments/[id]/components';
 /* ─────────────────────────────────────────
    MAIN PAGE - TOURNAMENT DETAIL
 ───────────────────────────────────────── */
-export default function TournamentDetailPage({ params, searchParams }: { params: Promise<{ id: string; tournamentId: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+export default function TournamentDetailPage({ params, searchParams }: { params: Promise<{ userId: string; tournamentId: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const router = useRouter();
   const { user } = useAuth();
   const [tournament, setTournament] = useState<any>(null);
@@ -47,7 +47,7 @@ export default function TournamentDetailPage({ params, searchParams }: { params:
   // Unwrap params Promise (Next.js 15)
   const resolvedParams = use(params);
   const resolvedSearchParams = use(searchParams);
-  const playerId = resolvedParams.id;
+  const playerId = resolvedParams.userId;
   const tournamentId = resolvedParams.tournamentId;
 
   // Set initial tab from URL query param

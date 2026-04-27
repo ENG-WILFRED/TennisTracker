@@ -6,7 +6,7 @@ import { verifyApiAuth } from '@/lib/authMiddleware';
 // GET /api/service-requests - Get service requests
 export async function GET(request: NextRequest) {
   try {
-    const auth = verifyApiAuth(request);
+    const auth = await verifyApiAuth(request);
     if (!auth) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
 // POST /api/service-requests - Create a service request
 export async function POST(request: NextRequest) {
   try {
-    const auth = verifyApiAuth(request);
+    const auth = await verifyApiAuth(request);
     if (!auth) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

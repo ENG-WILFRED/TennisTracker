@@ -10,7 +10,7 @@ export async function PATCH(
   }
 ) {
   try {
-    const auth = verifyApiAuth(request);
+    const auth = await verifyApiAuth(request);
     if (!auth) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
@@ -79,7 +79,7 @@ export async function DELETE(
   }
 ) {
   try {
-    const auth = verifyApiAuth(request);
+    const auth = await verifyApiAuth(request);
     if (!auth) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
