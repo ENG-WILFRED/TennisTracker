@@ -156,6 +156,7 @@ export const CoachDashboard: React.FC = () => {
   const [stats, setStats] = useState({ studentCount: 0, rating: 0, totalSessions: 0 });
   const [activities, setActivities] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [editingProfile, setEditingProfile] = useState(false);
   const [profileData, setProfileData] = useState<any>(null);
   const [personalForm, setPersonalForm] = useState({
@@ -172,52 +173,96 @@ export const CoachDashboard: React.FC = () => {
 
   const isProfile = activeNav === 'My Profile';
 
+  // If still loading, show loading state (but not forever - there's a timeout)
   if (loading && !dashboardData) {
     return <LoadingState icon="🎾" message="Loading coach dashboard..." />;
   }
 
-  // Fallback: if loading is false but dashboardData is still null, set empty state
-  if (!dashboardData) {
-    console.error('[CoachDashboard] Dashboard data is missing even after loading');
+  // Show error if loading failed
+  if (loadError) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 to-red-100">
         <div className="text-center">
           <h2 className="text-2xl font-bold text-red-600 mb-2">Error Loading Dashboard</h2>
-          <p className="text-red-700 mb-4">Failed to load your coach dashboard. Please try refreshing the page.</p>
+          <p className="text-red-700 mb-4">{loadError}</p>
           <button
-            onClick={() => window.location.reload()}
+            onClick={() => {
+              setLoadError(null);
+              setLoading(true);
+              setDashboardData(null);
+              window.location.reload();
+            }}
             className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700"
           >
-            Refresh Page
+            Retry
           </button>
         </div>
       </div>
     );
   }
 
+  // If we have no dashboard data, use empty/fallback data so we don't get stuck
+  const finalDashboardData = dashboardData || {
+    coach: { id: user?.id || '', name: 'Coach', photo: null, role: 'Coach', bio: '' },
+    students: [],
+    nextSession: null,
+    earnings: { thisMonth: 0, pending: 0, perSession: 0, balance: 0, students: 0 },
+    activities: [],
+    stats: { studentCount: 0, rating: 0, totalSessions: 0 },
+  };
+
   // Fetch real data on mount
   useEffect(() => {
+    let isMounted = true;
+    let hasStartedFetch = false;
+    
+    const timeoutId = setTimeout(() => {
+      if (isMounted && !dashboardData) {
+        console.error('[CoachDashboard] Dashboard load timeout after 15 seconds, hasStartedFetch:', hasStartedFetch);
+        console.error('[CoachDashboard] User available:', !!user?.id);
+        // Force exit loading state with fallback data
+        setDashboardData({
+          coach: { id: user?.id || '', name: 'Coach', photo: null, role: 'Coach', bio: '' },
+          students: [],
+          nextSession: null,
+          earnings: { thisMonth: 0, pending: 0, perSession: 0, balance: 0, students: 0 },
+          activities: [],
+          stats: { studentCount: 0, rating: 0, totalSessions: 0 },
+        });
+        setLoading(false);
+      }
+    }, 15000); // 15 second timeout
+
     const fetchCoachDashboard = async () => {
       try {
+        hasStartedFetch = true;
+        console.log('[CoachDashboard] fetchCoachDashboard started, user:', user?.id);
+        
         if (!user?.id) {
-          console.warn('[CoachDashboard] User ID not available yet');
-          // Set dummy data to escape loading state when user not available
-          setDashboardData({
-            coach: { id: '', name: 'Coach', photo: null, role: 'Coach', bio: '' },
-            students: [],
-            nextSession: null,
-            earnings: { thisMonth: 0, pending: 0, perSession: 0, balance: 0, students: 0 },
-            activities: [],
-            stats: { studentCount: 0, rating: 0, totalSessions: 0 },
-          });
+          console.log('[CoachDashboard] User ID not available, setting fallback data');
+          if (isMounted) {
+            // Set dummy data to escape loading state when user not available
+            setDashboardData({
+              coach: { id: '', name: 'Coach', photo: null, role: 'Coach', bio: '' },
+              students: [],
+              nextSession: null,
+              earnings: { thisMonth: 0, pending: 0, perSession: 0, balance: 0, students: 0 },
+              activities: [],
+              stats: { studentCount: 0, rating: 0, totalSessions: 0 },
+            });
+            setLoading(false);
+          }
           return;
         }
         const coachId = user.id;
-        console.log('[CoachDashboard] Fetching data for coach:', coachId);
+        console.log('[CoachDashboard] Starting fetch for coach:', coachId);
 
+        console.log('[CoachDashboard] Fetching user profile...');
         const userRes = await authenticatedFetch(`/api/user/profile/${coachId}`);
-        if (userRes.ok) {
+        console.log('[CoachDashboard] User profile response:', userRes.status);
+        if (userRes.ok && isMounted) {
           const fullUserData = await userRes.json();
+          console.log('[CoachDashboard] User profile data received');
           setProfileData(fullUserData);
           setPersonalForm({
             firstName: fullUserData.firstName || '',
@@ -230,28 +275,47 @@ export const CoachDashboard: React.FC = () => {
             bio: fullUserData.bio || '',
             photo: fullUserData.photo || '',
           });
-        } else {
+        } else if (!userRes.ok) {
           console.warn('[CoachDashboard] Failed to fetch user profile:', userRes.status);
         }
 
+        console.log('[CoachDashboard] Fetching dashboard data...');
         const dashboardRes = await authenticatedFetch(`/api/dashboard/role?role=coach&userId=${coachId}`);
         console.log('[CoachDashboard] Dashboard API response status:', dashboardRes.status);
         
-        if (dashboardRes.ok) {
+        if (dashboardRes.ok && isMounted) {
           const data = await dashboardRes.json();
-          console.log('[CoachDashboard] Dashboard data received:', data);
+          console.log('[CoachDashboard] Dashboard data received successfully');
           setDashboardData(data);
           setCoachData(data.coach);
           setPlayers(data.students || []);
           setEarnings(data.earnings || { thisMonth: 0, pending: 0, perSession: 0, balance: 0, students: 0 });
           setStats(data.stats || { studentCount: 0, rating: 0, totalSessions: 0 });
           setActivities(data.activities || []);
-        } else {
+        } else if (!dashboardRes.ok) {
           const errorText = await dashboardRes.text();
           console.error('[CoachDashboard] Dashboard API failed:', dashboardRes.status, errorText);
-          // Set dummy data to escape loading state
+          if (isMounted) {
+            // Set dummy data to escape loading state
+            setDashboardData({
+              coach: { id: coachId, name: 'Coach', photo: null, role: 'Coach', bio: '' },
+              students: [],
+              nextSession: null,
+              earnings: { thisMonth: 0, pending: 0, perSession: 0, balance: 0, students: 0 },
+              activities: [],
+              stats: { studentCount: 0, rating: 0, totalSessions: 0 },
+            });
+          }
+        }
+      } catch (error) {
+        console.error('[CoachDashboard] Error fetching coach dashboard:', error);
+        if (isMounted) {
+          const errorMsg = error instanceof Error ? error.message : 'Unknown error occurred';
+          console.error('[CoachDashboard] Setting error state:', errorMsg);
+          setLoadError(`Failed to load dashboard: ${errorMsg}`);
+          // Fallback to prevent infinite loading
           setDashboardData({
-            coach: { id: coachId, name: 'Coach', photo: null, role: 'Coach', bio: '' },
+            coach: { id: user?.id || '', name: 'Coach', photo: null, role: 'Coach', bio: '' },
             students: [],
             nextSession: null,
             earnings: { thisMonth: 0, pending: 0, perSession: 0, balance: 0, students: 0 },
@@ -259,23 +323,36 @@ export const CoachDashboard: React.FC = () => {
             stats: { studentCount: 0, rating: 0, totalSessions: 0 },
           });
         }
-      } catch (error) {
-        console.error('[CoachDashboard] Error fetching coach dashboard:', error);
-        // Fallback to prevent infinite loading
-        setDashboardData({
-          coach: { id: user?.id || '', name: 'Coach', photo: null, role: 'Coach', bio: '' },
-          students: [],
-          nextSession: null,
-          earnings: { thisMonth: 0, pending: 0, perSession: 0, balance: 0, students: 0 },
-          activities: [],
-          stats: { studentCount: 0, rating: 0, totalSessions: 0 },
-        });
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          console.log('[CoachDashboard] Setting loading to false');
+          setLoading(false);
+          clearTimeout(timeoutId);
+        }
       }
     };
 
-    fetchCoachDashboard();
+    console.log('[CoachDashboard] useEffect running, user:', user?.id);
+    if (user?.id) {
+      fetchCoachDashboard();
+    } else {
+      console.log('[CoachDashboard] Skipping fetch, no user ID yet');
+      // User not available yet, set fallback data to escape loading
+      setDashboardData({
+        coach: { id: '', name: 'Coach', photo: null, role: 'Coach', bio: '' },
+        students: [],
+        nextSession: null,
+        earnings: { thisMonth: 0, pending: 0, perSession: 0, balance: 0, students: 0 },
+        activities: [],
+        stats: { studentCount: 0, rating: 0, totalSessions: 0 },
+      });
+      setLoading(false);
+    }
+    
+    return () => {
+      isMounted = false;
+      clearTimeout(timeoutId);
+    };
   }, [user?.id]);
 
   const handleSaveProfile = async () => {

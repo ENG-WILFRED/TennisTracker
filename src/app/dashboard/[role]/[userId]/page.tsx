@@ -25,6 +25,7 @@ export default function DashboardRoleIdPage() {
   const validRoles: UserRole[] = ['player', 'coach', 'admin', 'finance_officer', 'referee', 'org', 'member', 'spectator', 'developer'];
   const routeRole = validRoles.includes(roleFromURL as UserRole) ? (roleFromURL as UserRole) : null;
   const activeRole = routeRole || currentRole;
+  const [roleValidated, setRoleValidated] = React.useState(false);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -33,56 +34,18 @@ export default function DashboardRoleIdPage() {
     }
   }, [isLoggedIn, router]);
 
-  // Validate the requested dashboard route before rendering
+  // Validate the requested dashboard route and manage role synchronization
   useEffect(() => {
-    if (!isRoleLoaded || !roleFromURL || !user?.id) return;
-
-    console.log('[Dashboard Page] Validating role:', { roleFromURL, currentRole, userRole: user?.role });
-
-    if (user.id !== userIdFromURL) {
-      console.log('[Dashboard Page] User ID mismatch, redirecting');
-      router.push(`/dashboard/${currentRole || 'spectator'}/${user.id}`);
+    if (!user?.id || userIdFromURL !== user.id || !routeRole) {
       return;
     }
 
-    // Allow navigation if the role is in availableMemberships or matches user role
-    const isValidMembership = availableMemberships.find((m: { role: UserRole }) => m.role === roleFromURL);
-    const isUserRoleMatch = user?.role === roleFromURL;
+    console.log('[Dashboard Page] User authenticated, allowing dashboard render for role:', routeRole);
+    setRoleValidated(true);
+  }, [user?.id, userIdFromURL, routeRole]);
 
-    if (!isValidMembership && !isUserRoleMatch && roleFromURL !== 'member') {
-      // User doesn't have this membership, redirect to current role
-      if (currentRole) {
-        router.push(`/dashboard/${currentRole}/${user.id}`);
-      }
-      return;
-    }
-
-    // If role is valid but not current, update currentRole
-    if ((isValidMembership || isUserRoleMatch) && currentRole !== roleFromURL) {
-      const membership = isValidMembership || { role: roleFromURL, orgId: '', orgName: 'Platform' };
-      setCurrentRole(roleFromURL as UserRole, (membership as any).orgId, (membership as any).orgName);
-    }
-  }, [availableMemberships, currentRole, isRoleLoaded, roleFromURL, router, setCurrentRole, user?.id, user?.role, userIdFromURL]);
-
-  useEffect(() => {
-    // Don't interfere if role is being validated in the previous effect
-    if (!isRoleLoaded || !routeRole || !currentRole) return;
-
-    // Only redirect if there's a clear mismatch after validation
-    if (routeRole !== 'member' && currentRole !== routeRole) {
-      // Check if the current role should have been updated
-      const hasRequestedMembership = availableMemberships.find((m: { role: UserRole }) => m.role === routeRole);
-      if (hasRequestedMembership) {
-        // User has this membership, let the previous effect handle the update
-        return;
-      }
-      
-      // User doesn't have this membership, redirect to current role
-      router.push(`/dashboard/${currentRole}/${user?.id}`);
-    }
-  }, [currentRole, routeRole, isRoleLoaded, router, user?.id, availableMemberships]);
-
-  const canRenderDashboard = isRoleLoaded && user?.id && userIdFromURL === user.id && (!routeRole || routeRole === 'member' || currentRole === routeRole);
+  // Allow dashboard to render if user is logged in with matching ID and we've validated the role
+  const canRenderDashboard = isLoggedIn && user?.id && userIdFromURL === user.id && roleValidated;
 
   if (!canRenderDashboard) {
     return (

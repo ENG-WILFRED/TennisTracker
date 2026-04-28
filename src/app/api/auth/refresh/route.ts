@@ -3,7 +3,25 @@ import { isRefreshTokenBlacklisted } from '@/lib/tokenBlacklist';
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    // Check if request has a body
+    const contentLength = request.headers.get('content-length');
+    if (!contentLength || contentLength === '0') {
+      return new Response(
+        JSON.stringify({ error: 'Refresh token is required' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    let body: any = {};
+    try {
+      body = await request.json();
+    } catch (parseError) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid request body' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
     const { refreshToken } = body as any;
 
     if (!refreshToken) {
