@@ -39,7 +39,7 @@
     "dev:next": "next dev",
     "websocket": "tsx src/websocket-server.ts",
     "websocket:dev": "tsx --watch src/websocket-server.ts",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
     "migrate": "prisma migrate dev",
