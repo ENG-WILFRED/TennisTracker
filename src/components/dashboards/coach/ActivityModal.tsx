@@ -236,6 +236,7 @@ export default function ActivityModal({ isOpen, selectedDate, onClose, onSave, c
   // Fetch courts when modal opens
   useEffect(() => {
     if (isOpen && coachId) {
+      setError(null); // Clear any previous errors when opening
       fetchCourts();
     }
   }, [isOpen, coachId]);
@@ -248,10 +249,15 @@ export default function ActivityModal({ isOpen, selectedDate, onClose, onSave, c
         const data = await res.json();
         setCourts(data.courts || []);
       } else {
-        console.error('Failed to fetch courts');
+        // Log detailed error information
+        const errorData = await res.json().catch(() => ({ error: 'Unknown error' }));
+        console.error(`Failed to fetch courts (${res.status}):`, errorData);
+        setError(`Failed to fetch courts: ${errorData?.error || res.statusText || 'Unknown error'}`);
       }
     } catch (err) {
-      console.error('Error fetching courts:', err);
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      console.error('Error fetching courts:', errorMessage);
+      setError(`Error fetching courts: ${errorMessage}`);
     } finally {
       setLoadingCourts(false);
     }
@@ -587,6 +593,7 @@ export default function ActivityModal({ isOpen, selectedDate, onClose, onSave, c
                       Court / Location
                     </label>
                     <select
+                      disabled={loadingCourts}
                       value={formData.courtId || (showOtherCourtInput ? 'other' : '')}
                       onChange={(e) => {
                         if (e.target.value === 'other') {
@@ -608,9 +615,13 @@ export default function ActivityModal({ isOpen, selectedDate, onClose, onSave, c
                         borderRadius: 8,
                         color: G.text,
                         fontSize: 13,
+                        opacity: loadingCourts ? 0.6 : 1,
+                        cursor: loadingCourts ? 'not-allowed' : 'pointer',
                       }}
                     >
-                      <option value="">-- Select Court --</option>
+                      <option value="">
+                        {loadingCourts ? '-- Loading courts... --' : '-- Select Court --'}
+                      </option>
                       {courts.map(court => (
                         <option key={court.id} value={court.id}>
                           {court.name} ({court.surface}, {court.indoorOutdoor})
@@ -736,6 +747,7 @@ export default function ActivityModal({ isOpen, selectedDate, onClose, onSave, c
                     Court / Location
                   </label>
                   <select
+                    disabled={loadingCourts}
                     value={formData.locationId || (showOtherLocationInput ? 'other' : '')}
                     onChange={(e) => {
                       if (e.target.value === 'other') {
@@ -757,9 +769,13 @@ export default function ActivityModal({ isOpen, selectedDate, onClose, onSave, c
                       borderRadius: 8,
                       color: G.text,
                       fontSize: 13,
+                      opacity: loadingCourts ? 0.6 : 1,
+                      cursor: loadingCourts ? 'not-allowed' : 'pointer',
                     }}
                   >
-                    <option value="">-- Select Court --</option>
+                    <option value="">
+                      {loadingCourts ? '-- Loading courts... --' : '-- Select Court --'}
+                    </option>
                     {courts.map(court => (
                       <option key={court.id} value={court.id}>
                         {court.name} ({court.surface}, {court.indoorOutdoor})

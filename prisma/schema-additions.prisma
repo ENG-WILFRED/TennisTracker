@@ -1,0 +1,14 @@
+// This file is EMPTY - all models have been merged into main schema.prisma
+// 
+// Previously duplicated models (now in main schema):
+// - EventLog
+// - LedgerEntry
+// - MetricWeight
+// - RecommendationConfig
+// - RecurringSession
+// - OwnershipTransfer
+// - DailyPlayerStats
+// - CoachPerformanceSummary
+// - OrgMetricsSnapshot
+//
+// Reference the main prisma/schema.prisma file for all model definitions.

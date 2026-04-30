@@ -5,8 +5,12 @@ import { UserRole } from '@/config/roles';
 /**
  * Get user memberships and available roles
  */
-export async function GET(req: Request, { params }: { params: { userId: string } }) {
+export async function GET(
+  req: Request,
+  context: { params: Promise<{ userId: string }> }
+) {
   try {
+    const params = await context.params;
     const userId = params.userId;
 
     if (!userId) {

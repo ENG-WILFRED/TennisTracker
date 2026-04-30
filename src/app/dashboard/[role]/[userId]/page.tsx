@@ -26,6 +26,8 @@ export default function DashboardRoleIdPage() {
   const routeRole = validRoles.includes(roleFromURL as UserRole) ? (roleFromURL as UserRole) : null;
   const activeRole = routeRole || currentRole;
   const [roleValidated, setRoleValidated] = React.useState(false);
+  
+  console.log('[Dashboard Page] Render - isLoggedIn:', isLoggedIn, 'user?.id:', user?.id, 'roleFromURL:', roleFromURL, 'routeRole:', routeRole, 'currentRole:', currentRole, 'activeRole:', activeRole);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -44,10 +46,13 @@ export default function DashboardRoleIdPage() {
     setRoleValidated(true);
   }, [user?.id, userIdFromURL, routeRole]);
 
-  // Allow dashboard to render if user is logged in with matching ID and we've validated the role
-  const canRenderDashboard = isLoggedIn && user?.id && userIdFromURL === user.id && roleValidated;
+  // Allow dashboard to render if:
+  // 1. User is logged in, OR
+  // 2. User ID matches URL and we have a valid route role (for pre-login routes)
+  // This allows the dashboard component to mount and fetch data while auth is being verified
+  const canRenderDashboard = isLoggedIn || (user?.id && userIdFromURL === user.id && routeRole);
 
-  if (!canRenderDashboard) {
+  if (!isLoggedIn && !canRenderDashboard) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
         <div className="text-center">

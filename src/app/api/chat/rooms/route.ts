@@ -9,14 +9,36 @@ export async function GET(request: Request) {
     }
 
     // Get current user - we only need the ID from the auth token
-    const user = { id: auth.playerId };
+    const userId = auth.playerId;
 
-    if (!user) {
+    if (!userId) {
       return new Response(JSON.stringify({ error: 'User not found' }), { status: 404 });
     }
 
-    // Single optimized query: fetch rooms with counts and participants in one go
+    // OPTIMIZED: Only fetch rooms the user is a participant in, limit to 50 recent rooms
+    // This avoids loading ALL rooms in the database
+    const userRooms = await prisma.chatParticipant.findMany({
+      where: { playerId: userId },
+      select: { roomId: true },
+      take: 50, // Limit to avoid huge queries
+      orderBy: { lastSeen: 'desc' as const },
+    });
+
+    const roomIds = userRooms.map(r => r.roomId);
+
+    if (roomIds.length === 0) {
+      return new Response(JSON.stringify([]), {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'public, max-age=5, s-maxage=5, stale-while-revalidate=10',
+        },
+      });
+    }
+
+    // Fetch only the rooms the user is in, with optimized data loading
     const rooms = await prisma.chatRoom.findMany({
+      where: { id: { in: roomIds } },
       select: {
         id: true,
         name: true,
@@ -25,14 +47,21 @@ export async function GET(request: Request) {
         _count: {
           select: { participants: true },
         },
+        // For non-DM rooms, load all participants. For DM rooms, just get the basic data
         participants: {
           select: {
             playerId: true,
             isOnline: true,
             player: {
               select: {
+                userId: true,
                 user: {
-                  select: { id: true, firstName: true, lastName: true, photo: true },
+                  select: { 
+                    id: true, 
+                    firstName: true, 
+                    lastName: true, 
+                    photo: true 
+                  },
                 },
               },
             },
@@ -44,6 +73,7 @@ export async function GET(request: Request) {
           take: 1,
         },
       },
+      orderBy: { updatedAt: 'desc' as const },
     });
 
     // Format response
@@ -52,8 +82,8 @@ export async function GET(request: Request) {
       
       // For DM rooms, get the other participant's details
       let dmParticipant = null;
-      if (room.isDM) {
-        dmParticipant = room.participants?.find((p: any) => p.playerId !== user.id)?.player || null;
+      if (room.isDM && room.participants && room.participants.length > 0) {
+        dmParticipant = room.participants.find((p: any) => p.playerId !== userId)?.player || null;
       }
 
       return {

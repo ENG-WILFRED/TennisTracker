@@ -41,6 +41,12 @@ model User {
   resourceRequests   ResourceRequest[] @relation("ResourceRequests")
   resourceApprovals  ResourceRequest[] @relation("ResourceApprovals")
   bugReports   BugReport[]
+  // Guardian relationships
+  guardianOf   Guardian[] @relation("Guardian")
+  guardians    Guardian[] @relation("Dependent")
+  // Parent relationships for invoices and ownership
+  parentInvoices InvoiceModel[] @relation("InvoiceParent")
+  parentTransfers OwnershipTransfer[] @relation("OwnershipTransferParent")
 
   @@index([createdAt])
   @@index([latitude, longitude])
@@ -89,6 +95,25 @@ model MembershipInvitation {
   @@index([expiresAt])
 }
 
+model Guardian {
+  id             String      @id @default(uuid())
+  guardianId     String      // User ID of the parent/guardian
+  dependentId    String      // User ID of the child/dependent
+  relationship   String      // 'parent', 'guardian', 'legal_guardian'
+  isApproved     Boolean     @default(false)
+  approvedAt     DateTime?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  
+  guardian       User        @relation("Guardian", fields: [guardianId], references: [id], onDelete: Cascade)
+  dependent      User        @relation("Dependent", fields: [dependentId], references: [id], onDelete: Cascade)
+
+  @@unique([guardianId, dependentId])
+  @@index([guardianId])
+  @@index([dependentId])
+  @@index([isApproved])
+}
+
 model Player {
   matchesPlayed              Int                         @default(0)
   matchesWon                 Int                         @default(0)
@@ -133,6 +158,13 @@ model Player {
   sessionBookings            SessionBooking[]           @relation("SessionBookings")
   coachRelationships         CoachPlayerRelationship[]  @relation("CoachPlayers")
   coachSessionReviews        CoachSessionReview[]       @relation("CoachSessionReviews")
+  playerReports              PlayerReport[]
+  invoices                   Invoice[]
+  subscriptions              Subscription[]
+  playerMetrics              PlayerMetric[]
+  invoiceModels              InvoiceModel[]
+  ownershipTransfers         OwnershipTransfer[]
+  dailyPlayerStats           DailyPlayerStats[]
 
   @@index([organizationId])
 }
@@ -210,6 +242,12 @@ model Staff {
   sessionReviews         CoachSessionReview[] @relation("CoachSessionReviews")
   activities             Activity[]       @relation("Activities")
   assignedTasks          Task[]           @relation("TaskAssignmentStaff")
+  progressUpdates        ProgressUpdate[]
+  coachReports           CoachReport[]
+  earnings               CoachEarning[]
+  availabilities         CoachAvailability[]
+  recurringSessions      RecurringSession[]    @relation("RecurringCoachSessions")
+  coachPerfSummaries     CoachPerformanceSummary[] @relation("CoachPerformanceSummaries")
 
   @@index([organizationId])
   @@index([employedById])
@@ -275,6 +313,37 @@ model Organization {
   taskTemplates           TaskTemplate[]           @relation("TaskTemplates")
   assignedTasks           Task[]                   @relation("OrganizationTasks")
   communityPosts          CommunityPost[]
+  // Operating Model Relations
+  playerMetrics           PlayerMetric[]
+  recommendations         Recommendation[]
+  revenues                OrgRevenue[]
+  payoutCycles            CoachPayoutCycle[]
+  availability            CoachAvailability[]
+  messages                Message[]
+  notifications           Notification[]
+  // Reporting & Analytics
+  playerReports           PlayerReport[]
+  parentReports           ParentReport[]
+  coachReports            CoachReport[]
+  analytics               OrgAnalytics?
+  invoices                Invoice[]
+  paymentMethods          PaymentMethod[]
+  subscriptions           Subscription[]
+  notificationTriggers    NotificationTrigger[]
+  announcementMessages    Announcement[]
+  // Event system
+  eventLogs               EventLog[]
+  ledgerEntries           LedgerEntry[]
+  paymentTransactions     PaymentTransaction[]
+  invoiceModels           InvoiceModel[]          @relation("InvoiceModels")
+  coachPerformanceSummaries CoachPerformanceSummary[]
+  metricsSnapshot         OrgMetricsSnapshot?
+  recurringSessionPatterns RecurringSession[]     @relation("RecurringSessions")
+  metricWeights           MetricWeight[]
+  recommendationConfigs   RecommendationConfig[]
+  ownershipTransfers      OwnershipTransfer[]
+  notificationLogs        NotificationLogModel[]
+  dailyPlayerStats        DailyPlayerStats[]
 
   @@index([createdAt])
   @@index([slug])
@@ -536,6 +605,7 @@ model ChatRoom {
 
   @@index([isDM])
   @@index([createdAt])
+  @@index([updatedAt])
 }
 
 model ChatMessage {
@@ -585,6 +655,7 @@ model ChatParticipant {
   @@index([roomId])
   @@index([playerId])
   @@index([isOnline])
+  @@index([playerId, lastSeen])
 }
 
 model Court {
@@ -1362,7 +1433,8 @@ model CoachSession {
   coachId        String              // Staff user ID
   organizationId String?
   playerId       String?             // Optional, for 1-on-1
-  sessionType    String              @default("1-on-1") // "1-on-1", "group"
+  recurringSessionId String?         // Link to RecurringSession if generated from pattern
+  sessionType    String              @default("1-on-1") // "1-on-1", "group", "match_play", "fitness"
   title          String
   description    String?
   startTime      DateTime
@@ -1371,7 +1443,7 @@ model CoachSession {
   courtId        String?
   maxParticipants Int                @default(1)
   price          Float?
-  status         String              @default("scheduled") // "scheduled", "in-progress", "completed", "cancelled"
+  status         String              @default("scheduled") // "scheduled", "confirmed", "in-progress", "completed", "cancelled", "no-show"
   cancellationReason String?
   cancelledAt    DateTime?
   createdAt      DateTime            @default(now())
@@ -1381,11 +1453,17 @@ model CoachSession {
   organization   Organization?       @relation("CoachSessions", fields: [organizationId], references: [id], onDelete: SetNull)
   player         Player?             @relation("CoachSessionsAsPlayer", fields: [playerId], references: [userId], onDelete: SetNull)
   court          Court?              @relation("CoachSessions", fields: [courtId], references: [id], onDelete: SetNull)
+  recurringSource RecurringSession?  @relation("RecurringSource", fields: [recurringSessionId], references: [id], onDelete: SetNull)
   bookings       SessionBooking[]
-  
+  progressUpdates ProgressUpdate[]
+  metricHistories MetricHistory[]
+  sessionReport  SessionReport?
+  earnings       CoachEarning[]
+
   @@index([coachId, startTime])
   @@index([organizationId, startTime])
   @@index([playerId, startTime])
+  @@index([recurringSessionId])
   @@index([status])
   @@index([createdAt])
 }
@@ -1843,4 +1921,1084 @@ model BugReport {
   @@index([status])
   @@index([severity])
   @@index([createdAt])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// OPERATING MODEL ENTITIES (Session-Centric Architecture)
+// ═══════════════════════════════════════════════════════════════
+
+// ─────────────────────────────────────────────────────────────
+// PROGRESS TRACKING SYSTEM
+// ─────────────────────────────────────────────────────────────
+
+model PlayerMetric {
+  id                  String      @id @default(uuid())
+  playerId            String
+  organizationId      String
+  
+  // Core Metrics (0-100 scale)
+  serve               Int         @default(50)
+  forehand            Int         @default(50)
+  backhand            Int         @default(50)
+  movement            Int         @default(50)
+  stamina             Int         @default(50)
+  strategy            Int         @default(50)
+  mentalToughness     Int         @default(50)
+  courtAwareness      Int         @default(50)
+  
+  // Metadata
+  lastUpdated         DateTime    @updatedAt
+  createdAt           DateTime    @default(now())
+  
+  // Relations
+  player              Player      @relation(fields: [playerId], references: [userId], onDelete: Cascade)
+  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  historicalScores    MetricHistory[]
+  
+  @@unique([playerId, organizationId])
+  @@index([playerId])
+  @@index([organizationId])
+}
+
+model MetricHistory {
+  id                  String      @id @default(uuid())
+  metricId            String
+  sessionId           String
+  
+  // Scores at this point in time
+  serve               Int
+  forehand            Int
+  backhand            Int
+  movement            Int
+  stamina             Int
+  strategy            Int
+  mentalToughness     Int
+  courtAwareness      Int
+  
+  // Deltas (change from previous)
+  changes             Json        // { serve: +5, forehand: -2 }
+  trend               String      // "up", "down", "stable"
+  
+  timestamp           DateTime    @default(now())
+  
+  // Relations
+  metric              PlayerMetric @relation(fields: [metricId], references: [id], onDelete: Cascade)
+  session             CoachSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  
+  @@index([metricId])
+  @@index([sessionId])
+  @@index([timestamp])
+}
+
+model ProgressUpdate {
+  id                  String      @id @default(uuid())
+  playerId            String
+  coachId             String      // Who submitted the update
+  sessionId           String
+  
+  // Coach submission
+  ratingChanges       Json        // { serve: +5, forehand: -2, strategy: 0 }
+  focusAreas          String[]    // ["forehand", "serve"]
+  notes               String?
+  
+  // Calculated fields
+  overallProgress     Int         // 0-100
+  timestamp           DateTime    @default(now())
+  
+  // Relations
+  session             CoachSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  coach               Staff        @relation(fields: [coachId], references: [userId], onDelete: Cascade)
+  
+  @@index([playerId])
+  @@index([coachId])
+  @@index([sessionId])
+  @@index([timestamp])
+}
+
+// ─────────────────────────────────────────────────────────────
+// RECOMMENDATIONS ENGINE
+// ─────────────────────────────────────────────────────────────
+
+model Recommendation {
+  id                  String      @id @default(uuid())
+  organizationId      String
+  targetId            String      // playerId, parentId, or coachId
+  targetType          String      // "player" | "parent" | "coach"
+  
+  // Content
+  title               String
+  description         String
+  priority            String      // "high" | "medium" | "low"
+  category            String      // "training" | "match" | "enrollment" | "progress"
+  
+  // Trigger & Analysis
+  triggeredBy         String      // "session_analysis" | "match_result" | "weekly_job"
+  triggerData         Json?       // Data that triggered recommendation
+  
+  // Actions
+  actionItems         String[]    // Specific next steps
+  linkedSessionId     String?
+  linkedMatchId       String?
+  
+  // Engagement
+  acknowledged        Boolean     @default(false)
+  acknowledgedAt      DateTime?
+  status              String      @default("active") // "active" | "completed" | "dismissed"
+  
+  createdAt           DateTime    @default(now())
+  validUntil          DateTime?   // Auto-expire
+  updatedAt           DateTime    @updatedAt
+  
+  // Relations
+  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  @@index([organizationId])
+  @@index([targetId])
+  @@index([targetType])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// FINANCIAL SYSTEM (Org-Centric)
+// ─────────────────────────────────────────────────────────────
+
+model OrgRevenue {
+  id                  String      @id @default(uuid())
+  organizationId      String
+  
+  // Payment source
+  paymentType         String      // "per_session" | "subscription" | "tournament"
+  fromPlayerId        String?     // Player who paid (or their account)
+  fromParentId        String?     // Parent who paid (via Guardian)
+  
+  // Amount
+  amount              Decimal     @db.Decimal(10, 2)
+  currency            String      @default("KES")
+  status              String      @default("pending") // "pending" | "confirmed" | "reconciled"
+  
+  // References
+  sessionIds          String[]    // Sessions this pays for
+  subscriptionId      String?
+  invoiceId           String?
+  
+  // Payment method
+  mpesaTransactionId  String?
+  paymentMethod       String      // "mpesa" | "bank" | "cash" | "card"
+  
+  createdAt           DateTime    @default(now())
+  recordedAt          DateTime?
+  updatedAt           DateTime    @updatedAt
+  
+  // Relations
+  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  @@index([organizationId])
+  @@index([fromPlayerId])
+  @@index([fromParentId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model CoachEarning {
+  id                  String      @id @default(uuid())
+  sessionId           String      @unique
+  coachId             String
+  organizationId      String
+  
+  // Calculation
+  sessionPrice        Decimal     @db.Decimal(10, 2)
+  coachPercentage     Decimal     @default(0.60) @db.Decimal(3, 2) // 60% default
+  amount              Decimal     @db.Decimal(10, 2)
+  
+  // Status
+  status              String      @default("pending") // "pending" | "approved" | "paid"
+  approvedAt          DateTime?
+  paidAt              DateTime?
+  payoutCycleId       String?
+  
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+  
+  // Relations
+  session             CoachSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  staff               Staff       @relation(fields: [coachId], references: [userId], onDelete: Cascade)
+  
+  @@index([coachId])
+  @@index([status])
+  @@index([organizationId])
+}
+
+model CoachPayoutCycle {
+  id                  String      @id @default(uuid())
+  organizationId      String
+  cycleNumber         String      // "2026-04-W1" or "2026-04"
+  cycleType           String      // "weekly" | "monthly"
+  
+  // Details
+  payoutDate          DateTime
+  totalAmount         Decimal     @db.Decimal(10, 2)
+  earningIds          String[]    // CoachEarning IDs included
+  
+  // Payment
+  paymentMethod       String      // "mpesa" | "bank"
+  transactionId       String?
+  status              String      @default("pending") // "pending" | "approved" | "sent" | "confirmed"
+  
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+  
+  // Relations
+  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  @@index([organizationId])
+  @@index([payoutDate])
+  @@index([status])
+}
+
+// ─────────────────────────────────────────────────────────────
+// SCHEDULING SYSTEM
+// ─────────────────────────────────────────────────────────────
+
+model CoachAvailability {
+  id                  String      @id @default(uuid())
+  coachId             String
+  organizationId      String
+  
+  // Recurrence
+  dayOfWeek           Int         // 0=Sunday, 6=Saturday
+  startTime           String      // "14:00"
+  endTime             String      // "18:00"
+  
+  // Constraints
+  maxSessionsPerDay   Int         @default(6)
+  sessionDuration     Int         @default(60) // minutes
+  bufferMinutes       Int         @default(0)
+  
+  // Exceptions
+  isRecurring         Boolean     @default(true)
+  recurringUntil      DateTime?
+  blackoutDates       DateTime[]  // Days not available
+  
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+  
+  // Relations
+  staff               Staff       @relation(fields: [coachId], references: [userId], onDelete: Cascade)
+  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  @@index([coachId])
+  @@index([organizationId])
+}
+
+// ─────────────────────────────────────────────────────────────
+// COMMUNICATION SYSTEM
+// ─────────────────────────────────────────────────────────────
+
+model Message {
+  id                  String      @id @default(uuid())
+  fromId              String
+  toId                String
+  organizationId      String
+  
+  // Content
+  type                String      @default("text") // "text" | "voice" | "file"
+  content             String
+  attachmentUrl       String?
+  
+  // Context
+  sessionId           String?
+  
+  // Status
+  read                Boolean     @default(false)
+  readAt              DateTime?
+  
+  createdAt           DateTime    @default(now())
+  
+  // Relations
+  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  @@index([fromId])
+  @@index([toId])
+  @@index([organizationId])
+  @@index([createdAt])
+}
+
+model Announcement {
+  id                  String      @id @default(uuid())
+  organizationId      String
+  authorId            String
+  
+  title               String
+  content             String
+  audience            String      // "coaches" | "players" | "parents" | "all"
+  
+  postedAt            DateTime    @default(now())
+  expiresAt           DateTime?
+  updatedAt           DateTime    @updatedAt
+  
+  // Relations
+  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  @@index([organizationId])
+  @@index([audience])
+}
+
+// ─────────────────────────────────────────────────────────────
+// NOTIFICATION SYSTEM
+// ─────────────────────────────────────────────────────────────
+
+model Notification {
+  id                  String      @id @default(uuid())
+  organizationId      String
+  targetId            String      // User receiving notification
+  targetType          String      // "coach" | "player" | "parent"
+  
+  // Event
+  eventType           String      // "session_booked", "session_reminder", "session_completed", etc.
+  eventId             String?     // Reference to related entity
+  
+  // Content
+  title               String
+  body                String
+  action              String?     // "view_report", "book_session"
+  actionUrl           String?
+  
+  // Delivery
+  deliveryChannels    String[]    // ["sms", "push", "email"]
+  sentAt              DateTime?
+  readAt              DateTime?
+  
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+  
+  // Relations
+  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  @@index([targetId])
+  @@index([organizationId])
+  @@index([eventType])
+  @@index([sentAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// SESSION REPORTING
+// ─────────────────────────────────────────────────────────────
+
+model SessionReport {
+  id                  String      @id @default(uuid())
+  sessionId           String      @unique
+  
+  // Coach submission
+  rating              Int         // Overall session rating (0-100)
+  duration            Int         // Actual duration in minutes
+  playerAttendance    Json        // { playerId: attended (bool) }
+  
+  // Content
+  whatWasWorked       String[]    // Topics covered
+  focusAreasNext      String[]    // Next session focus
+  coachNotes          String?
+  
+  // Data collection
+  submittedAt         DateTime    @default(now())
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+  
+  // Relations
+  session             CoachSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  
+  @@index([sessionId])
+}
+
+// ─────────────────────────────────────────────────────────────
+// MULTI-LAYER REPORTING SYSTEM
+// ─────────────────────────────────────────────────────────────
+
+model PlayerReport {
+  id                  String      @id @default(uuid())
+  playerId            String
+  organizationId      String
+  
+  // Report period
+  reportDate          DateTime    @default(now())
+  periodStart         DateTime
+  periodEnd           DateTime
+  
+  // Metrics snapshot
+  metricsSnapshot     Json        // Current metric values
+  improvementScore    Int         @default(0) // 0-100
+  
+  // Analysis
+  strengths           String[]    // Top 3 areas
+  weaknesses          String[]    // Bottom 3 areas
+  coachNotes          String?
+  
+  // Recommendations
+  focusAreas          String[]
+  recommendedNextSteps String[]
+  
+  // Meta
+  generatedAt         DateTime    @default(now())
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+  
+  // Relations
+  player              Player      @relation(fields: [playerId], references: [userId], onDelete: Cascade)
+  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  @@index([playerId])
+  @@index([organizationId])
+  @@index([reportDate])
+}
+
+model ParentReport {
+  id                  String      @id @default(uuid())
+  parentId            String
+  childId             String
+  organizationId      String
+  
+  // Child info
+  childName           String
+  
+  // Summary (simplified for parents)
+  improvementSummary  String      // Headline improvement
+  sessionSummary      String      // Last 4 weeks summary
+  
+  // Key achievements
+  achievements        String[]
+  
+  // Next steps
+  recommendations     String[]
+  
+  // Financial
+  sessionsEnrolled    Int
+  totalPaid           Decimal     @db.Decimal(10, 2)
+  nextPaymentDue      DateTime?
+  
+  // Meta
+  generatedAt         DateTime    @default(now())
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+  
+  // Relations
+  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  @@index([parentId])
+  @@index([childId])
+  @@index([organizationId])
+  @@index([generatedAt])
+}
+
+model CoachReport {
+  id                  String      @id @default(uuid())
+  coachId             String
+  organizationId      String
+  
+  // Time period
+  periodStart         DateTime
+  periodEnd           DateTime
+  
+  // Stats
+  playersManaged      Int         @default(0)
+  sessionsCompleted   Int         @default(0)
+  sessionsScheduled   Int         @default(0)
+  completionRate      Float       @default(0) // 0-100
+  
+  // Performance
+  avgPlayerRating     Float       @default(0) // 0-5 stars
+  playersImproving    Int         @default(0)
+  playersStagnating   Int         @default(0)
+  
+  // Earnings
+  earningsThisPeriod  Decimal     @db.Decimal(10, 2) @default(0)
+  pendingEarnings     Decimal     @db.Decimal(10, 2) @default(0)
+  payoutSchedule      String?
+  
+  // Feedback
+  playerFeedback      String[]    // Recent reviews
+  
+  // Meta
+  generatedAt         DateTime    @default(now())
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+  
+  // Relations
+  staff               Staff       @relation(fields: [coachId], references: [userId], onDelete: Cascade)
+  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  @@index([coachId])
+  @@index([organizationId])
+  @@index([periodStart])
+}
+
+model OrgAnalytics {
+  id                  String      @id @default(uuid())
+  organizationId      String      @unique
+  
+  // Time period
+  date                DateTime    @default(now()) @updatedAt
+  
+  // Revenue
+  totalRevenue        Decimal     @db.Decimal(10, 2) @default(0)
+  revenueByType       Json        // { per_session: X, subscription: Y, tournament: Z }
+  
+  // Players
+  activePlayersCount  Int         @default(0)
+  newPlayersCount     Int         @default(0)
+  retentionRate       Float       @default(0) // 0-100
+  churnedPlayersCount Int         @default(0)
+  
+  // Coaches
+  activeCoachesCount  Int         @default(0)
+  totalCoachEarnings  Decimal     @db.Decimal(10, 2) @default(0)
+  avgCoachRating      Float       @default(0) // 0-5 stars
+  
+  // Sessions
+  sessionCompletionRate Float     @default(0) // 0-100
+  avgSessionRating    Float       @default(0) // 0-5 stars
+  sessionsByType      Json        // { "1-on-1": X, "group": Y }
+  
+  // Courts
+  courtUtilization    Float       @default(0) // 0-100
+  totalBookings       Int         @default(0)
+  peakHours           String[]    // Peak booking times
+  
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+  
+  // Relations
+  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+model Invoice {
+  id                  String      @id @default(uuid())
+  organizationId      String
+  playerId            String
+  
+  // Details
+  invoiceNumber       String      @unique
+  issueDate           DateTime    @default(now())
+  dueDate             DateTime
+  
+  // Items
+  lineItems           Json        // Array of { description, quantity, unitPrice, amount }
+  
+  // Totals
+  totalAmount         Decimal     @db.Decimal(10, 2)
+  paidAmount          Decimal     @db.Decimal(10, 2) @default(0)
+  
+  // Status
+  status              String      @default("draft") // "draft" | "issued" | "paid" | "overdue"
+  
+  // Payment
+  paymentMethod       String?
+  paidAt              DateTime?
+  
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+  
+  // Relations
+  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  player              Player      @relation(fields: [playerId], references: [userId], onDelete: Cascade)
+  
+  @@index([organizationId])
+  @@index([playerId])
+  @@index([status])
+  @@index([dueDate])
+}
+
+model PaymentMethod {
+  id                  String      @id @default(uuid())
+  organizationId      String
+  
+  // Type
+  type                String      // "mpesa" | "bank_transfer" | "card" | "cash"
+  name                String      // Display name
+  
+  // M-Pesa
+  mpesaBusinessCode   String?
+  mpesaAccountCode    String?
+  
+  // Bank
+  accountName         String?
+  accountNumber       String?
+  bankName            String?
+  swiftCode           String?
+  
+  // Card processing (Stripe, etc.)
+  stripeAccountId     String?
+  
+  // Active
+  isActive            Boolean     @default(true)
+  isDefault           Boolean     @default(false)
+  
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+  
+  // Relations
+  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  @@index([organizationId])
+  @@index([type])
+}
+
+model Subscription {
+  id                  String      @id @default(uuid())
+  organizationId      String
+  playerId            String
+  
+  // Details
+  type                String      // "monthly" | "quarterly" | "yearly"
+  sessionsPerPeriod   Int
+  pricePerPeriod      Decimal     @db.Decimal(10, 2)
+  
+  // Status
+  status              String      @default("active") // "active" | "paused" | "cancelled"
+  
+  // Dates
+  startDate           DateTime
+  endDate             DateTime?
+  nextBillingDate     DateTime
+  
+  // Auto-renewal
+  autoRenew           Boolean     @default(true)
+  
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+  
+  // Relations
+  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  player              Player      @relation(fields: [playerId], references: [userId], onDelete: Cascade)
+  
+  @@index([organizationId])
+  @@index([playerId])
+  @@index([status])
+  @@index([nextBillingDate])
+}
+
+model NotificationTrigger {
+  id                  String      @id @default(uuid())
+  organizationId      String
+  
+  // Event
+  eventType           String      // "session.completed", "progress.updated", etc.
+  triggerCondition    Json?       // Conditions for triggering (optional)
+  
+  // Recipients
+  notifyTo            String[]    // ["player", "parent", "coach", "admin"]
+  
+  // Channels
+  channels            String[]    // ["sms", "push", "email"]
+  
+  // Templates
+  messageTemplate     String
+  titleTemplate       String
+  
+  // Control
+  isActive            Boolean     @default(true)
+  retryCount          Int         @default(3)
+  retryDelayMinutes   Int         @default(5)
+  
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+  
+  // Relations
+  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  @@index([organizationId])
+  @@index([eventType])
+  @@index([isActive])
+}
+
+
+// ─────────────────────────────────────────────────────────────────────
+// EVENT LOG & DOMAIN EVENT TRACKING
+// ─────────────────────────────────────────────────────────────────────
+
+model EventLog {
+  id                String      @id
+  type              String      // SESSION_COMPLETED, INVOICE_CREATED, etc.
+  aggregateId       String      // Which entity changed (sessionId, playerId, etc.)
+  aggregateType     String      // Entity type (Session, Player, Organization, etc.)
+  organizationId    String
+  
+  occurredAt        DateTime    // When it actually happened
+  publishedAt       DateTime    // When published to event stream
+  processedAt       DateTime?   // When last processed
+  
+  status            String      @default("published") // published | processed | failed
+  payload           Json        // Full event data for handlers
+  metadata          Json?       // userId, source, correlationId, etc.
+  
+  // Processing audit trail
+  processingRecords Json?       // [{handlerName, status, error, timestamp}]
+  
+  createdAt         DateTime    @default(now())
+  
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  @@index([type])
+  @@index([aggregateId])
+  @@index([organizationId])
+  @@index([publishedAt])
+  @@index([status])
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// INVOICE & BILLING LAYER
+// ─────────────────────────────────────────────────────────────────────
+
+model InvoiceModel {
+  id                String      @id @default(uuid())
+  organizationId    String
+  playerId          String
+  parentId          String?     // Parent who pays
+  
+  // Invoice metadata
+  invoiceNumber     String      @unique // "INV-2026-001"
+  issueDate         DateTime    @default(now())
+  dueDate           DateTime
+  
+  // Billing breakdown
+  lineItems         Json        // [{description, sessionId, amount, quantity, date}]
+  totalAmount       Decimal     @db.Decimal(12, 2)
+  paidAmount        Decimal     @db.Decimal(12, 2) @default(0)
+  
+  // Status workflow
+  status            String      @default("draft") // draft | issued | paid | partial | overdue | failed
+  
+  // Payment tracking
+  paymentMethod     String?     // mpesa | bank_transfer | card
+  paidAt            DateTime?
+  
+  // Dispute/adjustment
+  notes             String?
+  
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  
+  organization      Organization @relation("InvoiceModels", fields: [organizationId], references: [id], onDelete: Cascade)
+  player            Player       @relation(fields: [playerId], references: [userId], onDelete: Cascade)
+  parentUser        User?        @relation("InvoiceParent", fields: [parentId], references: [id], onDelete: SetNull)
+  
+  @@unique([invoiceNumber, organizationId])
+  @@index([organizationId])
+  @@index([playerId])
+  @@index([status])
+  @@index([dueDate])
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// LEDGER SYSTEM (Source of truth for financial reconciliation)
+// ─────────────────────────────────────────────────────────────────────
+
+model LedgerEntry {
+  id                String      @id @default(uuid())
+  organizationId    String
+  
+  // Entry classification
+  type              String      // credit | debit
+  amount            Decimal     @db.Decimal(12, 2)
+  currency          String      @default("USD")
+  
+  // Source tracking
+  sourceType        String      // session | payout | refund | adjustment | subscription
+  sourceId          String?     // Reference to source entity
+  
+  // Accounts
+  debitAccount      String?     // coach_wallet, parent_receivable, etc.
+  creditAccount     String?     // revenue, coach_earned, etc.
+  
+  // Metadata
+  description       String
+  referenceId       String?     // Invoice, Payout, Session, etc.
+  
+  createdAt         DateTime    @default(now())
+  
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  @@index([organizationId])
+  @@index([sourceType])
+  @@index([createdAt])
+  @@index([referenceId])
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// PAYMENT RECOVERY & AUDIT
+// ─────────────────────────────────────────────────────────────────────
+
+model PaymentTransaction {
+  id                String      @id @default(uuid())
+  organizationId    String
+  
+  // Amount details
+  amount            Decimal     @db.Decimal(12, 2)
+  currency          String      @default("USD")
+  
+  // Gateway details
+  gateway           String      // stripe | mpesa | bank_transfer | paypal
+  transactionId     String?     // External transaction ID
+  idempotencyKey    String      // Prevent duplicate charges
+  
+  // Status tracking
+  status            String      @default("pending") // pending | processing | completed | failed | refunded
+  error             String?
+  
+  // Timestamps
+  initiatedAt       DateTime    @default(now())
+  completedAt       DateTime?
+  
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  @@unique([idempotencyKey])
+  @@index([organizationId])
+  @@index([status])
+  @@index([gateway])
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// PROGRESS WEIGHTING (Normalization for fair scoring)
+// ─────────────────────────────────────────────────────────────────────
+
+model MetricWeight {
+  id                String      @id @default(uuid())
+  organizationId    String
+  
+  // Metric definition
+  metricName        String      // "serve_accuracy", "stamina", "strategy", etc.
+  playerLevel       String      // beginner | intermediate | advanced | elite
+  
+  // Weighting (0-1, where 1 = 100%)
+  weight            Float       @default(1.0)
+  
+  // When this weight is valid
+  activeFrom        DateTime    @default(now())
+  activeTo          DateTime?
+  
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  @@unique([organizationId, metricName, playerLevel])
+  @@index([organizationId])
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// RECOMMENDATION GUARDRAILS
+// ─────────────────────────────────────────────────────────────────────
+
+model RecommendationConfig {
+  id                String      @id @default(uuid())
+  organizationId    String      @unique
+  
+  // Guardrails
+  maxActivePerPlayer Int        @default(3)
+  maxPerWeek        Int         @default(2)
+  confidenceThreshold Float     @default(0.7) // 0-1 scale
+  
+  // Audience
+  showLowConfidence  Boolean     @default(false) // Only internal?
+  
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// RECURRING SESSIONS (For scalable scheduling)
+// ─────────────────────────────────────────────────────────────────────
+
+model RecurringSession {
+  id                String      @id @default(uuid())
+  organizationId    String
+  coachId           String
+  
+  // Pattern definition
+  title             String
+  description       String?
+  pattern           String      // weekly | biweekly | monthly | custom
+  daysOfWeek        Int[]       // [1,3,5] = Mon, Wed, Fri
+  
+  // Time
+  startTime         DateTime    // First session start
+  endTime           DateTime    // First session end (to calculate duration)
+  timezone          String      @default("UTC")
+  
+  // Duration
+  startDate         DateTime    // Pattern begins
+  endDate           DateTime?   // Pattern ends (null = ongoing)
+  
+  // Limits
+  maxParticipants   Int         @default(1)
+  price             Float?
+  
+  // State
+  isActive          Boolean     @default(true)
+  
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  
+  organization      Organization @relation("RecurringSessions", fields: [organizationId], references: [id], onDelete: Cascade)
+  coach             Staff        @relation("RecurringCoachSessions", fields: [coachId], references: [userId], onDelete: Cascade)
+  generatedSessions CoachSession[] @relation("RecurringSource")
+  
+  @@index([organizationId])
+  @@index([coachId])
+  @@index([startDate, endDate])
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// PARENT-CHILD OWNERSHIP TRANSFER
+// ─────────────────────────────────────────────────────────────────────
+
+model OwnershipTransfer {
+  id                String      @id @default(uuid())
+  organizationId    String
+  playerId          String
+  parentId          String
+  
+  // Transfer state
+  status            String      @default("dependent") // dependent | transitioning | independent
+  
+  // Transition details
+  transferDate      DateTime?   // When autonomy begins
+  reason            String?     // age_of_majority | player_request | legal_order
+  
+  // Audit
+  initiatedBy       String?     // Admin or system
+  approvedAt        DateTime?
+  
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  player            Player       @relation(fields: [playerId], references: [userId], onDelete: Cascade)
+  parentUser        User         @relation("OwnershipTransferParent", fields: [parentId], references: [id], onDelete: Cascade)
+  
+  @@unique([playerId, parentId])
+  @@index([organizationId])
+  @@index([status])
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// NOTIFICATION RELIABILITY LOG
+// ─────────────────────────────────────────────────────────────────────
+
+model NotificationLogModel {
+  id                String      @id @default(uuid())
+  organizationId    String
+  
+  // What was sent
+  channel           String      // email | sms | push
+  template          String      // welcome_email, otp_sms, etc.
+  recipient         String      // email or phone
+  
+  // Processing
+  status            String      @default("pending") // pending | sent | failed | retrying
+  attempts          Int         @default(0)
+  maxAttempts       Int         @default(3)
+  
+  // Tracking
+  eventId           String?     // EventLog.id that triggered this
+  correlationId     String?     // Group related notifications
+  
+  // Error handling
+  lastError         String?
+  nextRetryAt       DateTime?
+  
+  sentAt            DateTime?
+  failedAt          DateTime?
+  
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  @@index([organizationId])
+  @@index([status])
+  @@index([channel])
+  @@index([nextRetryAt])
+  @@index([eventId])
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// PRECOMPUTED ANALYTICS (Snapshot tables for fast reporting)
+// ─────────────────────────────────────────────────────────────────────
+
+model DailyPlayerStats {
+  id                String      @id @default(uuid())
+  organizationId    String
+  playerId          String
+  date              DateTime    // UTC date
+  
+  // Session activity
+  sessionsAttended  Int         @default(0)
+  sessionsMissed    Int         @default(0)
+  
+  // Performance
+  avgRating         Float?
+  metricScores      Json?       // Snapshot of that day's metrics
+  
+  // Milestones
+  milestonesReached String[]    @default([])
+  
+  createdAt         DateTime    @default(now())
+  
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  player            Player       @relation(fields: [playerId], references: [userId], onDelete: Cascade)
+  
+  @@unique([organizationId, playerId, date])
+  @@index([organizationId])
+  @@index([date])
+}
+
+model CoachPerformanceSummary {
+  id                String      @id @default(uuid())
+  organizationId    String
+  coachId           String
+  period            String      // "2026-04" or "2026-W1"
+  
+  // Workload
+  sessionsCompleted Int         @default(0)
+  playersManaged    Int         @default(0)
+  avgSessionRating  Float?
+  
+  // Earnings
+  totalEarned       Decimal     @db.Decimal(12, 2) @default(0)
+  pendingPayout     Decimal     @db.Decimal(12, 2) @default(0)
+  
+  createdAt         DateTime    @default(now())
+  
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  coach             Staff        @relation("CoachPerformanceSummaries", fields: [coachId], references: [userId], onDelete: Cascade)
+  
+  @@unique([organizationId, coachId, period])
+  @@index([organizationId])
+  @@index([period])
+}
+
+model OrgMetricsSnapshot {
+  id                String      @id @default(uuid())
+  organizationId    String      @unique
+  
+  // Revenue
+  totalRevenue      Decimal     @db.Decimal(12, 2)
+  monthlyRecurring  Decimal     @db.Decimal(12, 2)
+  
+  // Players
+  activePlayersCount Int
+  newThisMonth      Int
+  churnedThisMonth  Int
+  
+  // Coaches
+  activeCoachesCount Int
+  avgCoachRating    Float?
+  totalCoachEarnings Decimal @db.Decimal(12, 2)
+  
+  // Health
+  completionRate    Float       // 0-1
+  avgSessionRating  Float?
+  
+  updatedAt         DateTime    @updatedAt
+  
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 }

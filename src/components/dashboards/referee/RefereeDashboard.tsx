@@ -148,6 +148,9 @@ export const RefereeDashboard: React.FC = () => {
   const [assignedTasks, setAssignedTasks] = useState<any[]>([]);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [tasksLoading, setTasksLoading] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+
+  // ===== SET UP ALL HOOKS FIRST - BEFORE ANY EARLY RETURNS =====
 
   // Read selected task from URL
   useEffect(() => {
@@ -155,97 +158,90 @@ export const RefereeDashboard: React.FC = () => {
     setSelectedTaskId(taskId);
   }, [searchParams]);
 
-  const handleTaskSelect = (taskId: string) => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set('section', 'Tasks');
-    params.set('taskId', taskId);
-    router.push(`?${params.toString()}`, { scroll: false });
-  };
-
-  const handleTaskClose = () => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.delete('taskId');
-    router.push(`?${params.toString()}`, { scroll: false });
-  };
-
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
-
-  const handleMessageClick = (personId: string, personName: string) => {
-    router.push(chatUrlForUser(personId, personName));
-  };
-
-  const handleChallenge = async (personId: string, personName: string) => {
-    if (!user?.id) {
-      setStatusMessage('Please sign in to send a challenge.');
-      return;
-    }
-
-    try {
-      await sendChallengeRequest(user.id, personId);
-      setStatusMessage(`Challenge request sent to ${personName}.`);
-    } catch (error: any) {
-      setStatusMessage(error?.message || 'Failed to send challenge request.');
-    }
-  };
-
-  const isProfile = activeNav === 'My Profile';
-
-  if (loading && !dashboardData) {
-    return <LoadingState icon="🧑‍⚖️" message="Loading referee dashboard..." />;
-  }
-
-  // Fetch real data on mount
+  // Main dashboard data fetching
   useEffect(() => {
+    let isMounted = true;
+    let dataFetched = false;  // Track if we actually got data
+    let timeoutId: NodeJS.Timeout | null = null;
+
+    // Set 15 second timeout as a safety net
+    timeoutId = setTimeout(() => {
+      if (isMounted && !dataFetched) {
+        console.error('[RefereeDashboard] Timeout: Dashboard data not fetched after 15 seconds');
+        setLoading(false);
+      }
+    }, 15000);
+
     const fetchRefereeDashboard = async () => {
       try {
         if (!user?.id) {
           console.warn('[RefereeDashboard] User ID not available yet');
-          // Set dummy data to escape loading state when user not available
-          setDashboardData({
-            referee: { id: '', name: 'Referee', photo: null, role: 'Referee', bio: '' },
-            recentMatches: [],
-            incomingMatches: [],
-            stats: null,
-          });
+          if (isMounted) {
+            setDashboardData({
+              referee: { id: '', name: 'Referee', photo: null, role: 'Referee', bio: '' },
+              recentMatches: [],
+              incomingMatches: [],
+              stats: null,
+            });
+            setLoading(false);
+          }
           return;
         }
+        
         const refereeId = user.id;
 
         const userRes = await authenticatedFetch(`/api/user/profile/${refereeId}`);
         if (userRes.ok) {
           const fullUserData = await userRes.json();
-          setProfileData(fullUserData);
-          setPersonalForm({
-            firstName: fullUserData.firstName || '',
-            lastName: fullUserData.lastName || '',
-            email: fullUserData.email || '',
-            phone: fullUserData.phone || '',
-            gender: fullUserData.gender || '',
-            dateOfBirth: fullUserData.dateOfBirth ? new Date(fullUserData.dateOfBirth).toISOString().split('T')[0] : '',
-            nationality: fullUserData.nationality || '',
-            bio: fullUserData.bio || '',
-            photo: fullUserData.photo || '',
-          });
+          if (isMounted) {
+            setProfileData(fullUserData);
+            setPersonalForm({
+              firstName: fullUserData.firstName || '',
+              lastName: fullUserData.lastName || '',
+              email: fullUserData.email || '',
+              phone: fullUserData.phone || '',
+              gender: fullUserData.gender || '',
+              dateOfBirth: fullUserData.dateOfBirth ? new Date(fullUserData.dateOfBirth).toISOString().split('T')[0] : '',
+              nationality: fullUserData.nationality || '',
+              bio: fullUserData.bio || '',
+              photo: fullUserData.photo || '',
+            });
+          }
         }
 
         const dashboardRes = await authenticatedFetch(`/api/dashboard/role?role=referee&userId=${refereeId}`);
         if (dashboardRes.ok) {
           const data = await dashboardRes.json();
-          setDashboardData(data);
-          setRefereeData(data.referee);
-          setMatches(data.recentMatches || []);
-          setIncomingMatches(data.incomingMatches || []);
-          setPerformance(data.stats || null);
-          setCertificates(data.referee?.certifications || []);
+          if (isMounted) {
+            dataFetched = true;
+            setDashboardData(data);
+            setRefereeData(data.referee);
+            setMatches(data.recentMatches || []);
+            setIncomingMatches(data.incomingMatches || []);
+            setPerformance(data.stats || null);
+            setCertificates(data.referee?.certifications || []);
+            setLoading(false);
+
+            // Clear the timeout since we got the data
+            if (timeoutId) {
+              clearTimeout(timeoutId);
+            }
+          }
+        } else {
+          if (isMounted) setLoading(false);
         }
       } catch (error) {
-        console.error('Error fetching referee dashboard:', error);
-      } finally {
-        setLoading(false);
+        console.error('[RefereeDashboard] Error fetching dashboard:', error);
+        if (isMounted) setLoading(false);
       }
     };
 
     fetchRefereeDashboard();
+
+    return () => {
+      isMounted = false;
+      if (timeoutId) clearTimeout(timeoutId);
+    };
   }, [user?.id]);
 
   // Auto-follow players and organizations on mount
@@ -293,6 +289,46 @@ export const RefereeDashboard: React.FC = () => {
     fetchAssignedTasks();
   }, [user?.id]);
 
+  // ===== END OF HOOKS SETUP =====
+
+  const handleTaskSelect = (taskId: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('section', 'Tasks');
+    params.set('taskId', taskId);
+    router.push(`?${params.toString()}`, { scroll: false });
+  };
+
+  const handleTaskClose = () => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete('taskId');
+    router.push(`?${params.toString()}`, { scroll: false });
+  };
+
+  const handleMessageClick = (personId: string, personName: string) => {
+    router.push(chatUrlForUser(personId, personName));
+  };
+
+  const handleChallenge = async (personId: string, personName: string) => {
+    if (!user?.id) {
+      setStatusMessage('Please sign in to send a challenge.');
+      return;
+    }
+
+    try {
+      await sendChallengeRequest(user.id, personId);
+      setStatusMessage(`Challenge request sent to ${personName}.`);
+    } catch (error: any) {
+      setStatusMessage(error?.message || 'Failed to send challenge request.');
+    }
+  };
+
+  const isProfile = activeNav === 'My Profile';
+
+  if (loading && !dashboardData) {
+    return <LoadingState icon="🧑‍⚖️" message="Loading referee dashboard..." />;
+  }
+
+  // Handle saving profile updates
   const handleSaveProfile = async () => {
     try {
       const res = await authenticatedFetch(`/api/user/profile/${user?.id}`, {

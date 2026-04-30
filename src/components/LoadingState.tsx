@@ -50,8 +50,8 @@ export const LoadingState: React.FC<LoadingStateProps> = ({
           ...baseStyles,
           minHeight: '100vh',
           padding: 32,
-          background: '#0f1f0f',
-          color: '#7aaa6a',
+          background: 'linear-gradient(to bottom right, #f0fdf4, #dcfce7)',
+          color: '#374151',
         }}
         className={className}
       >
@@ -68,7 +68,7 @@ export const LoadingState: React.FC<LoadingStateProps> = ({
           style={{
             fontSize: 16,
             fontWeight: 600,
-            color: '#7aaa6a',
+            color: '#1f2937',
           }}
         >
           {message}
@@ -88,10 +88,10 @@ export const LoadingState: React.FC<LoadingStateProps> = ({
       style={{
         ...baseStyles,
         padding: 40,
-        background: '#1a3020',
-        border: '1px solid #2d5a35',
+        background: 'linear-gradient(to bottom right, #f0fdf4, #dcfce7)',
+        border: '1px solid #bbf7d0',
         borderRadius: 10,
-        color: '#7aaa6a',
+        color: '#1f2937',
       }}
       className={className}
     >
@@ -108,7 +108,7 @@ export const LoadingState: React.FC<LoadingStateProps> = ({
         style={{
           fontSize: 13,
           fontWeight: 600,
-          color: '#7aaa6a',
+          color: '#374151',
         }}
       >
         {message}

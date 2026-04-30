@@ -538,7 +538,13 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    refreshContacts();
+    // Defer the initial contact fetch to avoid blocking the main dashboard load
+    // Schedule it after a delay to allow the main page to render first
+    const timeoutId = setTimeout(() => {
+      refreshContacts();
+    }, 500); // 500ms delay gives the page time to render
+
+    return () => clearTimeout(timeoutId);
   }, [playerId, user, refreshContacts]);
 
   const value: ChatContextType = {

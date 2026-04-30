@@ -4,7 +4,9 @@ import React, { useState, useRef, Suspense, lazy, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { authenticatedFetch } from '@/lib/authenticatedFetch';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';import { LoadingState } from '@/components/LoadingState';import SessionManagement from './coach/SessionManagement';
+import { useRouter, useSearchParams, useParams } from 'next/navigation';
+import { LoadingState } from '@/components/LoadingState';
+import SessionManagement from './coach/SessionManagement';
 import PlayerManagement from './coach/PlayerManagement';
 import AnalyticsSection from './coach/AnalyticsSection';
 import CalendarView from './coach/CalendarView';
@@ -103,6 +105,37 @@ export const CoachDashboard: React.FC = () => {
   const { user } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const params = useParams();
+  
+  // Get coach ID from URL params first, then fall back to user context
+  const coachIdFromURL = (params?.userId as string) || '';
+  const coachId = user?.id || coachIdFromURL;
+  
+  // State for real data
+  const [players, setPlayers] = useState<any[]>([]);
+  const [coachData, setCoachData] = useState<any>(null);
+  const [dashboardData, setDashboardData] = useState<any>(null);
+  const [earnings, setEarnings] = useState({ thisMonth: 0, pending: 0, perSession: 0, balance: 0, students: 0 });
+  const [stats, setStats] = useState({ studentCount: 0, rating: 0, totalSessions: 0 });
+  const [activities, setActivities] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [profileData, setProfileData] = useState<any>(null);
+  const [personalForm, setPersonalForm] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    gender: '',
+    dateOfBirth: '',
+    nationality: '',
+    bio: '',
+    photo: '',
+  });
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+
+
 
   // Read active section from URL, default to 'Dashboard'
   const activeNav = (searchParams.get('section') as string) || 'Dashboard';
@@ -118,7 +151,115 @@ export const CoachDashboard: React.FC = () => {
     router.push(`?${params.toString()}`, { scroll: false });
   };
 
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  // ===== SET UP ALL HOOKS FIRST - BEFORE ANY EARLY RETURNS =====
+  
+  // Fetch real data on mount
+  useEffect(() => {
+    console.log('[CoachDashboard] useEffect triggered with coachId:', coachId);
+    
+    let isMounted = true;
+    let dataFetched = false;  // Track if we actually got data
+    let timeoutId: NodeJS.Timeout | null = null;
+    
+    // Set 15 second timeout as a safety net
+    timeoutId = setTimeout(() => {
+      // Only log error if we still haven't fetched any data after 15 seconds
+      if (isMounted && !dataFetched) {
+        console.error('[CoachDashboard] Timeout: Dashboard data not fetched after 15 seconds');
+        setLoading(false);
+      }
+    }, 15000);
+
+    const doFetch = async () => {
+      try {
+        if (!coachId) {
+          console.log('[CoachDashboard] Skipping fetch - no coachId');
+          if (isMounted) setLoading(false);
+          return;
+        }
+
+        console.log('[CoachDashboard] Starting fetch with coachId:', coachId);
+        
+        const res = await authenticatedFetch(`/api/dashboard/role?role=coach&userId=${coachId}`);
+        
+        if (!isMounted) return;
+
+        console.log('[CoachDashboard] Response received:', res.status, res.ok);
+        if (res.ok) {
+          const data = await res.json();
+          console.log('[CoachDashboard] JSON parsed successfully, students:', data.students?.length);
+          
+          if (data.coach) {
+            console.log('[CoachDashboard] Setting profile data for:', data.coach.name);
+            setProfileData({
+              firstName: data.coach.firstName || '',
+              lastName: data.coach.lastName || '',
+              email: data.coach.email || '',
+              phone: data.coach.phone || '',
+              gender: data.coach.gender || '',
+              dateOfBirth: data.coach.dateOfBirth ? new Date(data.coach.dateOfBirth).toISOString().split('T')[0] : '',
+              nationality: data.coach.nationality || '',
+              bio: data.coach.bio || '',
+              photo: data.coach.photo || '',
+            });
+            setPersonalForm({
+              firstName: data.coach.firstName || '',
+              lastName: data.coach.lastName || '',
+              email: data.coach.email || '',
+              phone: data.coach.phone || '',
+              gender: data.coach.gender || '',
+              dateOfBirth: data.coach.dateOfBirth ? new Date(data.coach.dateOfBirth).toISOString().split('T')[0] : '',
+              nationality: data.coach.nationality || '',
+              bio: data.coach.bio || '',
+              photo: data.coach.photo || '',
+            });
+          }
+          
+          console.log('[CoachDashboard] About to set dashboard data');
+          // Mark that we successfully fetched data
+          dataFetched = true;
+          
+          setDashboardData(data);
+          setCoachData(data.coach);
+          setPlayers(data.students || []);
+          setEarnings(data.earnings || { thisMonth: 0, pending: 0, perSession: 0, balance: 0, students: 0 });
+          setStats(data.stats || { studentCount: 0, rating: 0, totalSessions: 0 });
+          setActivities(data.activities || []);
+          console.log('[CoachDashboard] About to set loading false');
+          if (isMounted) setLoading(false);
+          
+          // Clear the timeout since we got the data
+          if (timeoutId) {
+            clearTimeout(timeoutId);
+          }
+          
+          console.log('[CoachDashboard] Fetch completed successfully');
+        } else {
+          console.error('[CoachDashboard] API failed with status:', res.status);
+          if (isMounted) setLoading(false);
+        }
+      } catch (error) {
+        console.error('[CoachDashboard] Fetch exception:', error instanceof Error ? error.message : String(error));
+        if (typeof window !== 'undefined') {
+          window.__dashboardDebug.push(`[doFetch] Exception: ${error instanceof Error ? error.message : String(error)}`);
+        }
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    if (coachId) {
+      doFetch();
+    } else {
+      if (isMounted) setLoading(false);
+    }
+    
+    return () => {
+      isMounted = false;
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [coachId, user?.id]);
+  
+  // ===== END OF HOOKS SETUP =====
 
   const handleMessageClick = (personId: string, personName: string) => {
     router.push(chatUrlForUser(personId, personName));
@@ -148,34 +289,18 @@ export const CoachDashboard: React.FC = () => {
     router.push(`?${params.toString()}`, { scroll: false });
   };
 
-  // State for real data
-  const [players, setPlayers] = useState<any[]>([]);
-  const [coachData, setCoachData] = useState<any>(null);
-  const [dashboardData, setDashboardData] = useState<any>(null);
-  const [earnings, setEarnings] = useState({ thisMonth: 0, pending: 0, perSession: 0, balance: 0, students: 0 });
-  const [stats, setStats] = useState({ studentCount: 0, rating: 0, totalSessions: 0 });
-  const [activities, setActivities] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [editingProfile, setEditingProfile] = useState(false);
-  const [profileData, setProfileData] = useState<any>(null);
-  const [personalForm, setPersonalForm] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    gender: '',
-    dateOfBirth: '',
-    nationality: '',
-    bio: '',
-    photo: '',
-  });
-
   const isProfile = activeNav === 'My Profile';
 
   // If still loading, show loading state (but not forever - there's a timeout)
   if (loading && !dashboardData) {
-    return <LoadingState icon="🎾" message="Loading coach dashboard..." />;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-green-100">
+        <div className="text-center">
+          <div className="text-6xl mb-4">🎾</div>
+          <p className="text-xl font-semibold text-gray-700 mb-2">Loading coach dashboard...</p>
+        </div>
+      </div>
+    );
   }
 
   // Show error if loading failed
@@ -203,157 +328,13 @@ export const CoachDashboard: React.FC = () => {
 
   // If we have no dashboard data, use empty/fallback data so we don't get stuck
   const finalDashboardData = dashboardData || {
-    coach: { id: user?.id || '', name: 'Coach', photo: null, role: 'Coach', bio: '' },
+    coach: { id: coachId || user?.id || '', name: 'Coach', photo: null, role: 'Coach', bio: '' },
     students: [],
     nextSession: null,
     earnings: { thisMonth: 0, pending: 0, perSession: 0, balance: 0, students: 0 },
     activities: [],
     stats: { studentCount: 0, rating: 0, totalSessions: 0 },
   };
-
-  // Fetch real data on mount
-  useEffect(() => {
-    let isMounted = true;
-    let hasStartedFetch = false;
-    
-    const timeoutId = setTimeout(() => {
-      if (isMounted && !dashboardData) {
-        console.error('[CoachDashboard] Dashboard load timeout after 15 seconds, hasStartedFetch:', hasStartedFetch);
-        console.error('[CoachDashboard] User available:', !!user?.id);
-        // Force exit loading state with fallback data
-        setDashboardData({
-          coach: { id: user?.id || '', name: 'Coach', photo: null, role: 'Coach', bio: '' },
-          students: [],
-          nextSession: null,
-          earnings: { thisMonth: 0, pending: 0, perSession: 0, balance: 0, students: 0 },
-          activities: [],
-          stats: { studentCount: 0, rating: 0, totalSessions: 0 },
-        });
-        setLoading(false);
-      }
-    }, 15000); // 15 second timeout
-
-    const fetchCoachDashboard = async () => {
-      try {
-        hasStartedFetch = true;
-        console.log('[CoachDashboard] fetchCoachDashboard started, user:', user?.id);
-        
-        if (!user?.id) {
-          console.log('[CoachDashboard] User ID not available, setting fallback data');
-          if (isMounted) {
-            // Set dummy data to escape loading state when user not available
-            setDashboardData({
-              coach: { id: '', name: 'Coach', photo: null, role: 'Coach', bio: '' },
-              students: [],
-              nextSession: null,
-              earnings: { thisMonth: 0, pending: 0, perSession: 0, balance: 0, students: 0 },
-              activities: [],
-              stats: { studentCount: 0, rating: 0, totalSessions: 0 },
-            });
-            setLoading(false);
-          }
-          return;
-        }
-        const coachId = user.id;
-        console.log('[CoachDashboard] Starting fetch for coach:', coachId);
-
-        console.log('[CoachDashboard] Fetching user profile...');
-        const userRes = await authenticatedFetch(`/api/user/profile/${coachId}`);
-        console.log('[CoachDashboard] User profile response:', userRes.status);
-        if (userRes.ok && isMounted) {
-          const fullUserData = await userRes.json();
-          console.log('[CoachDashboard] User profile data received');
-          setProfileData(fullUserData);
-          setPersonalForm({
-            firstName: fullUserData.firstName || '',
-            lastName: fullUserData.lastName || '',
-            email: fullUserData.email || '',
-            phone: fullUserData.phone || '',
-            gender: fullUserData.gender || '',
-            dateOfBirth: fullUserData.dateOfBirth ? new Date(fullUserData.dateOfBirth).toISOString().split('T')[0] : '',
-            nationality: fullUserData.nationality || '',
-            bio: fullUserData.bio || '',
-            photo: fullUserData.photo || '',
-          });
-        } else if (!userRes.ok) {
-          console.warn('[CoachDashboard] Failed to fetch user profile:', userRes.status);
-        }
-
-        console.log('[CoachDashboard] Fetching dashboard data...');
-        const dashboardRes = await authenticatedFetch(`/api/dashboard/role?role=coach&userId=${coachId}`);
-        console.log('[CoachDashboard] Dashboard API response status:', dashboardRes.status);
-        
-        if (dashboardRes.ok && isMounted) {
-          const data = await dashboardRes.json();
-          console.log('[CoachDashboard] Dashboard data received successfully');
-          setDashboardData(data);
-          setCoachData(data.coach);
-          setPlayers(data.students || []);
-          setEarnings(data.earnings || { thisMonth: 0, pending: 0, perSession: 0, balance: 0, students: 0 });
-          setStats(data.stats || { studentCount: 0, rating: 0, totalSessions: 0 });
-          setActivities(data.activities || []);
-        } else if (!dashboardRes.ok) {
-          const errorText = await dashboardRes.text();
-          console.error('[CoachDashboard] Dashboard API failed:', dashboardRes.status, errorText);
-          if (isMounted) {
-            // Set dummy data to escape loading state
-            setDashboardData({
-              coach: { id: coachId, name: 'Coach', photo: null, role: 'Coach', bio: '' },
-              students: [],
-              nextSession: null,
-              earnings: { thisMonth: 0, pending: 0, perSession: 0, balance: 0, students: 0 },
-              activities: [],
-              stats: { studentCount: 0, rating: 0, totalSessions: 0 },
-            });
-          }
-        }
-      } catch (error) {
-        console.error('[CoachDashboard] Error fetching coach dashboard:', error);
-        if (isMounted) {
-          const errorMsg = error instanceof Error ? error.message : 'Unknown error occurred';
-          console.error('[CoachDashboard] Setting error state:', errorMsg);
-          setLoadError(`Failed to load dashboard: ${errorMsg}`);
-          // Fallback to prevent infinite loading
-          setDashboardData({
-            coach: { id: user?.id || '', name: 'Coach', photo: null, role: 'Coach', bio: '' },
-            students: [],
-            nextSession: null,
-            earnings: { thisMonth: 0, pending: 0, perSession: 0, balance: 0, students: 0 },
-            activities: [],
-            stats: { studentCount: 0, rating: 0, totalSessions: 0 },
-          });
-        }
-      } finally {
-        if (isMounted) {
-          console.log('[CoachDashboard] Setting loading to false');
-          setLoading(false);
-          clearTimeout(timeoutId);
-        }
-      }
-    };
-
-    console.log('[CoachDashboard] useEffect running, user:', user?.id);
-    if (user?.id) {
-      fetchCoachDashboard();
-    } else {
-      console.log('[CoachDashboard] Skipping fetch, no user ID yet');
-      // User not available yet, set fallback data to escape loading
-      setDashboardData({
-        coach: { id: '', name: 'Coach', photo: null, role: 'Coach', bio: '' },
-        students: [],
-        nextSession: null,
-        earnings: { thisMonth: 0, pending: 0, perSession: 0, balance: 0, students: 0 },
-        activities: [],
-        stats: { studentCount: 0, rating: 0, totalSessions: 0 },
-      });
-      setLoading(false);
-    }
-    
-    return () => {
-      isMounted = false;
-      clearTimeout(timeoutId);
-    };
-  }, [user?.id]);
 
   const handleSaveProfile = async () => {
     try {

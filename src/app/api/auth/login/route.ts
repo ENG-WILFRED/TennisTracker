@@ -8,8 +8,9 @@ import { recordEndpointMetrics } from '@/lib/monitoring';
 
 /**
  * Get all available roles for a user based on active memberships
+ * Includes inherited membership for kids through their parents/guardians
  */
-async function getUserAvailableRoles(userId: string): Promise<{ role: UserRole; orgId: string; orgName: string; status: string }[]> {
+async function getUserAvailableRoles(userId: string): Promise<{ role: UserRole; orgId: string; orgName: string; status: string; inheritedFrom?: string }[]> {
   const memberships = await prisma.membership.findMany({
     where: {
       userId,
@@ -31,8 +32,27 @@ async function getUserAvailableRoles(userId: string): Promise<{ role: UserRole; 
     }
   });
 
-  const rolesMap = new Map<string, { role: UserRole; orgId: string; orgName: string; status: string }>();
+  // Check if user is a staff member (coach, etc.)
+  const staff = await prisma.staff.findUnique({
+    where: {
+      userId
+    }
+  });
 
+  // Check for inherited membership through guardians (for kids/dependents)
+  const guardianships = await prisma.guardian.findMany({
+    where: {
+      dependentId: userId,
+      isApproved: true
+    },
+    include: {
+      guardian: true
+    }
+  });
+
+  const rolesMap = new Map<string, { role: UserRole; orgId: string; orgName: string; status: string; inheritedFrom?: string }>();
+
+  // Add direct memberships
   for (const membership of memberships) {
     const key = `${membership.orgId}:${membership.role}`;
     if (!rolesMap.has(key)) {
@@ -45,6 +65,7 @@ async function getUserAvailableRoles(userId: string): Promise<{ role: UserRole; 
     }
   }
 
+  // Add club memberships
   for (const clubMember of clubMemberships) {
     const key = `${clubMember.organizationId}:member`;
     if (!rolesMap.has(key)) {
@@ -52,6 +73,50 @@ async function getUserAvailableRoles(userId: string): Promise<{ role: UserRole; 
         role: 'member',
         orgId: clubMember.organizationId,
         orgName: clubMember.organization.name,
+        status: 'accepted',
+      });
+    }
+  }
+
+  // Add inherited memberships from guardians (for kids)
+  for (const guardianship of guardianships) {
+    const guardianMemberships = await prisma.membership.findMany({
+      where: {
+        userId: guardianship.guardianId,
+        status: 'accepted'
+      },
+      include: {
+        organization: true
+      }
+    });
+
+    for (const membership of guardianMemberships) {
+      const key = `${membership.orgId}:member:inherited`;
+      if (!rolesMap.has(key)) {
+        rolesMap.set(key, {
+          role: 'member',
+          orgId: membership.orgId,
+          orgName: membership.organization.name,
+          status: 'accepted',
+          inheritedFrom: guardianship.guardian.firstName + ' ' + guardianship.guardian.lastName
+        });
+      }
+    }
+  }
+
+  // Add coach role if staff exists (coaches MUST belong to an org)
+  if (staff && staff.role && staff.role.toLowerCase().includes('coach')) {
+    if (!staff.organizationId) {
+      throw new Error('Coaches must belong to an organization. Please contact your administrator.');
+    }
+    const coachOrgId = staff.organizationId;
+    const key = `${coachOrgId}:coach`;
+    if (!rolesMap.has(key)) {
+      const org = await prisma.organization.findUnique({ where: { id: coachOrgId } });
+      rolesMap.set(key, {
+        role: 'coach' as UserRole,
+        orgId: coachOrgId,
+        orgName: org?.name || 'Platform',
         status: 'accepted',
       });
     }
