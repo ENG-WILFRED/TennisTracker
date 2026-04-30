@@ -93,7 +93,7 @@ describe('Scenario 3: Payment Failure Handling', () => {
         startTime: tomorrow,
         endTime: endTime,
         status: 'pending',
-        price: testCourt.hourlyRate,
+        price: testCourt.peakPrice || 500,
       },
     });
     
@@ -103,7 +103,7 @@ describe('Scenario 3: Payment Failure Handling', () => {
         userId: testUser.id,
         eventId: testOrganization.id,
         bookingType: 'court_booking',
-        amount: testCourt.hourlyRate,
+        amount: testCourt.peakPrice || 500,
         currency: 'KES',
         provider: 'mpesa',
         providerStatus: 'pending', // Still pending after timeout
@@ -238,7 +238,7 @@ describe('Scenario 3: Payment Failure Handling', () => {
         startTime: tomorrow,
         endTime: endTime,
         status: 'pending',
-        price: testCourt.hourlyRate,
+        price: testCourt.peakPrice || 500,
       },
     });
     
@@ -250,7 +250,7 @@ describe('Scenario 3: Payment Failure Handling', () => {
         userId: testUser.id,
         eventId: testOrganization.id,
         bookingType: 'court_booking',
-        amount: testCourt.hourlyRate,
+        amount: testCourt.peakPrice || 500,
         currency: 'KES',
         provider: 'mpesa',
         providerStatus: 'failed', // Payment failed

@@ -11,7 +11,7 @@ export async function GET(
   { params }: { params: Promise<{ taskId: string }> }
 ) {
   try {
-    const auth = verifyApiAuth(req);
+    const auth = await verifyApiAuth(req);
     if (!auth) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

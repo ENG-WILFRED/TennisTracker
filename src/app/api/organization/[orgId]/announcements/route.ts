@@ -40,7 +40,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ org
         message,
         announcementType: announcementType || 'general',
         targetRoles: targetRoles || ['member'],
-        createdBy: auth.playerId,
+        createdBy: auth.userId,
       },
     });
 

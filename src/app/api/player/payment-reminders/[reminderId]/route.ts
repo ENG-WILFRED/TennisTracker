@@ -40,7 +40,7 @@ export async function PATCH(
     }
 
     // Optional: Verify the reminder belongs to the authenticated player
-    if (reminder.member.player.userId !== auth.playerId) {
+    if (reminder.member.player.userId !== auth.userId) {
       return NextResponse.json(
         { error: 'Forbidden: You do not have permission to update this reminder' },
         { status: 403 }

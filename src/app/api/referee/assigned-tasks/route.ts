@@ -36,7 +36,7 @@ export async function GET(request: Request) {
 
     // Query NEW typed Task model (active tasks only)
     const whereClause: any = {
-      assignedToId: auth.playerId,
+      assignedToId: auth.userId,
     };
 
     if (statusFilter && statusFilter !== 'all') {

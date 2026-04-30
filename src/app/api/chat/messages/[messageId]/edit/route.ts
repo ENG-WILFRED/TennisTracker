@@ -31,7 +31,7 @@ export async function PATCH(
     }
 
     // Check if user owns the message
-    if (message.playerId !== auth.playerId) {
+    if (message.playerId !== auth.userId) {
       return new Response(JSON.stringify({ error: 'You can only edit your own messages' }), { status: 403 });
     }
 

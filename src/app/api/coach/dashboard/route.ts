@@ -9,12 +9,12 @@ import { coachTaskOrchestrator } from "@/services/coach-task.orchestrator";
  */
 export async function GET(req: NextRequest) {
   try {
-    const auth = verifyApiAuth(req);
+    const auth = await verifyApiAuth(req);
     if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     // Verify user is a coach
     const coach = await prisma.staff.findUnique({
-      where: { userId: auth.playerId },
+      where: { userId: auth.userId },
     });
 
     if (!coach || coach.role !== "coach") {
@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
       );
     }
     
-    const dashboard = await coachTaskOrchestrator.getCoachDashboard(auth.playerId);
+    const dashboard = await coachTaskOrchestrator.getCoachDashboard(auth.userId);
 
     return NextResponse.json({
       success: true,

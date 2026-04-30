@@ -13,7 +13,7 @@ export async function POST(
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
     }
 
-    const userId = auth.playerId;
+    const userId = auth.userId;
     const { roomId } = await params;
 
     // Check if the room exists
@@ -91,7 +91,7 @@ export async function DELETE(
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
     }
 
-    const userId = auth.playerId;
+    const userId = auth.userId;
     const { roomId } = await params;
 
     // Update participant to offline

@@ -21,7 +21,7 @@ export async function GET(
   { params }: { params: Promise<{ orgId: string }> }
 ) {
   try {
-    const authResult = verifyApiAuth(req);
+    const authResult  = await verifyApiAuth(req);
     if (!authResult) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

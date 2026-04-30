@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const userId = auth.playerId;
+    const userId = auth.userId;
 
     // Get organizations where user is owner
     const ownedOrgs = await prisma.organization.findMany({

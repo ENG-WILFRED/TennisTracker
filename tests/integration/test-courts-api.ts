@@ -1,4 +1,4 @@
-import { PrismaClient } from './src/generated/prisma';
+import { PrismaClient } from '@/generated/prisma';
 
 const prisma = new PrismaClient({
   datasources: {
@@ -35,7 +35,7 @@ async function testCourtsAPI() {
     console.log(`2. Fetching courts for organization: ${coach.organizationId}`);
     const courts = await prisma.court.findMany({
       where: {
-        organizationId: coach.organizationId,
+        organizationId: coach.organizationId || undefined,
       },
       select: {
         id: true,
@@ -52,7 +52,7 @@ async function testCourtsAPI() {
 
     if (courts.length > 0) {
       console.log('Sample courts:');
-      courts.slice(0, 3).forEach((court) => {
+      courts.slice(0, 3).forEach((court: any) => {
         console.log(
           `  - ${court.name} (${court.surface}, ${court.indoorOutdoor}, ${court.lights ? 'with lights' : 'no lights'})`
         );

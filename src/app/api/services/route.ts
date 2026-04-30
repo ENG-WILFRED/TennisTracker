@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
     if (organizationId) {
       // Check if user is organization admin/staff
       const player = await prisma.player.findUnique({
-        where: { userId: auth.playerId },
+        where: { userId: auth.userId },
         select: { organizationId: true }
       });
 
@@ -119,7 +119,7 @@ export async function POST(request: NextRequest) {
     } else {
       // Check if user has provider profile
       const provider = await prisma.providerProfile.findUnique({
-        where: { userId: auth.playerId },
+        where: { userId: auth.userId },
         select: { id: true, isActive: true }
       });
 

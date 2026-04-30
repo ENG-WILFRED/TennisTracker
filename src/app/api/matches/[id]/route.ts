@@ -129,7 +129,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       }
       if (status === 'completed') {
         updateData.resultSubmittedAt = new Date();
-        updateData.resultSubmittedBy = auth.playerId;
+        updateData.resultSubmittedBy = auth.userId;
       }
 
       if (scoreSetA !== undefined) updateData.scoreSetA = scoreSetA;

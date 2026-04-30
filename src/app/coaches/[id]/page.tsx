@@ -29,8 +29,8 @@ export default async function CoachProfilePage({ params }: { params: Promise<{ i
 
   const { coach, club, students, studentsStats, performanceData, overallRating } = data;
   const coachName =
-    [coach.user.firstName, coach.user.lastName].filter(Boolean).join(" ") ||
-    coach.user.username;
+    [coach.firstName, coach.lastName].filter(Boolean).join(" ") ||
+    coach.name;
 
   return (
     <main className="min-h-screen py-8 bg-gradient-to-br from-green-50 to-sky-50 w-full px-4">
@@ -48,8 +48,8 @@ export default async function CoachProfilePage({ params }: { params: Promise<{ i
               <div className="relative flex-shrink-0">
                 <div className="w-40 h-40 rounded-full bg-gradient-to-br from-green-400 to-emerald-600 p-1 shadow-xl border-4 border-white overflow-hidden">
                   <img
-                    src={coach.user.photo ?? '/images/coach-placeholder.jpg'}
-                    alt={`${coach.user.firstName} ${coach.user.lastName}`}
+                    src={coach.photo ?? '/images/coach-placeholder.jpg'}
+                    alt={`${coach.firstName} ${coach.lastName}`}
                     className="w-full h-full rounded-full object-cover"
                   />
                 </div>
@@ -120,15 +120,15 @@ export default async function CoachProfilePage({ params }: { params: Promise<{ i
                   </svg>
                   <h3 className="font-semibold text-gray-900">Associated Club</h3>
                 </div>
-                <Link href={`/players/${club.userId || club.user.id}`}>
+                <Link href={`/players/${club.id}`}>
                   <div className="p-4 border-2 rounded-lg bg-gradient-to-r from-green-50 to-emerald-50 border-green-200 hover:border-green-400 hover:shadow-md transition-all cursor-pointer">
                     <div className="flex items-center gap-3">
                       <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-emerald-600 rounded-full flex items-center justify-center text-white font-bold">
-                        {club.user.firstName?.[0]}
+                        {club.name?.[0]}
                       </div>
                       <div>
-                        <div className="font-bold text-green-900">{club.user.firstName} {club.user.lastName}</div>
-                        {club.user.email && <div className="text-sm text-green-700">{club.user.email}</div>}
+                        <div className="font-bold text-green-900">{club.name}</div>
+                        {club.photo && <div className="text-sm text-green-700">{club.photo}</div>}
                       </div>
                     </div>
                   </div>

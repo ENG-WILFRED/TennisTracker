@@ -8,7 +8,7 @@ import { taskSubmissionService } from "@/services/task-submission.service";
  */
 export async function GET(req: NextRequest) {
   try {
-    const auth = verifyApiAuth(req);
+    const auth = await verifyApiAuth(req);
     if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { searchParams } = new URL(req.url);

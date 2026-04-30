@@ -9,7 +9,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const userId = auth.playerId;
+    const userId = auth.userId;
 
     const memberships = await prisma.membership.findMany({
       where: { userId },

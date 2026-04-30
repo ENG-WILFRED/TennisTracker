@@ -11,7 +11,7 @@ export async function POST(request: Request) {
 
   try {
     const user = await prisma.user.findUnique({
-      where: { id: auth.playerId },
+      where: { id: auth.userId },
       select: { termsDeclineCount: true },
     });
 
@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     // If 5th decline, delete account
     if (newDeclineCount >= 5) {
       await prisma.user.delete({
-        where: { id: auth.playerId },
+        where: { id: auth.userId },
       });
 
       return NextResponse.json({ 
@@ -37,7 +37,7 @@ export async function POST(request: Request) {
 
     // Otherwise, update decline count
     await prisma.user.update({
-      where: { id: auth.playerId },
+      where: { id: auth.userId },
       data: { termsDeclineCount: newDeclineCount },
     });
 

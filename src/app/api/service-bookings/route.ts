@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     if (asProvider) {
       // Get bookings for services provided by this user
       const provider = await prisma.providerProfile.findUnique({
-        where: { userId: auth.playerId },
+        where: { userId: auth.userId },
         select: { id: true }
       });
 
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
       whereClause.providerId = provider.id;
     } else {
       // Get bookings made by this user
-      whereClause.userId = auth.playerId;
+      whereClause.userId = auth.userId;
     }
 
     if (status) {
@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
 
     const booking = await prisma.serviceBooking.create({
       data: {
-        userId: auth.playerId,
+        userId: auth.userId,
         serviceId,
         providerId: service.providerId,
         contextType: 'general',

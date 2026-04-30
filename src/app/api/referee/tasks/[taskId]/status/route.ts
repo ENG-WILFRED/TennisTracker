@@ -56,7 +56,7 @@ export async function PUT(
     }
 
     // Verify the task is assigned to current user
-    if (task.assignedToId !== auth.playerId) {
+    if (task.assignedToId !== auth.userId) {
       return new Response(
         JSON.stringify({ error: 'Forbidden' }),
         { status: 403, headers: { 'Content-Type': 'application/json' } }
@@ -102,7 +102,7 @@ export async function PUT(
       status,
       timestamp: new Date().toISOString(),
       notes,
-      changedBy: auth.playerId,
+      changedBy: auth.userId,
     });
     updateData.statusHistory = statusHistory;
 
@@ -121,7 +121,7 @@ export async function PUT(
         taskId: taskId,
         action: status,
         status: task.status,
-        changedByUserId: auth.playerId,
+        changedByUserId: auth.userId,
         notes,
       }
     });

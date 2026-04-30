@@ -8,7 +8,7 @@ export async function POST(request: Request) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
     }
 
-    if (!auth.playerId) {
+    if (!auth.userId) {
       return new Response(JSON.stringify({ error: 'User not authenticated' }), { status: 401 });
     }
 
@@ -35,7 +35,7 @@ export async function POST(request: Request) {
       return new Response(JSON.stringify({ error: 'Target user ID or email is required' }), { status: 400 });
     }
 
-    if (targetId === auth.playerId) {
+    if (targetId === auth.userId) {
       return new Response(JSON.stringify({ error: 'Cannot create DM with yourself' }), { status: 400 });
     }
 
@@ -47,14 +47,14 @@ export async function POST(request: Request) {
           {
             participants: {
               every: {
-                playerId: { in: [auth.playerId, targetId] }
+                playerId: { in: [auth.userId, targetId] }
               }
             }
           },
           {
             participants: {
               none: {
-                playerId: { notIn: [auth.playerId, targetId] }
+                playerId: { notIn: [auth.userId, targetId] }
               }
             }
           }
@@ -112,14 +112,14 @@ export async function POST(request: Request) {
     // Create new DM room
     const newRoom = await prisma.chatRoom.create({
       data: {
-        name: `DM: ${auth.playerId} - ${targetId}`, // Internal name
+        name: `DM: ${auth.userId} - ${targetId}`, // Internal name
         description: `Direct message between users`,
         isDM: true,
-        createdBy: auth.playerId,
+        createdBy: auth.userId,
         participants: {
           create: [
             {
-              playerId: auth.playerId,
+              playerId: auth.userId,
               isOnline: true,
             },
             {

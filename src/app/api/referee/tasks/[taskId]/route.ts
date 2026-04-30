@@ -12,12 +12,12 @@ export async function GET(
 ) {
   const { taskId } = await params;
   try {
-    const auth = verifyApiAuth(req);
+    const auth = await verifyApiAuth(req);
     if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const status = await refereeTaskOrchestrator.getTournamentStatus(
       taskId,
-      auth.playerId
+      auth.userId
     );
 
     return NextResponse.json({
@@ -43,7 +43,7 @@ export async function PUT(
 ) {
   try {
     const { taskId } = await params;
-    const auth = verifyApiAuth(req);
+    const auth = await verifyApiAuth(req);
     if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { action, payload } = await req.json();
@@ -54,25 +54,25 @@ export async function PUT(
       case "accept":
         result = await refereeTaskOrchestrator.acceptTournament(
           taskId,
-          auth.playerId
+          auth.userId
         );
         break;
       case "start":
         result = await refereeTaskOrchestrator.startTournament(
           taskId,
-          auth.playerId
+          auth.userId
         );
         break;
       case "complete":
         result = await refereeTaskOrchestrator.completeTournament(
           taskId,
-          auth.playerId
+          auth.userId
         );
         break;
       case "reject":
         result = await refereeTaskOrchestrator.rejectTournament(
           taskId,
-          auth.playerId,
+          auth.userId,
           payload?.reason || "Task rejected"
         );
         break;

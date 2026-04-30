@@ -9,7 +9,7 @@ import { AssignTaskPayload } from "@/types/task-system";
  */
 export async function POST(req: NextRequest) {
   try {
-    const auth = verifyApiAuth(req);
+    const auth = await verifyApiAuth(req);
     if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const payload: {
@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
 
     const task = await taskLifecycleService.assignTask(
       payload.organizationId,
-      auth.playerId,
+      auth.userId,
       payload.assignmentPayload
     );
 

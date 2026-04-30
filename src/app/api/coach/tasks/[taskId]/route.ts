@@ -13,10 +13,10 @@ export async function GET(
 ) {
   try {
     const { taskId } = await params;
-    const auth = verifyApiAuth(req);
+    const auth = await verifyApiAuth(req);
     if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const task = await coachTaskOrchestrator.getTaskDetails(taskId, auth.playerId);
+    const task = await coachTaskOrchestrator.getTaskDetails(taskId, auth.userId);
 
     return NextResponse.json({
       success: true,
@@ -41,7 +41,7 @@ export async function PUT(
 ) {
   const { taskId } = await params;
   try {
-    const auth = verifyApiAuth(req);
+    const auth = await verifyApiAuth(req);
     if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { action, payload } = await req.json();
@@ -50,15 +50,15 @@ export async function PUT(
 
     switch (action) {
       case "accept":
-        task = await coachTaskOrchestrator.acceptTask(taskId, auth.playerId);
+        task = await coachTaskOrchestrator.acceptTask(taskId, auth.userId);
         break;
       case "start":
-        task = await coachTaskOrchestrator.startWork(taskId, auth.playerId);
+        task = await coachTaskOrchestrator.startWork(taskId, auth.userId);
         break;
       case "submit":
         const submission = await coachTaskOrchestrator.submitWork(
           taskId,
-          auth.playerId,
+          auth.userId,
           payload
         );
         return NextResponse.json({
@@ -67,7 +67,7 @@ export async function PUT(
           message: "Work submitted for review",
         });
       case "complete":
-        task = await taskLifecycleService.completeTask(taskId, auth.playerId);
+        task = await taskLifecycleService.completeTask(taskId, auth.userId);
         break;
       default:
         return NextResponse.json(

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma';
+import { broadcastToDevelopers } from '@/lib/socket';
 
 export async function POST(request: NextRequest) {
   try {
@@ -51,6 +52,27 @@ export async function POST(request: NextRequest) {
         status: 'open'
       }
     })
+
+    // Broadcast new bug report via WebSocket in real-time
+    try {
+      const newBugData = {
+        id: bugReport.id,
+        title: bugReport.title,
+        severity: bugReport.severity,
+        status: bugReport.status,
+        module: pageUrl ? new URL(pageUrl).pathname.split('/')[1] || 'unknown' : 'unknown',
+        reporter: `${user.firstName} ${user.lastName}`,
+        reporterEmail: user.email,
+        pageUrl,
+        userAgent,
+        createdAt: bugReport.createdAt.toISOString(),
+        description: description.substring(0, 100) + (description.length > 100 ? '...' : '')
+      };
+
+      broadcastToDevelopers('bug_reported', newBugData);
+    } catch (broadcastError) {
+      console.warn('Failed to broadcast new bug report:', broadcastError);
+    }
 
     // Send email notifications using producer
     const { notify } = await import('@/app/api/notification/producer')

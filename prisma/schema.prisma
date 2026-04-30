@@ -3002,3 +3002,96 @@ model OrgMetricsSnapshot {
   
   organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 }
+
+// ─────────────────────────────────────────────────────────────────────
+// TEST RESULTS & MONITORING
+// ─────────────────────────────────────────────────────────────────────
+
+model TestResult {
+  id                String      @id @default(uuid())
+  
+  // Test identification
+  suiteName         String      // "pilot-scenarios", "integration", "stress", etc.
+  testName          String      // "booking-payment-confirmation", "auth-stress", etc.
+  testGroup         String?     // Optional grouping
+  
+  // Execution details
+  status            String      // "PASS" | "FAIL" | "PENDING" | "SKIPPED" | "ERROR"
+  startTime         DateTime
+  endTime           DateTime
+  duration          Int         // milliseconds
+  
+  // Results
+  message           String?     // Success or error message
+  error             String?     // Full error trace if failed
+  output            String?     @db.Text // Console output
+  
+  // Metrics (for stress tests)
+  requestsCompleted Int?
+  requestsFailed    Int?
+  avgResponseTime   Float?      // milliseconds
+  minResponseTime   Float?
+  maxResponseTime   Float?
+  throughput        Float?      // requests per second
+  
+  // Environment
+  environment       String      @default("development") // development | staging | production
+  nodeVersion       String?
+  appVersion        String?
+  testRunId         String?     // Link to test run batch
+  
+  // Metadata
+  tags              String[]    @default([])
+  metadata          Json?       // Custom data
+  
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  
+  // Relations
+  testRun           TestRun?    @relation(fields: [testRunId], references: [id], onDelete: Cascade)
+  
+  @@index([suiteName])
+  @@index([status])
+  @@index([createdAt])
+  @@index([testRunId])
+  @@index([environment])
+}
+
+model TestRun {
+  id                String      @id @default(uuid())
+  
+  // Run identification
+  name              String      // "Full test suite run", "Stress test 2026-04-30", etc.
+  runType           String      // "unit" | "integration" | "e2e" | "stress" | "pilot"
+  
+  // Execution
+  status            String      @default("RUNNING") // RUNNING | PASSED | FAILED | INCOMPLETE
+  startTime         DateTime    @default(now())
+  endTime           DateTime?
+  duration          Int?        // milliseconds
+  
+  // Results summary
+  totalTests        Int         @default(0)
+  passedTests       Int         @default(0)
+  failedTests       Int         @default(0)
+  skippedTests      Int         @default(0)
+  
+  // Test details
+  results           TestResult[]
+  
+  // Environment
+  environment       String      @default("development")
+  nodeVersion       String?
+  appVersion        String?
+  
+  // Metadata
+  triggeredBy       String?     // manual | automated | ci-cd
+  notes             String?
+  
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  
+  @@index([runType])
+  @@index([status])
+  @@index([createdAt])
+}

@@ -34,12 +34,12 @@ export async function GET(request: Request) {
     const limit = parseInt(url.searchParams.get('limit') || '10');
     const statusFilter = url.searchParams.get('status');
 
-    console.log(`📋 Fetching my tasks for user: ${auth.playerId}, offset: ${offset}, limit: ${limit}`);
+    console.log(`📋 Fetching my tasks for user: ${auth.userId}, offset: ${offset}, limit: ${limit}`);
 
     // Find the staff member for this user
     const staff = await prisma.staff.findFirst({
       where: {
-        userId: auth.playerId,
+        userId: auth.userId,
       },
       select: {
         userId: true,
@@ -62,7 +62,7 @@ export async function GET(request: Request) {
 
     // Build where clause
     const whereClause: any = {
-      assignedToId: auth.playerId,
+      assignedToId: auth.userId,
     };
 
     if (statusFilter && statusFilter !== 'all') {
@@ -115,7 +115,7 @@ export async function GET(request: Request) {
       take: limit,
     });
 
-    console.log(`✅ Found ${typedTasks.length} tasks for user ${auth.playerId}`);
+    console.log(`✅ Found ${typedTasks.length} tasks for user ${auth.userId}`);
 
     // Format tasks
     const formattedTasks = typedTasks.map((task: typeof typedTasks[number]) => ({

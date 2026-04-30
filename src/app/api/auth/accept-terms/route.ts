@@ -11,7 +11,7 @@ export async function POST(request: Request) {
 
   try {
     await prisma.user.update({
-      where: { id: auth.playerId },
+      where: { id: auth.userId },
       data: { 
         acceptedTermsAt: new Date(),
         termsDeclineCount: 0  // Reset decline count on acceptance

@@ -10,12 +10,29 @@ export async function getCoachDashboard(coachId: string) {
       select: {
         userId: true,
         role: true,
-        specializationArea: true,
-        certifications: true,
+        expertise: true,
+        contact: true,
         bio: true,
-        hourlyRate: true,
         employedById: true,
         createdAt: true,
+        specializations: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        certifications: {
+          select: {
+            id: true,
+            name: true,
+            issuedAt: true,
+          },
+        },
+        pricing: {
+          select: {
+            pricePerSession: true,
+          },
+        },
         user: {
           select: {
             id: true,
@@ -85,7 +102,9 @@ export async function getCoachDashboard(coachId: string) {
         nationality: coach.user.nationality,
         role: 'coach',
         bio: coach.user.bio,
-        specializations: coach.specializationArea ? [coach.specializationArea] : [],
+        expertise: coach.expertise,
+        contact: coach.contact,
+        specializations: coach.specializations.map((s: any) => s.name),
         certifications: coach.certifications || [],
       },
       club: club ? {
@@ -112,7 +131,7 @@ export async function getCoachDashboard(coachId: string) {
       earnings: {
         thisMonth: 0,
         pending: 0,
-        perSession: coach.hourlyRate || 0,
+        perSession: coach.pricing?.pricePerSession || 0,
         balance: 0,
         students: studentCount,
       },

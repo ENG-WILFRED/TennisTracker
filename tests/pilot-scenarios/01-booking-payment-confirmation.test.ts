@@ -83,46 +83,48 @@ describe('Scenario 1: Complete Booking → Payment → Confirmation Flow', () =>
     tomorrow.setDate(tomorrow.getDate() + 1);
     tomorrow.setHours(9, 0, 0, 0);
     
-    const tomorrowEnd = new Date(tomorrow);
-    tomorrowEnd.setDate(tomorrowEnd.getDate() + 1);
+    const dateStr = tomorrow.toISOString().split('T')[0];
     
     const response = await fetch(
-      `${BASE_URL}/api/bookings/available-slots?courtId=${testCourt.id}&startDate=${tomorrow.toISOString()}&endDate=${tomorrowEnd.toISOString()}`,
+      `${BASE_URL}/api/bookings/available-slots?court=${testCourt.id}&date=${dateStr}&org=${testOrganization.id}`,
       { method: 'GET' }
     );
     
     expect(response.ok).toBe(true);
-    const data = await response.json();
+    const slots = await response.json();
     
-    expect(data.slots).toBeDefined();
-    expect(Array.isArray(data.slots)).toBe(true);
-    expect(data.slots.length).toBeGreaterThan(0);
+    expect(Array.isArray(slots)).toBe(true);
+    expect(slots.length).toBeGreaterThan(0);
     
     // Verify each slot has required fields
-    data.slots.forEach((slot: any) => {
-      expect(slot.startTime).toBeDefined();
-      expect(slot.endTime).toBeDefined();
-      expect(slot.available).toBe(true);
+    slots.forEach((slot: any) => {
+      expect(slot.hour).toBeDefined();
+      expect(slot.time).toBeDefined();
+      expect(typeof slot.available).toBe('boolean');
       expect(slot.price).toBeDefined();
-      expect(slot.isPeak).toBeDefined();
+      expect(typeof slot.isPeak).toBe('boolean');
     });
     
-    console.log(`✅ Found ${data.slots.length} available slots with pricing`);
+    console.log(`✅ Found ${slots.length} available slots with pricing`);
   }, TEST_TIMEOUT);
   
   it('should display court details before booking', async () => {
     console.log('\n📋 Test 1.2: Check court details...');
     
-    const response = await fetch(`${BASE_URL}/api/courts/${testCourt.id}`, {
+    const response = await fetch(`${BASE_URL}/api/courts/${testCourt.id}/details`, {
       method: 'GET',
     });
     
     expect(response.ok).toBe(true);
-    const court = await response.json();
+    const data = await response.json();
     
-    expect(court.name).toBe(testCourt.name);
+    const court = data.court;
+    expect(court).toBeDefined();
     expect(court.name).toBe(testCourt.name);
     expect(court.surface).toBe(testCourt.surface);
+    expect(court.courtNumber).toBe(testCourt.courtNumber);
+    
+    console.log(`✅ Court details retrieved: ${court.name}`);
     expect(court.capacity).toBe(testCourt.capacity);
     
     console.log(`✅ Court details visible: ${court.name} - KES ${court.peakPrice}/hour`);
@@ -156,7 +158,7 @@ describe('Scenario 1: Complete Booking → Payment → Confirmation Flow', () =>
         startTime: tomorrow,
         endTime: endTime,
         status: 'pending', // Not confirmed yet
-        price: testCourt.hourlyRate,
+        price: testCourt.peakPrice || 500,
         notes: bookingData.notes,
       },
     });

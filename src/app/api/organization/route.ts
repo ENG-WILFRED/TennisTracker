@@ -104,13 +104,13 @@ export async function POST(request: Request) {
         email,
         primaryColor,
         logo: logoUrl,
-        createdBy: auth.playerId,
+        createdBy: auth.userId,
       },
     });
 
     // Link the creator to the organization as a player member
     await prisma.player.updateMany({
-      where: { userId: auth.playerId },
+      where: { userId: auth.userId },
       data: { organizationId: org.id },
     });
 

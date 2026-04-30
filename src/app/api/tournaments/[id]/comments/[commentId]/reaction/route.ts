@@ -4,7 +4,7 @@ import { verifyApiAuth } from '@/lib/authMiddleware';
 export async function POST(request: Request, { params }: { params: Promise<{ id: string; commentId: string }> }) {
   try {
     const auth = await verifyApiAuth(request);
-    if (!auth?.playerId) {
+    if (!auth?.userId) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
     }
 
@@ -22,7 +22,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     }
 
     // Verify user is not the comment author
-    if (comment.authorId === auth.playerId) {
+    if (comment.authorId === auth.userId) {
       return new Response(JSON.stringify({ error: 'Cannot react to your own comment' }), { status: 400 });
     }
 
@@ -31,7 +31,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       where: {
         tournamentCommentId_userId: {
           tournamentCommentId: commentId,
-          userId: auth.playerId,
+          userId: auth.userId,
         },
       },
     });
@@ -49,7 +49,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const reaction = await prisma.tournamentCommentReaction.create({
       data: {
         tournamentCommentId: commentId,
-        userId: auth.playerId,
+        userId: auth.userId,
         type,
       },
     });

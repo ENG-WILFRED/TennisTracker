@@ -12,14 +12,14 @@ export async function POST(request: Request) {
     if (!coachId) return new Response(JSON.stringify({ error: 'coachId required' }), { status: 400 });
 
     // actor must be a club
-    const actor = await prisma.player.findUnique({ where: { userId: auth.playerId } });
+    const actor = await prisma.player.findUnique({ where: { userId: auth.userId } });
     if (!actor || !actor.isClub) {
       return new Response(JSON.stringify({ error: 'Only club accounts can employ coaches' }), { status: 403 });
     }
 
     const updated = await prisma.staff.update({
       where: { userId: coachId },
-      data: { employedBy: { connect: { userId: auth.playerId } } },
+      data: { employedBy: { connect: { userId: auth.userId } } },
     });
 
     return NextResponse.json({ success: true, staff: updated });

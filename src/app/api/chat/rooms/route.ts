@@ -9,7 +9,7 @@ export async function GET(request: Request) {
     }
 
     // Get current user - we only need the ID from the auth token
-    const userId = auth.playerId;
+    const userId = auth.userId;
 
     if (!userId) {
       return new Response(JSON.stringify({ error: 'User not found' }), { status: 404 });
@@ -119,7 +119,7 @@ export async function POST(request: Request) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
     }
 
-    const user = { id: auth.playerId };
+    const user = { id: auth.userId };
 
     if (!user) {
       return new Response(JSON.stringify({ error: 'User not found' }), { status: 404 });

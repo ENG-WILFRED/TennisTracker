@@ -53,7 +53,7 @@ export async function POST(
       );
     }
 
-    if (task.assignedToId !== auth.playerId) {
+    if (task.assignedToId !== auth.userId) {
       return new Response(
         JSON.stringify({ error: 'Forbidden' }),
         { status: 403, headers: { 'Content-Type': 'application/json' } }
@@ -64,7 +64,7 @@ export async function POST(
     const resourceRequest = await prisma.resourceRequest.create({
       data: {
         taskId: taskId,
-        requestedByUserId: auth.playerId,
+        requestedByUserId: auth.userId,
         resourceType,
         quantity: quantity || 1,
         description,
@@ -121,7 +121,7 @@ export async function GET(
       );
     }
 
-    if (task.assignedToId !== auth.playerId) {
+    if (task.assignedToId !== auth.userId) {
       return new Response(
         JSON.stringify({ error: 'Forbidden' }),
         { status: 403, headers: { 'Content-Type': 'application/json' } }

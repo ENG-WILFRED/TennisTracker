@@ -65,7 +65,7 @@ export async function POST(
       );
     }
 
-    if (task.assignedToId !== auth.playerId) {
+    if (task.assignedToId !== auth.userId) {
       return new Response(
         JSON.stringify({ error: 'Forbidden' }),
         { status: 403, headers: { 'Content-Type': 'application/json' } }
@@ -176,7 +176,7 @@ export async function PUT(
       select: { assignedToId: true }
     });
 
-    if (!task || task.assignedToId !== auth.playerId) {
+    if (!task || task.assignedToId !== auth.userId) {
       return new Response(
         JSON.stringify({ error: 'Forbidden' }),
         { status: 403, headers: { 'Content-Type': 'application/json' } }
@@ -193,7 +193,7 @@ export async function PUT(
     if (winnerId) updateData.winnerId = winnerId;
     if (status === 'done' || status === 'completed') {
       updateData.resultSubmittedAt = new Date();
-      updateData.resultSubmittedBy = auth.playerId;
+      updateData.resultSubmittedBy = auth.userId;
     }
 
     const updatedMatch = await prisma.tournamentMatch.update({

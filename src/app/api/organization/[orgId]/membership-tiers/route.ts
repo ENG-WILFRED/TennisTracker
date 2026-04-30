@@ -41,9 +41,9 @@ async function requireOrgManager(request: Request, orgId: string) {
   const organization = await prisma.organization.findUnique({ where: { id: orgId } });
   if (!organization) return { error: 'Organization not found', status: 404 };
 
-  const isOwner = organization.createdBy === auth.playerId;
+  const isOwner = organization.createdBy === auth.userId;
   const isAdmin = Boolean(await prisma.clubMember.findFirst({
-    where: { organizationId: orgId, playerId: auth.playerId, role: 'admin' },
+    where: { organizationId: orgId, playerId: auth.userId, role: 'admin' },
   }));
 
   if (!isOwner && !isAdmin) {

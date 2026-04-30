@@ -1,4 +1,4 @@
-import { getCoachDashboard } from './src/actions/dashboards';
+import { getCoachDashboard } from '@/actions/staff';
 
 async function testCoachDashboard() {
   const elenaId = '8217805e-a165-428c-9b1b-b847941023bb';

@@ -57,7 +57,7 @@ export async function GET(
       );
     }
 
-    if (task.assignedToId !== auth.playerId) {
+    if (task.assignedToId !== auth.userId) {
       return new Response(
         JSON.stringify({ error: 'Forbidden' }),
         { status: 403, headers: { 'Content-Type': 'application/json' } }

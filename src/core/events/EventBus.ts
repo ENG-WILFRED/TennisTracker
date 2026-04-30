@@ -9,7 +9,7 @@
  */
 
 import { publishNotification } from '@/app/api/notification/producer';
-import { prisma } from '@/lib/prisma';
+import prisma from '@/lib/prisma';
 import { DomainEvent, DomainEventType } from './DomainEvent';
 
 interface EventSubscription {
@@ -132,7 +132,7 @@ class EventBus {
       orderBy: { publishedAt: 'asc' },
     });
 
-    return events.map((e) => ({
+    return events.map((e: any) => ({
       id: e.id,
       type: e.type as DomainEventType,
       aggregateId: e.aggregateId,

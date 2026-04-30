@@ -92,7 +92,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ org
           status: 'accepted', // Staff roles are auto-approved
           joinedAt: new Date(),
           approvedAt: new Date(),
-          approvedBy: auth.playerId,
+          approvedBy: auth.userId,
         },
       });
 
@@ -118,11 +118,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ org
     }
 
     // Check if user is authorized (organization admin/owner)
-    const isOwner = organization.createdBy === auth.playerId;
+    const isOwner = organization.createdBy === auth.userId;
     const isAdmin = await prisma.clubMember.findFirst({
       where: {
         organizationId: orgId,
-        playerId: auth.playerId,
+        playerId: auth.userId,
         role: 'admin',
       },
     });

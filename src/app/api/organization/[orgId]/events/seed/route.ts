@@ -18,9 +18,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ org
     }
 
     // Check authorization
-    const isOwner = organization.createdBy === auth.playerId;
+    const isOwner = organization.createdBy === auth.userId;
     const isAdmin = await prisma.clubMember.findFirst({
-      where: { organizationId: orgId, playerId: auth.playerId, role: 'admin' },
+      where: { organizationId: orgId, playerId: auth.userId, role: 'admin' },
     });
 
     if (!isOwner && !isAdmin) {

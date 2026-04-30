@@ -27,7 +27,7 @@ export async function POST(request: Request) {
     const existingMembership = await prisma.membership.findFirst({
       where: {
         orgId: orgId,
-        userId: auth.playerId,
+        userId: auth.userId,
         role: role,
       },
     });
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
 
     const membership = await prisma.membership.create({
       data: {
-        userId: auth.playerId,
+        userId: auth.userId,
         orgId: orgId,
         role,
         status: 'pending',

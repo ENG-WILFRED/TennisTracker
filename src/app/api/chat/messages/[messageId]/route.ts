@@ -23,7 +23,7 @@ export async function DELETE(
     }
 
     // Check if the user is the owner of the message
-    if (message.playerId !== auth.playerId) {
+    if (message.playerId !== auth.userId) {
       return new Response(JSON.stringify({ error: 'You can only delete your own messages' }), { status: 403 });
     }
 

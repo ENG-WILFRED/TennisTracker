@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    if (!membership || membership.playerId !== auth.playerId) {
+    if (!membership || membership.playerId !== auth.userId) {
       return NextResponse.json(
         { error: 'Membership not found or access denied' },
         { status: 404 }

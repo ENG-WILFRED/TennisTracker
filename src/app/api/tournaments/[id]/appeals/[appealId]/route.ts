@@ -39,14 +39,14 @@ export async function PATCH(
     const ownedOrg = await prisma.organization.findFirst({
       where: { 
         id: tournament.organizationId,
-        createdBy: auth.playerId 
+        createdBy: auth.userId 
       }
     });
 
     // Check if user is a member with admin/owner role
     const memberRole = await prisma.clubMember.findFirst({
       where: { 
-        playerId: auth.playerId,
+        playerId: auth.userId,
         organizationId: tournament.organizationId,
         role: { in: ['admin', 'owner'] }
       },
@@ -65,7 +65,7 @@ export async function PATCH(
       data: {
         status,
         responseText: responseText.trim(),
-        respondedBy: auth.playerId,
+        respondedBy: auth.userId,
         respondedAt: new Date()
       },
       include: {

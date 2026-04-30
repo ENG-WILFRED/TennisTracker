@@ -3,7 +3,7 @@
  * Tests all coaches to ensure they can load correctly
  */
 
-import prisma from './src/lib/prisma.js';
+import prisma from '@/lib/prisma';
 
 const API_BASE = 'http://localhost:3020';
 

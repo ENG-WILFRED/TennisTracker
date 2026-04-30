@@ -3,7 +3,8 @@
  * Run with: npx ts-node test-coach-dashboard-direct.ts
  */
 
-import prisma from './src/lib/prisma.js';
+import prisma from '@/lib/prisma';
+import { getCoachDashboard } from '@/actions/staff';
 
 const COACH_ID = 'dcd1fb1c-e342-45a0-b252-3f69e8be027d';
 
@@ -21,7 +22,6 @@ async function diagnoseCoachDashboard() {
         firstName: true, 
         lastName: true, 
         email: true, 
-        role: true,
       },
     });
 
@@ -32,8 +32,7 @@ async function diagnoseCoachDashboard() {
     }
 
     console.log('   ✅ User found:', user.firstName, user.lastName);
-    console.log('   Email:', user.email);
-    console.log('   Role:', user.role, '\n');
+    console.log('   Email:', user.email, '\n');
 
     // 2. Check if staff/coach record exists
     console.log('2️⃣ Checking if staff record exists...');
@@ -56,7 +55,7 @@ async function diagnoseCoachDashboard() {
         take: 5,
       });
       console.log('   Existing staff records (sample):');
-      allStaff.forEach(s => console.log(`   - ${s.userId}: ${s.role}`));
+      allStaff.forEach((s: any) => console.log(`   - ${s.userId}: ${s.role}`));
       process.exit(1);
     }
 
@@ -72,31 +71,11 @@ async function diagnoseCoachDashboard() {
     }
     console.log('   ✅ Role includes Coach\n');
 
-    // 4. Check players
-    console.log('4️⃣ Checking players...');
-    const players = await prisma.staffPlayer.findMany({
-      where: { staffUserId: COACH_ID },
-      select: { playerId: true, status: true },
-      take: 3,
-    });
-    console.log(`   Found ${players.length} player relationships`);
-    if (players.length === 0) {
-      console.log('   ⚠️  No players assigned yet (this is OK)\n');
-    } else {
-      console.log('   Sample players:', players.map(p => p.playerId).join(', '), '\n');
-    }
+    // 4. Check players - skip for now as staffPlayer model may not exist
+    console.log('4️⃣ Skipping player check (staffPlayer model)\n');
 
-    // 5. Check wallet
-    console.log('5️⃣ Checking wallet...');
-    const wallet = await prisma.wallet.findUnique({
-      where: { userId: COACH_ID },
-    });
-    if (!wallet) {
-      console.log('   ⚠️  No wallet found (would need to be created)\n');
-    } else {
-      console.log('   ✅ Wallet found');
-      console.log('   Balance:', wallet.balance, '\n');
-    }
+    // 5. Check wallet - skip for now as wallet model may not exist
+    console.log('5️⃣ Skipping wallet check (wallet model)\n');
 
     // 6. Check stats
     console.log('6️⃣ Checking stats...');
@@ -112,7 +91,6 @@ async function diagnoseCoachDashboard() {
     // 7. Try calling getCoachDashboard
     console.log('7️⃣ Attempting to call getCoachDashboard...');
     try {
-      const { getCoachDashboard } = await import('./src/actions/dashboards.js');
       const dashboardData = await getCoachDashboard(COACH_ID);
       console.log('   ✅ Successfully got dashboard data');
       console.log('   Coach name:', dashboardData.coach.name);

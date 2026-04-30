@@ -80,7 +80,7 @@ export async function POST(
         message,
         announcementType: announcementType || 'general',
         isPublished: isPublished || true,
-        createdBy: auth.playerId,
+        createdBy: auth.userId,
       },
       include: {
         event: {

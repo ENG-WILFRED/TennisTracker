@@ -2,7 +2,7 @@ import { verifyToken } from './jwt';
 import { isAccessTokenBlacklisted } from './tokenBlacklist';
 
 export interface AuthenticatedRequest {
-  playerId: string;
+  userId: string;
   email: string;
   username: string;
 }
@@ -29,7 +29,7 @@ export async function extractAndVerifyToken(authHeader: string | null): Promise<
   }
 
   return {
-    playerId: payload.playerId,
+    userId: payload.playerId,
     email: payload.email,
     username: payload.username,
   };

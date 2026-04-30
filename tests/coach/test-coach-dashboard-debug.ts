@@ -58,9 +58,9 @@ async function testCoachDashboardLoading() {
     } else if (response.ok) {
       const data = await response.json();
       console.log('  ✅ SUCCESS: API returned data');
-      console.log('     Coach name:', data.coach?.name);
-      console.log('     Students count:', data.students?.length);
-      console.log('     Stats:', data.stats);
+      console.log('     Coach name:', (data as any).coach?.name);
+      console.log('     Students count:', (data as any).students?.length);
+      console.log('     Stats:', (data as any).stats);
     } else {
       const text = await response.text();
       console.log(`  ⚠️  Unexpected status: ${response.status}`);
@@ -94,7 +94,7 @@ async function testCoachDashboardLoading() {
     if (response.status === 400) {
       const errorData = await response.json();
       console.log('  ✅ Route exists (error is validation-related)');
-      console.log('     Error:', errorData.error);
+      console.log('     Error:', (errorData as any).error);
     } else {
       console.log(`  Route returned status: ${response.status}`);
     }

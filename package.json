@@ -33,6 +33,8 @@
     "test:stress:auth": "npx tsx tests/stress/auth-stress.ts",
     "test:stress:websocket": "npx tsx tests/stress/websocket-stress.ts",
     "test:stress:payment": "npx tsx tests/stress/payment-stress.ts",
+    "test:db": "npx tsx tests/test-runner-with-db.ts",
+    "test:db:suite": "npx tsx tests/test-runner-with-db.ts --suite",
     "dev": "tsx server.ts",
     "dev:next": "next dev",
     "websocket": "tsx src/websocket-server.ts",

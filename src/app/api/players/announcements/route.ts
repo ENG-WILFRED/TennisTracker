@@ -16,7 +16,7 @@ export async function GET(request: Request) {
       where: {
         member: {
           player: {
-            userId: auth.playerId,
+            userId: auth.userId,
           },
         },
       },

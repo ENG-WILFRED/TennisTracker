@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
     // Create booking request using ServiceBooking model fields
     const booking = await prisma.serviceBooking.create({
       data: {
-        userId: auth.playerId,
+        userId: auth.userId,
         serviceId,
         providerId: service.providerId,
         contextType: 'service-request',

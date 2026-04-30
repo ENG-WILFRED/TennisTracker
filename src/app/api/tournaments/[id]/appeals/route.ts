@@ -30,14 +30,14 @@ export async function GET(
     const ownedOrg = await prisma.organization.findFirst({
       where: { 
         id: tournament.organizationId,
-        createdBy: auth.playerId 
+        createdBy: auth.userId 
       }
     });
 
     // Check if user is a member with admin/owner role
     const memberRole = await prisma.clubMember.findFirst({
       where: { 
-        playerId: auth.playerId,
+        playerId: auth.userId,
         organizationId: tournament.organizationId,
         role: { in: ['admin', 'owner'] }
       },
@@ -54,7 +54,7 @@ export async function GET(
 
     // If not organizer, only show user's own appeals
     if (!isOrganizer) {
-      whereClause.userId = auth.playerId;
+      whereClause.userId = auth.userId;
     }
     const appeals = await prisma.ruleAppeal.findMany({
       where: whereClause,
@@ -111,7 +111,7 @@ export async function POST(
         id: true,
         organizationId: true,
         registrations: {
-          where: { member: { player: { userId: auth.playerId } } },
+          where: { member: { player: { userId: auth.userId } } },
           select: { id: true }
         }
       }
@@ -128,7 +128,7 @@ export async function POST(
     // Check if user already has a pending appeal for this rule
     const existingAppeal = await prisma.ruleAppeal.findFirst({
       where: {
-        userId: auth.playerId,
+        userId: auth.userId,
         eventId: tournamentId,
         ruleCategory: ruleCategory || null,
         ruleLabel: ruleLabel || null,
@@ -142,7 +142,7 @@ export async function POST(
 
     const appeal = await prisma.ruleAppeal.create({
       data: {
-        userId: auth.playerId,
+        userId: auth.userId,
         eventId: tournamentId,
         organizationId: tournament.organizationId,
         ruleCategory,

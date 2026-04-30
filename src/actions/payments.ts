@@ -393,15 +393,13 @@ export async function createCourtBooking(
     // Create the booking record
     const booking = await prisma.courtBooking.create({
       data: {
-        playerId: userId,
+        memberId: userId,
         courtId,
         organizationId,
         startTime: new Date(startTime),
         endTime: new Date(endTime),
-        matchType: matchType || 'singles',
+        bookingType: 'regular',
         status: 'confirmed',
-        paymentStatus: 'completed',
-        paymentId: paymentRecord.id,
         notes: metadata.notes || '',
       },
     });

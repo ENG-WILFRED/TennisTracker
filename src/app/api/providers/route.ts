@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const provider = await prisma.providerProfile.findUnique({
-      where: { userId: auth.playerId },
+      where: { userId: auth.userId },
       include: {
         user: { include: { user: true } },
         organization: true,
@@ -40,14 +40,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'businessName, phone, and description are required' }, { status: 400 });
     }
 
-    const existing = await prisma.providerProfile.findUnique({ where: { userId: auth.playerId } });
+    const existing = await prisma.providerProfile.findUnique({ where: { userId: auth.userId } });
     if (existing) {
       return NextResponse.json({ error: 'Provider profile already exists' }, { status: 409 });
     }
 
     const profile = await prisma.providerProfile.create({
       data: {
-        userId: auth.playerId,
+        userId: auth.userId,
         businessName,
         categories: Array.isArray(categories) ? categories : [],
         phone,
@@ -72,7 +72,7 @@ export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
 
-    const profile = await prisma.providerProfile.findUnique({ where: { userId: auth.playerId } });
+    const profile = await prisma.providerProfile.findUnique({ where: { userId: auth.userId } });
     if (!profile) {
       return NextResponse.json({ error: 'Provider profile not found' }, { status: 404 });
     }

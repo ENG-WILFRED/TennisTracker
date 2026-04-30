@@ -13,7 +13,7 @@ export async function GET(
     }
 
     const { matchId } = await params;
-    const userId = auth.playerId;
+    const userId = auth.userId;
 
     // Check if user is assigned as referee for tasks related to this match
     const match = await prisma.tournamentMatch.findUnique({

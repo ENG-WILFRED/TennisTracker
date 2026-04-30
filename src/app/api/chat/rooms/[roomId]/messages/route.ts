@@ -64,7 +64,7 @@ export async function GET(
     messagesToReturn.reverse();
 
     // Mark messages from others as read (only recent messages)
-    const me = await prisma.player.findUnique({ where: { userId: auth.playerId } });
+    const me = await prisma.player.findUnique({ where: { userId: auth.userId } });
     let readMessageIds: string[] = [];
     if (me && me.userId) {
       readMessageIds = messagesToReturn
@@ -83,7 +83,7 @@ export async function GET(
           data: {
             messageIds: readMessageIds,
             readAt: new Date().toISOString(),
-            readerId: auth.playerId,
+            readerId: auth.userId,
           },
         };
         broadcastToRoom(roomId, readReceiptMessage);
@@ -142,7 +142,7 @@ export async function POST(
     }
 
     const user = await prisma.player.findUnique({
-      where: { userId: auth.playerId },
+      where: { userId: auth.userId },
       include: { user: true },
     });
 

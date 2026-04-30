@@ -58,11 +58,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ org
 
     // Verify authorization
     const isOwner = await prisma.organization.findFirst({
-      where: { id: orgId, createdBy: auth.playerId }
+      where: { id: orgId, createdBy: auth.userId }
     });
 
     const isAdmin = await prisma.clubMember.findFirst({
-      where: { organizationId: orgId, playerId: auth.playerId, role: 'admin' }
+      where: { organizationId: orgId, playerId: auth.userId, role: 'admin' }
     });
 
     if (!isOwner && !isAdmin) {
@@ -188,11 +188,11 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ o
 
     // Verify authorization
     const isOwner = await prisma.organization.findFirst({
-      where: { id: orgId, createdBy: auth.playerId }
+      where: { id: orgId, createdBy: auth.userId }
     });
 
     const isAdmin = await prisma.clubMember.findFirst({
-      where: { organizationId: orgId, playerId: auth.playerId, role: 'admin' }
+      where: { organizationId: orgId, playerId: auth.userId, role: 'admin' }
     });
 
     if (!isOwner && !isAdmin) {

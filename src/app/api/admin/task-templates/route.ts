@@ -10,7 +10,7 @@ import { CreateTaskTemplate } from "@/types/task-system";
  */
 export async function GET(req: NextRequest) {
   try {
-    const auth = verifyApiAuth(req);
+    const auth = await verifyApiAuth(req);
     if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { searchParams } = new URL(req.url);
@@ -53,7 +53,7 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
   try {
-    const authUser = verifyApiAuth(req);
+    const authUser  = await verifyApiAuth(req);
     if (!authUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const payload: {
@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
     // Verify user is admin of organization
     const isAdmin = await prisma.staff.findFirst({
       where: {
-        userId: authUser.playerId,
+        userId: authUser.userId,
         role: "admin",
       },
     });

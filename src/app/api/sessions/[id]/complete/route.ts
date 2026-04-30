@@ -18,14 +18,15 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { createDomainEvent, publishEvent } from '@/core/events/EventBus';
+import prisma from '@/lib/prisma';
+import { createDomainEvent } from '@/core/events/DomainEvent';
+import { publishEvent } from '@/core/events/EventBus';
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const sessionId = params.id;
+  const { id: sessionId } = await params;
 
   try {
     // 1. FETCH SESSION
@@ -94,8 +95,8 @@ export async function PUT(
           platformFeePercent: 0.1,
           
           // For notifications
-          coachName: session.coach?.name || 'Coach',
-          playerName: session.player?.name || 'Player',
+          coachName: (session.coach as any)?.firstName || 'Coach',
+          playerName: (session.player as any)?.firstName || 'Player',
         },
         {
           userId: req.headers.get('x-user-id') || 'system',

@@ -13,7 +13,7 @@ export async function GET(
 ) {
   try {
     const { submissionId } = await params;
-    const auth = verifyApiAuth(req);
+    const auth = await verifyApiAuth(req);
     if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const submission = await taskSubmissionService.getSubmission(submissionId);
@@ -48,7 +48,7 @@ export async function PUT(
 ) {
   try {
     const { submissionId } = await params;
-    const auth = verifyApiAuth(req);
+    const auth = await verifyApiAuth(req);
     if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const payload: ReviewSubmissionPayload = await req.json();
@@ -57,7 +57,7 @@ export async function PUT(
 
     const submission = await taskSubmissionService.reviewSubmission(
       submissionId,
-      auth.playerId,
+      auth.userId,
       payload
     );
 

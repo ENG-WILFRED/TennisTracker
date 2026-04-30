@@ -9,7 +9,7 @@ import { verifyApiAuth } from '@/lib/authMiddleware';
 export async function GET(request: NextRequest) {
   try {
     // Verify authentication using JWT token from Authorization header
-    const auth = verifyApiAuth(request as unknown as Request);
+    const auth = await verifyApiAuth(request as unknown as Request);
     
     if (!auth) {
       return NextResponse.json(
@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const playerId = auth.playerId; // This is actually the userId
+    const playerId = auth.userId; // This is actually the userId
 
     // Get player and their registrations
     const player = await prisma.player.findUnique({

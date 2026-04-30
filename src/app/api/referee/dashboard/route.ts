@@ -10,12 +10,12 @@ import { refereeTaskOrchestrator } from "@/services/referee-task.orchestrator";
  */
 export async function GET(req: NextRequest) {
   try {
-    const auth = verifyApiAuth(req);
+    const auth = await verifyApiAuth(req);
     if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     // Verify user is a referee
     const referee = await prisma.referee.findUnique({
-      where: { userId: auth.playerId },
+      where: { userId: auth.userId },
     });
 
     if (!referee) {
@@ -26,8 +26,8 @@ export async function GET(req: NextRequest) {
     }
     
     const dashboard = await cacheResponse(
-      `referee-dashboard:${auth.playerId}`,
-      async () => refereeTaskOrchestrator.getRefereeDashboard(auth.playerId),
+      `referee-dashboard:${auth.userId}`,
+      async () => refereeTaskOrchestrator.getRefereeDashboard(auth.userId),
       10_000
     );
 

@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const userId = auth.playerId;
+    const userId = auth.userId;
 
     // Get all club memberships for the user (these are the applications)
     const applications = await prisma.clubMember.findMany({

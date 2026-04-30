@@ -51,14 +51,14 @@ export async function PUT(
     const member = await prisma.clubMember.findFirst({
       where: {
         organizationId: orgId,
-        player: { userId: auth.playerId },
+        player: { userId: auth.userId },
         role: { in: ['officer', 'manager', 'admin'] },
       },
     });
 
     // Also check if user is the organization owner
     const user = await prisma.user.findUnique({
-      where: { id: auth.playerId },
+      where: { id: auth.userId },
     });
 
     const isOwner = user?.email === organization.email;

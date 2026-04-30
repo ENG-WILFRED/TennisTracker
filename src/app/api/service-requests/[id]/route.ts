@@ -32,8 +32,8 @@ export async function PATCH(
     }
 
     // Verify authorization: provider can update or client can cancel
-    const isProvider = booking.service.providerId === auth.playerId;
-    const isClient = booking.userId === auth.playerId;
+    const isProvider = booking.service.providerId === auth.userId;
+    const isClient = booking.userId === auth.userId;
 
     if (!isProvider && !isClient) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });

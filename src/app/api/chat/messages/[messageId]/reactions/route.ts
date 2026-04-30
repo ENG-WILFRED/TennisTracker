@@ -35,7 +35,7 @@ export async function POST(
       where: {
         roomId_playerId: {
           roomId: message.roomId,
-          playerId: auth.playerId,
+          playerId: auth.userId,
         },
       },
     });
@@ -49,7 +49,7 @@ export async function POST(
       where: {
         messageId_playerId_emoji: {
           messageId,
-          playerId: auth.playerId,
+          playerId: auth.userId,
           emoji,
         },
       },
@@ -66,7 +66,7 @@ export async function POST(
         type: 'reaction_removed',
         data: {
           messageId,
-          playerId: auth.playerId,
+          playerId: auth.userId,
           emoji,
         },
       });
@@ -80,7 +80,7 @@ export async function POST(
       const reaction = await prisma.messageReaction.create({
         data: {
           messageId,
-          playerId: auth.playerId,
+          playerId: auth.userId,
           emoji,
         },
         include: {

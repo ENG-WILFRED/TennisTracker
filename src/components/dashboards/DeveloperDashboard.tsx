@@ -98,26 +98,24 @@ export function DeveloperDashboard() {
   const [cachedMetrics, setCachedMetrics] = useState<DeveloperMetrics | null>(null);
   const [organizations, setOrganizations] = useState<any[]>([]);
   const [testReports, setTestReports] = useState<any[]>([]);
+  const [runningTestId, setRunningTestId] = useState<string | null>(null);
+  const [testProgress, setTestProgress] = useState<Record<string, any>>({});
+  const [isRunningTests, setIsRunningTests] = useState(false);
   const wsRef = useRef<Socket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [metricsRes, bugsRes, orgsRes, reportsRes] = await Promise.all([
+        const [metricsRes, orgsRes, reportsRes] = await Promise.all([
           fetch('/api/developer/metrics'),
-          fetch('/api/developer/bugs?limit=20'),
           fetch('/api/developer/organizations'),
-          fetch('/api/developer/test-reports'),
+          fetch('/api/developer/test-results/stats?days=7'),
         ]);
         if (metricsRes.ok) {
           const metricsData = await metricsRes.json();
           setMetrics(metricsData);
           setCachedMetrics(metricsData);
-        }
-        if (bugsRes.ok) {
-          const d = await bugsRes.json();
-          setBugs(d.bugReports || []);
         }
         if (orgsRes.ok) {
           const orgsData = await orgsRes.json();
@@ -125,7 +123,7 @@ export function DeveloperDashboard() {
         }
         if (reportsRes.ok) {
           const reportsData = await reportsRes.json();
-          setTestReports(reportsData.reports || []);
+          setTestReports(reportsData.testRuns || []);
         }
       } catch {
         addToast('Failed to load developer dashboard data', 'error');
@@ -179,6 +177,46 @@ export function DeveloperDashboard() {
             addToast(note, 'info');
           });
 
+          // Real-time new bug reports
+          socket.on('bug_reported', (newBug: DeveloperBug) => {
+            setBugs(p => [newBug, ...p]);
+            const note = `New bug reported: "${newBug.title}"`;
+            setNotificationLog(p => [note, ...p.slice(0, 7)]);
+            addToast(note, 'warning');
+            setTimeline(p => [`New bug: ${newBug.title} — ${new Date().toLocaleTimeString()}`, ...p.slice(0, 9)]);
+          });
+
+          // Real-time test completion - refresh reports
+          socket.on('test_run_completed', async (data: any) => {
+            const note = `Test run completed: ${data.suite || 'all'}`;
+            setNotificationLog(p => [note, ...p.slice(0, 7)]);
+            setTimeline(p => [`Test run completed — ${new Date().toLocaleTimeString()}`, ...p.slice(0, 9)]);
+            
+            setIsRunningTests(false);
+            setRunningTestId(null);
+            
+            addToast(
+              `Tests completed! ${data.passed || 0}✓ ${data.failed || 0}✗`,
+              (data.failed || 0) > 0 ? 'warning' : 'success'
+            );
+            
+            // Refresh test reports
+            try {
+              const reportsRes = await fetch('/api/developer/test-results/stats?days=7');
+              if (reportsRes.ok) {
+                const reportsData = await reportsRes.json();
+                setTestReports(reportsData.testRuns || []);
+              }
+            } catch (err) {
+              console.error('Failed to refresh test reports:', err);
+            }
+          });
+
+          // Real-time test progress updates
+          socket.on('test_progress_update', (data: any) => {
+            setTestProgress(data);
+          });
+
           socket.on('disconnect', () => {
             setWsConnected(false);
             setTimeline(p => [`Socket.IO disconnected — ${new Date().toLocaleTimeString()}`, ...p.slice(0, 9)]);
@@ -216,19 +254,21 @@ export function DeveloperDashboard() {
   }, [addToast, cachedMetrics]);
 
   useEffect(() => {
-    const refreshBugs = async () => {
+    // Load bugs once from DB on component mount
+    const loadBugs = async () => {
       try {
         const r = await fetch('/api/developer/bugs?limit=20');
         if (r.ok) {
           const d = await r.json();
           setBugs(d.bugReports || []);
         }
-      } catch {}
+      } catch {
+        console.error('Failed to load bugs');
+      }
     };
 
-    refreshBugs();
-    const bugInterval = setInterval(refreshBugs, 15000);
-    return () => clearInterval(bugInterval);
+    loadBugs();
+    // No polling - updates come via WebSocket in real-time
   }, []);
 
   // Automatic ping every 5 minutes
@@ -264,6 +304,39 @@ export function DeveloperDashboard() {
     
     return () => clearInterval(pingInterval);
   }, [addToast]);
+
+  // Trigger test run
+  const triggerTestRun = async (suite: string) => {
+    setIsRunningTests(true);
+    try {
+      const response = await fetch('/api/developer/run-tests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          suite,
+          concurrent: '50',
+          duration: '60',
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        addToast(`Failed to trigger tests: ${error.error}`, 'error');
+        setIsRunningTests(false);
+        return;
+      }
+
+      const data = await response.json();
+      setRunningTestId(data.testRunId);
+      addToast(`Tests started: ${suite}`, 'success');
+      setTimeline(p => [`Tests triggered: ${suite} — ${new Date().toLocaleTimeString()}`, ...p.slice(0, 9)]);
+
+      // Tests will update via WebSocket listener (test_progress_update and test_run_completed events)
+    } catch (error) {
+      addToast('Failed to trigger tests', 'error');
+      setIsRunningTests(false);
+    }
+  };
 
   const openBugs = useMemo(() => bugs.filter(b => b.status !== 'resolved'), [bugs]);
   const selectedBug = useMemo(
@@ -934,27 +1007,132 @@ export function DeveloperDashboard() {
         ══════════════════════════════════════════ */}
         {activeTab === 'reports' && (
           <div className="animate-fadeIn space-y-4">
-            {/* Test reports list */}
-            <div className="rounded-2xl border border-slate-800/70 bg-slate-900/60 p-5 space-y-3">
-              <p className="text-[10px] tracking-widest uppercase text-slate-500">Test Reports</p>
-              {testReports.length === 0 && (
-                <p className="text-sm text-slate-600">No test reports available.</p>
-              )}
-              {testReports.map((report: any, i: number) => (
-                <div key={i} className="rounded-xl border border-slate-800/70 bg-slate-900/70 p-4">
+            {/* Test Runner Controls */}
+            <div className="rounded-2xl border border-slate-800/70 bg-slate-900/60 p-5">
+              <p className="text-[10px] tracking-widest uppercase text-slate-500 mb-4">Run Tests</p>
+              
+              {isRunningTests && runningTestId ? (
+                <div className="space-y-4">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-semibold text-slate-300">{report.name || `Report ${i + 1}`}</span>
-                    <span className="text-xs text-slate-500">{new Date(report.timestamp || Date.now()).toLocaleString()}</span>
+                    <p className="text-sm font-semibold text-cyan-300">Tests Running...</p>
+                    <p className="text-xs text-slate-400">{testProgress.progress?.toFixed(0) || 0}%</p>
                   </div>
-                  <p className="text-sm text-slate-400">{report.summary || 'No summary available'}</p>
-                  {report.details && (
-                    <details className="mt-2">
-                      <summary className="text-xs text-cyan-400 cursor-pointer">View Details</summary>
-                      <pre className="text-xs text-slate-500 mt-2 whitespace-pre-wrap">{JSON.stringify(report.details, null, 2)}</pre>
-                    </details>
-                  )}
+                  <div className="h-3 rounded-full bg-slate-800 overflow-hidden">
+                    <div
+                      className="h-3 rounded-full bg-gradient-to-r from-cyan-500 to-cyan-400 transition-all duration-300"
+                      style={{ width: `${testProgress.progress || 0}%` }}
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 gap-2 text-xs">
+                    <div className="text-center">
+                      <p className="text-slate-400">Total</p>
+                      <p className="font-bold text-slate-300">{testProgress.summary?.total || 0}</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-emerald-400">Passed</p>
+                      <p className="font-bold text-emerald-300">{testProgress.summary?.passed || 0}</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-red-400">Failed</p>
+                      <p className="font-bold text-red-300">{testProgress.summary?.failed || 0}</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-amber-400">Skipped</p>
+                      <p className="font-bold text-amber-300">{testProgress.summary?.skipped || 0}</p>
+                    </div>
+                  </div>
                 </div>
-              ))}
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                  {[
+                    { name: 'All Tests', suite: 'all', icon: '▶' },
+                    { name: 'Auth', suite: 'auth', icon: '🔐' },
+                    { name: 'Booking', suite: 'court-booking', icon: '📅' },
+                    { name: 'WebSocket', suite: 'websocket', icon: '🔌' },
+                    { name: 'Payment', suite: 'payment', icon: '💳' },
+                  ].map(test => (
+                    <button
+                      key={test.suite}
+                      onClick={() => triggerTestRun(test.suite)}
+                      disabled={isRunningTests}
+                      className="rounded-lg border border-slate-700/60 bg-slate-800/60 hover:bg-slate-800 hover:border-cyan-500/40 disabled:opacity-50 disabled:cursor-not-allowed px-3 py-2 text-xs sm:text-sm font-semibold text-slate-300 hover:text-cyan-300 transition-all"
+                    >
+                      {test.icon} {test.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Test reports summary */}
+            {testReports.length > 0 && (
+              <div className="rounded-2xl border border-slate-800/70 bg-slate-900/60 p-5">
+                <p className="text-[10px] tracking-widest uppercase text-slate-500 mb-4">Test Statistics (Last 7 Days)</p>
+                <div className="grid grid-cols-4 gap-3">
+                  <div className="rounded-lg bg-emerald-900/30 p-3 border border-emerald-700/30">
+                    <p className="text-xs text-emerald-300 font-semibold">Total Passed</p>
+                    <p className="text-lg font-bold text-emerald-400">{testReports[0]?.overallStats?.passedResults || 0}</p>
+                  </div>
+                  <div className="rounded-lg bg-red-900/30 p-3 border border-red-700/30">
+                    <p className="text-xs text-red-300 font-semibold">Total Failed</p>
+                    <p className="text-lg font-bold text-red-400">{testReports[0]?.overallStats?.failedResults || 0}</p>
+                  </div>
+                  <div className="rounded-lg bg-blue-900/30 p-3 border border-blue-700/30">
+                    <p className="text-xs text-blue-300 font-semibold">Pass Rate</p>
+                    <p className="text-lg font-bold text-blue-400">{(testReports[0]?.overallStats?.passRate || 0).toFixed(1)}%</p>
+                  </div>
+                  <div className="rounded-lg bg-amber-900/30 p-3 border border-amber-700/30">
+                    <p className="text-xs text-amber-300 font-semibold">Total Results</p>
+                    <p className="text-lg font-bold text-amber-400">{testReports[0]?.overallStats?.totalResults || 0}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Test runs list */}
+            <div className="rounded-2xl border border-slate-800/70 bg-slate-900/60 p-5 space-y-3">
+              <p className="text-[10px] tracking-widest uppercase text-slate-500">Recent Test Runs</p>
+              {testReports.length === 0 ? (
+                <p className="text-sm text-slate-600">No test runs available.</p>
+              ) : (
+                testReports[0]?.testRuns?.map((run: any, i: number) => (
+                  <div key={i} className="rounded-xl border border-slate-800/70 bg-slate-900/70 p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-semibold text-slate-300">{run.name}</span>
+                      <span className={`text-xs px-2 py-1 rounded ${run.status === 'PASSED' ? 'bg-emerald-900/60 text-emerald-300' : run.status === 'FAILED' ? 'bg-red-900/60 text-red-300' : 'bg-amber-900/60 text-amber-300'}`}>
+                        {run.status}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2 text-xs text-slate-400 mb-2">
+                      <div>✓ {run.passedTests || 0} passed</div>
+                      <div>✗ {run.failedTests || 0} failed</div>
+                      <div>⊘ {run.skippedTests || 0} skipped</div>
+                      <div>⏱ {((run.duration || 0) / 1000).toFixed(2)}s</div>
+                    </div>
+                    <p className="text-xs text-slate-500">{new Date(run.startTime).toLocaleString()}</p>
+                  </div>
+                ))
+              )}
+
+              {/* Latest failures */}
+              {testReports[0]?.latestFailures?.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-slate-800/70">
+                  <p className="text-[10px] tracking-widest uppercase text-slate-500 mb-3">Latest Failures</p>
+                  <div className="space-y-2">
+                    {testReports[0].latestFailures.map((failure: any, i: number) => (
+                      <div key={i} className="rounded-lg border border-red-700/30 bg-red-900/20 p-3">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <p className="text-xs font-semibold text-red-300">{failure.testName}</p>
+                            <p className="text-xs text-slate-400 mt-1">{failure.error}</p>
+                          </div>
+                          <span className="text-xs text-slate-500 ml-2">{((failure.duration || 0) / 1000).toFixed(2)}s</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

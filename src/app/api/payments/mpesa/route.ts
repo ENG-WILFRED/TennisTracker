@@ -31,6 +31,16 @@ export async function POST(request: Request) {
       );
     }
 
+    // Validate mobile number format before calling the action
+    if (!mobileNumber.match(/^254\d{9}$/)) {
+      const errorMsg = 'Invalid mobile number format. Use 254XXXXXXXXX';
+      console.error('M-Pesa validation failed:', errorMsg);
+      return new Response(
+        JSON.stringify({ success: false, error: errorMsg }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
     const result = await processMPesaPayment(mobileNumber, amount, accountReference || '', transactionDesc || '', userId, eventId, bookingType);
     return new Response(JSON.stringify(result), {
       status: result.success ? 200 : 400,

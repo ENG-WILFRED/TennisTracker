@@ -12,7 +12,7 @@ export async function authenticatedFetch(
   url: string,
   options: FetchOptions = {}
 ): Promise<Response> {
-  const { requireAuth = true, skipRetry = false, ...fetchOptions } = options;
+  const { requireAuth = true, skipRetry = false, ...fetchOptions } = options as any;
   const FETCH_TIMEOUT = 15000; // 15 second timeout
 
   const headers = new Headers(fetchOptions.headers);

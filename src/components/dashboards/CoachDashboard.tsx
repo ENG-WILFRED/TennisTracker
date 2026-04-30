@@ -241,7 +241,7 @@ export const CoachDashboard: React.FC = () => {
       } catch (error) {
         console.error('[CoachDashboard] Fetch exception:', error instanceof Error ? error.message : String(error));
         if (typeof window !== 'undefined') {
-          window.__dashboardDebug.push(`[doFetch] Exception: ${error instanceof Error ? error.message : String(error)}`);
+          (window as any).__dashboardDebug?.push(`[doFetch] Exception: ${error instanceof Error ? error.message : String(error)}`);
         }
         if (isMounted) setLoading(false);
       }
