@@ -275,6 +275,10 @@ model Organization {
   logo                    String?
   primaryColor            String?
   createdBy               String?
+  status                  String                   @default("pending") // pending, approved, rejected
+  approvedBy              String?
+  approvedAt              DateTime?
+  rejectionReason         String?
   createdAt               DateTime                 @default(now())
   updatedAt               DateTime                 @updatedAt
   activityScore           Int                      @default(0)

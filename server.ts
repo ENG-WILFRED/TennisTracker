@@ -12,6 +12,7 @@ import { parse } from 'url';
 import next from 'next';
 import { initializeSocketIO } from './src/lib/socket.js';
 import { collectDeveloperMetrics } from './src/lib/developerMetrics.js';
+import { initProducer, closeProducer } from './src/app/api/notification/producer.js';
 
 declare global {
   namespace NodeJS {
@@ -51,25 +52,34 @@ initializeSocketIO(server);
 // The internal broadcast endpoint remains available for external services to notify connected developers.
 
 // Start server
-server.listen(port, hostname, () => {
+server.listen(port, hostname, async () => {
   console.log(`🚀 Server running at http://${hostname}:${port}`);
   console.log(`🔗 Socket.IO endpoint: ws://${hostname}:${port}/api/socketio`);
   console.log(`📊 Environment: ${dev ? 'development' : 'production'}`);
+  
+  // Initialize Kafka producer
+  try {
+    await initProducer();
+  } catch (err) {
+    console.warn('[KAFKA] Producer initialization warning:', err instanceof Error ? err.message : err);
+  }
 });
 
 // Graceful shutdown
-process.on('SIGTERM', () => {
+process.on('SIGTERM', async () => {
   console.log('🛑 SIGTERM received, shutting down gracefully');
   if (process.metricsInterval) clearInterval(process.metricsInterval);
+  await closeProducer();
   server.close(() => {
     console.log('✅ Server closed');
     process.exit(0);
   });
 });
 
-process.on('SIGINT', () => {
+process.on('SIGINT', async () => {
   console.log('🛑 SIGINT received, shutting down gracefully');
   if (process.metricsInterval) clearInterval(process.metricsInterval);
+  await closeProducer();
   server.close(() => {
     console.log('✅ Server closed');
     process.exit(0);

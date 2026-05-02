@@ -8,6 +8,7 @@ import { useRole } from "@/context/RoleContext";
 import { RoleSelection } from "@/components/RoleSelection";
 import { useToast } from "@/components/ui/ToastContext";
 import { UserRole } from "@/config/roles";
+import { sendLoginNotification } from '@/actions/loginNotification';
 
 const G = {
   dark: "#0a180a",
@@ -172,6 +173,27 @@ export default function LoginPage() {
     );
 
     addToast('Login successful! Redirecting…', 'success');
+
+    // Send login notification email after successful role selection
+    try {
+      const notificationResult = await sendLoginNotification({
+        email: finalUser.email,
+        firstName: finalUser.firstName || finalUser.name?.split(' ')[0] || 'there',
+        selectedRole,
+        userId: finalUser.id,
+      });
+
+      if (notificationResult?.success) {
+        console.log(`[LOGIN-NOTIFICATION] Sent login email to ${finalUser.email} for user ${finalUser.firstName || finalUser.name?.split(' ')[0] || 'there'} with role ${selectedRole}`);
+      } else if (notificationResult && 'error' in notificationResult) {
+        console.error('[LOGIN-NOTIFICATION] Failed to send login email:', notificationResult.error);
+      } else {
+        console.error('[LOGIN-NOTIFICATION] Failed to send login email: unknown error');
+      }
+    } catch (error) {
+      console.error('[LOGIN-NOTIFICATION] Failed to send login email:', error);
+      // Don't block login flow if notification fails
+    }
 
     setTimeout(() => {
       if (finalUser.id && selectedRole) {

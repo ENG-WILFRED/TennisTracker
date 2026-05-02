@@ -397,12 +397,12 @@ export function DeveloperDashboard() {
     }
   };
 
-  const handleOrganizationAction = async (orgId: string, action: 'approve' | 'reject') => {
+  const handleOrganizationAction = async (orgId: string, action: 'approve' | 'reject', rejectionReason?: string) => {
     try {
-      const response = await fetch('/api/developer/organizations', {
+      const response = await fetch(`/api/developer/organizations/${orgId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: orgId, action }),
+        body: JSON.stringify({ action, rejectionReason }),
       });
 
       if (response.ok) {

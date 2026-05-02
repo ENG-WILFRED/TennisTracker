@@ -79,6 +79,7 @@ export const SpectatorDashboard: React.FC = () => {
   const [orgLoading, setOrgLoading] = useState(false);
   const [orgError, setOrgError] = useState('');
   const [orgSuccess, setOrgSuccess] = useState(false);
+  const [pendingOrgs, setPendingOrgs] = useState<Array<{ id: string; name: string; status: string; createdAt: string }>>([]);
 
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -181,6 +182,42 @@ export const SpectatorDashboard: React.FC = () => {
     }
   };
 
+  const fetchPendingOrganizations = async () => {
+    try {
+      const response = await authenticatedFetch('/api/organization?status=pending');
+      if (response.ok) {
+        const data = await response.json();
+        // Filter to only show orgs created by the current user
+        const myPendingOrgs = (Array.isArray(data) ? data : []).filter((org: any) => org.createdBy === user?.id && org.status === 'pending');
+        setPendingOrgs(myPendingOrgs);
+      } else {
+        setPendingOrgs([]);
+      }
+    } catch (error) {
+      console.error('Failed to fetch pending organizations:', error);
+      setPendingOrgs([]);
+    }
+  };
+
+  const handleRemindOrg = async (orgId: string) => {
+    try {
+      const response = await authenticatedFetch('/api/organization/remind', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ organizationId: orgId }),
+      });
+
+      const result = await response.json();
+      if (!response.ok) {
+        showToast(result.error || 'Failed to send reminder.', 'error');
+      } else {
+        showToast(result.message || 'Reminder sent to developers!', 'success');
+      }
+    } catch (error: any) {
+      showToast(error?.message || 'Failed to send reminder.', 'error');
+    }
+  };
+
   const connectWebSocket = (matchId: string) => {
     if (wsRef.current) {
       wsRef.current.close();
@@ -229,7 +266,7 @@ export const SpectatorDashboard: React.FC = () => {
   useEffect(() => {
     const initializeData = async () => {
       setLoading(true);
-      await Promise.all([fetchMatches(1, matchSort), fetchPlayers(), fetchOrganizations(), fetchUserApplications()]);
+      await Promise.all([fetchMatches(1, matchSort), fetchPlayers(), fetchOrganizations(), fetchUserApplications(), fetchPendingOrganizations()]);
       setLoading(false);
     };
 
@@ -458,8 +495,12 @@ export const SpectatorDashboard: React.FC = () => {
       // Success - show success screen
       setOrgSuccess(true);
       
-      // Refresh organizations list
-      const orgsResponse = await authenticatedFetch('/api/organizations');
+      // Refresh organizations list and pending organizations
+      const [orgsResponse] = await Promise.all([
+        authenticatedFetch('/api/organizations'),
+        fetchPendingOrganizations(),
+      ]);
+      
       if (orgsResponse.ok) {
         const orgsData = await orgsResponse.json();
         setOrganizations(orgsData.organizations || []);
@@ -596,6 +637,8 @@ export const SpectatorDashboard: React.FC = () => {
             orgError={orgError}
             orgSuccess={orgSuccess}
             setOrgSuccess={setOrgSuccess}
+            pendingOrgs={pendingOrgs}
+            onRemindOrg={handleRemindOrg}
           />
         );
       case 'Apply':

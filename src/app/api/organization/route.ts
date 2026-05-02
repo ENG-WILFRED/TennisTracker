@@ -1,9 +1,17 @@
 import prisma from '@/lib/prisma';
 import { verifyApiAuth } from '@/lib/authMiddleware';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const url = new URL(request.url);
+    const status = url.searchParams.get('status');
+
+    // Build where clause based on status filter
+    const whereClause = status ? { status: status as any } : {};
+
+    // Use a single query with aggregations for better performance
     const orgs = await prisma.organization.findMany({
+      where: whereClause,
       orderBy: { createdAt: 'desc' },
       take: 50,
       include: {
@@ -24,28 +32,26 @@ export async function GET() {
           },
           take: 10,
         },
+        _count: {
+          select: {
+            players: true,
+            staff: true,
+            inventory: true,
+            events: true,
+          },
+        },
       },
     });
 
-    // Enrich with counts
-    const enrichedOrgs = await Promise.all(
-      orgs.map(async (org: Awaited<ReturnType<typeof prisma.organization.findMany>>[number]) => {
-        const [members, courts, events] = await Promise.all([
-          prisma.clubMember.count({ where: { organizationId: org.id } }),
-          prisma.court.count({ where: { organizationId: org.id } }),
-          prisma.clubEvent.count({ where: { organizationId: org.id } }),
-        ]);
-
-        return {
-          ...org,
-          _count: {
-            members,
-            courts,
-            events,
-          },
-        };
-      })
-    );
+    // Transform the data to match the expected format
+    const enrichedOrgs = orgs.map((org) => ({
+      ...org,
+      _count: {
+        members: (org._count.players || 0) + (org._count.staff || 0),
+        courts: org._count.inventory || 0, // Assuming inventory represents courts
+        events: org._count.events || 0,
+      },
+    }));
 
     return new Response(JSON.stringify(enrichedOrgs), {
       status: 200,
@@ -93,7 +99,7 @@ export async function POST(request: Request) {
       return new Response(JSON.stringify({ error: 'Name is required' }), { status: 400 });
     }
 
-    // Create organization
+    // Create organization with pending status
     const org = await prisma.organization.create({
       data: {
         name,
@@ -105,6 +111,7 @@ export async function POST(request: Request) {
         primaryColor,
         logo: logoUrl,
         createdBy: auth.userId,
+        status: 'pending', // Organization starts in pending status for developer approval
       },
     });
 

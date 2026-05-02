@@ -1022,6 +1022,8 @@ export function CreateOrgSection({
   orgError,
   orgSuccess,
   setOrgSuccess,
+  pendingOrgs = [],
+  onRemindOrg,
 }: {
   orgFormData: {
     name: string;
@@ -1037,10 +1039,70 @@ export function CreateOrgSection({
   orgError: string;
   orgSuccess: boolean;
   setOrgSuccess: (value: boolean) => void;
+  pendingOrgs?: Array<{
+    id: string;
+    name: string;
+    status: string;
+    createdAt: string;
+  }>;
+  onRemindOrg?: (orgId: string) => Promise<void>;
 }) {
+  const [remindingOrgId, setRemindingOrgId] = React.useState<string | null>(null);
+
+  const handleRemind = async (orgId: string) => {
+    setRemindingOrgId(orgId);
+    try {
+      if (onRemindOrg) {
+        await onRemindOrg(orgId);
+      }
+    } finally {
+      setRemindingOrgId(null);
+    }
+  };
+
   return (
     <SectionCard title="Create Your Organization" subtitle="Start your own sports organization or club">
       <div className="flex flex-col gap-4">
+        {/* Show pending organizations if any */}
+        {pendingOrgs.length > 0 && (
+          <div className="rounded-xl p-4" style={{ background: '#1b2f1b', border: '1px solid #243e24' }}>
+            <p className="text-sm font-semibold mb-3" style={{ color: '#f3d55b' }}>
+              ⏳ Organizations Pending Approval ({pendingOrgs.length})
+            </p>
+            <div className="space-y-3">
+              {pendingOrgs.map((org) => (
+                <div
+                  key={org.id}
+                  className="rounded-2xl p-3 flex items-center justify-between gap-3"
+                  style={{ background: '#132917', border: '1px solid #243e24' }}
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold truncate" style={{ color: '#e8f5e0' }}>
+                      {org.name}
+                    </p>
+                    <p className="text-xs mt-1" style={{ color: '#7aaa6a' }}>
+                      Created: {new Date(org.createdAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => handleRemind(org.id)}
+                    disabled={remindingOrgId === org.id}
+                    className="flex-shrink-0 px-3 py-1 rounded-lg text-xs font-semibold transition-all"
+                    style={{
+                      background: remindingOrgId === org.id ? '#0f1f0f' : '#2d5a27',
+                      color: remindingOrgId === org.id ? '#7aaa6a' : '#e8f5e0',
+                      border: `1px solid ${remindingOrgId === org.id ? '#243e24' : '#7dc142'}`,
+                      cursor: remindingOrgId === org.id ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    {remindingOrgId === org.id ? 'Sending...' : 'Remind'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {!orgSuccess ? (
           <>
             <div className="rounded-xl p-4" style={{ background: '#0f1f0f', border: `1px solid #243e24` }}>
