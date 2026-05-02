@@ -666,13 +666,13 @@ export const SpectatorDashboard: React.FC = () => {
   return (
     <div className="h-screen flex flex-col lg:flex-row" style={{ background: G.dark, color: G.text, fontFamily: "'Segoe UI', system-ui, sans-serif" }}>
       <header
-        className="lg:hidden flex items-center justify-between px-4 py-3 border-b"
+        className="lg:hidden flex items-center justify-between px-3 py-3 border-b"
         style={{ background: G.sidebar, borderColor: G.cardBorder }}
       >
         <div className="flex items-center gap-3">
           <span className="text-xl">🎾</span>
           <div>
-            <p className="text-sm font-semibold" style={{ color: G.lime }}>Spectator Dashboard</p>
+            <p className="text-sm font-semibold" style={{ color: G.lime }}>Spectator</p>
             <p className="text-xs" style={{ color: G.muted }}>{user?.firstName} {user?.lastName}</p>
           </div>
         </div>
@@ -698,7 +698,7 @@ export const SpectatorDashboard: React.FC = () => {
       >
         <div style={{ padding: '15px 14px 10px', borderBottom: `1px solid ${G.cardBorder}`, display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
           <span style={{ fontSize: 20 }}>🎾</span>
-          <div style={{ color: G.lime, fontWeight: 900, fontSize: 14 }}>Spectator Hub</div>
+          <div style={{ color: G.lime, fontWeight: 900, fontSize: 14 }}>Navigation</div>
           <button
             className="lg:hidden ml-auto rounded-md px-2 py-1 text-xs font-semibold"
             style={{ background: G.card, color: G.text, border: `1px solid ${G.cardBorder}` }}
@@ -793,7 +793,7 @@ export const SpectatorDashboard: React.FC = () => {
       </aside>
 
       <main className="flex-1 overflow-hidden" style={{ minWidth: 0 }}>
-        <div className="h-full overflow-y-auto" style={{ padding: '24px' }}>
+        <div className="h-full overflow-y-auto px-4 py-6 lg:px-6">
           <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div className="space-y-3">
               <div>

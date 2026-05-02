@@ -26,8 +26,11 @@ export async function GET(
     
     // Get pagination parameters from query
     const url = new URL(request.url);
-    const offset = parseInt(url.searchParams.get('offset') || '0');
-    const limit = parseInt(url.searchParams.get('limit') || '10');
+    const rawOffset = parseInt(url.searchParams.get('offset') || '0', 10);
+    const rawLimit = parseInt(url.searchParams.get('limit') || '10', 10);
+    const offset = Math.max(0, Number.isNaN(rawOffset) ? 0 : rawOffset);
+    const limit = Math.max(1, Number.isNaN(rawLimit) ? 10 : rawLimit);
+    const pageLimit = offset + limit;
 
     // Query NEW typed Task model (active tasks only)
     const [typedTaskCount, typedTasks, eventTaskCount, eventTasks] = await Promise.all([
@@ -61,6 +64,7 @@ export async function GET(
           { dueDate: 'asc' },
           { createdAt: 'desc' }
         ],
+        take: pageLimit,
       }),
       // Query legacy EventTask model
       prisma.eventTask.count({
@@ -87,6 +91,7 @@ export async function GET(
           { dueDate: 'asc' },
           { createdAt: 'desc' }
         ],
+        take: pageLimit,
       })
     ]);
 

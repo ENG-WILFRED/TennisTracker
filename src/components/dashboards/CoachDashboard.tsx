@@ -50,14 +50,14 @@ const ProgressBar: React.FC<{ value: number; color?: string }> = ({ value, color
 const Tag: React.FC<{ children: React.ReactNode; yellow?: boolean; color?: string }> = ({ children, yellow, color }) => {
   const c = color || (yellow ? G.yellow : G.lime);
   return (
-  <span style={{
-    fontSize: 8.5, fontWeight: 700, borderRadius: 4, padding: '2px 7px',
-    background: `${c}22`,
-    border: `1px solid ${c}44`,
-    color: c,
-    display: 'inline-block',
-  }}>{children}</span>
-);
+    <span style={{
+      fontSize: 8.5, fontWeight: 700, borderRadius: 4, padding: '2px 7px',
+      background: `${c}22`,
+      border: `1px solid ${c}44`,
+      color: c,
+      display: 'inline-block',
+    }}>{children}</span>
+  );
 };
 
 const SectionLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
@@ -90,6 +90,8 @@ const navItems = [
   { label: 'Sessions', icon: '📅' },
   { label: 'Players', icon: '👥' },
   { label: 'Calendar', icon: '📆' },
+  { label: 'Find People', icon: '👥' },
+  { label: 'Find Courts', icon: '🎾' },
   { label: 'Tasks', icon: '📋' },
   { label: 'Messaging', icon: '💬' },
   { label: 'Community', icon: '🌐' },
@@ -106,11 +108,11 @@ export const CoachDashboard: React.FC = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const params = useParams();
-  
+
   // Get coach ID from URL params first, then fall back to user context
   const coachIdFromURL = (params?.userId as string) || '';
   const coachId = user?.id || coachIdFromURL;
-  
+
   // State for real data
   const [players, setPlayers] = useState<any[]>([]);
   const [coachData, setCoachData] = useState<any>(null);
@@ -134,14 +136,33 @@ export const CoachDashboard: React.FC = () => {
     photo: '',
   });
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  
+  // Bio, Certifications, and Availability editing state
+  const [editingBio, setEditingBio] = useState(false);
+  const [bioForm, setBioForm] = useState('');
+  const [editingCertificates, setEditingCertificates] = useState(false);
+  const [certForm, setCertForm] = useState({ name: '', url: '', year: new Date().getFullYear() });
+  const [certificates, setCertificates] = useState<any[]>([]);
+  const [editingAvailability, setEditingAvailability] = useState(false);
+  const [availForm, setAvailForm] = useState({ day: 'Monday', startTime: '09:00', endTime: '17:00' });
+  const [availability, setAvailability] = useState<any[]>([]);
 
 
 
   // Read active section from URL, default to 'Dashboard'
   const activeNav = (searchParams.get('section') as string) || 'Dashboard';
-  
+
   // Handle navigation to a new section
   const handleNavigation = (section: string) => {
+    if (section === 'Find People') {
+      router.push('/dashboard/find-people');
+      return;
+    }
+    if (section === 'Find Courts') {
+      router.push('/dashboard/find-courts');
+      return;
+    }
     const params = new URLSearchParams(searchParams.toString());
     params.set('section', section);
     // Remove 'tab' param when switching sections (unless it's Profile)
@@ -152,15 +173,15 @@ export const CoachDashboard: React.FC = () => {
   };
 
   // ===== SET UP ALL HOOKS FIRST - BEFORE ANY EARLY RETURNS =====
-  
+
   // Fetch real data on mount
   useEffect(() => {
     console.log('[CoachDashboard] useEffect triggered with coachId:', coachId);
-    
+
     let isMounted = true;
     let dataFetched = false;  // Track if we actually got data
     let timeoutId: NodeJS.Timeout | null = null;
-    
+
     // Set 15 second timeout as a safety net
     timeoutId = setTimeout(() => {
       // Only log error if we still haven't fetched any data after 15 seconds
@@ -179,16 +200,16 @@ export const CoachDashboard: React.FC = () => {
         }
 
         console.log('[CoachDashboard] Starting fetch with coachId:', coachId);
-        
+
         const res = await authenticatedFetch(`/api/dashboard/role?role=coach&userId=${coachId}`);
-        
+
         if (!isMounted) return;
 
         console.log('[CoachDashboard] Response received:', res.status, res.ok);
         if (res.ok) {
           const data = await res.json();
           console.log('[CoachDashboard] JSON parsed successfully, students:', data.students?.length);
-          
+
           if (data.coach) {
             console.log('[CoachDashboard] Setting profile data for:', data.coach.name);
             setProfileData({
@@ -214,11 +235,11 @@ export const CoachDashboard: React.FC = () => {
               photo: data.coach.photo || '',
             });
           }
-          
+
           console.log('[CoachDashboard] About to set dashboard data');
           // Mark that we successfully fetched data
           dataFetched = true;
-          
+
           setDashboardData(data);
           setCoachData(data.coach);
           setPlayers(data.students || []);
@@ -227,12 +248,12 @@ export const CoachDashboard: React.FC = () => {
           setActivities(data.activities || []);
           console.log('[CoachDashboard] About to set loading false');
           if (isMounted) setLoading(false);
-          
+
           // Clear the timeout since we got the data
           if (timeoutId) {
             clearTimeout(timeoutId);
           }
-          
+
           console.log('[CoachDashboard] Fetch completed successfully');
         } else {
           console.error('[CoachDashboard] API failed with status:', res.status);
@@ -252,13 +273,13 @@ export const CoachDashboard: React.FC = () => {
     } else {
       if (isMounted) setLoading(false);
     }
-    
+
     return () => {
       isMounted = false;
       if (timeoutId) clearTimeout(timeoutId);
     };
   }, [coachId, user?.id]);
-  
+
   // ===== END OF HOOKS SETUP =====
 
   const handleMessageClick = (personId: string, personName: string) => {
@@ -294,10 +315,10 @@ export const CoachDashboard: React.FC = () => {
   // If still loading, show loading state (but not forever - there's a timeout)
   if (loading && !dashboardData) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-green-100">
+      <div className="min-h-screen flex items-center justify-center" style={{ background: G.sidebar, color: G.text }}>
         <div className="text-center">
           <div className="text-6xl mb-4">🎾</div>
-          <p className="text-xl font-semibold text-gray-700 mb-2">Loading coach dashboard...</p>
+          <p className="text-xl font-semibold text-white mb-2">Loading coach dashboard...</p>
         </div>
       </div>
     );
@@ -358,6 +379,112 @@ export const CoachDashboard: React.FC = () => {
     }
   };
 
+  const handleSaveBio = async () => {
+    try {
+      const res = await authenticatedFetch(`/api/user/profile/${user?.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user?.id, bio: bioForm }),
+      });
+      if (res.ok) {
+        setCoachData({ ...coachData, bio: bioForm });
+        setEditingBio(false);
+        alert('Biography updated!');
+      } else {
+        alert('Failed to update biography');
+      }
+    } catch (error) {
+      console.error('Error updating bio:', error);
+      alert('Error updating biography');
+    }
+  };
+
+  const handleAddCertificate = async () => {
+    if (!certForm.name || !certForm.url) {
+      alert('Please fill in all fields');
+      return;
+    }
+    try {
+      const res = await authenticatedFetch(`/api/user/certificates/${user?.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(certForm),
+      });
+      if (res.ok) {
+        const newCert = await res.json();
+        setCertificates([...certificates, newCert]);
+        setCoachData({ ...coachData, certifications: [...(coachData?.certifications || []), newCert] });
+        setCertForm({ name: '', url: '', year: new Date().getFullYear() });
+        alert('Certificate added!');
+      } else {
+        alert('Failed to add certificate');
+      }
+    } catch (error) {
+      console.error('Error adding certificate:', error);
+      alert('Error adding certificate');
+    }
+  };
+
+  const handleDeleteCertificate = async (certId: string, index: number) => {
+    try {
+      const res = await authenticatedFetch(`/api/user/certificates/${user?.id}/${certId}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        const updated = certificates.filter((_, i) => i !== index);
+        setCertificates(updated);
+        setCoachData({ ...coachData, certifications: updated });
+        alert('Certificate deleted!');
+      }
+    } catch (error) {
+      console.error('Error deleting certificate:', error);
+      alert('Error deleting certificate');
+    }
+  };
+
+  const handleAddAvailability = async () => {
+    if (!availForm.day || !availForm.startTime || !availForm.endTime) {
+      alert('Please fill in all fields');
+      return;
+    }
+    try {
+      const res = await authenticatedFetch(`/api/user/availability/${user?.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(availForm),
+      });
+      if (res.ok) {
+        const newAvail = await res.json();
+        setAvailability([...availability, newAvail]);
+        setCoachData({ ...coachData, availability: [...(coachData?.availability || []), newAvail] });
+        setAvailForm({ day: 'Monday', startTime: '09:00', endTime: '17:00' });
+        alert('Availability added!');
+      } else {
+        alert('Failed to add availability');
+      }
+    } catch (error) {
+      console.error('Error adding availability:', error);
+      alert('Error adding availability');
+    }
+  };
+
+  const handleDeleteAvailability = async (availId: string, index: number) => {
+    try {
+      const res = await authenticatedFetch(`/api/user/availability/${user?.id}/${availId}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        const updated = availability.filter((_, i) => i !== index);
+        setAvailability(updated);
+        setCoachData({ ...coachData, availability: updated });
+        alert('Availability deleted!');
+      }
+    } catch (error) {
+      console.error('Error deleting availability:', error);
+      alert('Error deleting availability');
+    }
+  };
+
   const handleLogout = async () => {
     try {
       await authenticatedFetch('/api/auth/logout', { method: 'POST' });
@@ -373,18 +500,28 @@ export const CoachDashboard: React.FC = () => {
   const miniSt = { background: G.card, border: `1px solid ${G.border}`, borderRadius: 8, padding: '8px 10px', marginBottom: 5 } as const;
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row" style={{ fontFamily: "'Segoe UI', system-ui, sans-serif", background: G.dark, color: G.text, minHeight: '100vh', overflow: 'hidden', fontSize: 13 }}>
+    <div className="min-h-screen flex flex-col md:flex-row" style={{ fontFamily: "'Segoe UI', system-ui, sans-serif", background: G.sidebar, color: G.text, height: '100vh', overflow: 'hidden', fontSize: 13 }}>
+
+      {sidebarOpen && <div className="fixed inset-0 z-30 bg-black/40 md:hidden" onClick={() => setSidebarOpen(false)} />}
 
       {/* ═══════════════ LEFT NAV ═══════════════ */}
-      <aside className="hidden md:flex md:w-56" style={{ background: G.sidebar, borderRight: `1px solid ${G.border}`, flexDirection: 'column', flexShrink: 0 }}>
+      <aside className={`fixed inset-y-0 left-0 z-40 w-72 max-w-[80vw] transform border-r transition-transform duration-300 md:relative md:sticky md:top-0 md:translate-x-0 md:flex md:w-56 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`} style={{ background: G.sidebar, borderColor: G.border, display: 'flex', flexDirection: 'column', flexShrink: 0, height: '100vh', overflow: 'hidden' }}>
 
         {/* Brand */}
-        <div style={{ padding: '14px 15px 13px', borderBottom: `1px solid ${G.border}`, display: 'flex', alignItems: 'center', gap: 9 }}>
+        <div className="hidden md:flex" style={{ padding: '14px 15px 13px', borderBottom: `1px solid ${G.border}`, display: 'flex', alignItems: 'center', gap: 9 }}>
           <div style={{ width: 28, height: 28, background: G.lime, borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, flexShrink: 0 }}>🎾</div>
           <div>
             <div style={{ fontWeight: 900, fontSize: 13.5, color: G.lime, letterSpacing: -0.4, lineHeight: 1.1 }}>Vico Sports</div>
             <div style={{ fontSize: 8.5, color: G.muted, letterSpacing: 1.1, textTransform: 'uppercase' }}>Coach Platform</div>
           </div>
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(false)}
+            className="inline-flex items-center justify-center w-9 h-9 rounded-xl border border-[#243e24] text-[#7aaa6a] hover:bg-[#1e3a20] transition lg:hidden"
+            aria-label="Close navigation"
+          >
+            ✕
+          </button>
         </div>
 
         {/* Nav items */}
@@ -442,13 +579,13 @@ export const CoachDashboard: React.FC = () => {
               <MembershipSwitcher />
             </div>
             <div style={{ marginTop: 6, display: 'flex', gap: 6 }}>
-              <button 
+              <button
                 onClick={() => setEditingProfile(true)}
                 style={{ flex: 1, background: G.dark, color: G.lime, border: `1px solid ${G.lime}`, borderRadius: 6, padding: '4px 0', fontSize: 9, fontWeight: 700, cursor: 'pointer' }}
               >
                 Edit
               </button>
-              <button 
+              <button
                 onClick={handleLogout}
                 style={{ flex: 1, background: '#ff6b6b', color: '#fff', border: 'none', borderRadius: 6, padding: '4px 0', fontSize: 9, fontWeight: 700, cursor: 'pointer' }}
               >
@@ -460,22 +597,25 @@ export const CoachDashboard: React.FC = () => {
       </aside>
 
       {/* ═══════════════ MAIN ═══════════════ */}
-      <main className="flex-1 overflow-y-auto md:overflow-hidden" style={{ padding: activeNav === 'Calendar' ? 0 : '14px 18px', display: 'flex', flexDirection: 'column', gap: activeNav === 'Calendar' ? 0 : 11, minWidth: 0 }}>
+      <main className="flex-1 overflow-y-auto" style={{ height: '100vh', padding: activeNav === 'Calendar' ? 0 : '12px 12px', display: 'flex', flexDirection: 'column', gap: activeNav === 'Calendar' ? 0 : 11, minWidth: 0 }}>
 
         <div className="md:hidden sticky top-0 z-20 bg-[#0f1e0f] border-b border-[#243e24] px-4 py-3">
-          <div className="flex gap-2 overflow-x-auto pb-1">
-            {navItems.map((item) => {
-              const isActive = activeNav === item.label;
-              return (
-                <button
-                  key={item.label}
-                  onClick={() => handleNavigation(item.label)}
-                  className={`whitespace-nowrap rounded-2xl border px-3 py-2 text-xs font-semibold transition ${isActive ? 'bg-[#1f3b1f] border-[#326832] text-[#d1e6c3]' : 'bg-transparent border-[#243e24] text-[#8aa274]'}`}
-                >
-                  {item.icon} {item.label}
-                </button>
-              );
-            })}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-[#79bf3e] flex items-center justify-center text-sm">🎾</div>
+              <div>
+                <div className="text-[11px] font-semibold text-[#e4f2da]">Vico Sports</div>
+                <div className="text-[9px] uppercase tracking-[.3em] text-[#7aaa6a]">Coach Platform</div>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(true)}
+              className="inline-flex items-center justify-center w-10 h-10 rounded-xl border border-[#243e24] text-[#7aaa6a] hover:bg-[#1e3a20] transition"
+              aria-label="Open navigation"
+            >
+              ☰
+            </button>
           </div>
         </div>
 
@@ -483,22 +623,38 @@ export const CoachDashboard: React.FC = () => {
           /* ── PROFILE VIEW ── */
           <div style={card}>
             {/* Profile tab bar */}
-            <div style={{ display: 'flex', gap: 3, background: G.dark, borderRadius: 8, padding: 3, marginBottom: 16 }}>
-              {profileTabs.map(tab => (
-                <button
-                  key={tab}
-                  onClick={() => handleProfileTab(tab)}
+            <div style={{ marginBottom: 16 }}>
+              <div className="md:hidden">
+                <select
+                  value={profileTab}
+                  onChange={e => handleProfileTab(e.target.value as ProfileTab)}
                   style={{
-                    flex: 1, padding: '8px 0', borderRadius: 6, border: 'none', cursor: 'pointer',
-                    fontSize: 11.5, fontWeight: 700,
-                    background: profileTab === tab ? G.lime : 'transparent',
-                    color: profileTab === tab ? '#0a180a' : G.muted,
-                    transition: 'all .15s',
+                    width: '100%', padding: '10px 12px', background: G.dark, border: `1px solid ${G.border}`,
+                    borderRadius: 8, color: G.text, fontSize: 12, fontWeight: 700, appearance: 'none',
                   }}
                 >
-                  {profileTabLabels[tab]}
-                </button>
-              ))}
+                  {profileTabs.map(tab => (
+                    <option key={tab} value={tab}>{profileTabLabels[tab]}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="hidden md:flex" style={{ display: 'flex', gap: 3, background: G.dark, borderRadius: 8, padding: 3 }}>
+                {profileTabs.map(tab => (
+                  <button
+                    key={tab}
+                    onClick={() => handleProfileTab(tab)}
+                    style={{
+                      flex: 1, padding: '8px 0', borderRadius: 6, border: 'none', cursor: 'pointer',
+                      fontSize: 11.5, fontWeight: 700,
+                      background: profileTab === tab ? G.lime : 'transparent',
+                      color: profileTab === tab ? '#0a180a' : G.muted,
+                      transition: 'all .15s',
+                    }}
+                  >
+                    {profileTabLabels[tab]}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {profileTab === 'personal' && (
@@ -620,34 +776,74 @@ export const CoachDashboard: React.FC = () => {
 
             {profileTab === 'bio' && (
               <div>
-                <h3 style={{ fontSize: 13.5, fontWeight: 800, marginBottom: 10 }}>About the Coach</h3>
-                {loading ? (
-                  <p style={{ fontSize: 12.5, lineHeight: 1.65, color: G.muted }}>Loading...</p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                  <h3 style={{ fontSize: 13.5, fontWeight: 800 }}>About the Coach</h3>
+                  <BtnSecondary style={{ fontSize: 10, padding: '5px 12px' }} onClick={() => { setEditingBio(!editingBio); setBioForm(coachData?.bio || ''); }}>
+                    {editingBio ? '✕ Cancel' : '✎ Edit'}
+                  </BtnSecondary>
+                </div>
+                {editingBio ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <textarea
+                      style={{ width: '100%', padding: '10px', background: G.dark, border: `1px solid ${G.border}`, color: G.text, borderRadius: 8, fontSize: 12, fontFamily: 'inherit', minHeight: 100, resize: 'vertical' }}
+                      value={bioForm}
+                      onChange={e => setBioForm(e.target.value)}
+                      placeholder="Write your biography..."
+                    />
+                    <BtnPrimary onClick={handleSaveBio}>💾 Save Biography</BtnPrimary>
+                  </div>
                 ) : (
-                  <>
-                    <p style={{ fontSize: 12.5, lineHeight: 1.65, color: G.text2, marginBottom: 16 }}>
-                      {coachData?.bio || 'No biography added yet.'}
-                    </p>
-                    <div style={{ background: G.dark, borderRadius: 8, padding: 12 }}>
-                      <SectionLabel>Specializations</SectionLabel>
-                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                        {(coachData?.specializations || []).length > 0 ? (
-                          coachData.specializations.map((spec: string, i: number) => (
-                            <span key={i} style={{ background: G.mid, color: G.text2, padding: '4px 10px', borderRadius: 6, fontSize: 11 }}>{spec}</span>
-                          ))
-                        ) : (
-                          <span style={{ color: G.muted, fontSize: 11 }}>No specializations added yet.</span>
-                        )}
-                      </div>
-                    </div>
-                  </>
+                  <p style={{ fontSize: 12.5, lineHeight: 1.65, color: G.text2, marginBottom: 16 }}>
+                    {coachData?.bio || 'No biography added yet.'}
+                  </p>
                 )}
               </div>
             )}
 
             {profileTab === 'certifications' && (
               <div>
-                <h3 style={{ fontSize: 13.5, fontWeight: 800, marginBottom: 12 }}>Certifications & Credentials</h3>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                  <h3 style={{ fontSize: 13.5, fontWeight: 800 }}>Certifications & Credentials</h3>
+                  <BtnSecondary style={{ fontSize: 10, padding: '5px 12px' }} onClick={() => setEditingCertificates(!editingCertificates)}>
+                    {editingCertificates ? '✕ Done' : '➕ Add'}
+                  </BtnSecondary>
+                </div>
+                
+                {editingCertificates && (
+                  <div style={{ background: G.card2, border: `1px solid ${G.border}`, borderRadius: 10, padding: 14, marginBottom: 12 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+                      <div>
+                        <label style={{ fontSize: 9.5, color: G.muted2, display: 'block', marginBottom: 4, fontWeight: 600 }}>CERTIFICATE NAME</label>
+                        <input
+                          style={{ width: '100%', padding: '8px 10px', background: G.dark, border: `1px solid ${G.border}`, color: G.text, borderRadius: 6, fontSize: 11 }}
+                          value={certForm.name}
+                          onChange={e => setCertForm({ ...certForm, name: e.target.value })}
+                          placeholder="e.g., ITF Level 2"
+                        />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: 9.5, color: G.muted2, display: 'block', marginBottom: 4, fontWeight: 600 }}>YEAR</label>
+                        <input
+                          type="number"
+                          style={{ width: '100%', padding: '8px 10px', background: G.dark, border: `1px solid ${G.border}`, color: G.text, borderRadius: 6, fontSize: 11 }}
+                          value={certForm.year}
+                          onChange={e => setCertForm({ ...certForm, year: parseInt(e.target.value) })}
+                        />
+                      </div>
+                    </div>
+                    <div style={{ marginBottom: 10 }}>
+                      <label style={{ fontSize: 9.5, color: G.muted2, display: 'block', marginBottom: 4, fontWeight: 600 }}>CERTIFICATE URL</label>
+                      <input
+                        style={{ width: '100%', padding: '8px 10px', background: G.dark, border: `1px solid ${G.border}`, color: G.text, borderRadius: 6, fontSize: 11 }}
+                        value={certForm.url}
+                        onChange={e => setCertForm({ ...certForm, url: e.target.value })}
+                        placeholder="https://example.com/certificate"
+                      />
+                    </div>
+                    <BtnPrimary onClick={handleAddCertificate}>Add Certificate</BtnPrimary>
+                  </div>
+                )}
+
                 {loading ? (
                   <p style={{ fontSize: 12.5, color: G.muted }}>Loading...</p>
                 ) : (coachData?.certifications || []).length > 0 ? (
@@ -655,9 +851,14 @@ export const CoachDashboard: React.FC = () => {
                     <div key={i} style={{ background: G.dark, borderRadius: 8, padding: 12, marginBottom: 9, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div>
                         <div style={{ fontWeight: 700, fontSize: 12.5 }}>{cert.name}</div>
-                        <div style={{ color: G.muted, fontSize: 11, marginTop: 3 }}>Since {cert.year || 'N/A'}</div>
+                        <div style={{ color: G.muted, fontSize: 11, marginTop: 3 }}>Year: {cert.year || 'N/A'} · <a href={cert.url} target="_blank" rel="noopener noreferrer" style={{ color: G.lime, textDecoration: 'none' }}>View</a></div>
                       </div>
-                      <Tag>{cert.status || 'Active'}</Tag>
+                      <button
+                        onClick={() => handleDeleteCertificate(cert.id, i)}
+                        style={{ background: 'none', border: 'none', color: G.red, cursor: 'pointer', fontSize: 16 }}
+                      >
+                        🗑️
+                      </button>
                     </div>
                   ))
                 ) : (
@@ -668,14 +869,66 @@ export const CoachDashboard: React.FC = () => {
 
             {profileTab === 'availability' && (
               <div>
-                <h3 style={{ fontSize: 13.5, fontWeight: 800, marginBottom: 12 }}>Coaching Availability</h3>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                  <h3 style={{ fontSize: 13.5, fontWeight: 800 }}>Coaching Availability</h3>
+                  <BtnSecondary style={{ fontSize: 10, padding: '5px 12px' }} onClick={() => setEditingAvailability(!editingAvailability)}>
+                    {editingAvailability ? '✕ Done' : '➕ Add'}
+                  </BtnSecondary>
+                </div>
+
+                {editingAvailability && (
+                  <div style={{ background: G.card2, border: `1px solid ${G.border}`, borderRadius: 10, padding: 14, marginBottom: 12 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 10 }}>
+                      <div>
+                        <label style={{ fontSize: 9.5, color: G.muted2, display: 'block', marginBottom: 4, fontWeight: 600 }}>DAY</label>
+                        <select
+                          style={{ width: '100%', padding: '8px 10px', background: G.dark, border: `1px solid ${G.border}`, color: G.text, borderRadius: 6, fontSize: 11 }}
+                          value={availForm.day}
+                          onChange={e => setAvailForm({ ...availForm, day: e.target.value })}
+                        >
+                          {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(d => (
+                            <option key={d} value={d}>{d}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label style={{ fontSize: 9.5, color: G.muted2, display: 'block', marginBottom: 4, fontWeight: 600 }}>START TIME</label>
+                        <input
+                          type="time"
+                          style={{ width: '100%', padding: '8px 10px', background: G.dark, border: `1px solid ${G.border}`, color: G.text, borderRadius: 6, fontSize: 11 }}
+                          value={availForm.startTime}
+                          onChange={e => setAvailForm({ ...availForm, startTime: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: 9.5, color: G.muted2, display: 'block', marginBottom: 4, fontWeight: 600 }}>END TIME</label>
+                        <input
+                          type="time"
+                          style={{ width: '100%', padding: '8px 10px', background: G.dark, border: `1px solid ${G.border}`, color: G.text, borderRadius: 6, fontSize: 11 }}
+                          value={availForm.endTime}
+                          onChange={e => setAvailForm({ ...availForm, endTime: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                    <BtnPrimary onClick={handleAddAvailability}>Add Time Slot</BtnPrimary>
+                  </div>
+                )}
+
                 {loading ? (
                   <p style={{ fontSize: 12.5, color: G.muted }}>Loading...</p>
                 ) : (coachData?.availability || []).length > 0 ? (
                   (coachData.availability as any[]).map((avail, i) => (
-                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 10, background: G.dark, borderRadius: 8, marginBottom: 7 }}>
-                      <span style={{ fontWeight: 600, fontSize: 12 }}>{avail.day}</span>
-                      <span style={{ color: G.lime2, fontSize: 12, fontWeight: 700 }}>{avail.time}</span>
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 12, background: G.dark, borderRadius: 8, marginBottom: 8, border: `1px solid ${G.border}` }}>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: 12 }}>{avail.day}</div>
+                        <div style={{ color: G.lime2, fontSize: 11, marginTop: 2 }}>{avail.startTime} - {avail.endTime}</div>
+                      </div>
+                      <button
+                        onClick={() => handleDeleteAvailability(avail.id, i)}
+                        style={{ background: 'none', border: 'none', color: G.red, cursor: 'pointer', fontSize: 16 }}
+                      >
+                        🗑️
+                      </button>
                     </div>
                   ))
                 ) : (
@@ -688,7 +941,7 @@ export const CoachDashboard: React.FC = () => {
         ) : activeNav === 'Dashboard' ? (
           <>
             {/* ── STAT CARDS AT TOP ── */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-9 mb-4 md:mb-16">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-9 mb-4 md:mb-16">
               {[
                 { label: 'This Month', value: `$${earnings.thisMonth.toLocaleString()}`, delta: '↑ 12% vs last mo' },
                 { label: 'Per Session', value: `$${earnings.perSession}`, delta: `${players.length} players` },
@@ -788,9 +1041,18 @@ export const CoachDashboard: React.FC = () => {
               </div>
             )}
 
-            <div className="grid gap-4 xl:grid-cols-2 mb-6">
-              <FindNearbyPeople onMessageClick={handleMessageClick} onChallengeClick={handleNearbyPlayerChallenge} />
-              <FindNearbyCourts />
+            <div style={card}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 800 }}>Explore Nearby</div>
+                  <div style={{ fontSize: 11, color: G.muted2, marginTop: 3 }}>Search for players or courts on separate pages.</div>
+                </div>
+                <Tag>New</Tag>
+              </div>
+              <div style={{ display: 'grid', gap: 10, gridTemplateColumns: '1fr 1fr' }}>
+                <BtnPrimary onClick={() => router.push('/dashboard/find-people')}>Find People</BtnPrimary>
+                <BtnPrimary onClick={() => router.push('/dashboard/find-courts')}>Find Courts</BtnPrimary>
+              </div>
             </div>
 
             {/* ── ANALYTICS SECTION ── */}

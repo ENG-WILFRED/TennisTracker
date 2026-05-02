@@ -224,57 +224,69 @@ export default function AssignedTasksWidget({ userId, limit = 3 }: TasksWidgetPr
         </div>
 
         {/* Filters & Refresh Bar */}
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'space-between', background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 8, padding: '10px 12px', flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', flex: 1 }}>
-            {/* Status Filter */}
-            {['all', 'pending', 'accepted', 'in_progress', 'completed', 'rejected'].map(status => (
-              <button
-                key={status}
-                onClick={() => {
-                  setFilterStatus(status);
-                  setCurrentPage(1);
-                }}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 8, padding: '10px 12px', flexWrap: 'nowrap', overflowX: 'auto' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'nowrap', flex: 1, minWidth: 0 }}>
+            <div className="status-dropdown-mobile" style={{ alignItems: 'center', gap: 8, color: G.muted, fontSize: 11, fontWeight: 700, minWidth: 0, display: 'flex' }}>
+              <span>Status</span>
+              <select
+                value={filterStatus}
+                onChange={e => { setFilterStatus(e.target.value); setCurrentPage(1); }}
                 style={{
-                  padding: '6px 12px',
-                  background: filterStatus === status ? G.bright : 'transparent',
-                  border: `1px solid ${filterStatus === status ? G.bright : G.cardBorder}`,
-                  borderRadius: 6,
-                  fontSize: 10,
-                  fontWeight: 600,
-                  color: filterStatus === status ? G.text : G.muted,
+                  padding: '8px 12px',
+                  background: 'rgba(125, 193, 66, 0.12)',
+                  color: G.lime,
+                  border: `1px solid ${G.lime}`,
+                  borderRadius: 9999,
+                  fontSize: 11,
                   cursor: 'pointer',
-                  whiteSpace: 'nowrap',
-                  transition: 'all 0.2s',
+                  minWidth: 140,
+                  appearance: 'none',
+                  WebkitAppearance: 'none',
+                  MozAppearance: 'none',
+                  backgroundImage: 'linear-gradient(45deg, transparent 50%, rgba(255,255,255,0.3) 50%), linear-gradient(135deg, rgba(255,255,255,0.3) 50%, transparent 50%)',
+                  backgroundPosition: 'calc(100% - 18px) calc(1em + 2px), calc(100% - 14px) calc(1em + 2px)',
+                  backgroundSize: '5px 5px, 5px 5px',
+                  backgroundRepeat: 'no-repeat',
                 }}
               >
-                {statusConfig[status]?.icon || '•'} {status === 'all' ? 'All' : status}
-              </button>
-            ))}
+                <option value="all">All</option>
+                <option value="pending">Pending</option>
+                <option value="accepted">Accepted</option>
+                <option value="in_progress">In Progress</option>
+                <option value="completed">Completed</option>
+                <option value="rejected">Rejected</option>
+              </select>
+            </div>
 
-            {/* Priority Filter */}
-            {['all', 'high', 'medium', 'low'].map(priority => (
-              <button
-                key={priority}
-                onClick={() => {
-                  setFilterPriority(priority);
-                  setCurrentPage(1);
-                }}
-                style={{
-                  padding: '6px 12px',
-                  background: filterPriority === priority ? G.yellow : 'transparent',
-                  border: `1px solid ${filterPriority === priority ? G.yellow : G.cardBorder}`,
-                  borderRadius: 6,
-                  fontSize: 10,
-                  fontWeight: 600,
-                  color: filterPriority === priority ? '#000' : G.muted,
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap',
-                  transition: 'all 0.2s',
-                }}
-              >
-                {priority === 'all' ? '⚖️ All' : priority}
-              </button>
-            ))}
+            <div className="status-buttons-desktop" style={{ alignItems: 'center', gap: 8, flexWrap: 'nowrap', minWidth: 0, display: 'none', width: '100%' }}>
+              {['all', 'pending', 'accepted', 'in_progress', 'completed', 'rejected'].map(status => (
+                <button
+                  key={status}
+                  onClick={() => {
+                    setFilterStatus(status);
+                    setCurrentPage(1);
+                  }}
+                  style={{
+                    flex: '1 1 120px',
+                    minWidth: 110,
+                    padding: '8px 12px',
+                    background: filterStatus === status ? G.lime : 'transparent',
+                    border: `1px solid ${G.lime}`,
+                    borderRadius: 9999,
+                    color: filterStatus === status ? '#0f1f0f' : G.text,
+                    fontSize: 11,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    transition: 'all 0.2s',
+                    textTransform: 'capitalize',
+                    opacity: filterStatus === status ? 1 : 0.9,
+                  }}
+                >
+                  {status === 'all' ? 'All' : status.replace('_', ' ')}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Refresh Button */}
@@ -304,6 +316,14 @@ export default function AssignedTasksWidget({ userId, limit = 3 }: TasksWidgetPr
         </div>
 
         <style>{`
+          .status-dropdown-mobile { display: flex; }
+          .status-buttons-desktop { display: none; }
+
+          @media (min-width: 1024px) {
+            .status-dropdown-mobile { display: none !important; }
+            .status-buttons-desktop { display: flex !important; }
+          }
+
           @keyframes spin {
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { MapPin, Home, AlertCircle, TrendingUp, Search, Filter, ChevronDown, Zap, Target } from 'lucide-react';
+import { MapPin, Home, AlertCircle, TrendingUp, Search, ChevronDown, Zap, Target, SlidersHorizontal } from 'lucide-react';
 
 interface NearbyCourt {
   id: string;
@@ -54,435 +54,15 @@ const LOCATION_COORDINATES: Record<string, { latitude: number; longitude: number
 const SURFACES = ['Clay', 'Hard', 'Grass', 'Carpet'];
 const INDOOR_OUTDOOR = ['Indoor', 'Outdoor'];
 
-const SURFACE_COLORS: Record<string, { bg: string; text: string; border: string }> = {
-  Clay:   { bg: 'rgba(194,120,60,0.12)',  text: '#e8a06a', border: 'rgba(194,120,60,0.3)' },
-  Hard:   { bg: 'rgba(60,130,194,0.12)',  text: '#7ab8e8', border: 'rgba(60,130,194,0.3)' },
-  Grass:  { bg: 'rgba(74,196,74,0.12)',   text: '#7dc142', border: 'rgba(74,196,74,0.3)'  },
-  Carpet: { bg: 'rgba(130,60,194,0.12)',  text: '#b07ae8', border: 'rgba(130,60,194,0.3)' },
+const SURFACE_CONFIG: Record<string, { bg: string; text: string; dot: string }> = {
+  Clay:   { bg: 'bg-orange-400/10',  text: 'text-orange-400', dot: 'bg-orange-400' },
+  Hard:   { bg: 'bg-blue-400/10',    text: 'text-blue-400',   dot: 'bg-blue-400'   },
+  Grass:  { bg: 'bg-emerald-400/10', text: 'text-emerald-400',dot: 'bg-emerald-400' },
+  Carpet: { bg: 'bg-purple-400/10',  text: 'text-purple-400', dot: 'bg-purple-400' },
 };
 
-const styles = `
-  @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600&display=swap');
-
-  .fnc-root * { box-sizing: border-box; }
-
-  .fnc-root {
-    font-family: 'Barlow', sans-serif;
-    background: linear-gradient(145deg, #050f05 0%, #0a1a0a 50%, #071207 100%);
-    border-radius: 20px;
-    padding: 32px;
-    margin-bottom: 24px;
-    border: 1px solid rgba(74,196,74,0.15);
-    color: #e8f5e0;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .fnc-root::before {
-    content: '';
-    position: absolute;
-    top: -80px; right: -80px;
-    width: 260px; height: 260px;
-    background: radial-gradient(circle, rgba(125,193,66,0.07) 0%, transparent 70%);
-    pointer-events: none;
-  }
-
-  .fnc-root::after {
-    content: '';
-    position: absolute;
-    bottom: -60px; left: -60px;
-    width: 200px; height: 200px;
-    background: radial-gradient(circle, rgba(41,214,120,0.05) 0%, transparent 70%);
-    pointer-events: none;
-  }
-
-  .fnc-header {
-    display: flex; align-items: flex-start;
-    justify-content: space-between;
-    margin-bottom: 28px; position: relative;
-  }
-
-  .fnc-title-group { display: flex; align-items: center; gap: 14px; }
-
-  .fnc-icon-wrap {
-    width: 48px; height: 48px;
-    background: linear-gradient(135deg, rgba(125,193,66,0.2), rgba(74,196,74,0.08));
-    border: 1px solid rgba(125,193,66,0.3);
-    border-radius: 14px;
-    display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0;
-  }
-
-  .fnc-title {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 26px; font-weight: 800;
-    color: #7dc142; margin: 0; letter-spacing: 0.5px;
-    text-transform: uppercase;
-  }
-
-  .fnc-subtitle { margin: 4px 0 0; color: #6a9a5a; font-size: 13px; font-weight: 400; }
-
-  .fnc-divider {
-    height: 1px;
-    background: linear-gradient(to right, transparent, rgba(125,193,66,0.2), transparent);
-    margin: 0 0 26px;
-  }
-
-  .fnc-form-grid { display: grid; gap: 18px; margin-bottom: 22px; }
-
-  .fnc-label {
-    display: block; font-size: 11px; font-weight: 600;
-    color: #7dc142; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;
-  }
-
-  .fnc-input-wrap { position: relative; display: flex; align-items: center; }
-
-  .fnc-input-icon {
-    position: absolute; left: 14px;
-    color: #5a8a4a; pointer-events: none;
-    width: 16px; height: 16px;
-  }
-
-  .fnc-input {
-    width: 100%;
-    background: rgba(15,31,15,0.8);
-    border: 1px solid rgba(45,90,53,0.6);
-    border-radius: 12px;
-    color: #e8f5e0;
-    padding: 13px 14px 13px 42px;
-    font-family: 'Barlow', sans-serif;
-    font-size: 14px;
-    transition: border-color 0.2s, box-shadow 0.2s;
-    outline: none;
-  }
-
-  .fnc-input:focus {
-    border-color: rgba(125,193,66,0.5);
-    box-shadow: 0 0 0 3px rgba(125,193,66,0.08);
-  }
-
-  .fnc-input::placeholder { color: #3d5e3d; }
-
-  .fnc-select-wrap { position: relative; }
-
-  .fnc-select {
-    width: 100%;
-    background: rgba(15,31,15,0.8);
-    border: 1px solid rgba(45,90,53,0.6);
-    border-radius: 12px;
-    color: #e8f5e0;
-    padding: 13px 40px 13px 14px;
-    font-family: 'Barlow', sans-serif;
-    font-size: 14px;
-    appearance: none; cursor: pointer; outline: none;
-    transition: border-color 0.2s, box-shadow 0.2s;
-  }
-
-  .fnc-select:focus {
-    border-color: rgba(125,193,66,0.5);
-    box-shadow: 0 0 0 3px rgba(125,193,66,0.08);
-  }
-
-  .fnc-select option { background: #0a1a0a; }
-
-  .fnc-chevron {
-    position: absolute; right: 12px; top: 50%;
-    transform: translateY(-50%);
-    width: 16px; height: 16px; color: #5a8a4a; pointer-events: none;
-  }
-
-  .fnc-num-input {
-    width: 140px;
-    background: rgba(15,31,15,0.8);
-    border: 1px solid rgba(45,90,53,0.6);
-    border-radius: 12px;
-    color: #e8f5e0;
-    padding: 13px 14px;
-    font-family: 'Barlow', sans-serif;
-    font-size: 14px; outline: none;
-    transition: border-color 0.2s, box-shadow 0.2s;
-  }
-
-  .fnc-num-input:focus {
-    border-color: rgba(125,193,66,0.5);
-    box-shadow: 0 0 0 3px rgba(125,193,66,0.08);
-  }
-
-  .fnc-btn-grid { display: grid; gap: 10px; margin-bottom: 26px; }
-
-  .fnc-btn {
-    width: 100%; border: none; border-radius: 13px;
-    padding: 14px 18px;
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 15px; font-weight: 700; letter-spacing: 0.5px;
-    cursor: pointer; transition: all 0.2s; text-transform: uppercase;
-    display: flex; align-items: center; justify-content: center; gap: 8px;
-  }
-
-  .fnc-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-
-  .fnc-btn-primary {
-    background: linear-gradient(135deg, #5fc45f, #7dc142);
-    color: #071207;
-    box-shadow: 0 4px 16px rgba(95,196,95,0.25);
-  }
-  .fnc-btn-primary:hover:not(:disabled) {
-    background: linear-gradient(135deg, #6dd46d, #8fd14f);
-    box-shadow: 0 6px 20px rgba(95,196,95,0.35);
-    transform: translateY(-1px);
-  }
-
-  .fnc-btn-secondary {
-    background: rgba(61,122,61,0.15);
-    color: #9de87a;
-    border: 1px solid rgba(95,196,95,0.3);
-  }
-  .fnc-btn-secondary:hover:not(:disabled) {
-    background: rgba(61,122,61,0.25);
-    border-color: rgba(95,196,95,0.5);
-    transform: translateY(-1px);
-  }
-
-  .fnc-btn-tertiary {
-    background: rgba(38,91,38,0.1);
-    color: #7aaa6a;
-    border: 1px solid rgba(61,122,61,0.25);
-  }
-  .fnc-btn-tertiary:hover:not(:disabled) {
-    background: rgba(38,91,38,0.2);
-    border-color: rgba(61,122,61,0.4);
-    transform: translateY(-1px);
-  }
-
-  .fnc-error {
-    background: rgba(30,47,30,0.8);
-    border: 1px solid rgba(255,100,80,0.3);
-    color: #ff9c7a;
-    padding: 14px 16px; border-radius: 13px; margin-bottom: 20px;
-    display: flex; align-items: center; gap: 10px; font-size: 13px;
-  }
-
-  .fnc-result-banner {
-    background: rgba(17,36,17,0.9);
-    border: 1px solid rgba(45,90,53,0.5);
-    border-radius: 12px;
-    padding: 12px 16px;
-    color: #7dc142;
-    font-size: 13px; font-weight: 600; letter-spacing: 0.3px;
-    display: flex; align-items: center; gap: 8px;
-  }
-
-  .fnc-filter-panel {
-    background: rgba(15,31,15,0.6);
-    border: 1px solid rgba(45,90,53,0.4);
-    border-radius: 16px;
-    padding: 20px;
-    backdrop-filter: blur(4px);
-  }
-
-  .fnc-filter-header {
-    display: flex; align-items: center; gap: 10px; margin-bottom: 18px;
-  }
-
-  .fnc-filter-title {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 15px; font-weight: 700; margin: 0;
-    color: #e8f5e0; text-transform: uppercase; letter-spacing: 0.5px;
-  }
-
-  .fnc-filter-count {
-    margin-left: auto;
-    background: rgba(125,193,66,0.15);
-    border: 1px solid rgba(125,193,66,0.3);
-    color: #7dc142;
-    padding: 3px 10px; border-radius: 999px;
-    font-size: 12px; font-weight: 600;
-  }
-
-  .fnc-filter-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: 14px;
-  }
-
-  .fnc-filter-select {
-    background: rgba(19,41,19,0.8);
-    border: 1px solid rgba(45,90,53,0.5);
-    border-radius: 10px;
-    color: #c8e8b8;
-    padding: 9px 12px;
-    font-family: 'Barlow', sans-serif;
-    font-size: 13px; width: 100%; outline: none;
-    transition: border-color 0.2s; cursor: pointer;
-  }
-  .fnc-filter-select:focus { border-color: rgba(125,193,66,0.5); }
-  .fnc-filter-select option { background: #0a1a0a; }
-
-  .fnc-card {
-    background: rgba(19,41,19,0.7);
-    border: 1px solid rgba(45,90,53,0.4);
-    border-radius: 16px;
-    overflow: hidden;
-    display: grid;
-    grid-template-columns: 88px 1fr auto;
-    gap: 0;
-    align-items: stretch;
-    transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
-    position: relative;
-  }
-
-  .fnc-card::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0; height: 1px;
-    background: linear-gradient(to right, transparent, rgba(125,193,66,0.2), transparent);
-    opacity: 0; transition: opacity 0.2s;
-  }
-
-  .fnc-card:hover {
-    border-color: rgba(125,193,66,0.3);
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
-  }
-
-  .fnc-card:hover::before { opacity: 1; }
-
-  .fnc-court-img {
-    width: 88px;
-    object-fit: cover;
-    display: block;
-    flex-shrink: 0;
-  }
-
-  .fnc-card-body {
-    padding: 16px 18px;
-    min-width: 0;
-  }
-
-  .fnc-card-name-row {
-    display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 4px;
-  }
-
-  .fnc-card-name {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 18px; font-weight: 700; margin: 0;
-    color: #e8f5e0;
-  }
-
-  .fnc-dist-badge {
-    background: rgba(125,193,66,0.12);
-    border: 1px solid rgba(125,193,66,0.25);
-    color: #7dc142;
-    padding: 3px 10px; border-radius: 999px;
-    font-size: 12px; font-weight: 700; white-space: nowrap;
-  }
-
-  .fnc-org { margin: 2px 0; color: #5a8a4a; font-size: 13px; }
-  .fnc-address { margin: 2px 0; color: #8ab07a; font-size: 13px; }
-
-  .fnc-tags {
-    display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px;
-  }
-
-  .fnc-tag {
-    background: rgba(10,24,10,0.6);
-    border: 1px solid rgba(45,90,53,0.3);
-    border-radius: 7px;
-    padding: 3px 10px;
-    font-size: 12px; color: #7aaa6a;
-  }
-
-  .fnc-lights-tag {
-    background: rgba(255,220,50,0.08);
-    border: 1px solid rgba(255,220,50,0.2);
-    color: #e8d560;
-  }
-
-  .fnc-card-action {
-    display: flex; align-items: center; justify-content: center;
-    padding: 0 18px;
-    border-left: 1px solid rgba(45,90,53,0.3);
-  }
-
-  .fnc-book-btn {
-    background: linear-gradient(135deg, #5fc45f, #7dc142);
-    color: #071207; border: none;
-    border-radius: 10px;
-    padding: 12px 18px; cursor: pointer;
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 15px; font-weight: 700;
-    text-transform: uppercase; letter-spacing: 0.5px;
-    transition: all 0.2s;
-    white-space: nowrap;
-  }
-
-  .fnc-book-btn:hover {
-    background: linear-gradient(135deg, #6dd46d, #8fd14f);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(95,196,95,0.3);
-  }
-
-  .fnc-suggest-banner {
-    background: rgba(17,38,21,0.8);
-    border: 1px solid rgba(61,122,61,0.35);
-    border-radius: 14px;
-    padding: 16px 18px;
-    color: #c9e7c9;
-    display: flex; align-items: flex-start; gap: 12px;
-  }
-
-  .fnc-suggest-title {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 16px; font-weight: 700; margin: 0 0 4px;
-    text-transform: uppercase; letter-spacing: 0.5px;
-  }
-
-  .fnc-suggest-text { margin: 0; color: #7aaa6a; font-size: 13px; }
-
-  .fnc-empty {
-    background: rgba(17,39,21,0.6);
-    border: 1px solid rgba(38,91,38,0.3);
-    border-radius: 16px;
-    padding: 36px 24px; text-align: center;
-  }
-
-  .fnc-empty-icon {
-    width: 48px; height: 48px;
-    background: rgba(125,193,66,0.1);
-    border: 1px solid rgba(125,193,66,0.2);
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    margin: 0 auto 14px;
-  }
-
-  .fnc-empty-title {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 18px; font-weight: 700; margin: 0;
-    color: #9cc79c; text-transform: uppercase;
-  }
-
-  .fnc-empty-text { margin: 8px 0 0; color: #5a8a4a; font-size: 13px; }
-
-  .fnc-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
-  @media (max-width: 600px) { .fnc-two-col { grid-template-columns: 1fr; } }
-  @media (max-width: 700px) { .fnc-card { grid-template-columns: 80px 1fr; } .fnc-card-action { display: none; } }
-
-  .fnc-pulse {
-    display: inline-block; width: 8px; height: 8px;
-    background: #7dc142; border-radius: 50%;
-    animation: fnc-pulse 1.8s ease-in-out infinite;
-  }
-  @keyframes fnc-pulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.4; transform: scale(0.7); }
-  }
-
-  .fnc-surface-badge {
-    padding: 3px 10px; border-radius: 999px;
-    font-size: 11px; font-weight: 700;
-    text-transform: uppercase; letter-spacing: 0.5px;
-  }
-`;
+const inputBase =
+  'w-full bg-white/[0.04] border border-white/[0.08] rounded-lg text-sm text-white placeholder-white/20 outline-none transition-all focus:border-[#7dc142]/50 focus:bg-white/[0.06]';
 
 export const FindNearbyCourts: React.FC<FindNearbyCourtsProps> = ({
   onSelectCourt,
@@ -499,26 +79,29 @@ export const FindNearbyCourts: React.FC<FindNearbyCourtsProps> = ({
   const [searchLocation, setSearchLocation] = useState('');
   const [searchMode, setSearchMode] = useState<'radius' | 'nearest' | 'location'>('radius');
   const [resultLabel, setResultLabel] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
 
-  const [selectedSurface, setSelectedSurface] = useState<string>('');
-  const [selectedIndoorOutdoor, setSelectedIndoorOutdoor] = useState<string>('');
-  const [hasLights, setHasLights] = useState<string>('');
+  const [selectedSurface, setSelectedSurface] = useState('');
+  const [selectedIndoorOutdoor, setSelectedIndoorOutdoor] = useState('');
+  const [hasLights, setHasLights] = useState('');
   const [sortByDistance, setSortByDistance] = useState<'closest' | 'farthest'>('closest');
-  const [filterLocation, setFilterLocation] = useState<string>('');
+  const [filterLocation, setFilterLocation] = useState('');
 
-  const buildUrlParams = (options: { mode?: 'radius' | 'nearest' | 'location'; latitude?: number; longitude?: number; radius?: number; query?: string; location?: string }) => {
+  const buildUrlParams = (options: {
+    mode?: 'radius' | 'nearest' | 'location';
+    latitude?: number; longitude?: number;
+    radius?: number; query?: string; location?: string;
+  }) => {
     const params = new URLSearchParams();
     const mode = options.mode || searchMode;
     const query = options.query ?? searchQuery;
     const location = options.location ?? searchLocation;
-    const radius = typeof options.radius === 'number' ? options.radius : radiusKm;
-
-    params.set('limit', '50');
-    params.set('mode', mode);
+    const r = typeof options.radius === 'number' ? options.radius : radiusKm;
+    params.set('limit', '50'); params.set('mode', mode);
     if (query.trim()) params.set('query', query.trim());
     if (location.trim()) params.set('location', location.trim());
     if (mode === 'nearest') params.set('nearest', 'true');
-    else if (mode === 'radius') params.set('radius', String(radius));
+    else if (mode === 'radius') params.set('radius', String(r));
     if (typeof options.latitude === 'number' && typeof options.longitude === 'number') {
       params.set('latitude', String(options.latitude));
       params.set('longitude', String(options.longitude));
@@ -526,21 +109,19 @@ export const FindNearbyCourts: React.FC<FindNearbyCourtsProps> = ({
     return params.toString();
   };
 
-  const getCacheKey = (mode: 'radius' | 'nearest' | 'location', query: string, location: string, radius: number) => {
-    return `FindNearbyCourts:${window.location.pathname}:${mode}:${query}:${location}:${radius}`;
-  };
+  const getCacheKey = (mode: string, query: string, location: string, r: number) =>
+    `FindNearbyCourts:${typeof window !== 'undefined' ? window.location.pathname : ''}:${mode}:${query}:${location}:${r}`;
 
   const loadInitialSearchFromUrl = () => {
     if (typeof window === 'undefined') return null;
     const params = new URLSearchParams(window.location.search);
     const query = params.get('query') || '';
     const location = params.get('location') || '';
-    const mode = (params.get('mode') as 'radius' | 'nearest' | 'location') || (params.get('nearest') === 'true' ? 'nearest' : params.has('location') ? 'location' : 'radius');
-    const radius = Number(params.get('radius')) || radiusKm;
-    if (!query && !location && !params.get('nearest') && !params.has('mode') && !params.has('radius')) {
-      return null;
-    }
-    return { mode, query, location, radius };
+    const mode = (params.get('mode') as 'radius' | 'nearest' | 'location') ||
+      (params.get('nearest') === 'true' ? 'nearest' : params.has('location') ? 'location' : 'radius');
+    const r = Number(params.get('radius')) || radiusKm;
+    if (!query && !location && !params.get('nearest') && !params.has('mode') && !params.has('radius')) return null;
+    return { mode, query, location, radius: r };
   };
 
   const filteredAndSortedCourts = useMemo(() => {
@@ -554,9 +135,8 @@ export const FindNearbyCourts: React.FC<FindNearbyCourtsProps> = ({
     return filtered;
   }, [nearbyCourts, selectedSurface, selectedIndoorOutdoor, hasLights, sortByDistance, filterLocation]);
 
-  const availableLocationsInResults = useMemo(() => {
-    return Array.from(new Set(nearbyCourts.map(c => c.city))).sort();
-  }, [nearbyCourts]);
+  const availableLocations = useMemo(() =>
+    Array.from(new Set(nearbyCourts.map(c => c.city))).sort(), [nearbyCourts]);
 
   const fetchNearbyCourts = async (
     mode: 'radius' | 'nearest' | 'location',
@@ -566,44 +146,28 @@ export const FindNearbyCourts: React.FC<FindNearbyCourtsProps> = ({
     const locationValue = overrides?.location ?? searchLocation;
     const radiusValue = overrides?.radius ?? radiusKm;
 
-    setSearchMode(mode);
-    setSearchQuery(queryValue);
-    setSearchLocation(locationValue);
-    setRadiusKm(radiusValue);
-    setLoading(true); setError(null); setNearbyCourts([]); setSuggestedCourts([]);
-    setHasSearched(true); setResultLabel('');
-    setSelectedSurface(''); setSelectedIndoorOutdoor(''); setHasLights('');
-    setSortByDistance('closest'); setFilterLocation('');
+    setSearchMode(mode); setSearchQuery(queryValue); setSearchLocation(locationValue); setRadiusKm(radiusValue);
+    setLoading(true); setError(null); setNearbyCourts([]); setSuggestedCourts([]); setHasSearched(true); setResultLabel('');
+    setSelectedSurface(''); setSelectedIndoorOutdoor(''); setHasLights(''); setSortByDistance('closest'); setFilterLocation('');
 
     const performSearch = async (latitude?: number, longitude?: number) => {
       try {
         const urlParams = buildUrlParams({ mode, latitude, longitude, radius: radiusValue, query: queryValue, location: locationValue });
-        const url = `/api/courts/nearby?${urlParams}`;
-        const response = await fetch(url);
+        const response = await fetch(`/api/courts/nearby?${urlParams}`);
         if (!response.ok) throw new Error('Search failed.');
         const data: NearbyCourt[] = await response.json();
         setNearbyCourts(data);
         const label = data.length > 0
-          ? mode === 'nearest'
-            ? 'Nearest courts returned'
-            : mode === 'location'
-              ? 'Location search results'
-              : `Courts within ${radiusValue} km`
-          : mode === 'radius' && latitude !== undefined
-            ? `No courts found within ${radiusValue} km`
-            : 'No matching courts found';
+          ? mode === 'nearest' ? 'Nearest courts' : mode === 'location' ? 'Location results' : `Within ${radiusValue} km`
+          : mode === 'radius' && latitude !== undefined ? `No courts within ${radiusValue} km` : 'No courts found';
         setResultLabel(label);
-
         if (typeof window !== 'undefined') {
-          const currentSection = new URLSearchParams(window.location.search).get('section') || 'find-courts';
-          window.history.replaceState(null, '', `${window.location.pathname}?section=${currentSection}&${urlParams}`);
-          const cacheKey = getCacheKey(mode, queryValue, locationValue, radiusValue);
-          window.sessionStorage.setItem(cacheKey, JSON.stringify({ nearbyCourts: data, suggestedCourts: [], resultLabel: label }));
+          window.history.replaceState(null, '', `${window.location.pathname}?section=find-courts&${urlParams}`);
+          window.sessionStorage.setItem(getCacheKey(mode, queryValue, locationValue, radiusValue), JSON.stringify({ nearbyCourts: data, suggestedCourts: [], resultLabel: label }));
         }
-
         if (data.length === 0 && mode === 'radius' && latitude !== undefined) {
-          const suggestData: NearbyCourt[] = await (await fetch(`/api/courts/nearby?${buildUrlParams({ mode: 'nearest', latitude, longitude, query: queryValue, location: locationValue })}`)).json();
-          setSuggestedCourts(suggestData.slice(0, 10));
+          const sd: NearbyCourt[] = await (await fetch(`/api/courts/nearby?${buildUrlParams({ mode: 'nearest', latitude, longitude, query: queryValue, location: locationValue })}`)).json();
+          setSuggestedCourts(sd.slice(0, 10));
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to fetch courts');
@@ -613,29 +177,13 @@ export const FindNearbyCourts: React.FC<FindNearbyCourtsProps> = ({
     };
 
     if (mode === 'location') {
-      if (!locationValue.trim() && !queryValue.trim()) { setError('Please enter a location or search term.'); setLoading(false); return; }
-      const fallbackCoordinates = locationValue.trim() ? LOCATION_COORDINATES[locationValue.trim()] : undefined;
-      if (!navigator.geolocation) {
-        if (fallbackCoordinates) {
-          performSearch(fallbackCoordinates.latitude, fallbackCoordinates.longitude);
-          return;
-        }
-        setError('Geolocation not supported. Please allow location access or choose a known location.');
-        setLoading(false);
-        return;
-      }
+      if (!locationValue.trim() && !queryValue.trim()) { setError('Enter a location or search term.'); setLoading(false); return; }
+      const fb = locationValue.trim() ? LOCATION_COORDINATES[locationValue.trim()] : undefined;
+      if (!navigator.geolocation) { if (fb) { performSearch(fb.latitude, fb.longitude); return; } setError('Geolocation not supported.'); setLoading(false); return; }
       navigator.geolocation.getCurrentPosition(
         pos => performSearch(pos.coords.latitude, pos.coords.longitude),
-        err => {
-          if (fallbackCoordinates) {
-            performSearch(fallbackCoordinates.latitude, fallbackCoordinates.longitude);
-            return;
-          }
-          setError(`Location access denied: ${err.message}`);
-          setLoading(false);
-        }
-      );
-      return;
+        () => { if (fb) { performSearch(fb.latitude, fb.longitude); return; } setError('Location access denied.'); setLoading(false); }
+      ); return;
     }
     if (!navigator.geolocation) { setError('Geolocation not supported.'); setLoading(false); return; }
     navigator.geolocation.getCurrentPosition(
@@ -647,249 +195,247 @@ export const FindNearbyCourts: React.FC<FindNearbyCourtsProps> = ({
   /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const initialSearch = loadInitialSearchFromUrl();
-    if (!initialSearch) return;
-
-    const { mode, query, location, radius } = initialSearch;
-    setSearchMode(mode);
-    setSearchQuery(query);
-    setSearchLocation(location);
-    setRadiusKm(radius);
-    setHasSearched(true);
-
-    const cacheKey = getCacheKey(mode, query, location, radius);
-    const cached = window.sessionStorage.getItem(cacheKey);
+    const init = loadInitialSearchFromUrl();
+    if (!init) return;
+    const { mode, query, location, radius: r } = init;
+    setSearchMode(mode); setSearchQuery(query); setSearchLocation(location); setRadiusKm(r); setHasSearched(true);
+    const cached = window.sessionStorage.getItem(getCacheKey(mode, query, location, r));
     if (cached) {
       try {
-        const parsed = JSON.parse(cached);
-        setNearbyCourts(parsed.nearbyCourts || []);
-        setSuggestedCourts(parsed.suggestedCourts || []);
-        setResultLabel(parsed.resultLabel || '');
-        setError(null);
-        return;
-      } catch (error) {
-        console.warn('Unable to restore nearby courts from cache', error);
-      }
+        const p = JSON.parse(cached);
+        setNearbyCourts(p.nearbyCourts || []); setSuggestedCourts(p.suggestedCourts || []); setResultLabel(p.resultLabel || ''); return;
+      } catch {}
     }
-
-    fetchNearbyCourts(mode, { query, location, radius });
+    fetchNearbyCourts(mode, { query, location, radius: r });
   }, []);
   /* eslint-enable react-hooks/exhaustive-deps */
 
-  const getSurfaceStyle = (surface: string) => SURFACE_COLORS[surface] || { bg: 'rgba(74,196,74,0.12)', text: '#7dc142', border: 'rgba(74,196,74,0.3)' };
+  const surfCfg = (surface: string) => SURFACE_CONFIG[surface] || SURFACE_CONFIG.Hard;
+  const selectCls = `${inputBase} px-3 py-2.5 appearance-none cursor-pointer`;
 
   return (
-    <>
-      <style>{styles}</style>
-      <div className="fnc-root">
-        <div className="fnc-header">
-          <div className="fnc-title-group">
-            <div className="fnc-icon-wrap">
-              <Home style={{ width: 22, height: 22, color: '#7dc142' }} />
-            </div>
-            <div>
-              <h2 className="fnc-title">Find Courts Near You</h2>
-              <p className="fnc-subtitle">Search by venue, city, surface, lighting, or available location</p>
-            </div>
-          </div>
-          {loading && <span className="fnc-pulse" />}
+    <div className="w-full text-white">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center gap-2.5">
+          <Home className="w-4 h-4 text-[#7dc142]" />
+          <h2 className="text-sm font-semibold tracking-widest uppercase text-white/70">Find Courts Near You</h2>
         </div>
+        {loading && <span className="w-1.5 h-1.5 rounded-full bg-[#7dc142] animate-pulse" />}
+      </div>
 
-        <div className="fnc-divider" />
-
-        <div className="fnc-form-grid">
-          <div className="fnc-two-col">
-            <div>
-              <label className="fnc-label">Search term</label>
-              <div className="fnc-input-wrap">
-                <Search className="fnc-input-icon" />
-                <input
-                  className="fnc-input"
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  placeholder="Court name, city, surface..."
-                />
-              </div>
-            </div>
-            <div>
-              <label className="fnc-label">Location</label>
-              <div className="fnc-select-wrap">
-                <select className="fnc-select" value={searchLocation} onChange={e => setSearchLocation(e.target.value)}>
-                  <option value="">Select a location...</option>
-                  {AVAILABLE_LOCATIONS.map(l => <option key={l} value={l}>{l}</option>)}
-                </select>
-                <ChevronDown className="fnc-chevron" />
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <label className="fnc-label">Search radius (km)</label>
-            <input
-              className="fnc-num-input"
-              type="number" value={radiusKm} min={1} max={200}
-              onChange={e => setRadiusKm(Number(e.target.value))}
-            />
-          </div>
+      {/* Search inputs */}
+      <div className="grid grid-cols-2 gap-3 mb-3">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/25 pointer-events-none" />
+          <input
+            className={`${inputBase} pl-9 pr-3 py-2.5`}
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Court name, surface…"
+          />
         </div>
-
-        <div className="fnc-btn-grid">
-          <button className="fnc-btn fnc-btn-primary" onClick={() => fetchNearbyCourts('radius')} disabled={loading}>
-            <Target style={{ width: 16, height: 16 }} />
-            {loading ? 'Searching nearby...' : `Search within ${radiusKm} km`}
-          </button>
-          <div className="fnc-two-col">
-            <button className="fnc-btn fnc-btn-secondary" onClick={() => fetchNearbyCourts('nearest')} disabled={loading}>
-              <Zap style={{ width: 15, height: 15 }} />
-              {loading ? 'Finding nearest...' : 'Nearest courts'}
-            </button>
-            <button className="fnc-btn fnc-btn-tertiary" onClick={() => fetchNearbyCourts('location')} disabled={loading}>
-              <MapPin style={{ width: 15, height: 15 }} />
-              {loading ? 'Searching...' : 'By location'}
-            </button>
-          </div>
+        <div className="relative">
+          <select className={selectCls} value={searchLocation} onChange={e => setSearchLocation(e.target.value)}>
+            <option value="">Location…</option>
+            {AVAILABLE_LOCATIONS.map(l => <option key={l} value={l}>{l}</option>)}
+          </select>
+          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/25 pointer-events-none" />
         </div>
+      </div>
 
-        {error && (
-          <div className="fnc-error">
-            <AlertCircle style={{ width: 16, height: 16, flexShrink: 0 }} />
-            <span>{error}</span>
-          </div>
-        )}
+      <div className="flex items-center gap-3 mb-4">
+        <div className="relative flex-shrink-0">
+          <input
+            type="number" min={1} max={200} value={radiusKm}
+            onChange={e => setRadiusKm(Number(e.target.value))}
+            className={`${inputBase} w-24 px-3 py-2.5 text-center`}
+          />
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-white/25 pointer-events-none">km</span>
+        </div>
+        <span className="text-white/20 text-xs">radius</span>
+      </div>
 
-        {hasSearched && (
-          <div style={{ display: 'grid', gap: 16 }}>
-            {resultLabel && (
-              <div className="fnc-result-banner">
-                <span className="fnc-pulse" />
+      {/* Action buttons */}
+      <div className="grid grid-cols-3 gap-2 mb-5">
+        <button
+          onClick={() => fetchNearbyCourts('radius')} disabled={loading}
+          className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg bg-[#7dc142] hover:bg-[#8dd152] text-[#071207] text-xs font-bold tracking-wide uppercase transition-all disabled:opacity-50"
+        >
+          <Target className="w-3.5 h-3.5" />
+          {loading ? 'Searching…' : `${radiusKm} km`}
+        </button>
+        <button
+          onClick={() => fetchNearbyCourts('nearest')} disabled={loading}
+          className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg bg-white/[0.05] hover:bg-white/[0.09] border border-white/[0.07] text-white/70 hover:text-white text-xs font-semibold tracking-wide uppercase transition-all disabled:opacity-50"
+        >
+          <Zap className="w-3.5 h-3.5" />
+          Nearest
+        </button>
+        <button
+          onClick={() => fetchNearbyCourts('location')} disabled={loading}
+          className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg bg-white/[0.05] hover:bg-white/[0.09] border border-white/[0.07] text-white/70 hover:text-white text-xs font-semibold tracking-wide uppercase transition-all disabled:opacity-50"
+        >
+          <MapPin className="w-3.5 h-3.5" />
+          By city
+        </button>
+      </div>
+
+      {/* Error */}
+      {error && (
+        <div className="flex items-center gap-2 px-3 py-2.5 mb-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs">
+          <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+          {error}
+        </div>
+      )}
+
+      {/* Results */}
+      {hasSearched && (
+        <div className="space-y-3">
+          {/* Result label + filter toggle */}
+          {(resultLabel || nearbyCourts.length > 0) && (
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-white/40">
                 {resultLabel}
-              </div>
-            )}
+                {filteredAndSortedCourts.length !== nearbyCourts.length && nearbyCourts.length > 0 &&
+                  <span className="ml-1 text-[#7dc142]">· {filteredAndSortedCourts.length} shown</span>}
+              </span>
+              {nearbyCourts.length > 0 && (
+                <button
+                  onClick={() => setShowFilters(v => !v)}
+                  className={`flex items-center gap-1.5 text-xs font-medium transition-colors ${showFilters ? 'text-[#7dc142]' : 'text-white/30 hover:text-white/60'}`}
+                >
+                  <SlidersHorizontal className="w-3.5 h-3.5" />
+                  Filter
+                </button>
+              )}
+            </div>
+          )}
 
-            {nearbyCourts.length > 0 && (
-              <div className="fnc-filter-panel">
-                <div className="fnc-filter-header">
-                  <Filter style={{ width: 16, height: 16, color: '#7dc142' }} />
-                  <h3 className="fnc-filter-title">Filter Results</h3>
-                  <span className="fnc-filter-count">{filteredAndSortedCourts.length} courts</span>
+          {/* Filter panel */}
+          {showFilters && nearbyCourts.length > 0 && (
+            <div className="grid grid-cols-2 gap-2 p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+              {[
+                { label: 'Surface', value: selectedSurface, onChange: setSelectedSurface, options: SURFACES.map(s => ({ v: s, t: s })) },
+                { label: 'Type', value: selectedIndoorOutdoor, onChange: setSelectedIndoorOutdoor, options: INDOOR_OUTDOOR.map(t => ({ v: t, t })) },
+                { label: 'Lights', value: hasLights, onChange: setHasLights, options: [{ v: 'yes', t: 'With lights' }, { v: 'no', t: 'Without lights' }] },
+                { label: 'Sort', value: sortByDistance, onChange: (v: string) => setSortByDistance(v as 'closest' | 'farthest'), options: [{ v: 'closest', t: 'Closest' }, { v: 'farthest', t: 'Farthest' }] },
+                { label: 'City', value: filterLocation, onChange: setFilterLocation, options: availableLocations.map(l => ({ v: l, t: l })) },
+              ].map(({ label, value, onChange, options }) => (
+                <div key={label} className="relative">
+                  <label className="block text-[10px] font-semibold text-white/30 uppercase tracking-widest mb-1">{label}</label>
+                  <select
+                    value={value}
+                    onChange={e => onChange(e.target.value)}
+                    className="w-full bg-white/[0.04] border border-white/[0.07] rounded-md text-xs text-white/80 px-2.5 py-2 appearance-none outline-none focus:border-[#7dc142]/40 cursor-pointer"
+                  >
+                    <option value="">All</option>
+                    {options.map(o => <option key={o.v} value={o.v}>{o.t}</option>)}
+                  </select>
+                  <ChevronDown className="absolute right-2 bottom-2.5 w-3 h-3 text-white/20 pointer-events-none" />
                 </div>
-                <div className="fnc-filter-grid">
-                  <div>
-                    <label className="fnc-label" style={{ marginBottom: 6 }}>Surface</label>
-                    <select className="fnc-filter-select" value={selectedSurface} onChange={e => setSelectedSurface(e.target.value)}>
-                      <option value="">All surfaces</option>
-                      {SURFACES.map(s => <option key={s} value={s}>{s}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="fnc-label" style={{ marginBottom: 6 }}>Type</label>
-                    <select className="fnc-filter-select" value={selectedIndoorOutdoor} onChange={e => setSelectedIndoorOutdoor(e.target.value)}>
-                      <option value="">All types</option>
-                      {INDOOR_OUTDOOR.map(t => <option key={t} value={t}>{t}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="fnc-label" style={{ marginBottom: 6 }}>Lights</label>
-                    <select className="fnc-filter-select" value={hasLights} onChange={e => setHasLights(e.target.value)}>
-                      <option value="">All courts</option>
-                      <option value="yes">With lights</option>
-                      <option value="no">Without lights</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="fnc-label" style={{ marginBottom: 6 }}>Distance</label>
-                    <select className="fnc-filter-select" value={sortByDistance} onChange={e => setSortByDistance(e.target.value as 'closest' | 'farthest')}>
-                      <option value="closest">Closest first</option>
-                      <option value="farthest">Farthest first</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="fnc-label" style={{ marginBottom: 6 }}>City</label>
-                    <select className="fnc-filter-select" value={filterLocation} onChange={e => setFilterLocation(e.target.value)}>
-                      <option value="">All locations</option>
-                      {availableLocationsInResults.map(l => <option key={l} value={l}>{l}</option>)}
-                    </select>
-                  </div>
-                </div>
-              </div>
-            )}
+              ))}
+            </div>
+          )}
 
-            {filteredAndSortedCourts.length > 0 ? (
-              <div style={{ display: 'grid', gap: 12 }}>
-                {filteredAndSortedCourts.map(court => {
-                  const surf = getSurfaceStyle(court.surface);
-                  return (
-                    <div key={court.id} className="fnc-card" onClick={() => onSelectCourt?.(court)} style={{ cursor: onSelectCourt ? 'pointer' : 'default' }}>
-                      <img src={court.image} alt={court.name} className="fnc-court-img" />
-                      <div className="fnc-card-body">
-                        <div className="fnc-card-name-row">
-                          <h3 className="fnc-card-name">{court.name}</h3>
-                          <span className="fnc-dist-badge">📍 {court.distance.toFixed(1)} km</span>
-                        </div>
-                        <p className="fnc-org">{court.organization}</p>
-                        <p className="fnc-address">{court.address}</p>
-                        <div className="fnc-tags">
-                          <span className="fnc-surface-badge" style={{ background: surf.bg, color: surf.text, border: `1px solid ${surf.border}` }}>
-                            {court.surface}
+          {/* Court cards */}
+          {filteredAndSortedCourts.length > 0 ? (
+            <div className="space-y-px">
+              {filteredAndSortedCourts.map((court, i) => {
+                const sc = surfCfg(court.surface);
+                return (
+                  <div
+                    key={court.id}
+                    onClick={() => onSelectCourt?.(court)}
+                    className={`flex items-center gap-3 px-3 py-3 hover:bg-white/[0.04] transition-colors ${i === 0 ? 'rounded-t-lg' : ''} ${i === filteredAndSortedCourts.length - 1 ? 'rounded-b-lg' : ''} ${onSelectCourt ? 'cursor-pointer' : ''}`}
+                  >
+                    {/* Court image */}
+                    <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-white/[0.05]">
+                      <img src={court.image} alt={court.name} className="w-full h-full object-cover" />
+                    </div>
+
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-semibold text-white leading-none">{court.name}</span>
+                        <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded ${sc.bg} ${sc.text}`}>
+                          <span className={`w-1 h-1 rounded-full ${sc.dot}`} />
+                          {court.surface}
+                        </span>
+                        {court.lights && (
+                          <span className="text-[10px] font-semibold text-yellow-400/80 bg-yellow-400/10 px-1.5 py-0.5 rounded">
+                            🔆 Lit
                           </span>
-                          <span className="fnc-tag">{court.indoorOutdoor}</span>
-                          {court.lights && <span className="fnc-tag fnc-lights-tag">🔆 Lights</span>}
-                        </div>
+                        )}
                       </div>
+                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                        <span className="text-xs text-white/30">{court.organization}</span>
+                        <span className="text-white/15 text-xs">·</span>
+                        <span className="text-xs text-white/30">{court.city}</span>
+                        <span className="text-white/15 text-xs">·</span>
+                        <span className="text-xs text-white/20">{court.indoorOutdoor}</span>
+                      </div>
+                    </div>
+
+                    {/* Distance + book */}
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className="text-xs font-semibold text-[#7dc142]">{court.distance.toFixed(1)} km</span>
                       {onBookClick && (
-                        <div className="fnc-card-action">
-                          <button className="fnc-book-btn" onClick={e => { e.stopPropagation(); onBookClick(court.id, court.name); }}>
-                            Book
-                          </button>
-                        </div>
+                        <button
+                          onClick={e => { e.stopPropagation(); onBookClick(court.id, court.name); }}
+                          className="px-2.5 py-1.5 rounded-md bg-[#7dc142] hover:bg-[#8dd152] text-[#071207] text-xs font-bold uppercase tracking-wide transition-all"
+                        >
+                          Book
+                        </button>
                       )}
                     </div>
-                  );
-                })}
-              </div>
-            ) : suggestedCourts.length > 0 ? (
-              <div style={{ display: 'grid', gap: 12 }}>
-                <div className="fnc-suggest-banner">
-                  <TrendingUp style={{ width: 20, height: 20, color: '#7dc142', flexShrink: 0, marginTop: 2 }} />
-                  <div>
-                    <p className="fnc-suggest-title">Suggested courts beyond {radiusKm} km</p>
-                    <p className="fnc-suggest-text">No courts were found inside your radius — showing the nearest available courts outside it.</p>
                   </div>
+                );
+              })}
+            </div>
+          ) : suggestedCourts.length > 0 ? (
+            <div className="space-y-3">
+              <div className="flex items-start gap-2.5 px-3 py-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+                <TrendingUp className="w-4 h-4 text-[#7dc142] flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-xs font-semibold text-white/70">No courts within {radiusKm} km</p>
+                  <p className="text-xs text-white/30 mt-0.5">Showing nearest courts outside your radius.</p>
                 </div>
-                {suggestedCourts.map(court => {
-                  const surf = getSurfaceStyle(court.surface);
+              </div>
+              <div className="space-y-px">
+                {suggestedCourts.map((court, i) => {
+                  const sc = surfCfg(court.surface);
                   return (
-                    <div key={court.id} className="fnc-card" style={{ gridTemplateColumns: '80px 1fr' }}>
-                      <img src={court.image} alt={court.name} className="fnc-court-img" />
-                      <div className="fnc-card-body">
-                        <div className="fnc-card-name-row">
-                          <h3 className="fnc-card-name">{court.name}</h3>
-                          <span className="fnc-dist-badge">{court.distance.toFixed(1)} km</span>
-                        </div>
-                        <p className="fnc-org">{court.organization}</p>
-                        <p className="fnc-address">{court.city}</p>
-                        <div className="fnc-tags">
-                          <span className="fnc-surface-badge" style={{ background: surf.bg, color: surf.text, border: `1px solid ${surf.border}` }}>
-                            {court.surface}
+                    <div key={court.id} className={`flex items-center gap-3 px-3 py-3 hover:bg-white/[0.04] transition-colors ${i === 0 ? 'rounded-t-lg' : ''} ${i === suggestedCourts.length - 1 ? 'rounded-b-lg' : ''}`}>
+                      <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-white/[0.05]">
+                        <img src={court.image} alt={court.name} className="w-full h-full object-cover" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold text-white">{court.name}</span>
+                          <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded ${sc.bg} ${sc.text}`}>
+                            <span className={`w-1 h-1 rounded-full ${sc.dot}`} />{court.surface}
                           </span>
                         </div>
+                        <span className="text-xs text-white/30">{court.city}</span>
                       </div>
+                      <span className="text-xs font-semibold text-white/40">{court.distance.toFixed(1)} km</span>
                     </div>
                   );
                 })}
               </div>
-            ) : hasSearched && !loading ? (
-              <div className="fnc-empty">
-                <div className="fnc-empty-icon">
-                  <Home style={{ width: 22, height: 22, color: '#7dc142' }} />
-                </div>
-                <p className="fnc-empty-title">No courts found</p>
-                <p className="fnc-empty-text">Try expanding the radius, adjusting filters, or using nearest search.</p>
+            </div>
+          ) : hasSearched && !loading ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="w-10 h-10 rounded-full bg-white/[0.04] flex items-center justify-center mb-3">
+                <Home className="w-5 h-5 text-white/20" />
               </div>
-            ) : null}
-          </div>
-        )}
-      </div>
-    </>
+              <p className="text-sm font-medium text-white/30">No courts found</p>
+              <p className="text-xs text-white/20 mt-1">Try a wider radius or nearest search</p>
+            </div>
+          ) : null}
+        </div>
+      )}
+    </div>
   );
 };

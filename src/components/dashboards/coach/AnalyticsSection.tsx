@@ -248,7 +248,7 @@ export default function AnalyticsSection({ coachId }: { coachId: string }) {
       </div>
 
       {/* KPI Row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 9 }}>
+      <div className="analytics-kpi-grid" style={{ display: 'grid', gap: 9 }}>
         {[
           { icon: '🎾', label: 'Total Sessions', value: stats.totalSessions, sub: `${stats.completedSessions} completed`, color: G.lime2 },
           { icon: '💰', label: 'Total Revenue', value: `$${stats.totalRevenue.toLocaleString()}`, sub: `$${(stats.totalRevenue / Math.max(stats.completedSessions, 1)).toFixed(0)} avg/session`, color: G.lime2 },
@@ -265,8 +265,8 @@ export default function AnalyticsSection({ coachId }: { coachId: string }) {
       </div>
 
       {/* Filter Bar & Refresh */}
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'space-between', background: G.card, borderRadius: 8, padding: 11, border: `1px solid ${G.border}` }}>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', flex: 1 }}>
+      <div className="analytics-filter-bar" style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'space-between', background: G.card, borderRadius: 8, padding: 11, border: `1px solid ${G.border}` }}>
+        <div className="analytics-filter-actions" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', flex: 1 }}>
           {(['revenue', 'sessions'] as const).map(tab => (
             <button 
               key={tab} 
@@ -292,6 +292,34 @@ export default function AnalyticsSection({ coachId }: { coachId: string }) {
               {f}
             </button>
           ))}
+        </div>
+        <div className="analytics-filter-dropdown" style={{ display: 'none', flex: 1 }}>
+          <select
+            value={activeChart}
+            onChange={e => setActiveChart(e.target.value as 'revenue' | 'sessions')}
+            style={{
+              width: '100%',
+              maxWidth: 220,
+              padding: '8px 36px 8px 12px',
+              background: G.dark,
+              border: `1px solid ${G.border}`,
+              color: G.text,
+              borderRadius: 8,
+              fontSize: 11,
+              fontWeight: 700,
+              appearance: 'none',
+              WebkitAppearance: 'none',
+              MozAppearance: 'none',
+              cursor: 'pointer',
+              backgroundImage: 'linear-gradient(45deg, transparent 50%, rgba(255,255,255,.4) 50%), linear-gradient(135deg, rgba(255,255,255,.4) 50%, transparent 50%)',
+              backgroundPosition: 'calc(100% - 18px) calc(50% - 2px), calc(100% - 13px) calc(50% - 2px)',
+              backgroundSize: '6px 6px, 6px 6px',
+              backgroundRepeat: 'no-repeat',
+            }}
+          >
+            <option value="revenue">💰 Revenue</option>
+            <option value="sessions">🎾 Sessions</option>
+          </select>
         </div>
         <button 
           onClick={handleRefresh}
@@ -322,6 +350,39 @@ export default function AnalyticsSection({ coachId }: { coachId: string }) {
         @keyframes spin {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
+        }
+        .analytics-kpi-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        .analytics-filter-dropdown {
+          display: none;
+        }
+        .analytics-insights-grid {
+          grid-template-columns: 1fr;
+        }
+        .analytics-tx-reviews-grid {
+          grid-template-columns: 1fr;
+        }
+        @media (max-width: 767px) {
+          .analytics-filter-actions {
+            display: none !important;
+          }
+          .analytics-filter-dropdown {
+            display: flex !important;
+          }
+        }
+        @media (min-width: 768px) {
+          .analytics-insights-grid {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+          }
+          .analytics-tx-reviews-grid {
+            grid-template-columns: 1.5fr 1fr;
+          }
+        }
+        @media (min-width: 1024px) {
+          .analytics-kpi-grid {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+          }
         }
       `}</style>
 
@@ -359,7 +420,7 @@ export default function AnalyticsSection({ coachId }: { coachId: string }) {
       </div>
 
       {/* Transactions + Recent Reviews */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 11 }}>
+      <div className="analytics-tx-reviews-grid" style={{ display: 'grid', gap: 11 }}>
 
         {/* Transactions */}
         <div style={card}>
@@ -434,7 +495,7 @@ export default function AnalyticsSection({ coachId }: { coachId: string }) {
           <div style={{ fontSize: 12, fontWeight: 800, color: G.lime }}>💡 AI-Powered Coaching Insights</div>
           <Tag>Personalized</Tag>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 9 }}>
+        <div className="analytics-insights-grid" style={{ display: 'grid', gap: 9 }}>
           {[
             { icon: '📈', title: 'Revenue Opportunity', body: 'Adding 2 group sessions/week could boost monthly revenue by ~$480 with your current player base.' },
             { icon: '🎯', title: 'Retention Alert', body: `${stats.totalPlayers - stats.activePlayers} players haven't booked in 30+ days. A follow-up message could recover them.` },
