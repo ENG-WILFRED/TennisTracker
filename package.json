@@ -42,7 +42,7 @@
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
-    "migrate": "prisma migrate deploy",
+    "migrate": "tsx scripts/prisma-deploy-or-push.ts",
     "seed": "prisma db seed",
     "migrate:reset": "prisma migrate reset"
   },
