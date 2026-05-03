@@ -47,6 +47,16 @@ export async function GET(req: Request) {
   } catch (err) {
     console.error('[Dashboard API] Error:', err instanceof Error ? err.message : err);
     console.error('[Dashboard API] Full error:', err);
+
+    // Handle user not found errors gracefully
+    if (err instanceof Error && err.message === 'User not found') {
+      return NextResponse.json({
+        error: 'User not found',
+        message: 'Your session has expired. Please log in again.',
+        action: 'logout'
+      }, { status: 401 });
+    }
+
     return NextResponse.json({ error: 'Internal server error', details: err instanceof Error ? err.message : 'Unknown error' }, { status: 500 });
   }
 }
