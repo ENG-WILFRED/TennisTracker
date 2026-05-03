@@ -1,4 +1,4 @@
-import prisma from './src/lib/prisma';
+import prisma from '../src/lib/prisma';
 
 async function queryUser() {
   try {
@@ -76,7 +76,7 @@ async function queryUser() {
       console.log('   ❌ No memberships found\n');
     } else {
       console.log(`   ✅ Found ${memberships.length} membership(ies):`);
-      memberships.forEach((membership, index) => {
+      memberships.forEach((membership: { id: string; orgId: string; role: string; status: string; joinedAt: Date; approvedAt: Date | null }, index: number) => {
         console.log(`\n   Membership ${index + 1}:`);
         console.log(`   - ID: ${membership.id}`);
         console.log(`   - Org ID: ${membership.orgId}`);

@@ -2,7 +2,7 @@
  * Find and fix all coaches with incorrect roles
  */
 
-import prisma from './src/lib/prisma.js';
+import prisma from '../src/lib/prisma';
 
 async function fixAllCoaches() {
   console.log('\n=== FINDING ALL COACHES WITH INCORRECT ROLES ===\n');
@@ -22,7 +22,7 @@ async function fixAllCoaches() {
       },
     });
 
-    const nonCoaches = staffRecords.filter(s => !s.role.includes('Coach'));
+    const nonCoaches = staffRecords.filter((s: { role: string }) => !s.role.includes('Coach'));
     
     if (nonCoaches.length === 0) {
       console.log('✅ All staff have correct roles!\n');
