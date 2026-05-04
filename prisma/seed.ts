@@ -14,6 +14,7 @@ import { seedTournamentTasks } from './seeds/tournament-tasks.js';
 import { seedTaskTemplates } from './seeds/task-templates-complete.js';
 import { seedTournamentPlayers } from './seeds/tournament-players-seeding.js';
 import { seedKenyaPlayersAndCourts } from './seeds/kenya-tennis-seed.js';
+import { seedCoachSessions } from './seeds/coach-sessions.js';
 import { PrismaClient } from '../src/generated/prisma/index.js';
 
 const prisma = new PrismaClient();
@@ -90,8 +91,13 @@ async function main() {
     console.log('───────────────────────────────────────────────────────────────');
     await seedStaffForAllOrgs();
 
-    // 12. Seed task templates
-    console.log('📍 STEP 12: Task Templates');
+    // 12. Seed coach sessions and activity links
+    console.log('📍 STEP 12: Coach Sessions');
+    console.log('───────────────────────────────────────────────────────────────');
+    await seedCoachSessions();
+
+    // 13. Seed task templates
+    console.log('📍 STEP 13: Task Templates');
     console.log('───────────────────────────────────────────────────────────────');
     await seedTaskTemplates();
 
@@ -101,24 +107,6 @@ async function main() {
     await seedTournamentTasks();
 
     // 14. Seed tournament players
-    console.log('📍 STEP 14: Tournament Players');
-    console.log('───────────────────────────────────────────────────────────────');
-    await seedTournamentPlayers();
-    console.log('📍 STEP 11: Staff Members');
-    console.log('───────────────────────────────────────────────────────────────');
-    await seedStaffForAllOrgs();
-
-    // 12. Seed tournament tasks (referee assignments with matches)
-    console.log('📍 STEP 12: Tournament Tasks');
-    console.log('───────────────────────────────────────────────────────────────');
-    await seedTournamentTasks();
-
-    // 13. Seed task templates for referees and coaches
-    console.log('📍 STEP 13: Task Templates');
-    console.log('───────────────────────────────────────────────────────────────');
-    await seedTaskTemplates();
-
-    // 14. Seed players for tournaments (5 per tournament, marked as paid/confirmed)
     console.log('📍 STEP 14: Tournament Players');
     console.log('───────────────────────────────────────────────────────────────');
     await seedTournamentPlayers();

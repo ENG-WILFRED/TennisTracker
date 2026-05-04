@@ -1463,6 +1463,7 @@ model CoachSession {
   metricHistories MetricHistory[]
   sessionReport  SessionReport?
   earnings       CoachEarning[]
+  activities     Activity[]          @relation("ActivitySessions")
 
   @@index([coachId, startTime])
   @@index([organizationId, startTime])
@@ -1658,6 +1659,7 @@ model CoachSessionReview {
 model Activity {
   id             String              @id @default(uuid())
   coachId        String              // Staff user ID
+  sessionId      String?             // Optional link to CoachSession
   type           String              // 'session', 'tournament', 'restocking', 'player-reachout', 'email'
   date           String              // YYYY-MM-DD format
   startTime      String              // HH:MM format
@@ -1670,8 +1672,10 @@ model Activity {
   updatedAt      DateTime            @updatedAt
   
   coach          Staff               @relation("Activities", fields: [coachId], references: [userId], onDelete: Cascade)
+  session        CoachSession?       @relation("ActivitySessions", fields: [sessionId], references: [id], onDelete: SetNull)
   
   @@index([coachId])
+  @@index([sessionId])
   @@index([date])
   @@index([type])
   @@index([createdAt])

@@ -9,6 +9,7 @@ import { ProfileView } from '@/components/profile/ProfileView';
 import { BookingView } from '@/components/booking/BookingViewNew';
 import { CommunityView } from '@/components/community/CommunityView';
 import { TournamentsView } from '@/components/players/TournamentsView';
+import { SessionsView } from '@/components/players/SessionsView';
 import { StatsView } from '@/components/stats/StatsView';
 import { ProgressView } from '@/components/stats/ProgressView';
 import { SettingsView } from '@/components/settings/SettingsView';
@@ -34,6 +35,7 @@ export const PlayerDashboard: React.FC = () => {
   const showBooking = searchParams.get('booking') === 'true';
   const showCommunity = searchParams.get('community') === 'true';
   const showTournaments = searchParams.get('tournaments') === 'true';
+  const showSessions = searchParams.get('sessions') === 'true';
   const showStats = searchParams.get('stats') === 'true';
   const showProgress = searchParams.get('progress') === 'true';
   const showMessages = searchParams.get('messages') === 'true';
@@ -55,6 +57,8 @@ export const PlayerDashboard: React.FC = () => {
       setActiveNav('Community');
     } else if (showTournaments) {
       setActiveNav('Tournaments');
+    } else if (showSessions) {
+      setActiveNav('My Sessions');
     } else if (showStats) {
       setActiveNav('Stats');
     } else if (showProgress) {
@@ -66,7 +70,7 @@ export const PlayerDashboard: React.FC = () => {
     } else {
       setActiveNav('Home');
     }
-  }, [showProfile, showBooking, showCommunity, showTournaments, showStats, showProgress, showMessages, showSettings]);
+  }, [showProfile, showBooking, showCommunity, showTournaments, showSessions, showStats, showProgress, showMessages, showSettings]);
 
   useEffect(() => {
     if (user?.id) {
@@ -111,8 +115,9 @@ export const PlayerDashboard: React.FC = () => {
   const navItems = [
     { label: 'Home', icon: '🏠', href: undefined }, 
     { label: 'My Profile', icon: '👤', href: '?profile=true' },
+    { label: 'My Sessions', icon: '📅', href: '?sessions=true' },
     { label: 'Tournaments', icon: '🏆', href: '?tournaments=true' }, 
-    { label: 'Court Booking', icon: '📅', href: '?booking=true' },
+    { label: 'Court Booking', icon: '🎾', href: '?booking=true' },
     { label: 'Progress', icon: '📈', href: '?progress=true' },
     { label: 'Services', icon: '🛠️', href: '/services' },
     { label: 'Messages', icon: '💬', href: '?messages=true' },
@@ -340,6 +345,8 @@ export const PlayerDashboard: React.FC = () => {
             <CommunityView isEmbedded={true} />
           ) : showTournaments ? (
             <TournamentsView isEmbedded={true} playerId={user?.id || ''} />
+          ) : showSessions ? (
+            <SessionsView isEmbedded={true} playerId={user?.id} />
           ) : showStats ? (
             <StatsView isEmbedded={true} playerData={playerData} />
           ) : showProgress ? (
