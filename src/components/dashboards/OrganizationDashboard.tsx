@@ -430,7 +430,7 @@ export const OrganizationDashboard: React.FC = () => {
   }
 
   return (
-    <div className="h-screen flex flex-col lg:flex-row overflow-hidden" style={{ fontFamily: "'Segoe UI', system-ui, sans-serif", background: G.dark, color: G.text }}>
+    <div className="h-screen flex flex-col lg:flex-row overflow-hidden" style={{ background: G.dark, color: G.text }}>
 
       {/* Mobile top bar */}
       <div className="lg:hidden flex items-center justify-between px-4 py-3 border-b" style={{ background: G.sidebar, borderColor: G.cardBorder }}>

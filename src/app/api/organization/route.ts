@@ -121,6 +121,26 @@ export async function POST(request: Request) {
       data: { organizationId: org.id },
     });
 
+    // Notify developers that a new organization registration was submitted
+    try {
+      const { notify } = await import('@/app/api/notification/producer');
+      await notify({
+        to: process.env.ADMIN_EMAIL || 'admin@tennistracker.com',
+        channel: 'email',
+        template: 'orgRegistered',
+        data: {
+          organizationId: org.id,
+          organizationName: org.name,
+          creatorId: auth.userId,
+          creatorEmail: email,
+          createdAt: org.createdAt?.toISOString?.() || new Date().toISOString(),
+          status: org.status,
+        },
+      });
+    } catch (notifyError) {
+      console.warn('Failed to publish orgRegistered notification:', notifyError);
+    }
+
     return new Response(JSON.stringify(org), {
       status: 201,
       headers: { 'Content-Type': 'application/json' },

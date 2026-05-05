@@ -365,7 +365,7 @@ export const RefereeDashboard: React.FC = () => {
   const card2 = { background: G.card2, border: `1px solid ${G.border}`, borderRadius: 12, padding: 13 } as const;
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row" style={{ fontFamily: "'Segoe UI', system-ui, sans-serif", background: G.dark, color: G.text, minHeight: '100vh', overflow: 'hidden', fontSize: 13 }}>
+    <div className="min-h-screen flex flex-col md:flex-row" style={{ background: G.dark, color: G.text, minHeight: '100vh', overflow: 'hidden', fontSize: 13 }}>
 
       {/* ═══════════════ LEFT NAV ═══════════════ */}
       <aside className="hidden md:flex md:w-56" style={{ background: G.sidebar, borderRight: `1px solid ${G.border}`, display: 'flex', flexDirection: 'column', flexShrink: 0 }}>

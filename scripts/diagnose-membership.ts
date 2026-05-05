@@ -68,7 +68,7 @@ async function diagnoseMembership() {
       console.log('   ❌ NO MEMBERSHIPS! This is likely the issue.');
       console.log('   The user has no organization membership.\n');
     } else {
-      user.memberships.forEach((m, i) => {
+      user.memberships.forEach((m: { role: string; status: string; organization: { id: string; name: string } }, i: number) => {
         console.log(`   Membership ${i + 1}:`);
         console.log(`     - Role: ${m.role}`);
         console.log(`     - Status: ${m.status}`);
@@ -92,13 +92,13 @@ async function diagnoseMembership() {
 
     // 5. Check if user has any organization membership with Coach-related role
     console.log('5️⃣ Membership Role Analysis:');
-    const coachMembers = user.memberships.filter(m => 
+    const coachMembers = user.memberships.filter((m: { role: string }) => 
       m.role && (m.role.includes('Coach') || m.role.includes('coach') || m.role.includes('Staff'))
     );
     
     if (coachMembers.length === 0) {
       console.log('   ⚠️  User has no membership with Coach/Staff role!');
-      console.log('   Membership roles found:', user.memberships.map(m => m.role).join(', ') || 'None');
+      console.log('   Membership roles found:', user.memberships.map((m: { role: string }) => m.role).join(', ') || 'None');
       console.log('\n   This might be the issue - need to add Coach membership\n');
     } else {
       console.log('   ✅ User has Coach/Staff membership role\n');
@@ -125,7 +125,7 @@ async function diagnoseMembership() {
       issues.push(`• Staff role is "${user.staff.role}" not "Coach"`);
     }
     
-    const inactiveMemberships = user.memberships.filter(m => m.status !== 'active');
+    const inactiveMemberships = user.memberships.filter((m: { status: string }) => m.status !== 'active');
     if (inactiveMemberships.length > 0) {
       issues.push(`• ${inactiveMemberships.length} inactive membership(s)`);
     }

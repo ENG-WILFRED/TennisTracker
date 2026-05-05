@@ -12,9 +12,13 @@ export async function GET(request: Request) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
     }
 
-    // Get pending organizations
-    const pending = await prisma.organization.findMany({
-      where: { status: 'pending' },
+    const url = new URL(request.url);
+    const status = url.searchParams.get('status');
+
+    const whereClause = status === 'all' ? {} : { status: status || 'pending' };
+
+    const orgs = await prisma.organization.findMany({
+      where: whereClause,
       select: {
         id: true,
         name: true,
@@ -25,15 +29,16 @@ export async function GET(request: Request) {
         email: true,
         logo: true,
         createdAt: true,
+        approvedAt: true,
         createdBy: true,
+        approvedBy: true,
         status: true,
       },
       orderBy: { createdAt: 'desc' },
     });
 
-    // Enrich with creator info
     const enrichedOrgs = await Promise.all(
-      pending.map(async (org) => {
+      orgs.map(async (org) => {
         const creator = org.createdBy
           ? await prisma.user.findUnique({
               where: { id: org.createdBy },
@@ -48,12 +53,19 @@ export async function GET(request: Request) {
       })
     );
 
+    if (status === 'all') {
+      return new Response(JSON.stringify({ organizations: enrichedOrgs }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     return new Response(JSON.stringify({ pending: enrichedOrgs }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error('Error fetching pending organizations:', error);
+    console.error('Error fetching developer organizations:', error);
     return new Response(JSON.stringify({ error: 'Internal server error' }), { status: 500 });
   }
 }

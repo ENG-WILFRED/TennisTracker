@@ -65,6 +65,24 @@ export async function authenticatedFetch(
     if (response.status === 401 && !skipRetry && requireAuth) {
       console.log(`[authenticatedFetch] Got 401 for ${url}, attempting token refresh and retry...`);
       
+      // Check if the response has a specific logout action
+      let responseData;
+      try {
+        responseData = await response.clone().json();
+      } catch (e) {
+        // Response might not be JSON
+      }
+      
+      if (responseData?.action === 'logout') {
+        console.log(`[authenticatedFetch] API requested logout for ${url}`);
+        clearTokens();
+        if (typeof window !== 'undefined') {
+          // Redirect to login
+          window.location.href = '/login';
+        }
+        throw new Error('Session expired');
+      }
+      
       const refreshed = await refreshAccessToken();
       if (refreshed) {
         // Get the new auth header and retry the request

@@ -119,7 +119,7 @@ export const FinanceDashboard: React.FC = () => {
   const statusColor = (s: string) => s === 'Paid' ? G.lime : s === 'Pending' ? G.yellow : '#e57373';
 
   return (
-    <div className="flex flex-col md:flex-row" style={{ height: '100vh', fontFamily: "'Segoe UI', system-ui, sans-serif", background: G.dark, color: G.text, overflow: 'hidden' }}>
+    <div className="flex flex-col md:flex-row" style={{ height: '100vh', background: G.dark, color: G.text, overflow: 'hidden' }}>
 
       {/* LEFT SIDEBAR */}
       <aside className="hidden md:flex md:w-48" style={{ background: G.sidebar, borderRight: `1px solid ${G.cardBorder}`, flexDirection: 'column', flexShrink: 0 }}>

@@ -1,7 +1,25 @@
-@import "tailwindcss";
 @import url('https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500&family=Syne:wght@700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap');
+@import "tailwindcss";
+
+/* Global font family setup */
+body, html {
+	font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
 
 @layer components {
+	/* Typography utilities */
+	.font-heading {
+		@apply font-bold;
+		font-family: 'Syne', system-ui, sans-serif;
+	}
+	.font-code {
+		font-family: 'DM Mono', 'Monaco', monospace;
+	}
+	.font-display {
+		font-family: 'DM Sans', system-ui, sans-serif;
+		font-weight: 800;
+	}
+	
 	.btn {
 		@apply bg-green-500 text-white font-bold px-4 py-2 rounded-md;
 	}
