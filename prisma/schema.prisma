@@ -348,6 +348,9 @@ model Organization {
   ownershipTransfers      OwnershipTransfer[]
   notificationLogs        NotificationLogModel[]
   dailyPlayerStats        DailyPlayerStats[]
+  // Developer onboarding
+  emailLogs               DeveloperEmailLog[]
+  payments                OrganizationPayment[]
 
   @@index([createdAt])
   @@index([slug])
@@ -3098,4 +3101,40 @@ model TestRun {
   @@index([runType])
   @@index([status])
   @@index([createdAt])
+}
+
+model DeveloperEmailLog {
+  id                  String      @id @default(uuid())
+  organizationId      String
+  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  recipientEmail      String
+  subject             String
+  body                String
+  installationFee     Int
+  monthlySubscription Int
+  sentBy              String      // userId of developer who sent it
+  status              String      @default("sent") // sent | delivered | bounced | failed
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+
+  @@index([organizationId])
+  @@index([createdAt])
+  @@index([status])
+}
+
+model OrganizationPayment {
+  id                String      @id @default(uuid())
+  organizationId    String
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  amount            Float
+  notes             String?
+  recordedBy        String      // userId of developer who recorded it
+  status            String      @default("confirmed") // pending | confirmed | verified
+  paymentDate       DateTime    @default(now())
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  @@index([organizationId])
+  @@index([createdAt])
+  @@index([status])
 }

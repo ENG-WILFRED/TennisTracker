@@ -27,10 +27,10 @@ export async function POST(
 
     const { orgId } = await params;
     const body = await request.json();
-    const { action, rejectionReason } = body as { action: 'approve' | 'reject'; rejectionReason?: string };
+    const { action, rejectionReason } = body as { action: 'approve' | 'reject' | 'suspend' | 'reactivate' | 'email' | 'delete'; rejectionReason?: string };
 
-    if (!action || !['approve', 'reject'].includes(action)) {
-      return new Response(JSON.stringify({ error: 'Action must be approve or reject' }), { status: 400 });
+    if (!action || !['approve', 'reject', 'suspend', 'reactivate', 'email', 'delete'].includes(action)) {
+      return new Response(JSON.stringify({ error: 'Action must be approve, reject, suspend, reactivate, email, or delete' }), { status: 400 });
     }
 
     // Get the organization
@@ -42,6 +42,12 @@ export async function POST(
     if (!org) {
       return new Response(JSON.stringify({ error: 'Organization not found' }), { status: 404 });
     }
+
+    // Get the creator user for email functionality
+    const creator = org.createdBy ? await prisma.user.findUnique({
+      where: { id: org.createdBy },
+      select: { email: true, firstName: true },
+    }) : null;
 
     if (action === 'approve') {
       // Approve the organization
@@ -59,7 +65,6 @@ export async function POST(
         const roles = ['admin', 'org', 'finance_officer'];
 
         for (const role of roles) {
-          // Check if membership already exists
           const existing = await prisma.membership.findUnique({
             where: {
               userId_orgId: {
@@ -81,7 +86,6 @@ export async function POST(
               },
             });
           } else {
-            // Update existing membership
             await prisma.membership.update({
               where: {
                 userId_orgId: {
@@ -99,7 +103,6 @@ export async function POST(
           }
         }
 
-        // Also create Staff entries for admin and org roles
         for (const role of ['admin', 'org']) {
           const existingStaff = await prisma.staff.findUnique({
             where: { userId: org.createdBy },
@@ -119,7 +122,6 @@ export async function POST(
         }
       }
 
-      // Create a notification for the organization creator
       if (org.createdBy) {
         const creator = await prisma.user.findUnique({
           where: { id: org.createdBy },
@@ -149,7 +151,63 @@ export async function POST(
         status: 200,
         headers: { 'Content-Type': 'application/json' },
       });
-    } else {
+    }
+
+    if (action === 'suspend' || action === 'reactivate') {
+      const newStatus = action === 'suspend' ? 'suspended' : 'approved';
+      const updatedOrg = await prisma.organization.update({
+        where: { id: orgId },
+        data: {
+          status: newStatus,
+          updatedAt: new Date(),
+        },
+      });
+
+      return new Response(JSON.stringify({
+        success: true,
+        message: `Organization "${org.name}" has been ${action === 'suspend' ? 'suspended' : 'reactivated'}`,
+        organization: updatedOrg,
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (action === 'email') {
+      const { subject, message } = body as { subject?: string; message?: string };
+      const recipient = org.email || creator?.email;
+
+      if (!recipient) {
+        return new Response(JSON.stringify({ error: 'No recipient email available for this organization' }), { status: 400 });
+      }
+
+      try {
+        const { notify } = await import('@/app/api/notification/producer');
+        await notify({
+          to: recipient,
+          channel: 'email',
+          template: 'developer_org_message',
+          data: {
+            organizationName: org.name,
+            subject: subject || `Update from TennisTracker Developer Support`,
+            message: message || `Hello ${creator?.firstName || 'there'},\n\nThis is a message from the TennisTracker development team regarding your organization registration.`,
+          },
+        });
+      } catch (notifyError) {
+        console.warn('Failed to send developer email to organization:', notifyError);
+        return new Response(JSON.stringify({ error: 'Failed to queue email message' }), { status: 500 });
+      }
+
+      return new Response(JSON.stringify({
+        success: true,
+        message: `Email queued for ${recipient}`,
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (action === 'reject') {
       // Reject the organization
       const updatedOrg = await prisma.organization.update({
         where: { id: orgId },
@@ -161,7 +219,6 @@ export async function POST(
         },
       });
 
-      // Create a notification for the organization creator
       if (org.createdBy) {
         const creator = await prisma.user.findUnique({
           where: { id: org.createdBy },
@@ -192,8 +249,24 @@ export async function POST(
         headers: { 'Content-Type': 'application/json' },
       });
     }
+
+    if (action === 'delete') {
+      // Permanently delete the organization and all related data
+      await prisma.organization.delete({
+        where: { id: orgId },
+      });
+
+      return new Response(JSON.stringify({
+        success: true,
+        message: `Organization "${org.name}" has been permanently deleted`,
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
   } catch (error) {
     console.error('Error processing organization action:', error);
     return new Response(JSON.stringify({ error: 'Internal server error' }), { status: 500 });
   }
 }
+

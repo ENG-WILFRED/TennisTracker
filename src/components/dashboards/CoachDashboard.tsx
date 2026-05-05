@@ -500,7 +500,7 @@ export const CoachDashboard: React.FC = () => {
   const miniSt = { background: G.card, border: `1px solid ${G.border}`, borderRadius: 8, padding: '8px 10px', marginBottom: 5 } as const;
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row" style={{ fontFamily: "'Segoe UI', system-ui, sans-serif", background: G.sidebar, color: G.text, height: '100vh', overflow: 'hidden', fontSize: 13 }}>
+    <div className="min-h-screen flex flex-col md:flex-row" style={{ background: G.sidebar, color: G.text, height: '100vh', overflow: 'hidden', fontSize: 13 }}>
 
       {sidebarOpen && <div className="fixed inset-0 z-30 bg-black/40 md:hidden" onClick={() => setSidebarOpen(false)} />}
 
