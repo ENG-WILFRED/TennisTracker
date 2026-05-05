@@ -232,6 +232,7 @@ export default function ActivityModal({ isOpen, selectedDate, onClose, onSave, c
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [conflictWarning, setConflictWarning] = useState<string | null>(null);
 
   // Fetch courts when modal opens
   useEffect(() => {
@@ -301,7 +302,51 @@ export default function ActivityModal({ isOpen, selectedDate, onClose, onSave, c
 
   const handleInputChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  }
+
+  const checkForConflicts = async () => {
+    try {
+      if (!formData.date || !formData.startTime || !formData.endTime || activeType !== 'session') {
+        setConflictWarning(null);
+        return;
+      }
+      
+      const res = await fetch(`/api/coaches/sessions?coachId=${coachId}`);
+      if (!res.ok) {
+        setConflictWarning(null);
+        return;
+      }
+      
+      const sessions = await res.json();
+      const newActivityStart = new Date(`${formData.date}T${formData.startTime}:00Z`).getTime();
+      const newActivityEnd = new Date(`${formData.date}T${formData.endTime}:00Z`).getTime();
+      
+      const conflicts = sessions.filter((session: any) => {
+        if (session.status === 'cancelled' || session.status === 'completed') return false;
+        if (editingActivity?.id === session.id) return false;
+        const existingStart = new Date(session.startTime).getTime();
+        const existingEnd = new Date(session.endTime).getTime();
+        return newActivityStart < existingEnd && newActivityEnd > existingStart;
+      });
+      
+      if (conflicts.length > 0) {
+        const conflictTitles = conflicts.map((c: any) => c.title).join(', ');
+        setConflictWarning(`⚠️ Conflict: Sessions at this time (${conflictTitles})`);
+      } else {
+        setConflictWarning(null);
+      }
+    } catch (err) {
+      console.error('Error checking conflicts:', err);
+      setConflictWarning(null);
+    }
   };
+
+  const handleTimeChange = async (field: string, value: string) => {
+    handleInputChange(field, value);
+    if (field === 'startTime' || field === 'endTime' || field === 'date') {
+      await checkForConflicts();
+    }
+  };;
 
   const validateForm = (): boolean => {
     if (!formData.title.trim()) {
@@ -466,7 +511,7 @@ export default function ActivityModal({ isOpen, selectedDate, onClose, onSave, c
                 <input
                   type="date"
                   value={formData.date}
-                  onChange={(e) => handleInputChange('date', e.target.value)}
+                  onChange={(e) => handleTimeChange('date', e.target.value)}
                   style={{
                     width: '100%',
                     padding: '10px 12px',
@@ -485,7 +530,7 @@ export default function ActivityModal({ isOpen, selectedDate, onClose, onSave, c
                 <input
                   type="time"
                   value={formData.startTime}
-                  onChange={(e) => handleInputChange('startTime', e.target.value)}
+                  onChange={(e) => handleTimeChange('startTime', e.target.value)}
                   style={{
                     width: '100%',
                     padding: '10px 12px',
@@ -504,7 +549,7 @@ export default function ActivityModal({ isOpen, selectedDate, onClose, onSave, c
                 <input
                   type="time"
                   value={formData.endTime}
-                  onChange={(e) => handleInputChange('endTime', e.target.value)}
+                  onChange={(e) => handleTimeChange('endTime', e.target.value)}
                   style={{
                     width: '100%',
                     padding: '10px 12px',
@@ -517,6 +562,14 @@ export default function ActivityModal({ isOpen, selectedDate, onClose, onSave, c
                 />
               </div>
             </div>
+
+            
+            {/* Conflict Warning */}
+            {conflictWarning && (
+              <div style={{ marginBottom: 18, padding: '12px 14px', borderRadius: 8, background: 'rgba(239,192,64,.1)', border: '1px solid rgba(239,192,64,.3)', fontSize: 12, color: G.yellow, fontWeight: 600 }}>
+                {conflictWarning}
+              </div>
+            )}
 
             {/* Title & Description */}
             <div style={{ marginBottom: 18 }}>

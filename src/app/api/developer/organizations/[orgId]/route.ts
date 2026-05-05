@@ -129,11 +129,12 @@ export async function POST(
           await prisma.notification.create({
             data: {
               organizationId: org.id,
-              userId: org.createdBy,
-              type: 'organization_approved',
+              targetId: org.createdBy,
+              targetType: 'admin',
+              eventType: 'organization_approved',
               title: 'Organization Approved! 🎉',
-              message: `Your organization "${org.name}" has been approved by the development team. You now have access to the admin, organization, and finance dashboards.`,
-              read: false,
+              body: `Your organization "${org.name}" has been approved by the development team. You now have access to the admin, organization, and finance dashboards.`,
+              deliveryChannels: ['email'],
             },
           });
         }
@@ -169,11 +170,12 @@ export async function POST(
           await prisma.notification.create({
             data: {
               organizationId: org.id,
-              userId: org.createdBy,
-              type: 'organization_rejected',
+              targetId: org.createdBy,
+              targetType: 'admin',
+              eventType: 'organization_rejected',
               title: 'Organization Registration Declined',
-              message: `Your organization "${org.name}" registration was not approved. Reason: ${rejectionReason || 'Please contact support for more information.'}`,
-              read: false,
+              body: `Your organization "${org.name}" registration was not approved. Reason: ${rejectionReason || 'Please contact support for more information.'}`,
+              deliveryChannels: ['email'],
             },
           });
         }

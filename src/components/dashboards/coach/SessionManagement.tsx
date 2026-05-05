@@ -1,12 +1,10 @@
 'use client';
-// ─────────────────────────────────────────────────────────────────
-// SessionManagement.tsx  –  Vico Sports design system
-// ─────────────────────────────────────────────────────────────────
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { LoadingState } from '@/components/LoadingState';
 import { useToast } from '@/components/ui/ToastContext';
+import { authenticatedFetch } from '@/lib/authenticatedFetch';
 
 const G = {
   dark: '#0a180a', sidebar: '#0f1e0f', card: '#162616', card2: '#1b2f1b', card3: '#203520',
@@ -88,6 +86,9 @@ export default function SessionManagement({ coachId }: { coachId: string }) {
     courtId: '',
     playerIds: [] as string[],
   });
+  const [estimatedPrice, setEstimatedPrice] = useState<number | null>(null);
+  const [isEstimating, setIsEstimating] = useState(false);
+  const [estimateError, setEstimateError] = useState<string | null>(null);
   const [hoveredSessionId, setHoveredSessionId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
@@ -154,37 +155,29 @@ export default function SessionManagement({ coachId }: { coachId: string }) {
   }, [coachId]);
 
   useEffect(() => {
-    const fetchCourts = async () => {
+    const loadReferenceData = async () => {
       try {
-        const res = await fetch(`/api/coaches/courts?coachId=${coachId}`);
-        if (res.ok) {
-          const data = await res.json();
-          setCourts(Array.isArray(data.courts) ? data.courts : []);
-        } else {
-          console.error('Failed to fetch courts', await res.text());
-        }
-      } catch (error) {
-        console.error('Error fetching courts:', error);
-      }
-    };
+        const [courtsRes, playersRes] = await Promise.all([
+          fetch(`/api/coaches/courts?coachId=${coachId}`),
+          fetch(`/api/coaches/players/eligible?coachId=${coachId}`),
+        ]);
 
-    const fetchPlayers = async () => {
-      try {
-        const res = await fetch(`/api/coaches/players/eligible?coachId=${coachId}`);
-        if (res.ok) {
-          const data = await res.json();
+        if (courtsRes.ok) {
+          const data = await courtsRes.json();
+          setCourts(Array.isArray(data.courts) ? data.courts : []);
+        }
+
+        if (playersRes.ok) {
+          const data = await playersRes.json();
           setPlayers(Array.isArray(data.players) ? data.players : []);
-        } else {
-          console.error('Failed to fetch players', await res.text());
         }
       } catch (error) {
-        console.error('Error fetching players:', error);
+        console.error('Error loading courts or players:', error);
       }
     };
 
     if (coachId) {
-      fetchCourts();
-      fetchPlayers();
+      loadReferenceData();
     }
   }, [coachId]);
 
@@ -195,6 +188,59 @@ export default function SessionManagement({ coachId }: { coachId: string }) {
     mediaQuery.addEventListener('change', handleResize);
     return () => mediaQuery.removeEventListener('change', handleResize);
   }, []);
+
+  const fetchSessionEstimate = useCallback(async () => {
+    const playerId = formData.playerIds[0];
+    if (!formData.startTime || !formData.endTime || !playerId) {
+      setEstimatedPrice(null);
+      setEstimateError(null);
+      return;
+    }
+
+    const start = new Date(formData.startTime);
+    const end = new Date(formData.endTime);
+    if (isNaN(start.getTime()) || isNaN(end.getTime()) || end <= start) {
+      setEstimatedPrice(null);
+      setEstimateError('Enter a valid start and end time');
+      return;
+    }
+
+    setIsEstimating(true);
+    setEstimateError(null);
+
+    try {
+      const params = new URLSearchParams({
+        coachId,
+        playerId,
+        startTime: start.toISOString(),
+        endTime: end.toISOString(),
+      });
+      const res = await authenticatedFetch(`/api/coaches/sessions/estimate?${params.toString()}`);
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        setEstimatedPrice(null);
+        setEstimateError(body?.error || 'Unable to estimate session cost');
+      } else {
+        const data = await res.json();
+        setEstimatedPrice(data.estimatedPrice ?? null);
+        setEstimateError(null);
+      }
+    } catch (error) {
+      console.error('Estimate fetch failed', error);
+      setEstimatedPrice(null);
+      setEstimateError('Unable to estimate session cost');
+    } finally {
+      setIsEstimating(false);
+    }
+  }, [coachId, formData.endTime, formData.playerIds, formData.startTime]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchSessionEstimate();
+    }, 250);
+
+    return () => clearTimeout(timer);
+  }, [fetchSessionEstimate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -402,26 +448,26 @@ export default function SessionManagement({ coachId }: { coachId: string }) {
   };
 
   // Get unique values from sessions for filter options
-  const getUniqueSessionTypes = () => {
+  const uniqueSessionTypes = useMemo(() => {
     const types = new Set(sessions.map(s => s.sessionType));
     return Array.from(types).sort();
-  };
+  }, [sessions]);
 
-  const getUniqueLocations = () => {
+  const uniqueLocations = useMemo(() => {
     const locations = new Set(sessions.filter(s => s.court).map(s => typeof s.court === 'string' ? s.court : s.court?.name || ''));
     return Array.from(locations).filter(Boolean).sort();
-  };
+  }, [sessions]);
 
-  const getPriceRange = () => {
+  const priceRangeBounds = useMemo(() => {
     const prices = sessions.filter(s => s.price).map(s => s.price || 0);
     return {
       min: Math.min(...prices, 0),
       max: Math.max(...prices, 500)
     };
-  };
+  }, [sessions]);
 
   // Advanced filter logic
-  const applyAdvancedFilters = (sessionList: Session[]) => {
+  const applyAdvancedFilters = useCallback((sessionList: Session[]) => {
     return sessionList.filter(session => {
       // Filter by session type
       if (selectedSessionTypes.length > 0 && !selectedSessionTypes.includes(session.sessionType)) {
@@ -459,16 +505,25 @@ export default function SessionManagement({ coachId }: { coachId: string }) {
 
       return true;
     });
-  };
+  }, [selectedSessionTypes, selectedLocations, priceRange, dateRange]);
 
   // Apply status filter first, then advanced filters
-  const filtered = applyAdvancedFilters(
-    sessions.filter(s => {
+  const filtered = useMemo(() => {
+    const statusFiltered = sessions.filter(s => {
       if (filter === 'upcoming') return new Date(s.startTime) >= new Date();
       if (filter === 'completed') return s.status === 'completed' || new Date(s.startTime) < new Date();
       return true;
-    })
-  );
+    });
+    return applyAdvancedFilters(statusFiltered);
+  }, [sessions, filter, applyAdvancedFilters]);
+
+  // Memoized summary stats
+  const summaryStats = useMemo(() => ({
+    upcoming: sessions.filter(s => new Date(s.startTime) >= new Date()).length,
+    oneOnOne: sessions.filter(s => s.sessionType === '1-on-1').length,
+    group: sessions.filter(s => s.sessionType !== '1-on-1').length,
+    revenue: sessions.reduce((a, s) => a + (s.price || 0) * s.bookings.length, 0),
+  }), [sessions]);
 
   const card = { background: G.card, border: `1px solid ${G.border}`, borderRadius: 12, padding: 14 } as const;
   const inputSt = { width: '100%', padding: '8px 11px', background: G.dark, border: `1px solid ${G.border}`, color: G.text, borderRadius: 7, fontSize: 11.5, outline: 'none', boxSizing: 'border-box' } as const;
@@ -496,10 +551,10 @@ export default function SessionManagement({ coachId }: { coachId: string }) {
       {/* Summary Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(4,1fr)', gap: 9 }}>
         {[
-          { label: 'Upcoming', value: sessions.filter(s => new Date(s.startTime) >= new Date()).length, color: G.lime2 },
-          { label: '1-on-1', value: sessions.filter(s => s.sessionType === '1-on-1').length, color: G.lime },
-          { label: 'Group', value: sessions.filter(s => s.sessionType !== '1-on-1').length, color: G.blue },
-          { label: 'Revenue Est.', value: `$${sessions.reduce((a, s) => a + (s.price || 0) * s.bookings.length, 0)}`, color: G.yellow },
+          { label: 'Upcoming', value: summaryStats.upcoming, color: G.lime2 },
+          { label: '1-on-1', value: summaryStats.oneOnOne, color: G.lime },
+          { label: 'Group', value: summaryStats.group, color: G.blue },
+          { label: 'Revenue Est.', value: `$${summaryStats.revenue}`, color: G.yellow },
         ].map((st, i) => (
           <div key={`stat-${i}`} style={{ background: G.card, border: `1px solid ${G.border}`, borderRadius: 10, padding: '10px 12px' }}>
             <div style={{ fontSize: 8, color: G.muted, textTransform: 'uppercase', letterSpacing: 0.8 }}>{st.label}</div>
@@ -608,6 +663,18 @@ export default function SessionManagement({ coachId }: { coachId: string }) {
                   <input style={inputSt} type="number" step="0.01" value={formData.price} onChange={e => setFormData({ ...formData, price: parseFloat(e.target.value) })} />
                 </div>
               </div>
+              <div style={{ marginTop: 12, padding: 12, borderRadius: 10, background: G.card2, border: `1px solid ${G.border2}` }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: G.text, marginBottom: 4 }}>Pricing preview</div>
+                {isEstimating ? (
+                  <div style={{ fontSize: 12, color: G.muted }}>Calculating estimated cost…</div>
+                ) : estimateError ? (
+                  <div style={{ fontSize: 12, color: G.red }}>{estimateError}</div>
+                ) : estimatedPrice != null ? (
+                  <div style={{ fontSize: 14, fontWeight: 700, color: G.lime }}>${estimatedPrice.toFixed(2)} estimated</div>
+                ) : (
+                  <div style={{ fontSize: 12, color: G.muted }}>Add a player, start time, and end time to preview the estimated session price.</div>
+                )}
+              </div>
             </div>
             <div style={{ marginTop: 10 }}>
               <label style={{ fontSize: 9.5, color: G.muted2, display: 'block', marginBottom: 4 }}>DESCRIPTION</label>
@@ -667,7 +734,7 @@ export default function SessionManagement({ coachId }: { coachId: string }) {
             <div>
               <label style={{ fontSize: 9.5, color: G.muted2, display: 'block', marginBottom: 6, fontWeight: 700 }}>SESSION TYPE</label>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {getUniqueSessionTypes().map(type => (
+                {uniqueSessionTypes.map(type => (
                   <label key={type} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, cursor: 'pointer', color: G.text }}>
                     <input type="checkbox" checked={selectedSessionTypes.includes(type)} onChange={e => {
                       if (e.target.checked) {
@@ -686,7 +753,7 @@ export default function SessionManagement({ coachId }: { coachId: string }) {
             <div>
               <label style={{ fontSize: 9.5, color: G.muted2, display: 'block', marginBottom: 6, fontWeight: 700 }}>LOCATION / COURT</label>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {getUniqueLocations().map(location => (
+                {uniqueLocations.map(location => (
                   <label key={location} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, cursor: 'pointer', color: G.text }}>
                     <input type="checkbox" checked={selectedLocations.includes(location)} onChange={e => {
                       if (e.target.checked) {
@@ -715,9 +782,9 @@ export default function SessionManagement({ coachId }: { coachId: string }) {
             <div>
               <label style={{ fontSize: 9.5, color: G.muted2, display: 'block', marginBottom: 6, fontWeight: 700 }}>PRICE RANGE</label>
               <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                <input type="number" min={getPriceRange().min} max={getPriceRange().max} value={priceRange[0]} onChange={e => setPriceRange([parseFloat(e.target.value) || 0, priceRange[1]])} style={{ ...inputSt, flex: 1, padding: '6px 8px', fontSize: 9.5 }} placeholder="Min" />
+                <input type="number" min={priceRangeBounds.min} max={priceRangeBounds.max} value={priceRange[0]} onChange={e => setPriceRange([parseFloat(e.target.value) || 0, priceRange[1]])} style={{ ...inputSt, flex: 1, padding: '6px 8px', fontSize: 9.5 }} placeholder="Min" />
                 <span style={{ fontSize: 9, color: G.muted }}>-</span>
-                <input type="number" min={getPriceRange().min} max={getPriceRange().max} value={priceRange[1]} onChange={e => setPriceRange([priceRange[0], parseFloat(e.target.value) || 500])} style={{ ...inputSt, flex: 1, padding: '6px 8px', fontSize: 9.5 }} placeholder="Max" />
+                <input type="number" min={priceRangeBounds.min} max={priceRangeBounds.max} value={priceRange[1]} onChange={e => setPriceRange([priceRange[0], parseFloat(e.target.value) || 500])} style={{ ...inputSt, flex: 1, padding: '6px 8px', fontSize: 9.5 }} placeholder="Max" />
                 <span style={{ fontSize: 9, color: G.muted, whiteSpace: 'nowrap' }}>$</span>
               </div>
             </div>

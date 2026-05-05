@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { authenticatedFetch } from '@/lib/authenticatedFetch';
 import { useRouter, useSearchParams, useParams } from 'next/navigation';
@@ -58,14 +58,14 @@ export function CoachDashboard() {
   const activeNav = (searchParams.get('section') as string) || 'Dashboard';
   const profileTab = (searchParams.get('tab') as ProfileTab) || 'personal';
 
-  const handleNavigation = (section: string) => {
+  const handleNavigation = useCallback((section: string) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set('section', section);
     if (section !== 'My Profile') {
       params.delete('tab');
     }
     router.push(`?${params.toString()}`, { scroll: false });
-  };
+  }, [router, searchParams]);
 
   useEffect(() => {
     let isMounted = true;
@@ -170,11 +170,11 @@ export function CoachDashboard() {
     };
   }, [coachId, user?.id]);
 
-  const handleMessageClick = (personId: string, personName: string) => {
+  const handleMessageClick = useCallback((personId: string, personName: string) => {
     router.push(chatUrlForUser(personId, personName));
-  };
+  }, [router]);
 
-  const handleNearbyPlayerChallenge = async (personId: string, personName: string) => {
+  const handleNearbyPlayerChallenge = useCallback(async (personId: string, personName: string) => {
     if (!user?.id) {
       setStatusMessage('Please sign in to send a challenge.');
       return;
@@ -185,14 +185,14 @@ export function CoachDashboard() {
     } catch (error: any) {
       setStatusMessage(error?.message || 'Failed to send challenge request.');
     }
-  };
+  }, [user?.id]);
 
-  const handleProfileTab = (tab: ProfileTab) => {
+  const handleProfileTab = useCallback((tab: ProfileTab) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set('section', 'My Profile');
     params.set('tab', tab);
     router.push(`?${params.toString()}`, { scroll: false });
-  };
+  }, [router, searchParams]);
 
   const handleSaveProfile = async () => {
     setSavingProfile(true);
@@ -327,6 +327,75 @@ export function CoachDashboard() {
     }
   };
 
+  const profileSectionProps = useMemo(
+    () => ({
+      user,
+      profileTab,
+      editingProfile,
+      setEditingProfile,
+      profileData,
+      personalForm,
+      setPersonalForm,
+      savingProfile,
+      handleSaveProfile,
+      editingBio,
+      setEditingBio,
+      bioForm,
+      setBioForm,
+      savingBio,
+      handleSaveBio,
+      coachData,
+      editingCertificates,
+      setEditingCertificates,
+      certForm,
+      setCertForm,
+      handleAddCertificate,
+      savingCertificate,
+      deletingCertificateIds,
+      handleDeleteCertificate,
+      editingAvailability,
+      setEditingAvailability,
+      availForm,
+      setAvailForm,
+      handleAddAvailability,
+      savingAvailability,
+      deletingAvailabilityIds,
+      handleDeleteAvailability,
+      availability,
+      loading,
+      handleProfileTab,
+    }),
+    [
+      user,
+      profileTab,
+      editingProfile,
+      profileData,
+      personalForm,
+      savingProfile,
+      handleSaveProfile,
+      editingBio,
+      bioForm,
+      savingBio,
+      handleSaveBio,
+      coachData,
+      editingCertificates,
+      certForm,
+      handleAddCertificate,
+      savingCertificate,
+      deletingCertificateIds,
+      handleDeleteCertificate,
+      editingAvailability,
+      availForm,
+      handleAddAvailability,
+      savingAvailability,
+      deletingAvailabilityIds,
+      handleDeleteAvailability,
+      availability,
+      loading,
+      handleProfileTab,
+    ]
+  );
+
   if (loading && !dashboardData) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: '#0f1e0f', color: '#e4f2da' }}>
@@ -359,44 +428,6 @@ export function CoachDashboard() {
       </div>
     );
   }
-
-  const profileSectionProps = {
-    user,
-    profileTab,
-    editingProfile,
-    setEditingProfile,
-    profileData,
-    personalForm,
-    setPersonalForm,
-    savingProfile,
-    handleSaveProfile,
-    editingBio,
-    setEditingBio,
-    bioForm,
-    setBioForm,
-    savingBio,
-    handleSaveBio,
-    coachData,
-    editingCertificates,
-    setEditingCertificates,
-    certForm,
-    setCertForm,
-    handleAddCertificate,
-    savingCertificate,
-    deletingCertificateIds,
-    handleDeleteCertificate,
-    editingAvailability,
-    setEditingAvailability,
-    availForm,
-    setAvailForm,
-    handleAddAvailability,
-    savingAvailability,
-    deletingAvailabilityIds,
-    handleDeleteAvailability,
-    availability,
-    loading,
-    handleProfileTab,
-  };
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row" style={{ fontFamily: "'Segoe UI', system-ui, sans-serif", background: '#0f1e0f', color: '#e4f2da', height: '100vh', overflow: 'hidden', fontSize: 13 }}>

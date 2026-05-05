@@ -93,7 +93,7 @@ const MiniBarChart: React.FC<{ data: { label: string; value: number }[]; color?:
   );
 };
 
-export default function AnalyticsSection({ coachId }: { coachId: string }) {
+export default function AnalyticsSection({ coachId, initialStats, initialWallet }: { coachId: string; initialStats?: CoachStats | null; initialWallet?: any | null }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const activeChart = (searchParams.get('analyticsTab') as 'revenue' | 'sessions') || 'revenue';
@@ -104,9 +104,9 @@ export default function AnalyticsSection({ coachId }: { coachId: string }) {
     router.push(`?${params.toString()}`, { scroll: false });
   };
 
-  const [stats, setStats] = useState<CoachStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [wallet, setWallet] = useState<any | null>(null);
+  const [stats, setStats] = useState<CoachStats | null>(initialStats === undefined ? null : initialStats);
+  const [loading, setLoading] = useState(initialStats === undefined || initialWallet === undefined);
+  const [wallet, setWallet] = useState<any | null>(initialWallet === undefined ? null : initialWallet);
   const [txFilter, setTxFilter] = useState<'all' | 'credit' | 'debit'>('all');
   const [showPayoutModal, setShowPayoutModal] = useState(false);
   const [payoutLoading, setPayoutLoading] = useState(false);
@@ -114,6 +114,16 @@ export default function AnalyticsSection({ coachId }: { coachId: string }) {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
+    let isMounted = true;
+    let statsLoaded = initialStats !== undefined;
+    let walletLoaded = initialWallet !== undefined;
+
+    const settleLoading = () => {
+      if (isMounted && statsLoaded && walletLoaded) {
+        setLoading(false);
+      }
+    };
+
     const fetchStats = async () => {
       try {
         const res = await fetch(`/api/coaches/stats?coachId=${coachId}`);
@@ -121,12 +131,13 @@ export default function AnalyticsSection({ coachId }: { coachId: string }) {
           const data = await res.json();
           const completionRate = data.totalSessions > 0
             ? (data.completedSessions / data.totalSessions) * 100 : 0;
-          setStats({ ...data, completionRate });
+          if (isMounted) setStats({ ...data, completionRate });
         }
       } catch (error) {
         console.error('Error fetching stats:', error);
       } finally {
-        setLoading(false);
+        statsLoaded = true;
+        settleLoading();
       }
     };
     
@@ -135,16 +146,30 @@ export default function AnalyticsSection({ coachId }: { coachId: string }) {
         const res = await fetch(`/api/coaches/wallet?coachId=${coachId}`);
         if (res.ok) {
           const data = await res.json();
-          setWallet(data);
+          if (isMounted) setWallet(data);
         }
       } catch (error) {
         console.error('Error fetching wallet:', error);
+      } finally {
+        walletLoaded = true;
+        settleLoading();
       }
     };
-    
-    fetchStats();
-    fetchWallet();
-  }, [coachId]);
+
+    if (initialStats === undefined) {
+      fetchStats();
+    }
+    if (initialWallet === undefined) {
+      fetchWallet();
+    }
+    if (initialStats !== undefined && initialWallet !== undefined) {
+      setLoading(false);
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [coachId, initialStats, initialWallet]);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -251,9 +276,9 @@ export default function AnalyticsSection({ coachId }: { coachId: string }) {
       <div className="analytics-kpi-grid" style={{ display: 'grid', gap: 9 }}>
         {[
           { icon: '🎾', label: 'Total Sessions', value: stats.totalSessions, sub: `${stats.completedSessions} completed`, color: G.lime2 },
-          { icon: '💰', label: 'Total Revenue', value: `$${stats.totalRevenue.toLocaleString()}`, sub: `$${(stats.totalRevenue / Math.max(stats.completedSessions, 1)).toFixed(0)} avg/session`, color: G.lime2 },
+          { icon: '💰', label: 'Total Revenue', value: `$${(stats.totalRevenue ?? 0).toLocaleString()}`, sub: `$${((stats.totalRevenue ?? 0) / Math.max(stats.completedSessions, 1)).toFixed(0)} avg/session`, color: G.lime2 },
           { icon: '👥', label: 'Active Players', value: stats.activePlayers, sub: `${stats.newPlayersThisMonth} new this month`, color: G.lime2 },
-          { icon: '⭐', label: 'Avg Rating', value: `${stats.avgRating.toFixed(1)}★`, sub: `${stats.reviewCount} reviews`, color: G.yellow },
+          { icon: '⭐', label: 'Avg Rating', value: `${(stats.avgRating ?? 0).toFixed(1)}★`, sub: `${stats.reviewCount} reviews`, color: G.yellow },
         ].map((kpi, i) => (
           <div key={i} style={card}>
             <div style={{ fontSize: 18, marginBottom: 5 }}>{kpi.icon}</div>
@@ -459,8 +484,8 @@ export default function AnalyticsSection({ coachId }: { coachId: string }) {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 11 }}>
             <SectionLabel>Recent Reviews</SectionLabel>
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <span style={{ fontSize: 14, fontWeight: 900, color: G.yellow }}>{stats.avgRating.toFixed(1)}</span>
-              <StarRating rating={stats.avgRating} />
+              <span style={{ fontSize: 14, fontWeight: 900, color: G.yellow }}>{(stats.avgRating ?? 0).toFixed(1)}</span>
+              <StarRating rating={stats.avgRating ?? 0} />
             </div>
           </div>
           {(stats.recentReviews || []).length === 0 ? (

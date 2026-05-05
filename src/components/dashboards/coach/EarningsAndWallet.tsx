@@ -61,11 +61,12 @@ export default function EarningsAndWallet({ coachId }: { coachId: string }) {
   const [showPayoutForm, setShowPayoutForm] = useState(false);
   const [txFilter, setTxFilter] = useState<'all' | 'credit' | 'debit'>('all');
   const [payoutForm, setPayoutForm] = useState({ amount: '', paymentMethod: 'bank_transfer', bankDetails: '' });
+  const [lastRefresh, setLastRefresh] = useState<number>(Date.now());
 
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await fetch(`/api/coaches/wallet?coachId=${coachId}`);
+        const res = await fetch(`/api/coaches/wallet?coachId=${coachId}&t=${lastRefresh}`);
         if (res.ok) {
           const d = await res.json();
           setWallet(d);
@@ -77,7 +78,17 @@ export default function EarningsAndWallet({ coachId }: { coachId: string }) {
       }
     };
     load();
-  }, [coachId]);
+  }, [coachId, lastRefresh]);
+
+
+
+  // Auto-refresh wallet every 30 seconds to catch recent earnings
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setLastRefresh(Date.now());
+    }, 30000); // 30 seconds
+    return () => clearInterval(interval);
+  }, []);
 
   const handlePayout = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -20,6 +20,7 @@ import OrganizationTournamentsSection from '@/components/organization/dashboard-
 import OrganizationReportsSection from '@/components/organization/dashboard-sections/OrganizationReportsSection';
 import OrganizationBookingsSection from '@/components/organization/dashboard-sections/OrganizationBookingsSection';
 import OrganizationPlayersSection from '@/components/organization/dashboard-sections/OrganizationPlayersSection';
+import OrganizationSettingsSection from '@/components/organization/dashboard-sections/OrganizationSettingsSection';
 import MessagingPanel from '@/components/dashboards/MessagingPanel';
 import { authenticatedFetch } from '@/lib/authenticatedFetch';
 import { clearTokens, getStoredTokens } from '@/lib/tokenManager';
@@ -77,6 +78,7 @@ export const OrganizationDashboard: React.FC = () => {
     { label: 'Members', icon: '🎖️', section: 'members' },
     { label: 'Messages', icon: '💬', section: 'messages' },
     { label: 'Reports', icon: '📊', section: 'reports' },
+    { label: 'Settings', icon: '⚙️', section: 'settings' },
   ];
 
   // Map section URL param to label
@@ -637,6 +639,10 @@ export const OrganizationDashboard: React.FC = () => {
 
         {activeNav === 'Reports' && (
           <OrganizationReportsSection />
+        )}
+
+        {activeNav === 'Settings' && (
+          <OrganizationSettingsSection orgId={dashboardData?.organizationId} />
         )}
       </main>
 

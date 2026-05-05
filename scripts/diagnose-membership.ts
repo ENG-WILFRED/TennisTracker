@@ -2,7 +2,7 @@
  * Diagnose membership and role configuration for coach dashboard
  */
 
-import prisma from './src/lib/prisma.js';
+import prisma from '../src/lib/prisma';
 
 const COACH_ID = 'dcd1fb1c-e342-45a0-b252-3f69e8be027d';
 

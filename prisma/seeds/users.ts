@@ -186,6 +186,21 @@ export async function seedUsers(organizations: any[]) {
       },
     },
 
+    // ==================== ELITE ADMIN ====================
+    {
+      username: 'elite_admin',
+      email: 'admin@tennistracker.com',
+      firstName: 'Elite',
+      lastName: 'Administrator',
+      phone: '+1-555-0000',
+      gender: 'Male',
+      dateOfBirth: new Date('1980-01-01'),
+      nationality: 'USA',
+      bio: 'Elite administrator with full system access and management privileges.',
+      photo: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=500&q=80',
+      role: 'admin',
+    },
+
     // ==================== COACHES ====================
     {
       username: 'coach_robert',
@@ -367,83 +382,107 @@ export async function seedUsers(organizations: any[]) {
 
   for (const userData of usersData) {
     try {
-      const user = await prisma.user.upsert({
-        where: { email: userData.email },
-        update: {
-          phone: userData.phone,
-          firstName: userData.firstName,
-          lastName: userData.lastName,
+      // Check if user exists by email or username
+      const existingUser = await prisma.user.findFirst({
+        where: {
+          OR: [
+            { email: userData.email },
+            { username: userData.username },
+          ],
         },
-        create: {
-          username: userData.username,
-          email: userData.email,
-          phone: userData.phone,
-          passwordHash: hashedPassword,
-          firstName: userData.firstName,
-          lastName: userData.lastName,
-          gender: userData.gender,
-          dateOfBirth: userData.dateOfBirth,
-          nationality: userData.nationality,
-          bio: userData.bio,
-          photo: userData.photo,
-          player:
-            userData.role === 'player'
-              ? {
-                  create: {
-                    matchesPlayed: userData.playerStats?.matchesPlayed || 0,
-                    matchesWon: userData.playerStats?.matchesWon || 0,
-                    matchesLost: userData.playerStats?.matchesLost || 0,
-                    organizationId: userData.organizationId,
-                  },
-                }
-              : userData.role === 'admin' || userData.role === 'finance_officer'
+      });
+
+      let user;
+
+      if (existingUser) {
+        // User exists, just update the user data
+        user = await prisma.user.update({
+          where: { id: existingUser.id },
+          data: {
+            phone: userData.phone,
+            firstName: userData.firstName,
+            lastName: userData.lastName,
+            gender: userData.gender,
+            dateOfBirth: userData.dateOfBirth,
+            nationality: userData.nationality,
+            bio: userData.bio,
+            photo: userData.photo,
+          },
+        });
+      } else {
+        // User doesn't exist, create new user
+        user = await prisma.user.create({
+          data: {
+            username: userData.username,
+            email: userData.email,
+            phone: userData.phone,
+            passwordHash: hashedPassword,
+            firstName: userData.firstName,
+            lastName: userData.lastName,
+            gender: userData.gender,
+            dateOfBirth: userData.dateOfBirth,
+            nationality: userData.nationality,
+            bio: userData.bio,
+            photo: userData.photo,
+            player:
+              userData.role === 'player'
                 ? {
                     create: {
-                      matchesPlayed: 0,
-                      matchesWon: 0,
-                      matchesLost: 0,
+                      matchesPlayed: userData.playerStats?.matchesPlayed || 0,
+                      matchesWon: userData.playerStats?.matchesWon || 0,
+                      matchesLost: userData.playerStats?.matchesLost || 0,
                       organizationId: userData.organizationId,
                     },
                   }
-                : undefined,
-          staff:
-            userData.role === 'coach'
-              ? {
-                  create: {
-                    role: 'Head Coach',
-                    contact: userData.email,
-                    yearsOfExperience: userData.staffData?.yearsOfExperience || 0,
-                    expertise: userData.staffData?.expertise,
-                    coachingLevel: userData.staffData?.coachingLevel,
-                    organizationId: userData.organizationId,
-                    certifications: {
-                      createMany: {
-                        data: userData.staffData?.certifications || [],
+                : userData.role === 'admin' || userData.role === 'finance_officer'
+                  ? {
+                      create: {
+                        matchesPlayed: 0,
+                        matchesWon: 0,
+                        matchesLost: 0,
+                        organizationId: userData.organizationId,
+                      },
+                    }
+                  : undefined,
+            staff:
+              userData.role === 'coach'
+                ? {
+                    create: {
+                      role: 'Head Coach',
+                      contact: userData.email,
+                      yearsOfExperience: userData.staffData?.yearsOfExperience || 0,
+                      expertise: userData.staffData?.expertise,
+                      coachingLevel: userData.staffData?.coachingLevel,
+                      organizationId: userData.organizationId,
+                      certifications: {
+                        createMany: {
+                          data: userData.staffData?.certifications || [],
+                        },
                       },
                     },
-                  },
-                }
-              : undefined,
-          referee:
-            userData.role === 'referee'
-              ? {
-                  create: {
-                    matchesRefereed: userData.refereeData?.matchesRefereed || 0,
-                    ballCrewMatches: userData.refereeData?.ballCrewMatches || 0,
-                    experience: userData.refereeData?.experience,
-                    certifications: userData.refereeData?.certifications || [],
-                  },
-                }
-              : undefined,
-          spectator: userData.role === 'spectator' ? { create: {} } : undefined,
-        },
-        include: {
-          player: true,
-          staff: true,
-          referee: true,
-          spectator: true,
-        },
-      });
+                  }
+                : undefined,
+            referee:
+              userData.role === 'referee'
+                ? {
+                    create: {
+                      matchesRefereed: userData.refereeData?.matchesRefereed || 0,
+                      ballCrewMatches: userData.refereeData?.ballCrewMatches || 0,
+                      experience: userData.refereeData?.experience,
+                      certifications: userData.refereeData?.certifications || [],
+                    },
+                  }
+                : undefined,
+            spectator: userData.role === 'spectator' ? { create: {} } : undefined,
+          },
+          include: {
+            player: true,
+            staff: true,
+            referee: true,
+            spectator: true,
+          },
+        });
+      }
 
       createdUsers.push(user);
       console.log(`  ✓ ${userData.role.toUpperCase()}: ${user.email}`);

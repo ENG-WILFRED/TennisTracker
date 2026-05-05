@@ -65,11 +65,12 @@ export async function POST(request: Request) {
         prisma.notification.create({
           data: {
             organizationId: org.id,
-            userId: dev.id,
-            type: 'organization_review_reminder',
+            targetId: dev.id,
+            targetType: 'developer',
+            eventType: 'organization_review_reminder',
             title: '📋 Organization Review Reminder',
-            message: `${org.name} is waiting for approval. Please review and approve or decline the organization registration.`,
-            read: false,
+            body: `${org.name} is waiting for approval. Please review and approve or decline the organization registration.`,
+            deliveryChannels: ['email'],
           },
         })
       )
@@ -79,9 +80,12 @@ export async function POST(request: Request) {
     await prisma.organizationActivity.create({
       data: {
         organizationId: org.id,
-        activityType: 'reminder_sent',
-        description: `Reminder sent to developers to review the organization registration`,
-        userId: auth.userId,
+        playerId: auth.userId,
+        action: 'reminder_sent',
+        details: {
+          description: 'Reminder sent to developers to review the organization registration',
+        },
+        metadata: {},
       },
     });
 

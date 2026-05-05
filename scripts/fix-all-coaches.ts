@@ -2,7 +2,7 @@
  * Find and fix all coaches with incorrect roles
  */
 
-import prisma from './src/lib/prisma.js';
+import prisma from '../src/lib/prisma';
 
 async function fixAllCoaches() {
   console.log('\n=== FINDING ALL COACHES WITH INCORRECT ROLES ===\n');

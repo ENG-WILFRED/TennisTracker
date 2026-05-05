@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { LoadingState } from '@/components/LoadingState';
 
 const G = {
@@ -95,9 +95,6 @@ export default function PlayerManagement({ coachId }: { coachId: string }) {
         const res = await fetch(`/api/coaches/players?coachId=${coachId}`);
         if (res.ok) {
           const d = await res.json();
-          console.log('📊 Raw API response:', d);
-          
-          // Transform API response to component format
           const transformed = Array.isArray(d) ? d.map((rel: any) => ({
             id: rel.playerId,
             user: rel.player.user,
@@ -106,8 +103,6 @@ export default function PlayerManagement({ coachId }: { coachId: string }) {
             sessionsCount: rel.sessionsCount,
             notes: rel.notes || [],
           })) : [];
-          
-          console.log('✅ Transformed players:', transformed);
           setPlayers(transformed);
         }
       } catch (error) {
@@ -130,7 +125,7 @@ export default function PlayerManagement({ coachId }: { coachId: string }) {
     } catch { }
   };
 
-  const selectPlayer = async (player: Player) => {
+  const selectPlayer = useCallback(async (player: Player) => {
     setSelectedPlayer(player);
     setLoadingProgress(true);
     try {
@@ -144,13 +139,19 @@ export default function PlayerManagement({ coachId }: { coachId: string }) {
     } finally {
       setLoadingProgress(false);
     }
-  };
+  }, []);
 
-  const filtered = players.filter(p => {
+  const filtered = useMemo(() => players.filter(p => {
     const matchSearch = p.user ? `${p.user.firstName} ${p.user.lastName}`.toLowerCase().includes(searchQuery.toLowerCase()) : false;
     const matchStatus = filterStatus === 'all' || p.status === filterStatus;
     return matchSearch && matchStatus;
-  });
+  }), [players, searchQuery, filterStatus]);
+
+  // Memoized stats for header
+  const playerStats = useMemo(() => ({
+    active: players.filter(p => p.status === 'active').length,
+    inactive: players.filter(p => p.status === 'inactive').length,
+  }), [players]);
 
   const card = { background: G.card, border: `1px solid ${G.border}`, borderRadius: 12, padding: 14 } as const;
   const inputSt = { width: '100%', padding: '8px 11px', background: G.dark, border: `1px solid ${G.border}`, color: G.text, borderRadius: 7, fontSize: 11.5, outline: 'none', boxSizing: 'border-box' } as const;
@@ -160,7 +161,7 @@ export default function PlayerManagement({ coachId }: { coachId: string }) {
   if (selectedPlayer) {
     const sp = selectedPlayer;
     const initials = `${sp.user.firstName[0]}${sp.user.lastName[0]}`;
-    const sessionProgress = Math.min((sp.sessionsCount / 30) * 100, 100);
+    const sessionProgress = useMemo(() => Math.min((sp.sessionsCount / 30) * 100, 100), [sp.sessionsCount]);
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
@@ -323,8 +324,8 @@ export default function PlayerManagement({ coachId }: { coachId: string }) {
           <div style={{ fontSize: 10, color: G.muted2, marginTop: 2 }}>Manage your player roster</div>
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
-          <Tag>{players.filter(p => p.status === 'active').length} active</Tag>
-          <Tag color={G.muted}>{players.filter(p => p.status === 'inactive').length} inactive</Tag>
+          <Tag>{playerStats.active} active</Tag>
+          <Tag color={G.muted}>{playerStats.inactive} inactive</Tag>
         </div>
       </div>
 

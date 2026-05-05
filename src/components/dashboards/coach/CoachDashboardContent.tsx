@@ -1,17 +1,50 @@
 'use client';
 
-import React from 'react';
-import SessionManagement from './SessionManagement';
-import PlayerManagement from './PlayerManagement';
-import AnalyticsSection from './AnalyticsSection';
-import CalendarView from './CalendarView';
-import MessagingPanel from '@/components/dashboards/MessagingPanel';
-import CommunityPanel from './CommunityPanel';
-import AssignedTasksWidget from '@/components/AssignedTasksWidget';
-import { FindNearbyPeople } from '@/components/FindNearbyPeople';
-import { FindNearbyCourts } from '@/components/FindNearbyCourts';
+import React, { useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import { chatUrlForUser } from '@/lib/nearby';
-import { CoachProfileSection, ProfileTab } from './CoachProfileSection';
+import type { ProfileTab } from './CoachProfileSection';
+
+const SessionManagement = dynamic(() => import('./SessionManagement').then(mod => mod.default), {
+  ssr: false,
+  loading: () => <div className="p-8 text-sm text-[#c2dbb0]">Loading sessions...</div>,
+});
+const PlayerManagement = dynamic(() => import('./PlayerManagement').then(mod => mod.default), {
+  ssr: false,
+  loading: () => <div className="p-8 text-sm text-[#c2dbb0]">Loading players...</div>,
+});
+const AnalyticsSection = dynamic(() => import('@/components/dashboards/coach/AnalyticsSection').then(mod => mod.default), {
+  ssr: false,
+  loading: () => <div className="p-8 text-sm text-[#c2dbb0]">Loading analytics...</div>,
+});
+const CalendarView = dynamic(() => import('./CalendarView').then(mod => mod.default), {
+  ssr: false,
+  loading: () => <div className="p-8 text-sm text-[#c2dbb0]">Loading calendar...</div>,
+});
+const CoachProfileSection = dynamic(() => import('./CoachProfileSection').then(mod => mod.CoachProfileSection), {
+  ssr: false,
+  loading: () => <div className="p-8 text-sm text-[#c2dbb0]">Loading profile...</div>,
+});
+const MessagingPanel = dynamic(() => import('@/components/dashboards/MessagingPanel').then(mod => mod.default), {
+  ssr: false,
+  loading: () => <div className="p-8 text-sm text-[#c2dbb0]">Loading messaging...</div>,
+});
+const CommunityPanel = dynamic(() => import('./CommunityPanel').then(mod => mod.default), {
+  ssr: false,
+  loading: () => <div className="p-8 text-sm text-[#c2dbb0]">Loading community...</div>,
+});
+const AssignedTasksWidget = dynamic(() => import('@/components/AssignedTasksWidget').then(mod => mod.default), {
+  ssr: false,
+  loading: () => <div className="p-8 text-sm text-[#c2dbb0]">Loading tasks...</div>,
+});
+const FindNearbyPeople = dynamic(() => import('@/components/FindNearbyPeople').then(mod => mod.FindNearbyPeople), {
+  ssr: false,
+  loading: () => <div className="p-8 text-sm text-[#c2dbb0]">Loading nearby people...</div>,
+});
+const FindNearbyCourts = dynamic(() => import('@/components/FindNearbyCourts').then(mod => mod.FindNearbyCourts), {
+  ssr: false,
+  loading: () => <div className="p-8 text-sm text-[#c2dbb0]">Loading nearby courts...</div>,
+});
 
 const G = {
   dark: '#0a180a',
@@ -107,14 +140,53 @@ export default function CoachDashboardContent({
   const card = { background: G.card, border: `1px solid ${G.border}`, borderRadius: 12, padding: 13 } as const;
   const card2 = { background: G.card2, border: `1px solid ${G.border}`, borderRadius: 12, padding: 13 } as const;
 
-  const finalDashboardData = dashboardData || {
-    coach: { id: coachId || user?.id || '', name: 'Coach', photo: null, role: 'Coach', bio: '' },
-    students: [],
-    nextSession: null,
-    earnings: { thisMonth: 0, pending: 0, perSession: 0, balance: 0, students: 0 },
-    activities: [],
-    stats: { studentCount: 0, rating: 0, totalSessions: 0 },
-  };
+  const finalDashboardData = useMemo(
+    () => dashboardData || {
+      coach: { id: coachId || user?.id || '', name: 'Coach', photo: null, role: 'Coach', bio: '' },
+      students: [],
+      nextSession: null,
+      earnings: { thisMonth: 0, pending: 0, perSession: 0, balance: 0, students: 0 },
+      activities: [],
+      stats: { studentCount: 0, rating: 0, totalSessions: 0 },
+    },
+    [dashboardData, coachId, user?.id]
+  );
+
+  const dashboardStats = useMemo(
+    () => [
+      { label: 'This Month', value: `$${earnings.thisMonth.toLocaleString()}`, delta: '↑ 12% vs last mo' },
+      { label: 'Per Session', value: `$${earnings.perSession}`, delta: `${players.length} players` },
+      { label: 'Pending Payout', value: `$${earnings.pending}`, delta: 'Available', yellow: true },
+      { label: 'Active Students', value: stats.studentCount.toString(), delta: `${stats.studentCount} managed` },
+    ],
+    [earnings.thisMonth, earnings.perSession, earnings.pending, players.length, stats.studentCount]
+  );
+
+  const activityCards = useMemo(
+    () => activities.map(activity => {
+      const typeEmoji: Record<string, string> = {
+        session: '🎾',
+        tournament: '🏆',
+        restocking: '📦',
+        'player-reachout': '📞',
+        email: '✉️',
+      };
+      const typeColors: Record<string, string> = {
+        session: G.lime,
+        tournament: G.yellow,
+        restocking: G.blue,
+        'player-reachout': G.lime2,
+        email: G.muted2,
+      };
+      const emoji = typeEmoji[activity.type] || '📌';
+      const color = typeColors[activity.type] || G.lime;
+      const actDate = new Date(`${activity.date}T${activity.startTime}:00Z`);
+      const dateStr = actDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+      return { activity, emoji, color, dateStr };
+    }),
+    [activities]
+  );
 
   const isProfile = activeNav === 'My Profile';
 
@@ -181,12 +253,7 @@ export default function CoachDashboardContent({
       ) : !loading && !loadError && activeNav === 'Dashboard' ? (
         <>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-9 mb-4 md:mb-16">
-            {[
-              { label: 'This Month', value: `$${earnings.thisMonth.toLocaleString()}`, delta: '↑ 12% vs last mo' },
-              { label: 'Per Session', value: `$${earnings.perSession}`, delta: `${players.length} players` },
-              { label: 'Pending Payout', value: `$${earnings.pending}`, delta: 'Available', yellow: true },
-              { label: 'Active Students', value: stats.studentCount.toString(), delta: `${stats.studentCount} managed` },
-            ].map((s, i) => (
+            {dashboardStats.map((s, i) => (
               <div key={i} className="rounded-xl p-3 md:p-4" style={{ background: G.card, border: `1px solid ${G.border}`, borderRadius: 10, padding: '11px 12px' }}>
                 <div style={{ fontSize: 8.5, color: G.muted, textTransform: 'uppercase', letterSpacing: 0.8 }}>{s.label}</div>
                 <div style={{ fontSize: 20, fontWeight: 900, color: s.yellow ? G.yellow : G.lime2, marginTop: 5, lineHeight: 1 }}>{s.value}</div>
@@ -205,66 +272,45 @@ export default function CoachDashboardContent({
               </span>
             </div>
 
-            {activities.length > 0 ? (
+            {activityCards.length > 0 ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {activities.map(activity => {
-                  const typeEmoji: Record<string, string> = {
-                    session: '🎾',
-                    tournament: '🏆',
-                    restocking: '📦',
-                    'player-reachout': '📞',
-                    email: '✉️',
-                  };
-                  const typeColors: Record<string, string> = {
-                    session: G.lime,
-                    tournament: G.yellow,
-                    restocking: G.blue,
-                    'player-reachout': G.lime2,
-                    email: G.muted2,
-                  };
-                  const emoji = typeEmoji[activity.type] || '📌';
-                  const color = typeColors[activity.type] || G.lime;
-                  const actDate = new Date(`${activity.date}T${activity.startTime}:00Z`);
-                  const dateStr = actDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-
-                  return (
-                    <div key={activity.id} style={{ background: G.card2, border: `1px solid ${G.border}`, borderRadius: 8, padding: 10, borderLeft: `3px solid ${color}` }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
-                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, flex: 1 }}>
-                          <div style={{ fontSize: 16 }}>{emoji}</div>
-                          <div style={{ flex: 1 }}>
-                            <div style={{ fontSize: 11.5, fontWeight: 700, color: G.text }}>{activity.title}</div>
-                            <div style={{ fontSize: 9.5, color: G.muted, marginTop: 2 }}>{dateStr}</div>
-                            {activity.description && <div style={{ fontSize: 9, color: G.muted2, marginTop: 3, lineHeight: 1.4 }}>{activity.description}</div>}
-                          </div>
-                        </div>
-                        <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 8 }}>
-                          <span style={{ fontSize: 8.5, fontWeight: 700, borderRadius: 4, padding: '2px 7px', background: `${color}22`, border: `1px solid ${color}44`, color, display: 'inline-block' }}>
-                            {activity.type}
-                          </span>
+                {activityCards.map(({ activity, emoji, color, dateStr }) => (
+                  <div key={activity.id} style={{ background: G.card2, border: `1px solid ${G.border}`, borderRadius: 8, padding: 10, borderLeft: `3px solid ${color}` }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, flex: 1 }}>
+                        <div style={{ fontSize: 16 }}>{emoji}</div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 11.5, fontWeight: 700, color: G.text }}>{activity.title}</div>
+                          <div style={{ fontSize: 9.5, color: G.muted, marginTop: 2 }}>{dateStr}</div>
+                          {activity.description && <div style={{ fontSize: 9, color: G.muted2, marginTop: 3, lineHeight: 1.4 }}>{activity.description}</div>}
                         </div>
                       </div>
-
-                      {activity.type === 'session' && activity.metadata && (
-                        <div style={{ fontSize: 9, color: G.muted2, marginTop: 6, paddingTop: 6, borderTop: `1px solid ${G.border}`, display: 'flex', gap: 12 }}>
-                          {activity.metadata.sessionType && <span>Type: {activity.metadata.sessionType}</span>}
-                          {activity.metadata.price && <span>Rate: ${activity.metadata.price}</span>}
-                          {activity.metadata.maxParticipants && <span>Max: {activity.metadata.maxParticipants}</span>}
-                        </div>
-                      )}
-                      {activity.type === 'tournament' && activity.metadata && (
-                        <div style={{ fontSize: 9, color: G.muted2, marginTop: 6, paddingTop: 6, borderTop: `1px solid ${G.border}` }}>
-                          Level: {activity.metadata.level} · Location: {activity.metadata.location}
-                        </div>
-                      )}
-                      {activity.type === 'restocking' && activity.metadata && (
-                        <div style={{ fontSize: 9, color: G.muted2, marginTop: 6, paddingTop: 6, borderTop: `1px solid ${G.border}` }}>
-                          {activity.metadata.quantity} × {activity.metadata.itemName} · ${activity.metadata.cost}
-                        </div>
-                      )}
+                      <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 8 }}>
+                        <span style={{ fontSize: 8.5, fontWeight: 700, borderRadius: 4, padding: '2px 7px', background: `${color}22`, border: `1px solid ${color}44`, color, display: 'inline-block' }}>
+                          {activity.type}
+                        </span>
+                      </div>
                     </div>
-                  );
-                })}
+
+                    {activity.type === 'session' && activity.metadata && (
+                      <div style={{ fontSize: 9, color: G.muted2, marginTop: 6, paddingTop: 6, borderTop: `1px solid ${G.border}`, display: 'flex', gap: 12 }}>
+                        {activity.metadata.sessionType && <span>Type: {activity.metadata.sessionType}</span>}
+                        {activity.metadata.price && <span>Rate: ${activity.metadata.price}</span>}
+                        {activity.metadata.maxParticipants && <span>Max: {activity.metadata.maxParticipants}</span>}
+                      </div>
+                    )}
+                    {activity.type === 'tournament' && activity.metadata && (
+                      <div style={{ fontSize: 9, color: G.muted2, marginTop: 6, paddingTop: 6, borderTop: `1px solid ${G.border}` }}>
+                        Level: {activity.metadata.level} · Location: {activity.metadata.location}
+                      </div>
+                    )}
+                    {activity.type === 'restocking' && activity.metadata && (
+                      <div style={{ fontSize: 9, color: G.muted2, marginTop: 6, paddingTop: 6, borderTop: `1px solid ${G.border}` }}>
+                        {activity.metadata.quantity} × {activity.metadata.itemName} · ${activity.metadata.cost}
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
             ) : (
               <div style={{ color: G.muted, fontSize: 11, textAlign: 'center', padding: '20px 0' }}>No activities scheduled for today</div>
@@ -294,7 +340,7 @@ export default function CoachDashboardContent({
             </div>
           )}
 
-          <AnalyticsSection coachId={coachId} />
+          <AnalyticsSection coachId={coachId} initialStats={stats} initialWallet={finalDashboardData.coach?.wallet} />
         </>
       ) : !loading && !loadError && activeNav === 'Sessions' ? (
         <SessionManagement coachId={coachId} />
