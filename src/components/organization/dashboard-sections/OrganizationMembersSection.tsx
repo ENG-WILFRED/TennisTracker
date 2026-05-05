@@ -148,16 +148,24 @@ function TierBadge({ tier }: { tier?: string }) {
 
 function normalizeClubMember(clubMember: any): Member {
   const user = clubMember?.player?.user;
+  const rawJoinDate = clubMember.joinDate;
+  let normalizedJoinDate: string | undefined;
+
+  if (rawJoinDate) {
+    const parsedDate = rawJoinDate instanceof Date ? rawJoinDate : new Date(rawJoinDate);
+    normalizedJoinDate = !Number.isNaN(parsedDate.getTime()) ? parsedDate.toISOString() : undefined;
+  }
+
   return {
     id: clubMember.id,
     firstName: user?.firstName || user?.email?.split('@')[0] || 'Unknown',
-    lastName: user?.lastName || '',
+    lastName: clubMember.lastName || '',
     email: user?.email || '',
     role: clubMember.role === 'member' ? 'player' : clubMember.role === 'officer' ? 'admin' : clubMember.role || 'player',
     tier: clubMember.membershipTier?.name || clubMember.tier || 'Basic',
     status: clubMember.paymentStatus === 'active' ? 'active' : 'inactive',
     paymentStatus: clubMember.paymentStatus,
-    joinDate: clubMember.joinDate ? clubMember.joinDate.toISOString() : undefined,
+    joinDate: normalizedJoinDate,
     visits: clubMember.attendanceCount || 0,
     nationality: user?.nationality || '',
     age: user?.dateOfBirth ? new Date(user.dateOfBirth).getFullYear() : undefined,

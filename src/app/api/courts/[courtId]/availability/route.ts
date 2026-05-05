@@ -34,14 +34,17 @@ export async function GET(
       return NextResponse.json({ error: 'Court not found' }, { status: 404 });
     }
 
+    const searchStart = new Date(startDate);
+    const searchEnd = new Date(endDate);
+
     // Get all confirmed bookings in the date range
     const bookings = await prisma.courtBooking.findMany({
       where: {
         courtId,
         status: 'confirmed',
         startTime: {
-          gte: new Date(startDate),
-          lte: new Date(endDate),
+          gte: searchStart,
+          lte: searchEnd,
         },
       },
       select: {
@@ -52,25 +55,62 @@ export async function GET(
       },
     });
 
-    // Generate availability matrix
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const availability = [];
+    // Get all active coach sessions for the court in the same window
+    const sessions = await prisma.coachSession.findMany({
+      where: {
+        courtId,
+        status: { in: ['scheduled', 'confirmed', 'in-progress'] },
+        OR: [
+          {
+            startTime: {
+              gte: searchStart,
+              lte: searchEnd,
+            },
+          },
+          {
+            endTime: {
+              gte: searchStart,
+              lte: searchEnd,
+            },
+          },
+          {
+            AND: [
+              { startTime: { lte: searchStart } },
+              { endTime: { gte: searchEnd } },
+            ],
+          },
+        ],
+      },
+      select: {
+        id: true,
+        title: true,
+        startTime: true,
+        endTime: true,
+        status: true,
+      },
+    });
 
-    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    const availability = [];
+    for (let d = new Date(searchStart); d <= searchEnd; d.setDate(d.getDate() + 1)) {
       const dayOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()];
       const dateStr = d.toISOString().split('T')[0];
 
-      // Get bookings for this day
-      const dayBookings = bookings.filter((b: typeof bookings[number]) => 
+      const dayBookings = bookings.filter((b: typeof bookings[number]) =>
         b.startTime.toISOString().split('T')[0] === dateStr
+      );
+
+      const daySessions = sessions.filter((s: typeof sessions[number]) =>
+        s.startTime.toISOString().split('T')[0] === dateStr ||
+        s.endTime.toISOString().split('T')[0] === dateStr ||
+        (s.startTime < new Date(`${dateStr}T00:00:00Z`) && s.endTime > new Date(`${dateStr}T23:59:59Z`))
       );
 
       availability.push({
         date: dateStr,
         dayOfWeek,
         bookings: dayBookings,
-        isAvailable: dayBookings.length < 10, // Simple heuristic: available if less than 10 bookings
+        sessions: daySessions,
+        isAvailable: dayBookings.length < 10 && daySessions.length === 0,
       });
     }
 

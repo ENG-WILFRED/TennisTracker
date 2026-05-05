@@ -296,8 +296,22 @@ export default function PlayerCourtDetailsPage() {
                         {day.dayOfWeek}, {new Date(day.date).toLocaleDateString()}
                       </div>
                       <div style={{ fontSize: 11, color: G.muted, marginTop: 2 }}>
-                        {day.isAvailable ? `${day.bookings.length} bookings` : 'Closed'}
+                        {day.sessions && day.sessions.length > 0
+                          ? `${day.sessions.length} session${day.sessions.length > 1 ? 's' : ''} scheduled`
+                          : `${day.bookings.length} booking${day.bookings.length !== 1 ? 's' : ''}`}
                       </div>
+                      {day.sessions && day.sessions.length > 0 && (
+                        <div style={{ fontSize: 10, color: G.lime, marginTop: 4 }}>
+                          {day.sessions.map((session: any, idx: number) => (
+                            <div key={session.id}>
+                              {new Date(session.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              {' - '}
+                              {new Date(session.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              {idx < day.sessions.length - 1 ? ', ' : ''}
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     <div
                       style={{
@@ -309,7 +323,7 @@ export default function PlayerCourtDetailsPage() {
                         fontWeight: 600,
                       }}
                     >
-                      {day.isAvailable ? 'Available' : 'Closed'}
+                      {day.isAvailable ? 'Available' : day.sessions && day.sessions.length > 0 ? 'Session blocked' : 'Closed'}
                     </div>
                   </div>
                 ))}

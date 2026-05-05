@@ -12,6 +12,27 @@ export async function getCoachDashboard(coachId: string) {
       userId: true,
       role: true,
       bio: true,
+      certifications: {
+        select: {
+          id: true,
+          name: true,
+          issuer: true,
+          issuedAt: true,
+          expiresAt: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      },
+      availability: {
+        select: {
+          id: true,
+          dayOfWeek: true,
+          startTime: true,
+          endTime: true,
+          createdAt: true,
+        },
+        orderBy: { dayOfWeek: 'asc' },
+      },
       user: {
         select: {
           firstName: true,

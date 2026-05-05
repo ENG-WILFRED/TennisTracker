@@ -1,11 +1,10 @@
 'use client';
-// ─────────────────────────────────────────────────────────────────
-// SessionManagement.tsx  –  Vico Sports design system
-// ─────────────────────────────────────────────────────────────────
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { LoadingState } from '@/components/LoadingState';
 import { useToast } from '@/components/ui/ToastContext';
+import { authenticatedFetch } from '@/lib/authenticatedFetch';
 
 const G = {
   dark: '#0a180a', sidebar: '#0f1e0f', card: '#162616', card2: '#1b2f1b', card3: '#203520',
@@ -42,13 +41,29 @@ const Tag = ({ children, yellow, red, color }: { children: React.ReactNode; yell
   return <span style={{ fontSize: 8.5, fontWeight: 700, borderRadius: 4, padding: '2px 7px', background: `${c}22`, border: `1px solid ${c}44`, color: c, display: 'inline-block' }}>{children}</span>;
 };
 
+interface CourtOption {
+  id: string;
+  name: string;
+  courtNumber?: string | number | null;
+  organization?: { name: string } | null;
+}
+
+interface PlayerOption {
+  userId: string;
+  firstName: string;
+  lastName: string;
+  relationshipType: 'direct' | 'organization';
+}
+
 export default function SessionManagement({ coachId }: { coachId: string }) {
+  const router = useRouter();
   const { addToast } = useToast();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [filter, setFilter] = useState<'all' | 'upcoming' | 'completed'>('upcoming');
+  const [filter, setFilter] = useState<'all' | 'upcoming' | 'completed'>('all');
+  const [isMobile, setIsMobile] = useState(false);
   
   // Advanced filters
   const [selectedSessionTypes, setSelectedSessionTypes] = useState<string[]>([]);
@@ -57,9 +72,27 @@ export default function SessionManagement({ coachId }: { coachId: string }) {
   const [dateRange, setDateRange] = useState<[string, string]>(['', '']);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   
-  const [formData, setFormData] = useState({ title: '', description: '', startTime: '', endTime: '', sessionType: '1-on-1', maxParticipants: 1, price: 60, court: '' });
+  const [courts, setCourts] = useState<CourtOption[]>([]);
+  const [players, setPlayers] = useState<PlayerOption[]>([]);
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    startTime: '',
+    endTime: '',
+    sessionType: '1-on-1',
+    maxParticipants: 1,
+    price: 60,
+    court: '',
+    courtId: '',
+    playerIds: [] as string[],
+  });
+  const [estimatedPrice, setEstimatedPrice] = useState<number | null>(null);
+  const [isEstimating, setIsEstimating] = useState(false);
+  const [estimateError, setEstimateError] = useState<string | null>(null);
   const [hoveredSessionId, setHoveredSessionId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -121,8 +154,97 @@ export default function SessionManagement({ coachId }: { coachId: string }) {
     load();
   }, [coachId]);
 
+  useEffect(() => {
+    const loadReferenceData = async () => {
+      try {
+        const [courtsRes, playersRes] = await Promise.all([
+          fetch(`/api/coaches/courts?coachId=${coachId}`),
+          fetch(`/api/coaches/players/eligible?coachId=${coachId}`),
+        ]);
+
+        if (courtsRes.ok) {
+          const data = await courtsRes.json();
+          setCourts(Array.isArray(data.courts) ? data.courts : []);
+        }
+
+        if (playersRes.ok) {
+          const data = await playersRes.json();
+          setPlayers(Array.isArray(data.players) ? data.players : []);
+        }
+      } catch (error) {
+        console.error('Error loading courts or players:', error);
+      }
+    };
+
+    if (coachId) {
+      loadReferenceData();
+    }
+  }, [coachId]);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(max-width: 760px)');
+    const handleResize = () => setIsMobile(mediaQuery.matches);
+    handleResize();
+    mediaQuery.addEventListener('change', handleResize);
+    return () => mediaQuery.removeEventListener('change', handleResize);
+  }, []);
+
+  const fetchSessionEstimate = useCallback(async () => {
+    const playerId = formData.playerIds[0];
+    if (!formData.startTime || !formData.endTime || !playerId) {
+      setEstimatedPrice(null);
+      setEstimateError(null);
+      return;
+    }
+
+    const start = new Date(formData.startTime);
+    const end = new Date(formData.endTime);
+    if (isNaN(start.getTime()) || isNaN(end.getTime()) || end <= start) {
+      setEstimatedPrice(null);
+      setEstimateError('Enter a valid start and end time');
+      return;
+    }
+
+    setIsEstimating(true);
+    setEstimateError(null);
+
+    try {
+      const params = new URLSearchParams({
+        coachId,
+        playerId,
+        startTime: start.toISOString(),
+        endTime: end.toISOString(),
+      });
+      const res = await authenticatedFetch(`/api/coaches/sessions/estimate?${params.toString()}`);
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        setEstimatedPrice(null);
+        setEstimateError(body?.error || 'Unable to estimate session cost');
+      } else {
+        const data = await res.json();
+        setEstimatedPrice(data.estimatedPrice ?? null);
+        setEstimateError(null);
+      }
+    } catch (error) {
+      console.error('Estimate fetch failed', error);
+      setEstimatedPrice(null);
+      setEstimateError('Unable to estimate session cost');
+    } finally {
+      setIsEstimating(false);
+    }
+  }, [coachId, formData.endTime, formData.playerIds, formData.startTime]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchSessionEstimate();
+    }, 250);
+
+    return () => clearTimeout(timer);
+  }, [fetchSessionEstimate]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsCreating(true);
     try {
       // Convert startTime and endTime from datetime-local to date and time parts
       const startDT = new Date(formData.startTime);
@@ -142,6 +264,13 @@ export default function SessionManagement({ coachId }: { coachId: string }) {
           endTime: endTimeStr,
           title: formData.title,
           description: formData.description,
+          court: formData.court,
+          courtId: formData.courtId || undefined,
+          playerIds: formData.playerIds.length > 0 ? formData.playerIds : undefined,
+          playerNames: formData.playerIds.length > 0 ? formData.playerIds.map(id => {
+            const player = players.find(p => p.userId === id);
+            return player ? `${player.firstName} ${player.lastName}` : '';
+          }) : undefined,
           metadata: {
             sessionType: formData.sessionType,
             maxParticipants: formData.maxParticipants,
@@ -169,14 +298,16 @@ export default function SessionManagement({ coachId }: { coachId: string }) {
         };
         setSessions([...sessions, newSession]);
         setShowForm(false);
-        setFormData({ title: '', description: '', startTime: '', endTime: '', sessionType: '1-on-1', maxParticipants: 1, price: 60, court: '' });
+        setFormData({ title: '', description: '', startTime: '', endTime: '', sessionType: '1-on-1', maxParticipants: 1, price: 60, court: '', courtId: '', playerIds: [] });
         addToast('Session created successfully!', 'success');
       } else {
-        addToast('Failed to create activity', 'error');
+        addToast('Failed to create session', 'error');
       }
     } catch (error) {
       console.error('Error creating activity:', error);
       addToast('Error creating activity', 'error');
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -222,13 +353,25 @@ export default function SessionManagement({ coachId }: { coachId: string }) {
       maxParticipants: session.maxParticipants,
       price: session.price || 60,
       court: (typeof session.court === 'string' ? session.court : session.court?.name) || '',
+      courtId: '',
+      playerIds: [],
     });
+  };
+
+  const handleViewDetails = (sessionId: string, sessionTitle: string) => {
+    // Show navigating toast
+    const toastId = addToast(`Navigating to ${sessionTitle}...`, 'info', 5000);
+    
+    // Navigate to session detail page
+    setTimeout(() => {
+      router.push(`/sessions/${sessionId}`);
+    }, 300);
   };
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingId) return;
-
+    setIsUpdating(true);
     try {
       const startDT = new Date(formData.startTime);
       const endDT = new Date(formData.endTime);
@@ -247,6 +390,13 @@ export default function SessionManagement({ coachId }: { coachId: string }) {
           endTime: endTimeStr,
           title: formData.title,
           description: formData.description,
+          court: formData.court,
+          courtId: formData.courtId || undefined,
+          playerIds: formData.playerIds.length > 0 ? formData.playerIds : undefined,
+          playerNames: formData.playerIds.length > 0 ? formData.playerIds.map(id => {
+            const player = players.find(p => p.userId === id);
+            return player ? `${player.firstName} ${player.lastName}` : '';
+          }) : undefined,
           metadata: {
             sessionType: formData.sessionType,
             maxParticipants: formData.maxParticipants,
@@ -278,7 +428,7 @@ export default function SessionManagement({ coachId }: { coachId: string }) {
         ));
         setEditingId(null);
         setShowForm(false);
-        setFormData({ title: '', description: '', startTime: '', endTime: '', sessionType: '1-on-1', maxParticipants: 1, price: 60, court: '' });
+        setFormData({ title: '', description: '', startTime: '', endTime: '', sessionType: '1-on-1', maxParticipants: 1, price: 60, court: '', courtId: '', playerIds: [] });
         addToast('Session updated successfully', 'success');
       } else {
         addToast('Failed to update session', 'error');
@@ -286,36 +436,38 @@ export default function SessionManagement({ coachId }: { coachId: string }) {
     } catch (error) {
       console.error('Error updating session:', error);
       addToast('Error updating session', 'error');
+    } finally {
+      setIsUpdating(false);
     }
   };
 
   const handleCancelEdit = () => {
     setEditingId(null);
     setShowForm(false);
-    setFormData({ title: '', description: '', startTime: '', endTime: '', sessionType: '1-on-1', maxParticipants: 1, price: 60, court: '' });
+    setFormData({ title: '', description: '', startTime: '', endTime: '', sessionType: '1-on-1', maxParticipants: 1, price: 60, court: '', courtId: '', playerIds: [] });
   };
 
   // Get unique values from sessions for filter options
-  const getUniqueSessionTypes = () => {
+  const uniqueSessionTypes = useMemo(() => {
     const types = new Set(sessions.map(s => s.sessionType));
     return Array.from(types).sort();
-  };
+  }, [sessions]);
 
-  const getUniqueLocations = () => {
+  const uniqueLocations = useMemo(() => {
     const locations = new Set(sessions.filter(s => s.court).map(s => typeof s.court === 'string' ? s.court : s.court?.name || ''));
     return Array.from(locations).filter(Boolean).sort();
-  };
+  }, [sessions]);
 
-  const getPriceRange = () => {
+  const priceRangeBounds = useMemo(() => {
     const prices = sessions.filter(s => s.price).map(s => s.price || 0);
     return {
       min: Math.min(...prices, 0),
       max: Math.max(...prices, 500)
     };
-  };
+  }, [sessions]);
 
   // Advanced filter logic
-  const applyAdvancedFilters = (sessionList: Session[]) => {
+  const applyAdvancedFilters = useCallback((sessionList: Session[]) => {
     return sessionList.filter(session => {
       // Filter by session type
       if (selectedSessionTypes.length > 0 && !selectedSessionTypes.includes(session.sessionType)) {
@@ -353,16 +505,25 @@ export default function SessionManagement({ coachId }: { coachId: string }) {
 
       return true;
     });
-  };
+  }, [selectedSessionTypes, selectedLocations, priceRange, dateRange]);
 
   // Apply status filter first, then advanced filters
-  const filtered = applyAdvancedFilters(
-    sessions.filter(s => {
+  const filtered = useMemo(() => {
+    const statusFiltered = sessions.filter(s => {
       if (filter === 'upcoming') return new Date(s.startTime) >= new Date();
       if (filter === 'completed') return s.status === 'completed' || new Date(s.startTime) < new Date();
       return true;
-    })
-  );
+    });
+    return applyAdvancedFilters(statusFiltered);
+  }, [sessions, filter, applyAdvancedFilters]);
+
+  // Memoized summary stats
+  const summaryStats = useMemo(() => ({
+    upcoming: sessions.filter(s => new Date(s.startTime) >= new Date()).length,
+    oneOnOne: sessions.filter(s => s.sessionType === '1-on-1').length,
+    group: sessions.filter(s => s.sessionType !== '1-on-1').length,
+    revenue: sessions.reduce((a, s) => a + (s.price || 0) * s.bookings.length, 0),
+  }), [sessions]);
 
   const card = { background: G.card, border: `1px solid ${G.border}`, borderRadius: 12, padding: 14 } as const;
   const inputSt = { width: '100%', padding: '8px 11px', background: G.dark, border: `1px solid ${G.border}`, color: G.text, borderRadius: 7, fontSize: 11.5, outline: 'none', boxSizing: 'border-box' } as const;
@@ -388,14 +549,14 @@ export default function SessionManagement({ coachId }: { coachId: string }) {
       </div>
 
       {/* Summary Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 9 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(4,1fr)', gap: 9 }}>
         {[
-          { label: 'Upcoming', value: sessions.filter(s => new Date(s.startTime) >= new Date()).length, color: G.lime2 },
-          { label: '1-on-1', value: sessions.filter(s => s.sessionType === '1-on-1').length, color: G.lime },
-          { label: 'Group', value: sessions.filter(s => s.sessionType !== '1-on-1').length, color: G.blue },
-          { label: 'Revenue Est.', value: `$${sessions.reduce((a, s) => a + (s.price || 0) * s.bookings.length, 0)}`, color: G.yellow },
+          { label: 'Upcoming', value: summaryStats.upcoming, color: G.lime2 },
+          { label: '1-on-1', value: summaryStats.oneOnOne, color: G.lime },
+          { label: 'Group', value: summaryStats.group, color: G.blue },
+          { label: 'Revenue Est.', value: `$${summaryStats.revenue}`, color: G.yellow },
         ].map((st, i) => (
-          <div key={i} style={{ background: G.card, border: `1px solid ${G.border}`, borderRadius: 10, padding: '10px 12px' }}>
+          <div key={`stat-${i}`} style={{ background: G.card, border: `1px solid ${G.border}`, borderRadius: 10, padding: '10px 12px' }}>
             <div style={{ fontSize: 8, color: G.muted, textTransform: 'uppercase', letterSpacing: 0.8 }}>{st.label}</div>
             <div style={{ fontSize: 20, fontWeight: 900, color: st.color, marginTop: 4, lineHeight: 1 }}>{st.value}</div>
           </div>
@@ -407,7 +568,7 @@ export default function SessionManagement({ coachId }: { coachId: string }) {
         <div style={card}>
           <SectionLabel>{editingId ? 'Edit Session Details' : 'New Session Details'}</SectionLabel>
           <form onSubmit={editingId ? handleUpdate : handleSubmit}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 10 }}>
               <div>
                 <label style={{ fontSize: 9.5, color: G.muted2, display: 'block', marginBottom: 4 }}>SESSION TITLE *</label>
                 <input style={inputSt} placeholder="e.g. Alex – Serve Clinic" value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} required />
@@ -430,9 +591,69 @@ export default function SessionManagement({ coachId }: { coachId: string }) {
               </div>
               <div>
                 <label style={{ fontSize: 9.5, color: G.muted2, display: 'block', marginBottom: 4 }}>COURT / LOCATION</label>
-                <input style={inputSt} placeholder="e.g. Court 1" value={formData.court} onChange={e => setFormData({ ...formData, court: e.target.value })} />
+                {courts.length > 0 ? (
+                  <select
+                    style={inputSt}
+                    value={formData.courtId}
+                    onChange={e => {
+                      const courtId = e.target.value;
+                      const court = courts.find(c => c.id === courtId);
+                      setFormData({
+                        ...formData,
+                        courtId,
+                        court: court ? `${court.name}${court.organization?.name ? ` — ${court.organization.name}` : ''}` : '',
+                      });
+                    }}
+                  >
+                    <option value="">Select a court</option>
+                    {courts.map(court => (
+                      <option key={court.id} value={court.id}>
+                        {court.name}{court.organization?.name ? ` — ${court.organization.name}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input style={inputSt} placeholder="e.g. Court 1" value={formData.court} onChange={e => setFormData({ ...formData, court: e.target.value })} />
+                )}
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              <div>
+                <label style={{ fontSize: 9.5, color: G.muted2, display: 'block', marginBottom: 4 }}>PLAYER{formData.maxParticipants > 1 ? 'S' : ''}</label>
+                {players.length > 0 ? (
+                  formData.maxParticipants > 1 ? (
+                    <select
+                      style={{ ...inputSt, height: '80px' }}
+                      multiple
+                      value={formData.playerIds}
+                      onChange={e => {
+                        const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
+                        setFormData({ ...formData, playerIds: selectedOptions });
+                      }}
+                    >
+                      {players.map(player => (
+                        <option key={player.userId} value={player.userId}>
+                          {player.firstName} {player.lastName} {player.relationshipType === 'direct' ? '(Direct)' : '(Org)'}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <select
+                      style={inputSt}
+                      value={formData.playerIds[0] || ''}
+                      onChange={e => setFormData({ ...formData, playerIds: e.target.value ? [e.target.value] : [] })}
+                    >
+                      <option value="">Select a player</option>
+                      {players.map(player => (
+                        <option key={player.userId} value={player.userId}>
+                          {player.firstName} {player.lastName} {player.relationshipType === 'direct' ? '(Direct)' : '(Org)'}
+                        </option>
+                      ))}
+                    </select>
+                  )
+                ) : (
+                  <input style={inputSt} placeholder="Select a player" value={formData.playerIds.join(', ')} onChange={e => setFormData({ ...formData, playerIds: e.target.value ? e.target.value.split(',').map(s => s.trim()) : [] })} />
+                )}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 8 }}>
                 <div>
                   <label style={{ fontSize: 9.5, color: G.muted2, display: 'block', marginBottom: 4 }}>MAX PLAYERS</label>
                   <input style={inputSt} type="number" min={1} value={formData.maxParticipants} onChange={e => setFormData({ ...formData, maxParticipants: parseInt(e.target.value) })} />
@@ -442,17 +663,29 @@ export default function SessionManagement({ coachId }: { coachId: string }) {
                   <input style={inputSt} type="number" step="0.01" value={formData.price} onChange={e => setFormData({ ...formData, price: parseFloat(e.target.value) })} />
                 </div>
               </div>
+              <div style={{ marginTop: 12, padding: 12, borderRadius: 10, background: G.card2, border: `1px solid ${G.border2}` }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: G.text, marginBottom: 4 }}>Pricing preview</div>
+                {isEstimating ? (
+                  <div style={{ fontSize: 12, color: G.muted }}>Calculating estimated cost…</div>
+                ) : estimateError ? (
+                  <div style={{ fontSize: 12, color: G.red }}>{estimateError}</div>
+                ) : estimatedPrice != null ? (
+                  <div style={{ fontSize: 14, fontWeight: 700, color: G.lime }}>${estimatedPrice.toFixed(2)} estimated</div>
+                ) : (
+                  <div style={{ fontSize: 12, color: G.muted }}>Add a player, start time, and end time to preview the estimated session price.</div>
+                )}
+              </div>
             </div>
             <div style={{ marginTop: 10 }}>
               <label style={{ fontSize: 9.5, color: G.muted2, display: 'block', marginBottom: 4 }}>DESCRIPTION</label>
               <textarea style={{ ...inputSt, resize: 'none' }} rows={2} placeholder="Session objectives and drills..." value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} />
             </div>
-            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-              <button type="submit" style={{ background: G.lime, color: '#0a180a', border: 'none', borderRadius: 8, padding: '9px 20px', fontWeight: 800, fontSize: 11, cursor: 'pointer' }}>
-                {editingId ? '✓ Update Session' : '✓ Create Session'}
+            <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 8, marginTop: 12 }}>
+              <button type="submit" style={{ width: isMobile ? '100%' : 'auto', background: G.lime, color: '#0a180a', border: 'none', borderRadius: 8, padding: '9px 20px', fontWeight: 800, fontSize: 11, cursor: 'pointer' }}>
+                {editingId ? (isUpdating ? '⏳ Updating...' : '✓ Update Session') : (isCreating ? '⏳ Creating...' : '✓ Create Session')}
               </button>
               {editingId && (
-                <button type="button" onClick={handleCancelEdit} style={{ background: G.border, color: G.text, border: 'none', borderRadius: 8, padding: '9px 20px', fontWeight: 800, fontSize: 11, cursor: 'pointer' }}>
+                <button type="button" onClick={handleCancelEdit} style={{ width: isMobile ? '100%' : 'auto', background: G.border, color: G.text, border: 'none', borderRadius: 8, padding: '9px 20px', fontWeight: 800, fontSize: 11, cursor: 'pointer' }}>
                   ✕ Cancel
                 </button>
               )}
@@ -462,14 +695,31 @@ export default function SessionManagement({ coachId }: { coachId: string }) {
       )}
 
       {/* Filter Tabs */}
-      <div style={{ display: 'flex', gap: 3, background: G.card, border: `1px solid ${G.border}`, borderRadius: 9, padding: 3 }}>
-        {(['all', 'upcoming', 'completed'] as const).map(f => (
-          <button key={f} onClick={() => setFilter(f)} style={{ flex: 1, padding: '6px 0', borderRadius: 7, border: 'none', cursor: 'pointer', fontSize: 10.5, fontWeight: 700, background: filter === f ? G.lime : 'transparent', color: filter === f ? '#0a180a' : G.muted, textTransform: 'capitalize' }}>
-            {f}
-          </button>
-        ))}
-        <div style={{ flex: 0.5 }} />
-        <button onClick={() => setShowAdvancedFilters(!showAdvancedFilters)} style={{ padding: '6px 12px', borderRadius: 7, border: 'none', cursor: 'pointer', fontSize: 10.5, fontWeight: 700, background: showAdvancedFilters ? G.border : 'transparent', color: showAdvancedFilters ? G.lime : G.muted, display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
+      <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 8, background: G.card, border: `1px solid ${G.border}`, borderRadius: 9, padding: 10, alignItems: isMobile ? 'stretch' : 'center' }}>
+        {isMobile ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '100%' }}>
+            <label style={{ fontSize: 9.5, color: G.muted2, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>Show</label>
+            <select
+              value={filter}
+              onChange={e => setFilter(e.target.value as typeof filter)}
+              style={{ ...inputSt, width: '100%', padding: '9px 10px', fontSize: 11 }}
+            >
+              <option value="all">All sessions</option>
+              <option value="upcoming">Upcoming</option>
+              <option value="completed">Completed</option>
+            </select>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', gap: 3, flex: 1 }}>
+            {(['all', 'upcoming', 'completed'] as const).map(f => (
+              <button key={f} onClick={() => setFilter(f)} style={{ flex: 1, padding: '6px 0', borderRadius: 7, border: 'none', cursor: 'pointer', fontSize: 10.5, fontWeight: 700, background: filter === f ? G.lime : 'transparent', color: filter === f ? '#0a180a' : G.muted, textTransform: 'capitalize' }}>
+                {f}
+              </button>
+            ))}
+          </div>
+        )}
+
+        <button onClick={() => setShowAdvancedFilters(!showAdvancedFilters)} style={{ padding: '9px 12px', borderRadius: 7, border: 'none', cursor: 'pointer', fontSize: 10.5, fontWeight: 700, background: showAdvancedFilters ? G.border : 'transparent', color: showAdvancedFilters ? G.lime : G.muted, display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap', width: isMobile ? '100%' : 'auto' }}>
           🔽 Filters {(selectedSessionTypes.length > 0 || selectedLocations.length > 0 || dateRange[0] || dateRange[1]) && <span style={{ fontSize: 9, background: G.lime, color: '#0a180a', borderRadius: 3, padding: '1px 4px', fontWeight: 800 }}>Active</span>}
         </button>
       </div>
@@ -484,7 +734,7 @@ export default function SessionManagement({ coachId }: { coachId: string }) {
             <div>
               <label style={{ fontSize: 9.5, color: G.muted2, display: 'block', marginBottom: 6, fontWeight: 700 }}>SESSION TYPE</label>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {getUniqueSessionTypes().map(type => (
+                {uniqueSessionTypes.map(type => (
                   <label key={type} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, cursor: 'pointer', color: G.text }}>
                     <input type="checkbox" checked={selectedSessionTypes.includes(type)} onChange={e => {
                       if (e.target.checked) {
@@ -503,7 +753,7 @@ export default function SessionManagement({ coachId }: { coachId: string }) {
             <div>
               <label style={{ fontSize: 9.5, color: G.muted2, display: 'block', marginBottom: 6, fontWeight: 700 }}>LOCATION / COURT</label>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {getUniqueLocations().map(location => (
+                {uniqueLocations.map(location => (
                   <label key={location} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, cursor: 'pointer', color: G.text }}>
                     <input type="checkbox" checked={selectedLocations.includes(location)} onChange={e => {
                       if (e.target.checked) {
@@ -532,9 +782,9 @@ export default function SessionManagement({ coachId }: { coachId: string }) {
             <div>
               <label style={{ fontSize: 9.5, color: G.muted2, display: 'block', marginBottom: 6, fontWeight: 700 }}>PRICE RANGE</label>
               <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                <input type="number" min={getPriceRange().min} max={getPriceRange().max} value={priceRange[0]} onChange={e => setPriceRange([parseFloat(e.target.value) || 0, priceRange[1]])} style={{ ...inputSt, flex: 1, padding: '6px 8px', fontSize: 9.5 }} placeholder="Min" />
+                <input type="number" min={priceRangeBounds.min} max={priceRangeBounds.max} value={priceRange[0]} onChange={e => setPriceRange([parseFloat(e.target.value) || 0, priceRange[1]])} style={{ ...inputSt, flex: 1, padding: '6px 8px', fontSize: 9.5 }} placeholder="Min" />
                 <span style={{ fontSize: 9, color: G.muted }}>-</span>
-                <input type="number" min={getPriceRange().min} max={getPriceRange().max} value={priceRange[1]} onChange={e => setPriceRange([priceRange[0], parseFloat(e.target.value) || 500])} style={{ ...inputSt, flex: 1, padding: '6px 8px', fontSize: 9.5 }} placeholder="Max" />
+                <input type="number" min={priceRangeBounds.min} max={priceRangeBounds.max} value={priceRange[1]} onChange={e => setPriceRange([priceRange[0], parseFloat(e.target.value) || 500])} style={{ ...inputSt, flex: 1, padding: '6px 8px', fontSize: 9.5 }} placeholder="Max" />
                 <span style={{ fontSize: 9, color: G.muted, whiteSpace: 'nowrap' }}>$</span>
               </div>
             </div>
@@ -559,7 +809,7 @@ export default function SessionManagement({ coachId }: { coachId: string }) {
         {filtered.length === 0 ? (
           <div style={{ ...card, textAlign: 'center', color: G.muted, padding: 30 }}>No activities found</div>
         ) : (
-          filtered.map(session => {
+          filtered.map((session, index) => {
             const fillPct = Math.round((session.bookings.length / session.maxParticipants) * 100);
             const isFull = session.bookings.length >= session.maxParticipants;
             const typeColor = session.type === 'session' ? sessionTypeColors[session.sessionType] || G.lime : G.muted;
@@ -572,9 +822,11 @@ export default function SessionManagement({ coachId }: { coachId: string }) {
             const isHovered = hoveredSessionId === session.id;
             
             return (
-              <div key={session.id} 
+              <div key={session.id || `session-${index}`} 
+                onClick={() => handleViewDetails(session.id, session.title)}
                 onMouseEnter={() => setHoveredSessionId(session.id)} 
-                onMouseLeave={() => setHoveredSessionId(null)} style={{ background: isPast ? G.card2 : G.card, border: `1px solid ${isPast ? G.border : G.border}`, borderRadius: 11, padding: 13, borderLeft: `3px solid ${isPast ? G.muted : typeColor}`, transition: 'border-color .15s', opacity: isPast ? 0.7 : 1 }}>
+                onMouseLeave={() => setHoveredSessionId(null)} 
+                style={{ background: isPast ? G.card2 : G.card, border: `1px solid ${isPast ? G.border : G.border}`, borderRadius: 11, padding: 13, borderLeft: `3px solid ${isPast ? G.muted : typeColor}`, transition: 'border-color .15s, cursor .15s, box-shadow .15s', opacity: isPast ? 0.7 : 1, cursor: 'pointer', boxShadow: isHovered ? `0 0 0 2px ${G.lime}22` : 'none' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 }}>

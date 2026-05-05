@@ -13,7 +13,7 @@ export async function authenticatedFetch(
   options: FetchOptions = {}
 ): Promise<Response> {
   const { requireAuth = true, skipRetry = false, ...fetchOptions } = options as any;
-  const FETCH_TIMEOUT = 15000; // 15 second timeout
+  const FETCH_TIMEOUT = 30000; // Increased to 30 seconds for dashboard requests
 
   const headers = new Headers(fetchOptions.headers);
 

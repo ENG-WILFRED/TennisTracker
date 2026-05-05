@@ -14,143 +14,183 @@ import { seedTournamentTasks } from './seeds/tournament-tasks.js';
 import { seedTaskTemplates } from './seeds/task-templates-complete.js';
 import { seedTournamentPlayers } from './seeds/tournament-players-seeding.js';
 import { seedKenyaPlayersAndCourts } from './seeds/kenya-tennis-seed.js';
+import { seedCoachSessions } from './seeds/coach-sessions.js';
 import { PrismaClient } from '../src/generated/prisma/index.js';
+import {
+  initializeSeedCheckpoints,
+  shouldSkipSeed,
+  startSeed,
+  completeSeed,
+  failSeed,
+  printSeedStatusReport,
+} from './seeds/seed-tracker.js';
 
 const prisma = new PrismaClient();
+
+// Helper to wrap seed functions with error handling and tracking
+async function executeSeed<T>(
+  seedName: string,
+  seedFunction: () => Promise<T>,
+): Promise<{ success: boolean; result?: T; error?: string }> {
+  if (await shouldSkipSeed(prisma, seedName)) {
+    console.log(`⏭️ Skipping ${seedName} (already completed)`);
+    return { success: true };
+  }
+
+  await startSeed(prisma, seedName);
+
+  try {
+    console.log(`\n⏳ Starting ${seedName}...`);
+    const result = await seedFunction();
+    await completeSeed(prisma, seedName, Array.isArray(result) ? result.length : 0);
+    console.log(`✅ ${seedName} completed successfully`);
+    return { success: true, result };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    await failSeed(prisma, seedName, errorMessage);
+    console.error(`❌ ${seedName} failed:`, errorMessage);
+    return { success: false, error: errorMessage };
+  }
+}
 
 async function main() {
   try {
     console.log('═══════════════════════════════════════════════════════════════');
     console.log('🌱 TENNIS TRACKER DATABASE SEEDING');
-    console.log('═══════════════════════════════════════════════════════════════\n');
+    console.log('═══════════════════════════════════════════════════════════════');
+    console.log('📋 With Checkpoint System - Only new/failed seeds will be applied\n');
+
+    await initializeSeedCheckpoints(prisma);
 
     // 1. Seed organizations first
     console.log('📍 STEP 1: Organizations');
     console.log('───────────────────────────────────────────────────────────────');
-    const organizations = await seedOrganizations();
+    const orgResult = await executeSeed('organizations', () => seedOrganizations());
+    if (!orgResult.success) throw new Error('Organizations seed must succeed');
+    const organizations = orgResult.result || [];
 
     // 2. Seed users (players, coaches, admins, etc.)
-    console.log('📍 STEP 2: Users & Roles');
+    console.log('\n📍 STEP 2: Users & Roles');
     console.log('───────────────────────────────────────────────────────────────');
-    const users = await seedUsers(organizations);
+    const usersResult = await executeSeed('users', () => seedUsers(organizations));
+    const users = (usersResult.result || []) as any[];
 
     // 3. Create courts for each organization
-    console.log('📍 STEP 3: Courts');
+    console.log('\n📍 STEP 3: Courts');
     console.log('───────────────────────────────────────────────────────────────');
-    const courts = await seedCourts(organizations);
+    const courtsResult = await executeSeed('courts', () => seedCourts(organizations));
+    const courts = courtsResult.result || [];
 
     // 3B. Create comprehensive Kenya tennis network
-    console.log('📍 STEP 3B: Kenya Tennis Network');
+    console.log('\n📍 STEP 3B: Kenya Tennis Network');
     console.log('───────────────────────────────────────────────────────────────');
-    const kenyaData = await seedKenyaPlayersAndCourts();
+    const kenyaResult = await executeSeed('kenya-tennis', () => seedKenyaPlayersAndCourts());
+    const kenyaData = kenyaResult.result || {
+      players: [],
+      courts: [],
+      bookings: 0,
+      comments: 0,
+      complaints: 0,
+    };
 
     // 4. Create membership tiers and add members to organizations
-    console.log('📍 STEP 4: Memberships');
+    console.log('\n📍 STEP 4: Memberships');
     console.log('───────────────────────────────────────────────────────────────');
-    const { tiers, members } = await seedMemberships(organizations, users);
+    const membershipsResult = await executeSeed('memberships', () => seedMemberships(organizations, users));
+    const { tiers = [], members = [] } = membershipsResult.result || {};
 
     // 5. Create enhanced bookings with realistic patterns
-    console.log('📍 STEP 5: Enhanced Booking Data (Realistic Patterns)');
+    console.log('\n📍 STEP 5: Enhanced Booking Data (Realistic Patterns)');
     console.log('───────────────────────────────────────────────────────────────');
-    const enhancedBookings = await seedEnhancedBookings(organizations, users, courts);
+    const bookingsResult = await executeSeed('enhanced-bookings', () =>
+      seedEnhancedBookings(organizations, users, courts),
+    );
+    const enhancedBookings = bookingsResult.result || [];
 
     // 6. Create payment records
-    console.log('📍 STEP 6: Payment Records');
+    console.log('\n📍 STEP 6: Payment Records');
     console.log('───────────────────────────────────────────────────────────────');
-    const payments = await seedPaymentRecords();
+    const paymentsResult = await executeSeed('payments', () => seedPaymentRecords());
+    const payments = paymentsResult.result || [];
 
-    // 6. Create matches between players
-    console.log('📍 STEP 6: Matches');
+    // 7. Create matches between players
+    console.log('\n📍 STEP 7: Matches');
     console.log('───────────────────────────────────────────────────────────────');
     const referees = users.filter((u) => u.referee);
-    const matches = await seedMatches(users, referees);
+    const matchesResult = await executeSeed('matches', () => seedMatches(users, referees));
+    const matches = matchesResult.result || [];
 
-    // 7. Seed community (posts, comments, reactions, follows)
-    console.log('📍 STEP 7: Community');
+    // 8. Seed community (posts, comments, reactions, follows)
+    console.log('\n📍 STEP 8: Community');
     console.log('───────────────────────────────────────────────────────────────');
-    const { posts, comments, reactions, follows } = await seedCommunity(users);
+    const communityResult = await executeSeed('community', () => seedCommunity(users));
+    const { posts = [], comments = [], reactions = [], follows = [] } = communityResult.result || {};
 
-    // 8. Seed tournaments
-    console.log('📍 STEP 8: Tournaments');
+    // 9. Seed tournaments
+    console.log('\n📍 STEP 9: Tournaments');
     console.log('───────────────────────────────────────────────────────────────');
-    await seedTournaments();
+    await executeSeed('tournaments', () => seedTournaments());
 
-    // 9. Seed tournament comments
-    console.log('📍 STEP 9: Tournament Comments');
+    // 10. Seed tournament comments
+    console.log('\n📍 STEP 10: Tournament Comments');
     console.log('───────────────────────────────────────────────────────────────');
-    const tournamentComments = await seedTournamentComments();
+    const tournamentCommentsResult = await executeSeed('tournament-comments', () =>
+      seedTournamentComments(),
+    );
+    const tournamentComments = tournamentCommentsResult.result || 0;
 
-    // 10. Seed player statistics and rankings
-    console.log('📍 STEP 10: Player Statistics & Rankings');
+    // 11. Seed player statistics and rankings
+    console.log('\n📍 STEP 11: Player Statistics & Rankings');
     console.log('───────────────────────────────────────────────────────────────');
-    await seedStats();
+    await executeSeed('player-stats', () => seedStats());
 
-    // 11. Seed staff members
-    console.log('📍 STEP 11: Staff Members');
+    // 12. Seed staff members
+    console.log('\n📍 STEP 12: Staff Members');
     console.log('───────────────────────────────────────────────────────────────');
-    await seedStaffForAllOrgs();
+    await executeSeed('staff', () => seedStaffForAllOrgs());
 
-    // 12. Seed task templates
-    console.log('📍 STEP 12: Task Templates');
+    // 13. Seed coach sessions and activity links
+    console.log('\n📍 STEP 13: Coach Sessions');
     console.log('───────────────────────────────────────────────────────────────');
-    await seedTaskTemplates();
+    await executeSeed('coach-sessions', () => seedCoachSessions());
 
-    // 13. Seed tournament tasks
-    console.log('📍 STEP 13: Tournament Tasks');
+    // 14. Seed task templates
+    console.log('\n📍 STEP 14: Task Templates');
     console.log('───────────────────────────────────────────────────────────────');
-    await seedTournamentTasks();
+    await executeSeed('task-templates', () => seedTaskTemplates());
 
-    // 14. Seed tournament players
-    console.log('📍 STEP 14: Tournament Players');
+    // 15. Seed tournament tasks
+    console.log('\n📍 STEP 15: Tournament Tasks');
     console.log('───────────────────────────────────────────────────────────────');
-    await seedTournamentPlayers();
-    console.log('📍 STEP 11: Staff Members');
-    console.log('───────────────────────────────────────────────────────────────');
-    await seedStaffForAllOrgs();
+    await executeSeed('tournament-tasks', () => seedTournamentTasks());
 
-    // 12. Seed tournament tasks (referee assignments with matches)
-    console.log('📍 STEP 12: Tournament Tasks');
+    // 16. Seed tournament players (may fail due to duplicates - will retry next run)
+    console.log('\n📍 STEP 16: Tournament Players');
     console.log('───────────────────────────────────────────────────────────────');
-    await seedTournamentTasks();
+    await executeSeed('tournament-players', () => seedTournamentPlayers());
 
-    // 13. Seed task templates for referees and coaches
-    console.log('📍 STEP 13: Task Templates');
-    console.log('───────────────────────────────────────────────────────────────');
-    await seedTaskTemplates();
-
-    // 14. Seed players for tournaments (5 per tournament, marked as paid/confirmed)
-    console.log('📍 STEP 14: Tournament Players');
-    console.log('───────────────────────────────────────────────────────────────');
-    await seedTournamentPlayers();
-
-    console.log('═══════════════════════════════════════════════════════════════');
-    console.log('✨ SEEDING COMPLETED SUCCESSFULLY!\n');
+    console.log('\n═══════════════════════════════════════════════════════════════');
+    console.log('✨ SEEDING SESSION COMPLETED!\n');
     console.log('📊 SUMMARY:');
     console.log(`  • Organizations: ${organizations.length}`);
     console.log(`  • Users: ${users.length}`);
     console.log(`  • Courts: ${courts.length}`);
-    console.log(`  • Kenya Players: ${kenyaData.players.length}`);
-    console.log(`  • Kenya Courts: ${kenyaData.courts.length}`);
-    console.log(`  • Kenya Bookings: ${kenyaData.bookings}`);
-    console.log(`  • Kenya Comments: ${kenyaData.comments}`);
-    console.log(`  • Kenya Complaints: ${kenyaData.complaints}`);
+    console.log(`  • Kenya Players: ${Array.isArray(kenyaData.players) ? kenyaData.players.length : 0}`);
+    console.log(`  • Kenya Courts: ${Array.isArray(kenyaData.courts) ? kenyaData.courts.length : 0}`);
     console.log(`  • Membership Tiers: ${tiers.length}`);
     console.log(`  • Club Members: ${members.length}`);
     console.log(`  • Court Bookings (Enhanced): ${enhancedBookings.length}`);
     console.log(`  • Payment Records: ${payments.length}`);
     console.log(`  • Matches: ${matches.length}`);
     console.log(`  • Community Posts: ${posts.length}`);
-    console.log(`  • Comments: ${comments.length}`);
-    console.log(`  • Reactions: ${reactions.length}`);
+    console.log(`  • Community Comments: ${comments.length}`);
+    console.log(`  • Community Reactions: ${reactions.length}`);
     console.log(`  • User Follows: ${follows.length}`);
-    console.log(`  • Tournaments: 5 (1 completed, 1 in progress, 1 ongoing, 2 upcoming)`);
     console.log(`  • Tournament Comments: ${tournamentComments}`);
-    console.log(`  • Referee Task Assignments: 3 tournaments with referee management tasks`);
-    console.log(`  • Coach Tasks: 2 (1 completed with submission, 1 in-progress)`);
-    console.log(`  • Task Submissions: 2 (1 approved, 1 pending review)`);
-    console.log(`  • Player Rankings: Created for ${members.length} players (current + historical)`);
-    console.log(`  • Staff Members: Created across all organizations`);
     console.log('═══════════════════════════════════════════════════════════════\n');
+
+    // Print detailed seed status report
+    printSeedStatusReport();
 
     console.log('🔐 TEST ACCOUNT CREDENTIALS (password: tennis123):');
     console.log('───────────────────────────────────────────────────────────────');
@@ -162,8 +202,12 @@ async function main() {
     console.log('  🏆 Referee:                 john.referee@example.com');
     console.log('  👁️  Spectator:              alice.spectator@example.com');
     console.log('═══════════════════════════════════════════════════════════════\n');
+
+    console.log('💡 INFO: To re-run only failed seeds, simply run `npm run seed` again.');
+    console.log('   The system will skip already-completed seeds and only process failed ones.\n');
   } catch (error) {
-    console.error('❌ Seeding failed:', error);
+    console.error('\n❌ Seeding session failed:', error);
+    printSeedStatusReport();
     process.exit(1);
   } finally {
     await prisma.$disconnect();

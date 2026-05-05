@@ -6,6 +6,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const {
       coachId,
+      sessionId,
       type,
       date,
       startTime,
@@ -15,7 +16,10 @@ export async function POST(req: NextRequest) {
       sessionType,
       court,
       courtId,
+      playerId,
+      playerIds,
       playerName,
+      playerNames,
       maxParticipants,
       price,
       tournamentName,
@@ -43,6 +47,7 @@ export async function POST(req: NextRequest) {
     const activity = await prisma.activity.create({
       data: {
         coachId,
+        sessionId: sessionId || undefined,
         type,
         date,
         startTime,
@@ -53,7 +58,10 @@ export async function POST(req: NextRequest) {
           sessionType,
           court,
           courtId,
-          playerName,
+          playerId: playerIds ? playerIds[0] : playerId, // backward compatibility
+          playerIds,
+          playerName: playerNames ? playerNames[0] : playerName, // backward compatibility
+          playerNames,
           maxParticipants,
           price,
           tournamentName,
@@ -92,6 +100,7 @@ export async function GET(req: NextRequest) {
     const searchParams = req.nextUrl.searchParams;
     const coachId = searchParams.get('coachId');
     const date = searchParams.get('date');
+    const type = searchParams.get('type');
 
     if (!coachId) {
       return NextResponse.json(
@@ -104,6 +113,9 @@ export async function GET(req: NextRequest) {
     const where: any = { coachId };
     if (date) {
       where.date = date;
+    }
+    if (type) {
+      where.type = type;
     }
 
     // Fetch activities

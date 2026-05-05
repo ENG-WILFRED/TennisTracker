@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { LoadingState } from '@/components/LoadingState';
 import ActivityModal, { type ActivityFormData } from './ActivityModal';
 
@@ -41,6 +41,8 @@ interface Session {
   type?: string;
   date?: string;
   completed?: boolean;
+  isSession?: boolean;
+  isBusy?: boolean;
 }
 
 const SectionLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
@@ -81,76 +83,129 @@ export default function CalendarView({ coachId }: { coachId: string }) {
   useEffect(() => {
     const fetchActivities = async () => {
       try {
-        // Fetch activities from the new Activity table
-        const res = await fetch(`/api/coaches/activities?coachId=${coachId}`);
-        if (res.ok) {
-          const data = await res.json();
-          const activities = Array.isArray(data.activities) ? data.activities : [];
-          
-          // Transform activities to session format for calendar display
-          const transformedSessions = activities.map((activity: any) => {
-            // Parse date and time properly
-            const dateTime = new Date(`${activity.date}T${activity.startTime}:00Z`);
-            return {
-              id: activity.id,
-              title: activity.title,
-              startTime: dateTime.toISOString(),
-              endTime: new Date(`${activity.date}T${activity.endTime}:00Z`).toISOString(),
-              status: 'scheduled',
-              sessionType: activity.metadata?.sessionType || activity.type,
-              bookings: [],
-              maxParticipants: activity.metadata?.maxParticipants || 1,
-              price: activity.metadata?.price || 0,
-              court: activity.metadata?.court || activity.metadata?.location || '',
-              playerName: activity.metadata?.playerName || '',
-              description: activity.description,
-              type: activity.type,
-              date: activity.date,
-              completed: activity.completed,
-            };
-          });
-          
-          console.log(`✓ Fetched ${transformedSessions.length} activities`);
-          setSessions(transformedSessions);
+        // Fetch both activities and coach sessions once per coach
+        const [activitiesRes, sessionsRes] = await Promise.all([
+          fetch(`/api/coaches/activities?coachId=${coachId}`),
+          fetch(`/api/coaches/sessions?coachId=${coachId}`),
+        ]);
+
+        const activities: any[] = [];
+        const coachSessions: any[] = [];
+
+        if (activitiesRes.ok) {
+          const data = await activitiesRes.json();
+          activities.push(...(Array.isArray(data.activities) ? data.activities : []));
         }
+
+        if (sessionsRes.ok) {
+          const data = await sessionsRes.json();
+          coachSessions.push(...(Array.isArray(data) ? data : []));
+        }
+
+        const transformedActivities = activities.map((activity: any) => {
+          const dateTime = new Date(`${activity.date}T${activity.startTime}:00Z`);
+          return {
+            id: activity.id,
+            title: activity.title,
+            startTime: dateTime.toISOString(),
+            endTime: new Date(`${activity.date}T${activity.endTime}:00Z`).toISOString(),
+            status: 'scheduled',
+            sessionType: activity.metadata?.sessionType || activity.type,
+            bookings: [],
+            maxParticipants: activity.metadata?.maxParticipants || 1,
+            price: activity.metadata?.price || 0,
+            court: activity.metadata?.court || activity.metadata?.location || '',
+            playerName: activity.metadata?.playerName || '',
+            description: activity.description,
+            type: activity.type,
+            date: activity.date,
+            completed: activity.completed,
+            isSession: false,
+          };
+        });
+
+        const transformedCoachSessions = coachSessions
+          .filter((s: any) => s.status !== 'cancelled')
+          .map((session: any) => ({
+            id: session.id,
+            title: `[BUSY] ${session.title}`,
+            startTime: session.startTime,
+            endTime: session.endTime,
+            status: session.status || 'scheduled',
+            sessionType: session.sessionType,
+            bookings: session.bookings || [],
+            maxParticipants: session.maxParticipants,
+            price: session.price,
+            court: session.court?.name || '',
+            playerName: '',
+            description: session.description,
+            type: 'coach-session',
+            date: new Date(session.startTime).toISOString().split('T')[0],
+            completed: session.status === 'completed',
+            isSession: true,
+            isBusy: true,
+          }));
+
+        setSessions([...transformedActivities, ...transformedCoachSessions]);
       } catch (error) {
-        console.error('Error fetching activities:', error);
+        console.error('Error fetching activities/sessions:', error);
       } finally {
         setLoading(false);
       }
     };
     fetchActivities();
-  }, [coachId, currentDate]);
+  }, [coachId]);
 
-  const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
-  const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay();
-  const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
-  const emptyDays = Array.from({ length: firstDay });
-  const today = new Date();
+  const calendarInfo = useMemo(() => {
+    const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
+    const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay();
+    const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+    const emptyDays = Array.from({ length: firstDay });
+    return { days, emptyDays };
+  }, [currentDate]);
 
-  const getSessionsForDay = (day: number) =>
-    sessions.filter(s => {
+  const { days, emptyDays } = calendarInfo;
+  const today = useMemo(() => new Date(), []);
+
+  const sessionsByDay = useMemo(() => {
+    const map: Record<number, Session[]> = {};
+    sessions.forEach(s => {
       const d = new Date(s.startTime);
-      return d.getDate() === day && d.getMonth() === currentDate.getMonth() && d.getFullYear() === currentDate.getFullYear();
+      if (d.getMonth() === currentDate.getMonth() && d.getFullYear() === currentDate.getFullYear()) {
+        const day = d.getDate();
+        if (!map[day]) map[day] = [];
+        map[day].push(s);
+      }
     });
+    return map;
+  }, [sessions, currentDate]);
 
-  const selectedDaySessions = selectedDay ? getSessionsForDay(selectedDay) : [];
+  const getSessionsForDay = (day: number) => sessionsByDay[day] || [];
 
-  // Get upcoming sessions (from today/now onwards, not completed)
-  const upcomingSessions = sessions
-    .filter(s => {
-      if (s.completed) return false; // Don't show completed activities
-      const startDate = new Date(s.startTime);
-      const now = new Date();
-      return startDate >= new Date(now.getFullYear(), now.getMonth(), now.getDate()); // From today onwards
-    })
-    .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
-    .slice(0, 6);
+  const selectedDaySessions = useMemo(
+    () => (selectedDay ? sessionsByDay[selectedDay] ?? [] : []),
+    [selectedDay, sessionsByDay]
+  );
 
-  const totalThisMonth = sessions.filter(s => {
-    const d = new Date(s.startTime);
-    return d.getMonth() === currentDate.getMonth() && d.getFullYear() === currentDate.getFullYear();
-  }).length;
+  const upcomingSessions = useMemo(() => {
+    const now = new Date();
+    return sessions
+      .filter(s => {
+        if (s.completed) return false;
+        const startDate = new Date(s.startTime);
+        return startDate >= new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      })
+      .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
+      .slice(0, 6);
+  }, [sessions]);
+
+  const totalThisMonth = useMemo(
+    () => sessions.filter(s => {
+      const d = new Date(s.startTime);
+      return d.getMonth() === currentDate.getMonth() && d.getFullYear() === currentDate.getFullYear();
+    }).length,
+    [sessions, currentDate]
+  );
 
   const card = { background: G.card, border: `1px solid ${G.border}`, borderRadius: 12, padding: 14 } as const;
 
