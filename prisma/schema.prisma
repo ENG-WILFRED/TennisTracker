@@ -355,13 +355,6 @@ model Organization {
   coachingPricing OrgCoachingPricing? // Organization-level pricing for coaching sessions
   sessionPayments SessionPayment[] // Payment records for coaching sessions
   userDebts       UserOrgDebt[] // Track user debts to organization
-  metricsSnapshot         OrgMetricsSnapshot?
-  recurringSessionPatterns RecurringSession[]     @relation("RecurringSessions")
-  metricWeights           MetricWeight[]
-  recommendationConfigs   RecommendationConfig[]
-  ownershipTransfers      OwnershipTransfer[]
-  notificationLogs        NotificationLogModel[]
-  dailyPlayerStats        DailyPlayerStats[]
   // Developer onboarding
   emailLogs               DeveloperEmailLog[]
   payments                OrganizationPayment[]
