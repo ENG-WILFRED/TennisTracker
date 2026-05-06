@@ -67,6 +67,7 @@ export type Member = {
   joinDate?: string;
   visits?: number;
   ranking?: number;
+  credentialLabel?: string;
   coach?: string;
   photo?: string | null;
   nationality?: string;
@@ -156,6 +157,11 @@ function normalizeClubMember(clubMember: any): Member {
     normalizedJoinDate = !Number.isNaN(parsedDate.getTime()) ? parsedDate.toISOString() : undefined;
   }
 
+  const latestRanking = clubMember.rankings?.[0];
+  const credentialLabel = clubMember.membershipTier?.name === 'Elite'
+    ? `Elite credential${latestRanking ? ` · #${latestRanking.currentRank}` : ''}`
+    : undefined;
+
   return {
     id: clubMember.id,
     firstName: user?.firstName || user?.email?.split('@')[0] || 'Unknown',
@@ -163,6 +169,8 @@ function normalizeClubMember(clubMember: any): Member {
     email: user?.email || '',
     role: clubMember.role === 'member' ? 'player' : clubMember.role === 'officer' ? 'admin' : clubMember.role || 'player',
     tier: clubMember.membershipTier?.name || clubMember.tier || 'Basic',
+    credentialLabel,
+    ranking: latestRanking?.currentRank,
     status: clubMember.paymentStatus === 'active' ? 'active' : 'inactive',
     paymentStatus: clubMember.paymentStatus,
     joinDate: normalizedJoinDate,
@@ -177,9 +185,18 @@ function normalizeClubMember(clubMember: any): Member {
 function MemberCard({ member, onClick }: { member: Member; onClick: () => void }) {
   const renderRoleDetail = () => {
     if (member.role === 'player') return (
-      <div style={{ display: 'flex', gap: 10, marginTop: 6 }}>
-        <span style={{ fontSize: 9, color: G.muted }}>Rank <strong style={{ color: G.lime }}>#{(member as any).ranking}</strong></span>
-        <span style={{ fontSize: 9, color: G.muted }}>Coach: <strong style={{ color: G.textSoft }}>{(member as any).coach}</strong></span>
+      <div style={{ display: 'flex', gap: 10, marginTop: 6, flexWrap: 'wrap' }}>
+        {typeof member.ranking === 'number' && (
+          <span style={{ fontSize: 9, color: G.muted }}>Rank <strong style={{ color: G.lime }}>#{member.ranking}</strong></span>
+        )}
+        {member.credentialLabel && (
+          <span style={{ fontSize: 9, color: G.muted }}>
+            Credential <strong style={{ color: G.textSoft }}>{member.credentialLabel}</strong>
+          </span>
+        )}
+        {(!member.credentialLabel && (member as any).coach) && (
+          <span style={{ fontSize: 9, color: G.muted }}>Coach: <strong style={{ color: G.textSoft }}>{(member as any).coach}</strong></span>
+        )}
       </div>
     );
     if (member.role === 'coach') return (
@@ -957,7 +974,14 @@ export default function OrganizationMembersSection({
                     const dt = selectedMember?.joinDate;
                     return dt ? new Date(dt).toLocaleDateString() : 'Unknown';
                   })()}</div>
-                  {selectedMember.role === 'player' && <div><strong style={{ color: G.lime }}>Ranking:</strong> #{(selectedMember as any).ranking || 'Unranked'}</div>}
+                  {selectedMember.role === 'player' && (
+                    <>
+                      <div><strong style={{ color: G.lime }}>Ranking:</strong> #{(selectedMember as any).ranking || 'Unranked'}</div>
+                      {selectedMember.credentialLabel && (
+                        <div><strong style={{ color: G.lime }}>Credential:</strong> {selectedMember.credentialLabel}</div>
+                      )}
+                    </>
+                  )}
                   {selectedMember.role === 'coach' && <div><strong style={{ color: G.lime }}>Students:</strong> {(selectedMember as any).students || 0}</div>}
                   {selectedMember.role === 'referee' && <div><strong style={{ color: G.lime }}>Matches Officiated:</strong> {(selectedMember as any).matchesOfficiated || 0}</div>}
                 </div>

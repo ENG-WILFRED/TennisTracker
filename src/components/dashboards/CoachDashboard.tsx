@@ -1,4 +1,3 @@
-export { CoachDashboard } from './coach/CoachDashboard';
 'use client';
 
 import React, { useState, useRef, Suspense, lazy, useEffect } from 'react';

@@ -127,6 +127,12 @@ export async function getPlayerDashboard(playerId: string) {
     borrowed: it.count === 0,
   }));
 
+  const winRate = player.matchesPlayed > 0
+    ? Math.round((player.matchesWon / player.matchesPlayed) * 100)
+    : 0;
+
+  const points = player.matchesWon * 50 + player.matchesPlayed * 2;
+
   return {
     player: {
       id: player.userId,
@@ -143,6 +149,8 @@ export async function getPlayerDashboard(playerId: string) {
       matchesPlayed: player.matchesPlayed,
       matchesWon: player.matchesWon,
       matchesLost: player.matchesLost,
+      winRate,
+      points,
       isClub: player.isClub,
       createdAt: player.createdAt.toISOString(),
       updatedAt: player.updatedAt.toISOString(),

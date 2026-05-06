@@ -13,6 +13,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ orgI
           include: { user: true },
         },
         membershipTier: true,
+        rankings: {
+          orderBy: [{ year: 'desc' }, { weekNumber: 'desc' }, { createdAt: 'desc' }],
+          take: 1,
+        },
       },
       orderBy: { joinDate: 'desc' },
     });

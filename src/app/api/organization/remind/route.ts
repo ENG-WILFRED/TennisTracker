@@ -66,7 +66,6 @@ export async function POST(request: Request) {
           data: {
             organizationId: org.id,
             targetId: dev.id,
-            targetType: 'developer',
             targetType: 'admin',
             eventType: 'organization_review_reminder',
             title: '📋 Organization Review Reminder',
@@ -89,13 +88,6 @@ export async function POST(request: Request) {
         metadata: {},
       },
     });
-            readAt: null,
-          },
-        })
-      )
-    );
-
-    // OrganizationActivity is player-focused in this schema, so skip the activity log here.
 
     return new Response(
       JSON.stringify({

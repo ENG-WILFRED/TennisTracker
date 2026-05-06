@@ -676,6 +676,10 @@ export async function getOrganizationDashboard(orgManagerId: string, orgId?: str
         membershipTier: {
           select: { name: true },
         },
+        rankings: {
+          orderBy: [{ year: 'desc' }, { weekNumber: 'desc' }, { createdAt: 'desc' }],
+          take: 1,
+        },
       },
       orderBy: { joinDate: 'desc' },
       take: 20,

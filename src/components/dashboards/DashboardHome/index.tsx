@@ -2,43 +2,6 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-// ─── Tiny SVG Charts ──────────────────────────────────────────────────────────
-
-const BarChart: React.FC<{ data: number[] }> = ({ data }) => {
-  const max = Math.max(...data);
-  return (
-    <div className="flex items-end gap-0.5 h-12">
-      {data.map((v, i) => (
-        <div
-          key={i}
-          className={`flex-1 rounded-t transition-all ${i === data.length - 1 ? 'bg-[#7dc142]' : 'bg-[#3d7a32]'}`}
-          style={{ height: `${(v / max) * 100}%`, minHeight: 4 }}
-        />
-      ))}
-    </div>
-  );
-};
-
-const LineChart: React.FC<{ data: number[] }> = ({ data }) => {
-  const max = Math.max(...data);
-  const min = Math.min(...data);
-  const pts = data
-    .map((v, i) => `${(i / (data.length - 1)) * 120},${40 - ((v - min) / (max - min)) * 34}`)
-    .join(' ');
-  return (
-    <svg width="100%" height="40" viewBox="0 0 120 40" preserveAspectRatio="none">
-      <defs>
-        <linearGradient id="lg" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#7dc142" stopOpacity="0.35" />
-          <stop offset="100%" stopColor="#7dc142" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <polygon points={`0,40 ${pts} 120,40`} fill="url(#lg)" />
-      <polyline points={pts} fill="none" stroke="#7dc142" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-};
-
 // ─── Reusable Card Shell ──────────────────────────────────────────────────────
 
 const Card: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = '' }) => (
@@ -75,11 +38,11 @@ export const ProfileSnapshot: React.FC<{ user: any; playerData: any; showViewPro
       )}
     </div>
     <div className="font-black text-[#e8f5e0] text-sm">{user?.firstName ?? 'John'} {user?.lastName ?? 'Smith'}</div>
-    <div className="text-[#7aaa6a] text-[10px] mt-0.5">Rank #{playerData?.rank || 5} · {playerData?.points || 1050} pts</div>
+    <div className="text-[#7aaa6a] text-[10px] mt-0.5">Rank #{playerData?.rank || 5} · {playerData?.player?.points || 1050} pts</div>
     <div className="flex gap-2 mt-3 justify-center">
-      <span className="bg-[#152515] text-[#e8f5e0] text-[10px] rounded px-2 py-0.5">{playerData?.matchesWon || 18}W</span>
-      <span className="bg-[#152515] text-[#e8f5e0] text-[10px] rounded px-2 py-0.5">{playerData?.matchesLost || 5}L</span>
-      <span className="bg-[#7dc142] text-[#0f1f0f] text-[10px] font-bold rounded px-2 py-0.5">{playerData?.winRate || 78}%</span>
+      <span className="bg-[#152515] text-[#e8f5e0] text-[10px] rounded px-2 py-0.5">{playerData?.player?.matchesWon || 18}W</span>
+      <span className="bg-[#152515] text-[#e8f5e0] text-[10px] rounded px-2 py-0.5">{playerData?.player?.matchesLost || 5}L</span>
+      <span className="bg-[#7dc142] text-[#0f1f0f] text-[10px] font-bold rounded px-2 py-0.5">{playerData?.player?.winRate || 78}%</span>
     </div>
     {showViewProfileButton && (
       <div className="mt-3 pt-3 border-t border-[#2d5a35]">
@@ -90,34 +53,6 @@ export const ProfileSnapshot: React.FC<{ user: any; playerData: any; showViewPro
         </Link>
       </div>
     )}
-  </Card>
-);
-
-// ─── FriendsOnline ────────────────────────────────────────────────────────────
-
-export interface FriendItem {
-  name: string;
-  status: 'online' | 'away' | 'offline';
-  avatar: string;
-}
-
-export const FriendsOnline: React.FC<{ friends: FriendItem[] }> = ({ friends }) => (
-  <Card>
-    <SectionTitle action={<span className="text-[10px] text-[#7dc142] cursor-pointer hover:underline">See All</span>}>
-      🟢 Friends Online
-    </SectionTitle>
-    <div className="space-y-1.5">
-      {friends.map((f, i) => (
-        <div key={i} className="flex items-center gap-2.5 px-3 py-2 bg-[#152515] border border-[#2d5a35] rounded-lg hover:border-[#7dc142]/50 transition-colors cursor-pointer">
-          <span className="text-xl">{f.avatar}</span>
-          <span className="flex-1 text-xs font-semibold text-[#e8f5e0]">{f.name}</span>
-          <span
-            className="w-2 h-2 rounded-full flex-shrink-0"
-            style={{ background: f.status === 'online' ? '#5fc45f' : f.status === 'away' ? '#ffa726' : '#666' }}
-          />
-        </div>
-      ))}
-    </div>
   </Card>
 );
 
@@ -143,58 +78,7 @@ export const UpcomingEvents: React.FC<{ events: { name: string; date: string; ic
   </Card>
 );
 
-// ─── Quick Actions ─────────────────────────────────────────────────────────────
-
-const QuickActions: React.FC = () => (
-  <Card>
-    <SectionTitle>⚡ Quick Actions</SectionTitle>
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-      {[
-        { icon: '🎾', label: 'Book Court' },
-        { icon: '🤝', label: 'Find Partner' },
-        { icon: '🏆', label: 'Enter Tournament' },
-        { icon: '📊', label: 'View Stats' },
-      ].map(a => (
-        <button key={a.label} className="flex flex-col items-center gap-1.5 py-3 bg-[#152515] border border-[#2d5a35] rounded-xl hover:border-[#7dc142]/60 hover:bg-[#2d5a27]/30 transition-all group">
-          <span className="text-xl">{a.icon}</span>
-          <span className="text-[10px] font-bold text-[#7aaa6a] group-hover:text-[#7dc142] transition-colors">{a.label}</span>
-        </button>
-      ))}
-    </div>
-  </Card>
-);
-
-// ─── Weather / Court Conditions ────────────────────────────────────────────────
-
-const CourtConditions: React.FC = () => (
-  <Card>
-    <SectionTitle>🌤️ Court Conditions</SectionTitle>
-    <div className="flex items-center gap-3 mb-3">
-      <span className="text-4xl">🌤️</span>
-      <div>
-        <div className="text-2xl font-black text-[#a8d84e]">28°C</div>
-        <div className="text-xs text-[#7aaa6a]">Partly Cloudy · Wind 12 km/h</div>
-      </div>
-    </div>
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-      {[
-        { label: 'Humidity', value: '55%' },
-        { label: 'UV Index', value: '6' },
-        { label: 'Visibility', value: 'Good' },
-      ].map(w => (
-        <div key={w.label} className="text-center bg-[#152515] rounded-lg py-2">
-          <div className="text-sm font-bold text-[#a8d84e]">{w.value}</div>
-          <div className="text-[9px] text-[#7aaa6a]">{w.label}</div>
-        </div>
-      ))}
-    </div>
-    <div className="mt-2.5 px-3 py-2 bg-[#2d5a27]/40 border border-[#3d7a32] rounded-lg text-[10px] text-[#7dc142] font-semibold">
-      ✅ Conditions are ideal for play today
-    </div>
-  </Card>
-);
-
-// ─── Recent Results ────────────────────────────────────────────────────────────
+// ─── Recent Results ───────────────────────────────────────────────────────────
 
 const RecentResults: React.FC = () => {
   const results = [
@@ -270,15 +154,15 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
   const [feedPost, setFeedPost] = useState('');
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
 
       {/* ── Top KPI Strip ─────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
         {[
-          { label: 'Upcoming Matches', value: upcomingMatches?.length || 3, icon: '📅', sub: 'next: tomorrow' },
-          { label: 'Players Online', value: 12, icon: '🟢', sub: 'in your area' },
-          { label: 'My Ranking', value: `#${playerData?.rank || 5}`, icon: '🏅', sub: '↑ 2 this week' },
-          { label: 'Win Rate', value: `${playerData?.winRate || 78}%`, icon: '📈', sub: 'last 30 days' },
+          { label: 'Upcoming Matches', value: upcomingMatches?.length || 0, icon: '📅', sub: 'next match planned' },
+          { label: 'Matches Played', value: playerData?.player?.matchesPlayed ?? 0, icon: '🎾', sub: 'season total' },
+          { label: 'Current Rank', value: `#${playerData?.rank ?? '-'}`, icon: '🏅', sub: 'live ranking' },
+          { label: 'Win Rate', value: `${playerData?.player?.winRate ?? 0}%`, icon: '📈', sub: 'backend score' },
         ].map((s, i) => (
           <Card key={i} className="flex items-start gap-3">
             <span className="text-2xl mt-0.5">{s.icon}</span>
@@ -292,7 +176,7 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
       </div>
 
       {/* ── Main Row ──────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
 
         {/* Next Match – spans 2 cols */}
         <Card className="col-span-1 lg:col-span-2 bg-gradient-to-br from-[#2d5a27] to-[#1a3020] border-[#7dc142]">
@@ -356,7 +240,7 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
                   {p.rank === 1 ? '🥇' : p.rank === 2 ? '🥈' : p.rank === 3 ? '🥉' : p.rank}
                 </span>
                 <span className={`flex-1 text-[#e8f5e0] truncate ${p.rank <= 3 ? 'font-bold' : ''}`}>{p.name}</span>
-                <span className="text-[#a8d84e] font-bold text-[10px] flex-shrink-0">{p.pts.toLocaleString()}</span>
+                <span className="text-[#a8d84e] font-bold text-[10px] flex-shrink-0">{p.ratingPoints?.toLocaleString?.() ?? 0}</span>
               </div>
             ))}
           </div>
@@ -367,44 +251,25 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
       </div>
 
       {/* ── Stats + Activity Row ──────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
 
         {/* My Stats */}
         <Card className="flex flex-col gap-4">
           <SectionTitle>📊 My Stats</SectionTitle>
 
           <div className="flex gap-2">
-            <StatPill label="Wins" value={playerData?.matchesWon || 18} />
-            <StatPill label="Losses" value={playerData?.matchesLost || 5} />
-            <StatPill label="Win Rate" value={`${playerData?.winRate || 78}%`} highlight />
+            <StatPill label="Wins" value={playerData?.player?.matchesWon || 18} />
+            <StatPill label="Losses" value={playerData?.player?.matchesLost || 5} />
+            <StatPill label="Win Rate" value={`${playerData?.player?.winRate || 78}%`} highlight />
           </div>
 
-          <div>
-            <div className="flex justify-between text-[10px] text-[#7aaa6a] mb-1.5">
-              <span>Matches Played (12 mo)</span>
-              <span className="text-[#7dc142]">↗</span>
-            </div>
-            <div className="bg-[#0f1f0f] rounded-lg px-3 pt-2 pb-1">
-              <BarChart data={[12, 18, 14, 22, 16, 25, 20, 18, 24, 21, 19, 23]} />
-            </div>
-          </div>
-
-          <div>
-            <div className="flex justify-between text-[10px] text-[#7aaa6a] mb-1.5">
-              <span>Performance Trend</span>
-              <span className="text-[#7dc142]">↗</span>
-            </div>
-            <div className="bg-[#0f1f0f] rounded-lg px-3 pt-2 pb-1">
-              <LineChart data={[40, 55, 48, 62, 58, 70, 65, 72, 68, 78, 74, 80]} />
-            </div>
-          </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {[
-              { l: 'Sets Won', v: playerData?.setsWon || 38 },
-              { l: 'Sets Lost', v: playerData?.setsLost || 21 },
+              { l: 'Sets Won', v: playerData?.player?.setsWon || 38 },
+              { l: 'Sets Lost', v: playerData?.player?.setsLost || 21 },
               { l: 'Ranking', v: `#${playerData?.rank || 5}` },
-              { l: 'Points', v: playerData?.points || 1050 },
+              { l: 'Points', v: playerData?.player?.points || 1050 },
             ].map(s => (
               <div key={s.l} className="bg-[#2d5a27] rounded-lg px-3 py-2">
                 <div className="text-[9px] text-[#7aaa6a]">{s.l}</div>
@@ -462,32 +327,10 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
         </Card>
       </div>
 
-      {/* ── Bottom Row: Achievements + Recent Results + Sidebar Widgets ──── */}
-      <Achievements />
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      {/* ── Bottom Row: Achievements + Recent Results ──────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        <Achievements />
         <RecentResults />
-        <CourtConditions />
-        <QuickActions />
-      </div>
-
-      {/* ── Sidebar extras (Friends + Events) ─────────────────────────────── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <FriendsOnline
-          friends={[
-            { name: 'Alex Kim', status: 'online', avatar: '🧑' },
-            { name: 'Sara Patel', status: 'online', avatar: '👩' },
-            { name: 'Chris Do', status: 'away', avatar: '🧔' },
-            { name: 'Mia Torres', status: 'offline', avatar: '👩‍🦱' },
-          ]}
-        />
-        <UpcomingEvents
-          events={[
-            { name: 'Club Championship', date: 'Apr 5 · 9:00 AM', icon: '🏆' },
-            { name: 'Doubles Friendly', date: 'Apr 10 · 4:00 PM', icon: '🎾' },
-            { name: 'Coaching Session', date: 'Apr 14 · 7:00 AM', icon: '🎓' },
-          ]}
-        />
       </div>
 
     </div>

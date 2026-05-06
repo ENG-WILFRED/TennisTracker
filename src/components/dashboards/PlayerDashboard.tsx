@@ -19,6 +19,7 @@ import { FindNearbyPeople } from '@/components/FindNearbyPeople';
 import { FindNearbyCourts } from '@/components/FindNearbyCourts';
 import { chatUrlForUser, sendChallengeRequest } from '@/lib/nearby';
 import { MembershipSwitcher } from '@/components/MembershipSwitcher';
+import toast from 'react-hot-toast';
 
 const G = {
   dark: '#0f1f0f', sidebar: '#152515', card: '#1a3020', cardBorder: '#2d5a35',
@@ -40,10 +41,13 @@ export const PlayerDashboard: React.FC = () => {
   const showProgress = searchParams.get('progress') === 'true';
   const showMessages = searchParams.get('messages') === 'true';
   const showSettings = searchParams.get('settings') === 'true';
+  const showFindPlayers = searchParams.get('findPlayers') === 'true';
+  const showFindCourts = searchParams.get('findCourts') === 'true';
   const [activeNav, setActiveNav] = useState('Home');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [feedPost, setFeedPost] = useState('');
   const [playerData, setPlayerData] = useState<any>(null);
+  const [leaderboard, setLeaderboard] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [organizationId, setOrganizationId] = useState<string>('');
 
@@ -63,6 +67,10 @@ export const PlayerDashboard: React.FC = () => {
       setActiveNav('Stats');
     } else if (showProgress) {
       setActiveNav('Progress');
+    } else if (showFindPlayers) {
+      setActiveNav('Find Players');
+    } else if (showFindCourts) {
+      setActiveNav('Find Courts');
     } else if (showMessages) {
       setActiveNav('Messages');
     } else if (showSettings) {
@@ -70,7 +78,7 @@ export const PlayerDashboard: React.FC = () => {
     } else {
       setActiveNav('Home');
     }
-  }, [showProfile, showBooking, showCommunity, showTournaments, showSessions, showStats, showProgress, showMessages, showSettings]);
+  }, [showProfile, showBooking, showCommunity, showTournaments, showSessions, showStats, showProgress, showFindPlayers, showFindCourts, showMessages, showSettings]);
 
   useEffect(() => {
     if (user?.id) {
@@ -96,6 +104,10 @@ export const PlayerDashboard: React.FC = () => {
             window.localStorage.setItem(cacheKey, JSON.stringify(data));
           }
 
+          const leaderboardRes = await fetch(`/api/leaderboard?limit=5&playerId=${user.id}`);
+          const leaderboardData = await leaderboardRes.json();
+          setLeaderboard(Array.isArray(leaderboardData) ? leaderboardData : []);
+
           // Try to get organization ID (first club membership)
           const orgRes = await fetch(`/api/player/organization?playerId=${user.id}`);
           const orgData = await orgRes.json();
@@ -119,18 +131,14 @@ export const PlayerDashboard: React.FC = () => {
     { label: 'Tournaments', icon: '🏆', href: '?tournaments=true' }, 
     { label: 'Court Booking', icon: '🎾', href: '?booking=true' },
     { label: 'Progress', icon: '📈', href: '?progress=true' },
-    { label: 'Services', icon: '🛠️', href: '/services' },
+    { label: 'Find Players', icon: '🧑‍🤝‍🧑', href: '?findPlayers=true' },
+    { label: 'Find Courts', icon: '🏓', href: '?findCourts=true' },
     { label: 'Messages', icon: '💬', href: '?messages=true' },
     { label: 'Stats', icon: '📊', href: '?stats=true' }, 
     { label: 'Community', icon: '👥', href: '?community=true' },
     { label: 'Settings', icon: '⚙️', href: '?settings=true' },
   ];
 
-  const leaderboard = [
-    { rank: 1, name: 'Adam Brown', pts: 1250 }, { rank: 2, name: 'David Lee', pts: 1185 },
-    { rank: 3, name: 'Mark Taylor', pts: 1100 }, { rank: 4, name: 'Chris Maina', pts: 1050 },
-    { rank: 5, name: 'John Smith', pts: 990 },
-  ];
 
   const activityFeed = [
     { user: 'Sarah', avatar: '👩', action: 'posted: "Great match today! 🎾 #tennislife"', time: '15 mins ago' },
@@ -192,19 +200,12 @@ export const PlayerDashboard: React.FC = () => {
     router.push(`/player/booking/details?court=${courtId}&org=${organizationId}&type=singles`);
   };
 
-  const friendsOnline: { name: string; status: 'online' | 'away' | 'offline'; avatar: string }[] = [
-    { name: 'Michael', status: 'online', avatar: '👦' }, { name: 'Lisa', status: 'online', avatar: '👩' },
-    { name: 'Tom', status: 'away', avatar: '👨' }, { name: 'Anna', status: 'online', avatar: '👧' },
-  ];
 
   if (loading) {
     return <LoadingState icon="🎾" message="Loading dashboard..." />;
   }
 
-  const upcomingMatches = playerData?.upcomingMatches || [
-    { opponent: 'Alex Carter', date: 'Tomorrow, 3:00 PM', court: 'Court 2', type: 'Singles' },
-    { opponent: 'David Lee', date: 'Fri, 5:00 PM', court: 'Court 1', type: 'Singles' },
-  ];
+  const upcomingMatches = playerData?.upcomingMatches || [];
 
   return (
     <div className="text-court-text flex flex-col lg:flex-row" style={{ height: '100vh', background: G.sidebar, color: G.text, overflow: 'hidden' }}>
@@ -270,6 +271,12 @@ export const PlayerDashboard: React.FC = () => {
                   key={item.label}
                   type="button"
                   onClick={() => {
+                    if (activeNav !== item.label) {
+                      toast.success(`Navigating to ${item.label}`, {
+                        duration: 2,
+                        position: 'top-right',
+                      });
+                    }
                     setActiveNav(item.label);
                     setSidebarOpen(false);
                     if (item.label === 'Home' && params?.role && params?.id) {
@@ -351,18 +358,36 @@ export const PlayerDashboard: React.FC = () => {
             <StatsView isEmbedded={true} playerData={playerData} />
           ) : showProgress ? (
             <ProgressView isEmbedded={true} playerId={user?.id} />
+          ) : showFindPlayers ? (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between gap-4 rounded-3xl border border-[#2d5a35] bg-[#152515] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
+                <div>
+                  <div className="text-sm uppercase tracking-[0.32em] text-[#7dc142]">Player Tools</div>
+                  <h1 className="mt-2 text-3xl font-black text-white">Find Players Near You</h1>
+                  <p className="mt-2 max-w-2xl text-sm text-[#c2dbb0]">Search for nearby players, message them directly, or send challenge requests from the dashboard body.</p>
+                </div>
+              </div>
+              <FindNearbyPeople
+                onMessageClick={(personId, personName) => router.push(chatUrlForUser(personId, personName))}
+                onChallengeClick={handleChallenge}
+              />
+            </div>
+          ) : showFindCourts ? (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between gap-4 rounded-3xl border border-[#2d5a35] bg-[#152515] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
+                <div>
+                  <div className="text-sm uppercase tracking-[0.32em] text-[#7dc142]">Coach Tools</div>
+                  <h1 className="mt-2 text-3xl font-black text-white">Find Courts Near You</h1>
+                  <p className="mt-2 max-w-2xl text-sm text-[#c2dbb0]">Search nearby courts and book from the dashboard body, while keeping the sidebar visible.</p>
+                </div>
+              </div>
+              <FindNearbyCourts onBookClick={handleCourtBooking} />
+            </div>
           ) : showSettings ? (
             <SettingsView isEmbedded={true} />
           ) : (
             <div className="space-y-4">
               <DashboardHome playerData={playerData} upcomingMatches={upcomingMatches} leaderboard={leaderboard} activityFeed={activityFeed} />
-              <div className="grid gap-4 xl:grid-cols-2">
-                <FindNearbyPeople
-                  onMessageClick={(personId, personName) => router.push(chatUrlForUser(personId, personName))}
-                  onChallengeClick={handleChallenge}
-                />
-                <FindNearbyCourts onBookClick={handleCourtBooking} />
-              </div>
             </div>
           )}
         </div>

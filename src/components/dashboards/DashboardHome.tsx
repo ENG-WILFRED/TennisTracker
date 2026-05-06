@@ -1,1 +1,1 @@
-export { DashboardHome, ProfileSnapshot, UpcomingEvents, FriendsOnline } from './DashboardHome/index';
+export { DashboardHome, ProfileSnapshot, UpcomingEvents } from './DashboardHome/index';

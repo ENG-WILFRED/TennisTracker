@@ -39,6 +39,11 @@ const G = {
 function normalizeMembersData(membersRaw: any[]) {
   return membersRaw.map((cm: any) => {
     const role = cm.role === 'member' ? 'player' : cm.role === 'officer' ? 'admin' : cm.role || 'member';
+    const latestRanking = cm.rankings?.[0];
+    const credentialLabel = cm.membershipTier?.name === 'Elite'
+      ? `Elite credential${latestRanking ? ` · #${latestRanking.currentRank}` : ''}`
+      : undefined;
+
     return {
       id: cm.id,
       firstName: cm.player?.user?.firstName || cm.player?.user?.email?.split('@')[0] || 'Unknown',
@@ -46,6 +51,8 @@ function normalizeMembersData(membersRaw: any[]) {
       email: cm.player?.user?.email || '',
       role,
       tier: cm.membershipTier?.name || cm.tier || 'Basic',
+      credentialLabel,
+      ranking: latestRanking?.currentRank,
       status: cm.paymentStatus === 'active' ? 'active' : 'inactive',
       joinDate: cm.joinDate || undefined,
       visits: cm.attendanceCount || 0,
