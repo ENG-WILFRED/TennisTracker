@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams, useParams } from 'next/navigation';
 import { LoadingState } from '@/components/LoadingState';
 import SessionManagement from './coach/SessionManagement';
+import toast from 'react-hot-toast';
 import PlayerManagement from './coach/PlayerManagement';
 import AnalyticsSection from './coach/AnalyticsSection';
 import CalendarView from './coach/CalendarView';
@@ -105,7 +106,7 @@ const profileTabLabels: Record<ProfileTab, string> = { personal: 'Personal Info'
 /* ── component ── */
 
 export const CoachDashboard: React.FC = () => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const params = useParams();
@@ -156,6 +157,8 @@ export const CoachDashboard: React.FC = () => {
 
   // Handle navigation to a new section
   const handleNavigation = (section: string) => {
+    toast.success(`Navigating to ${section}...`, { duration: 1000 });
+
     if (section === 'Find People') {
       router.push('/dashboard/find-people');
       return;
@@ -487,11 +490,17 @@ export const CoachDashboard: React.FC = () => {
   };
 
   const handleLogout = async () => {
+    const logoutToast = toast.loading('Logging out...', { duration: Infinity });
     try {
-      await authenticatedFetch('/api/auth/logout', { method: 'POST' });
-      router.push('/');
+      await logout();
+      toast.dismiss(logoutToast);
+      toast.success('Logged out successfully! 👋', { duration: 2000 });
+      router.push('/login');
     } catch (err) {
       console.error('Logout error:', err);
+      toast.dismiss(logoutToast);
+      toast.error('Error during logout, but session cleared', { duration: 2000 });
+      router.push('/login');
     }
   };
 
