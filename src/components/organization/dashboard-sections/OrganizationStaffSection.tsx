@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
 
 const G = {
@@ -42,13 +42,7 @@ export default function OrganizationStaffSection({ orgId }: StaffSectionProps) {
   const [activeRole, setActiveRole] = useState<RoleType>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  useEffect(() => {
-    if (orgId) {
-      fetchStaff();
-    }
-  }, [orgId, activeRole]);
-
-  async function fetchStaff() {
+  const fetchStaff = useCallback(async () => {
     if (!orgId) {
       setError('Organization ID is missing');
       setLoading(false);
@@ -70,7 +64,26 @@ export default function OrganizationStaffSection({ orgId }: StaffSectionProps) {
     } finally {
       setLoading(false);
     }
-  }
+  }, [orgId, activeRole]);
+
+  useEffect(() => {
+    if (orgId) {
+      fetchStaff();
+    }
+  }, [orgId, activeRole, fetchStaff]);
+
+  useEffect(() => {
+    const handleOrganizationMembershipUpdated = (event: Event) => {
+      const detail = (event as CustomEvent<{ orgId?: string }>).detail;
+      if (!detail?.orgId || detail.orgId !== orgId) return;
+      fetchStaff();
+    };
+
+    window.addEventListener('organizationMembershipUpdated', handleOrganizationMembershipUpdated as EventListener);
+    return () => {
+      window.removeEventListener('organizationMembershipUpdated', handleOrganizationMembershipUpdated as EventListener);
+    };
+  }, [orgId, fetchStaff]);
 
   // Filter staff by search query
   const filteredStaff = staff.filter(s =>

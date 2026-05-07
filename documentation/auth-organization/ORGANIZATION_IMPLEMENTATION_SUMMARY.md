@@ -52,7 +52,7 @@ Finance: finance@elitesports.com          / tennis123
 ```
 Admin:   admin@communitytennis.org        / tennis123
 Finance: finance@communitytennis.org      / tennis123
-```
+```![alt text](image.png)
 
 **All passwords:** `tennis123` (for development/testing only)
 

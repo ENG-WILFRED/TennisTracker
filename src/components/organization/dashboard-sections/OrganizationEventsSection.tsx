@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useAuth } from '@/context/AuthContext';
 
 const G = {
   dark: '#0f1f0f', sidebar: '#152515', card: '#1a3020', cardBorder: '#2d5a35',
@@ -29,6 +30,7 @@ interface OrgEventItem {
 }
 
 export default function OrganizationEventsSection({ orgId }: EventsSectionProps) {
+  const { user } = useAuth();
   const [events, setEvents] = useState<OrgEventItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -175,7 +177,7 @@ export default function OrganizationEventsSection({ orgId }: EventsSectionProps)
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, height: '100%' }}>
       {/* Events Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10 }}>
         <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 12 }}>
@@ -193,19 +195,28 @@ export default function OrganizationEventsSection({ orgId }: EventsSectionProps)
       </div>
 
       {/* Events List */}
-      <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 14 }}>
-        <div style={{ fontWeight: 800, fontSize: 13, marginBottom: 12 }}>🎾 Events Management</div>
+      <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 14, display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <div style={{ fontWeight: 800, fontSize: 13 }}>🎾 Events Management</div>
+          <button style={{ padding: '6px 10px', background: G.lime, color: '#0f1f0f', border: 'none', borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+            + Create New Event
+          </button>
+        </div>
         {loading ? (
           <div style={{ textAlign: 'center', padding: 20, color: G.muted }}>Loading events...</div>
         ) : events.length === 0 ? (
           <div style={{ textAlign: 'center', padding: 20, color: G.muted }}>No events found</div>
         ) : (
-          <div style={{ maxHeight: 520, overflowY: 'auto', paddingRight: 4 }}>
+          <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', paddingRight: 4 }}>
             {events.map((event: OrgEventItem, i: number) => {
               const registered = registeredCount(event);
               const status = getEventStatus(event.startDate, event.endDate);
               const isSession = event.type === 'session';
-              const viewHref = isSession ? `/sessions/${event.id}` : `/organization/${orgId}/events/${event.id}`;
+              const viewHref = isSession
+                ? user?.id
+                  ? `/dashboard/organization/${user.id}/session/${event.id}`
+                  : `/sessions/${event.id}`
+                : `/organization/${orgId}/events/${event.id}`;
               const actionLabel = isSession ? 'Manage' : 'Edit';
 
               return (
@@ -280,9 +291,6 @@ export default function OrganizationEventsSection({ orgId }: EventsSectionProps)
             })}
           </div>
         )}
-        <button style={{ width: '100%', marginTop: 12, padding: '8px', background: G.lime, color: '#0f1f0f', border: 'none', borderRadius: 6, fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>
-          + Create New Event
-        </button>
       </div>
     </div>
   );
