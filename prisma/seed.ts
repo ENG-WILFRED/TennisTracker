@@ -10,6 +10,8 @@ import { seedTournaments } from './seeds/tournaments.js';
 import { seedStats } from './seeds/stats.js';
 import { seedTournamentComments } from './seeds/tournament-comments.js';
 import { seedStaffForAllOrgs } from './seeds/staff.js';
+import { seedNewStaffSystem } from './seeds/staff-new-system.js';
+import { seedStaffDashboardData } from './seeds/staff-dashboard-data.js';
 import { seedTournamentTasks } from './seeds/tournament-tasks.js';
 import { seedTaskTemplates } from './seeds/task-templates-complete.js';
 import { seedTournamentPlayers } from './seeds/tournament-players-seeding.js';
@@ -149,6 +151,16 @@ async function main() {
     console.log('───────────────────────────────────────────────────────────────');
     await executeSeed('staff', () => seedStaffForAllOrgs());
 
+    // 12B. Seed new enterprise staff system with departments and roles
+    console.log('\n📍 STEP 12B: New Enterprise Staff System');
+    console.log('───────────────────────────────────────────────────────────────');
+    await executeSeed('staff-new-system', () => seedNewStaffSystem());
+
+    // 12C. Seed staff dashboard sample security logs and incidents
+    console.log('\n📍 STEP 12C: Staff Dashboard Security Data');
+    console.log('───────────────────────────────────────────────────────────────');
+    await executeSeed('staff-dashboard-data', () => seedStaffDashboardData());
+
     // 13. Seed coach sessions and activity links
     console.log('\n📍 STEP 13: Coach Sessions');
     console.log('───────────────────────────────────────────────────────────────');
@@ -192,7 +204,20 @@ async function main() {
     // Print detailed seed status report
     printSeedStatusReport();
 
-    console.log('🔐 TEST ACCOUNT CREDENTIALS (password: tennis123):');
+    console.log('🎭 STAFF DASHBOARD TEST ACCOUNTS (password: tennis123):');
+    console.log('───────────────────────────────────────────────────────────────');
+    console.log('  💰 Finance Manager:         alice.finance@example.com');
+    console.log('  📋 Finance Officer:        bob.officer@example.com');
+    console.log('  👔 HR Manager:             carol.hr@example.com');
+    console.log('  📞 Reception:              emma.reception@example.com');
+    console.log('  🔐 Security Officer:       frank.security@example.com');
+    console.log('  🔧 Maintenance Manager:    henry.maintenance@example.com');
+    console.log('  📦 Inventory Manager:      jack.inventory@example.com');
+    console.log('  🎧 Support Manager:        karen.support@example.com');
+    console.log('  ⚡ Operations Manager:      nathan.operations@example.com');
+    console.log('═══════════════════════════════════════════════════════════════\n');
+
+    console.log('🔐 LEGACY TEST ACCOUNT CREDENTIALS (password: tennis123):');
     console.log('───────────────────────────────────────────────────────────────');
     console.log('  🎾 Player (Independent):    marcus.johnson@example.com');
     console.log('  🎾 Player (Organization):   sophia.chen@example.com');

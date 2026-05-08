@@ -7,8 +7,8 @@
 Admin Email:    admin@centraltennis.com
 Admin Password: tennis123
 
-Finance Email:    finance@centraltennis.com
-Finance Password: tennis123
+Staff Email:    finance@centraltennis.com
+Staff Password: tennis123
 ```
 
 ## Organization 2: Elite Sports Academy
@@ -16,8 +16,8 @@ Finance Password: tennis123
 Admin Email:    admin@elitesports.com
 Admin Password: tennis123
 
-Finance Email:    finance@elitesports.com
-Finance Password: tennis123
+Staff Email:    finance@elitesports.com
+Staff Password: tennis123
 ```
 
 ## Organization 3: Community Tennis Courts
@@ -25,8 +25,8 @@ Finance Password: tennis123
 Admin Email:    admin@communitytennis.org
 Admin Password: tennis123
 
-Finance Email:    finance@communitytennis.org
-Finance Password: tennis123
+Staff Email:    finance@communitytennis.org
+Staff Password: tennis123
 ```
 
 ---
@@ -40,12 +40,12 @@ Finance Password: tennis123
 4. Click Login
 5. You should see organization dashboard
 
-### Scenario B: Login as Finance Officer
+### Scenario B: Login as Staff
 1. Visit `/login`
 2. Paste: `finance@centraltennis.com`
 3. Paste: `tennis123`
 4. Click Login
-5. You should see financial dashboard
+5. You should see staff dashboard
 
 ### Scenario C: Test Multi-Organization
 1. Logout current admin
@@ -94,7 +94,7 @@ curl -X GET http://localhost:3000/api/organization/{orgId} \
 ## Dashboard URLs After Login
 
 - **Admin Dashboard:** `/dashboard/organization`
-- **Finance Dashboard:** `/dashboard/finance`  
+- **Staff Dashboard:** `/dashboard/staff`  
 - **Settings:** `/settings`
 - **Profile:** `/profile`
 

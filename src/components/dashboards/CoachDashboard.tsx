@@ -157,15 +157,6 @@ export const CoachDashboard: React.FC = () => {
   // Handle navigation to a new section
   const handleNavigation = (section: string) => {
     toast.success(`Navigating to ${section}...`, { duration: 1000 });
-
-    if (section === 'Find People') {
-      router.push('/dashboard/find-people');
-      return;
-    }
-    if (section === 'Find Courts') {
-      router.push('/dashboard/find-courts');
-      return;
-    }
     const params = new URLSearchParams(searchParams.toString());
     params.set('section', section);
     // Remove 'tab' param when switching sections (unless it's Profile)
@@ -1059,8 +1050,8 @@ export const CoachDashboard: React.FC = () => {
                 <Tag>New</Tag>
               </div>
               <div style={{ display: 'grid', gap: 10, gridTemplateColumns: '1fr 1fr' }}>
-                <BtnPrimary onClick={() => router.push('/dashboard/find-people')}>Find People</BtnPrimary>
-                <BtnPrimary onClick={() => router.push('/dashboard/find-courts')}>Find Courts</BtnPrimary>
+                <BtnPrimary onClick={() => handleNavigation('Find People')}>Find People</BtnPrimary>
+                <BtnPrimary onClick={() => handleNavigation('Find Courts')}>Find Courts</BtnPrimary>
               </div>
             </div>
 

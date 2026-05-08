@@ -96,7 +96,7 @@ Each role has a dedicated dashboard component:
 | `PlayerDashboard` | `/dashboard` (Player) | Matches, stats, coaches, court availability |
 | `CoachDashboard` | `/dashboard` (Coach) | Students, sessions, ratings, availability |
 | `AdminDashboard` | `/dashboard` (Admin) | Members, events, courts, analytics |
-| `FinanceDashboard` | `/dashboard` (Finance) | Revenue, memberships, transactions, reports |
+| `StaffDashboard` | `/dashboard` (Staff) | Revenue, memberships, transactions, reports |
 | `RefereeDashboard` | `/dashboard` (Referee) | Assignments, scores, history, certifications |
 | `OrganizationDashboard` | `/dashboard` (Org) | All features, settings, billing, roles |
 
@@ -341,7 +341,7 @@ POST /api/auth/login
 - `src/components/dashboards/PlayerDashboard.tsx`
 - `src/components/dashboards/CoachDashboard.tsx`
 - `src/components/dashboards/AdminDashboard.tsx`
-- `src/components/dashboards/FinanceDashboard.tsx`
+- `src/components/dashboards/StaffDashboard.tsx`
 - `src/components/dashboards/RefereeDashboard.tsx`
 - `src/components/dashboards/OrganizationDashboard.tsx`
 - `src/lib/route-protection.ts`

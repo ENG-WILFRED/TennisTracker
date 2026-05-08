@@ -229,6 +229,40 @@ export const AdminDashboard: React.FC = () => {
           ))}
         </div>
 
+        <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 12, marginTop: 10 }}>
+          <section style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 14 }}>
+            <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 10 }}>🌐 Recent Staff Dashboards</div>
+            <div style={{ display: 'grid', gap: 10 }}>
+              {dashboardData?.staffRoster?.length ? dashboardData.staffRoster.map((member: any, index: number) => (
+                <div key={index} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: 10, background: '#0f1f0f', borderRadius: 10, border: `1px solid ${G.cardBorder}` }}>
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 700 }}>{member.name}</div>
+                    <div style={{ fontSize: 10, color: G.muted }}>{member.role.replace('_', ' ')} • {member.orgName}</div>
+                  </div>
+                  <button onClick={() => router.push(`/dashboard/staff/${member.id}`)} style={{ background: G.lime, color: '#0f1f0f', border: 'none', borderRadius: 8, padding: '6px 10px', cursor: 'pointer', fontSize: 10, fontWeight: 700 }}>View</button>
+                </div>
+              )) : <div style={{ fontSize: 11, color: G.muted }}>No staff dashboards available yet.</div>}
+            </div>
+          </section>
+
+          <section style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 14 }}>
+            <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 10 }}>🏢 Organization Overview</div>
+            {dashboardData?.organizations?.length ? (
+              <div style={{ display: 'grid', gap: 8 }}>
+                {dashboardData.organizations.map((org: any, index: number) => (
+                  <div key={index} style={{ padding: 10, background: '#0f1f0f', borderRadius: 10, border: `1px solid ${G.cardBorder}` }}>
+                    <div style={{ fontSize: 12, fontWeight: 700 }}>{org.name}</div>
+                    <div style={{ fontSize: 10, color: G.muted }}>{org.city || 'Worldwide'} · {org.country || 'Global'}</div>
+                    <button onClick={() => router.push(`/dashboard/org/${user?.id}?orgId=${org.id}`)} style={{ marginTop: 8, background: G.dark, color: G.lime, border: `1px solid ${G.lime}`, borderRadius: 7, padding: '6px 8px', fontSize: 10, fontWeight: 700, cursor: 'pointer' }}>Open Org</button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ fontSize: 11, color: G.muted }}>No organizations found.</div>
+            )}
+          </section>
+        </div>
+
         {activeNav === 'Home' && (
           <>
             {statusMessage && (

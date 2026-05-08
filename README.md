@@ -392,7 +392,7 @@ The Flutter mobile app mirrors web functionality with optimizations:
 - **AssignCard** - Task assignment form with role-specific fields
 - **TaskCard** - Display and manage task status
 - **CalendarView** - Month view with events
-- **FinanceDashboard** - Revenue and expense tracking
+- **StaffDashboard** - Revenue and expense tracking
 - **CoachDashboard** - Session and student management
 - **TournamentBracket** - Visual bracket display
 

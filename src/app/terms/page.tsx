@@ -49,7 +49,7 @@ Each person may maintain only one account unless explicitly authorized by VICO. 
   {
     id: "roles",
     title: "3. User Roles & Permissions",
-    content: `The Platform supports seven distinct roles: Players, Coaches, Referees, Staff, Finance Officers, Organization Admins, and Spectators. Each role carries specific permissions and responsibilities.
+    content: `The Platform supports six distinct roles: Players, Coaches, Referees, Staff, Organization Admins, and Spectators. Each role carries specific permissions and responsibilities.
 
 Organization Admins are responsible for managing their club's data, members, and compliance with these Terms. Coaches and Referees must ensure their credentials and certifications are accurate and up to date. Players and Spectators agree to engage respectfully with all Platform features and community members.
 

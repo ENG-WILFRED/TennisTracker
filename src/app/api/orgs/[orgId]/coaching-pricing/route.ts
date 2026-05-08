@@ -63,7 +63,7 @@ export async function POST(
       },
     });
 
-    if (!membership || !['admin', 'finance_officer'].includes(membership.role)) {
+    if (!membership || !['admin', 'staff'].includes(membership.role)) {
       return NextResponse.json(
         { error: 'Only organization admins can configure pricing' },
         { status: 403 }
