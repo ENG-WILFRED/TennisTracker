@@ -1,7 +1,11 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import toast from 'react-hot-toast';
 import { getAccessToken, refreshAccessToken } from '@/lib/tokenManager';
+import { authenticatedFetch } from '@/lib/authenticatedFetch';
+import { clearAllDashboardCache } from '@/lib/dashboardCache';
 
 const G = {
   dark: '#0a1a0a',
@@ -62,7 +66,7 @@ export type Member = {
   email: string;
   role: 'player' | 'coach' | 'referee' | 'admin' | 'member' | 'inactive';
   tier?: string;
-  status?: 'active' | 'inactive';
+  status?: 'active' | 'inactive' | 'pending';
   paymentStatus?: 'active' | 'inactive' | 'pending';
   joinDate?: string;
   visits?: number;
@@ -77,6 +81,7 @@ export type Member = {
   students?: number;
   certification?: string;
   certLevel?: string;
+  applicationType?: 'membership';
 };
 
 type Role = 'player' | 'coach' | 'referee' | 'admin' | 'all';
@@ -182,6 +187,24 @@ function normalizeClubMember(clubMember: any): Member {
   };
 }
 
+function normalizeMembershipApplication(application: any): Member {
+  const user = application.user;
+  const firstName = user?.firstName || user?.email?.split('@')[0] || 'Unknown';
+  const lastName = user?.lastName || '';
+  const normalizedJoinDate = application.joinedAt ? new Date(application.joinedAt).toISOString() : undefined;
+
+  return {
+    id: application.id,
+    firstName,
+    lastName,
+    email: user?.email || '',
+    role: application.role || 'player',
+    status: application.status || 'pending',
+    joinDate: normalizedJoinDate,
+    applicationType: 'membership',
+  };
+}
+
 function MemberCard({ member, onClick }: { member: Member; onClick: () => void }) {
   const renderRoleDetail = () => {
     if (member.role === 'player') return (
@@ -259,60 +282,149 @@ export default function OrganizationMembersSection({
   members?: any[];
   membersLoading?: boolean;
 }) {
-  const incomingMembers = (propMembers && propMembers.length > 0) ? propMembers : [];
-  const loading = membersLoading ?? false;
+  const queryClient = useQueryClient();
 
-  const [memberData, setMemberData] = useState<Member[]>(incomingMembers);
+  const { data: membersData, isLoading: membersLoadingQuery } = useQuery({
+    queryKey: ['orgMembers', organizationId],
+    queryFn: async () => {
+      const res = await authenticatedFetch(`/api/organization/${organizationId}/members`);
+      if (!res.ok) throw new Error('Failed to fetch members');
+      const data = await res.json();
+      return data.map(normalizeClubMember);
+    },
+    enabled: !!organizationId,
+  });
+
+  const { data: applicationsData, isLoading: applicationsLoading } = useQuery({
+    queryKey: ['orgApplications', organizationId],
+    queryFn: async () => {
+      const res = await authenticatedFetch(`/api/organization/${organizationId}/applications`);
+      if (!res.ok) throw new Error('Failed to fetch applications');
+      const data = await res.json();
+      return data.map(normalizeMembershipApplication);
+    },
+    enabled: !!organizationId,
+  });
+
+  const memberData = membersData || [];
+  const pendingApplications = applicationsData || [];
+  const loading = membersLoading || membersLoadingQuery || applicationsLoading;
+
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [messageText, setMessageText] = useState('');
   const [isMessageModalOpen, setIsMessageModalOpen] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [loadingAction, setLoadingAction] = useState<string | null>(null); // Track which specific action is loading
   const [notify, setNotify] = useState<string | null>(null);
-  const [fetchLoading, setFetchLoading] = useState(false);
 
-  useEffect(() => {
-    const isSameById = memberData.length === incomingMembers.length && incomingMembers.every((m, idx) => m.id === memberData[idx]?.id);
-    if (isSameById) return;
-
-    // Adopt incoming members only when the incoming set has changed.
-    // Avoid repeated overwrites due to parenting recreating the array on each render.
-    setMemberData(incomingMembers);
-  }, [incomingMembers, memberData]);
-
-  // Auto-hide notifications after 5 seconds
-  useEffect(() => {
-    if (notify) {
-      const timer = setTimeout(() => setNotify(null), 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [notify]);
-
-  useEffect(() => {
-    if (!organizationId) return;
-
-    const fetchMembers = async () => {
-      try {
-        setFetchLoading(true);
-        const res = await fetch(`/api/organization/${organizationId}/members`);
-        if (!res.ok) {
-          console.error('Failed to fetch members', res.status);
-          setFetchLoading(false);
-          return;
-        }
-        const data = await res.json();
-        if (Array.isArray(data)) {
-          setMemberData(data.map(normalizeClubMember));
-        }
-        setFetchLoading(false);
-      } catch (error) {
-        console.error('Error loading organization members:', error);
-        setFetchLoading(false);
+  // Mutations for API calls
+  const acceptApplicationMutation = useMutation({
+    mutationFn: async (applicationId: string) => {
+      const res = await authenticatedFetch(`/api/organization/${organizationId}/applications/${applicationId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ action: 'accept' }),
+      });
+      if (!res.ok) throw new Error('Failed to accept application');
+      return res.json();
+    },
+    onMutate: async () => {
+      setLoadingAction('activate');
+    },
+    onSuccess: (_data, applicationId: string) => {
+      clearAllDashboardCache();
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('organizationMembershipUpdated', { detail: { orgId: organizationId } }));
       }
-    };
+      queryClient.setQueryData(['orgApplications', organizationId], (old: any) => {
+        if (!Array.isArray(old)) return old;
+        return old.filter((app: any) => app.id !== applicationId);
+      });
+      queryClient.invalidateQueries({ queryKey: ['orgMembers', organizationId] });
+      queryClient.invalidateQueries({ queryKey: ['orgApplications', organizationId] });
+      setNotify('✅ Application accepted successfully');
+      toast.success('Application approved successfully');
+    },
+    onError: (error: any) => {
+      setNotify(`❌ Failed to accept application: ${error.message}`);
+      toast.error(`Failed to approve application: ${error.message}`);
+    },
+  });
 
-    fetchMembers();
-  }, [organizationId]);
+  const rejectApplicationMutation = useMutation({
+    mutationFn: async (applicationId: string) => {
+      const res = await authenticatedFetch(`/api/organization/${organizationId}/applications/${applicationId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ action: 'reject' }),
+      });
+      if (!res.ok) throw new Error('Failed to reject application');
+      return res.json();
+    },
+    onMutate: async () => {
+      setLoadingAction('dismiss');
+    },
+    onSuccess: (_data, applicationId: string) => {
+      clearAllDashboardCache();
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('organizationMembershipUpdated', { detail: { orgId: organizationId } }));
+      }
+      queryClient.setQueryData(['orgApplications', organizationId], (old: any) => {
+        if (!Array.isArray(old)) return old;
+        return old.filter((app: any) => app.id !== applicationId);
+      });
+      queryClient.invalidateQueries({ queryKey: ['orgApplications', organizationId] });
+      setNotify('✅ Application rejected successfully');
+      toast.success('Application rejected successfully');
+    },
+    onError: (error: any) => {
+      setNotify(`❌ Failed to reject application: ${error.message}`);
+      toast.error(`Failed to reject application: ${error.message}`);
+    },
+  });
+
+  const updateMemberMutation = useMutation({
+    mutationFn: async ({ memberId, action, extra }: { memberId: string; action: string; extra?: any; member: Member }) => {
+      const res = await authenticatedFetch(`/api/organization/${organizationId}/members/${memberId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ action, ...extra }),
+      });
+      if (!res.ok) throw new Error('Failed to update member');
+      return res.json();
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['orgMembers', organizationId] });
+      const { action, member } = variables as any;
+      const actionLabel = action === 'suspend' ? 'suspended' : action === 'activate' ? 'activated' : action === 'deactivate' ? 'deactivated' : action === 'dismiss' ? 'dismissed' : action === 'delete' ? 'deleted' : 'updated';
+      setNotify(`✅ ${member.firstName} ${member.lastName} has been ${actionLabel} successfully`);
+    },
+    onError: (error: any, variables) => {
+      const { member } = variables as any;
+      setNotify(`❌ Failed to update ${member.firstName} ${member.lastName}: ${error.message}`);
+    },
+  });
+
+  const deleteMemberMutation = useMutation({
+    mutationFn: async (memberId: string) => {
+      const res = await authenticatedFetch(`/api/organization/${organizationId}/members/${memberId}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) throw new Error('Failed to delete member');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orgMembers', organizationId] });
+      setNotify('✅ Member deleted successfully');
+    },
+    onError: (error: any) => {
+      setNotify(`❌ Failed to delete member: ${error.message}`);
+    },
+  });
+
+  // Update loading states based on mutations
+  useEffect(() => {
+    const isAnyPending = acceptApplicationMutation.isPending || rejectApplicationMutation.isPending || updateMemberMutation.isPending || deleteMemberMutation.isPending;
+    setActionLoading(isAnyPending);
+    if (!isAnyPending) setLoadingAction(null);
+  }, [acceptApplicationMutation.isPending, rejectApplicationMutation.isPending, updateMemberMutation.isPending, deleteMemberMutation.isPending]);
 
   // Helper function to get button text based on loading state
   const getButtonText = (action: string, defaultText: string) => {
@@ -330,112 +442,33 @@ export default function OrganizationMembersSection({
     return defaultText;
   };
 
-  const updateMemberStatus = async (
+const updateMemberStatus = (
     member: Member,
     action: 'activate' | 'deactivate' | 'suspend' | 'dismiss' | 'delete',
-    extra?: { until?: string; reason?: string; role?: string }
+    extra?: { until?: string; reason?: string; role?: string; isApplication?: boolean }
   ) => {
     if (!organizationId || !member?.id) {
       setNotify('❌ Organization or member data missing');
       return;
     }
 
-    let token = getAccessToken();
-    if (!token) {
-      // Try to refresh the token
-      const refreshed = await refreshAccessToken();
-      if (refreshed) {
-        token = getAccessToken();
-      }
-    }
-    
-    if (!token) {
-      setNotify('❌ Authentication required. Please log in again.');
+    const isApplication = member.applicationType === 'membership' || extra?.isApplication;
+
+    if (action === 'delete' && !isApplication) {
+      deleteMemberMutation.mutate(member.id);
       return;
     }
 
-    setActionLoading(true);
-    setLoadingAction(action); // Set specific loading action
-    setNotify(null); // Clear previous notifications
-
-    try {
-      const headers = {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      };
-
-      if (action === 'delete') {
-        const del = await fetch(`/api/organization/${organizationId}/members/${member.id}`, {
-          method: 'DELETE',
-          headers,
-        });
-
-        if (!del.ok) {
-          if (del.status === 401) {
-            throw new Error('Authentication failed. Please log in again.');
-          } else if (del.status === 403) {
-            throw new Error('You do not have permission to delete this member.');
-          } else if (del.status === 404) {
-            throw new Error('Member not found.');
-          } else {
-            const payload = await del.json().catch((parseError) => {
-              console.error('Failed to parse DELETE response JSON:', parseError);
-              console.error('DELETE response status:', del.status);
-              return { error: `Invalid response format (${del.status})` };
-            });
-            throw new Error(payload?.error || `Failed to delete member (${del.status})`);
-          }
-        }
-
-        setMemberData(prev => prev.filter(m => m.id !== member.id));
-        if (selectedMember?.id === member.id) setSelectedMember(null);
-        setNotify(`✅ ${member.firstName} ${member.lastName} has been deleted successfully`);
-        return;
+    if (isApplication) {
+      if (action === 'activate') {
+        acceptApplicationMutation.mutate(member.id);
+      } else if (action === 'dismiss') {
+        rejectApplicationMutation.mutate(member.id);
       }
-
-      const res = await fetch(`/api/organization/${organizationId}/members/${member.id}`, {
-        method: 'PATCH',
-        headers,
-        body: JSON.stringify({ action, ...extra }),
-      });
-
-      const payload = await res.json().catch((parseError) => {
-        console.error('Failed to parse response JSON:', parseError);
-        console.error('Response status:', res.status);
-        console.error('Response headers:', Object.fromEntries(res.headers.entries()));
-        return { error: `Invalid response format (${res.status})` };
-      });
-
-      if (!res.ok) {
-        if (res.status === 401) {
-          throw new Error('Authentication failed. Please log in again.');
-        } else if (res.status === 403) {
-          throw new Error('You do not have permission to perform this action.');
-        } else if (res.status === 404) {
-          throw new Error('Member not found.');
-        } else {
-          throw new Error(payload?.error || `Failed to ${action} member (${res.status})`);
-        }
-      }
-
-      const updatedMember = payload.member;
-      if (action === 'dismiss' || action === 'deactivate') {
-        setMemberData(prev => prev.filter(m => m.id !== member.id));
-        if (selectedMember?.id === member.id) setSelectedMember(null);
-        setNotify(`✅ ${member.firstName} ${member.lastName} has been ${action}d successfully`);
-      } else {
-        setMemberData(prev => prev.map(m => (m.id === member.id ? { ...m, ...updatedMember } : m)));
-        if (selectedMember?.id === member.id) setSelectedMember({ ...selectedMember, ...updatedMember as any });
-        const actionLabel = action === 'suspend' ? 'suspended' : 'activated';
-        setNotify(`✅ ${member.firstName} ${member.lastName} has been ${actionLabel} successfully`);
-      }
-    } catch (error: any) {
-      console.error('Member action error:', error);
-      setNotify(`❌ ${error?.message || `${action} failed`}`);
-    } finally {
-      setActionLoading(false);
-      setLoadingAction(null); // Clear specific loading action
+      return;
     }
+
+    updateMemberMutation.mutate({ memberId: member.id, action, extra, member });
   };
 
   const sendMessageToMember = async (member: Member) => {
@@ -656,7 +689,7 @@ export default function OrganizationMembersSection({
   const stats = {
     total: memberData.length,
     active: memberData.filter((m: Member) => (m.paymentStatus || m.status) === 'active').length,
-    pending: memberData.filter((m: Member) => (m.paymentStatus || m.status) === 'pending').length,
+    pending: memberData.filter((m: Member) => (m.paymentStatus || m.status) === 'pending').length + pendingApplications.length,
     players: roleCounts.player || roleCounts.member || 0,
     coaches: roleCounts.coach || 0,
     referees: roleCounts.referee || 0,
@@ -692,7 +725,10 @@ export default function OrganizationMembersSection({
     fontFamily: "'Raleway', sans-serif",
   });
 
-  const pendingRequests = memberData.filter((m: Member) => (m.paymentStatus || m.status) === 'pending');
+  const pendingRequests = [
+    ...memberData.filter((m: Member) => (m.paymentStatus || m.status) === 'pending'),
+    ...pendingApplications,
+  ];
   const latestRecruits = [...memberData]
     .filter((m: Member) => (m.paymentStatus || m.status) === 'active')
     .sort((a, b) => new Date(b.joinDate || 0).getTime() - new Date(a.joinDate || 0).getTime())
@@ -706,7 +742,7 @@ export default function OrganizationMembersSection({
         @import url('https://fonts.googleapis.com/css2?family=Raleway:wght@400;500;600;700;800;900&display=swap');
         .members-header-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
         .members-header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-        .members-stats-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+        .members-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
         .members-role-tabs { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
         .members-filter-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
         .members-detail-grid { display: grid; grid-template-columns: 1fr 300px; gap: 20px; }
@@ -864,79 +900,11 @@ export default function OrganizationMembersSection({
         </div>
       </div>
 
-      {/* Pending Requests and Latest Recruits */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, alignItems: 'start' }}>
-        <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 16 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 800, color: G.text }}>Incoming Requests</div>
-              <div style={{ fontSize: 11, color: G.muted }}>Approve new membership requests and role applications.</div>
-            </div>
-            <span style={{ fontSize: 12, color: G.lime, fontWeight: 700 }}>{pendingRequests.length}</span>
-          </div>
-          {pendingRequests.length === 0 ? (
-            <div style={{ color: G.muted, fontSize: 12, padding: '18px 0' }}>No pending membership requests right now.</div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {pendingRequests.map(member => (
-                <div key={member.id} style={{ background: G.dark, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 12 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
-                    <div>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: G.text }}>{member.firstName} {member.lastName}</div>
-                      <div style={{ fontSize: 11, color: G.muted }}>{member.email}</div>
-                      <div style={{ marginTop: 4, display: 'flex', gap: 8, alignItems: 'center' }}>
-                        <RoleBadge role={member.role} />
-                        <StatusDot status={member.paymentStatus || member.status} />
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                      <button disabled={actionLoading && loadingAction === 'activate'} onClick={() => updateMemberStatus(member, 'activate', { role: member.role })} style={{ padding: '8px 12px', borderRadius: 8, border: 'none', background: G.lime, color: G.dark, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
-                        {getButtonText('activate', 'Approve')}
-                      </button>
-                      <button disabled={actionLoading && loadingAction === 'dismiss'} onClick={() => updateMemberStatus(member, 'dismiss')} style={{ padding: '8px 12px', borderRadius: 8, border: 'none', background: G.red, color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
-                        {getButtonText('dismiss', 'Reject')}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 16 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 800, color: G.text }}>Latest Recruits</div>
-              <div style={{ fontSize: 11, color: G.muted }}>Recently activated members in the organization.</div>
-            </div>
-            <span style={{ fontSize: 12, color: G.lime, fontWeight: 700 }}>{latestRecruits.length}</span>
-          </div>
-          {latestRecruits.length === 0 ? (
-            <div style={{ color: G.muted, fontSize: 12, padding: '18px 0' }}>No recent recruits available yet.</div>
-          ) : (
-            <div style={{ display: 'grid', gap: 10 }}>
-              {latestRecruits.map(member => (
-                <div key={member.id} style={{ background: G.dark, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 12 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
-                    <div>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: G.text }}>{member.firstName} {member.lastName}</div>
-                      <div style={{ fontSize: 11, color: G.muted }}>{member.email}</div>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: 11, color: G.muted }}>Joined</div>
-                      <div style={{ fontSize: 12, fontWeight: 700 }}>{member.joinDate ? new Date(member.joinDate).toLocaleDateString('en-GB', { month: 'short', day: 'numeric' }) : 'Unknown'}</div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+      <div style={{ marginTop: 8, marginBottom: 8, color: G.muted, fontSize: 12 }}>
+        Use the filters and role tabs to refine the member directory below.
       </div>
 
-      {/* Member List or Detail View */}
-      {fetchLoading ? (
+      {loading ? (
         <div style={{ padding: 40, textAlign: 'center', color: G.muted }}>
           <div style={{ fontSize: 32, marginBottom: 8 }}>🎾</div>
           <div>Loading members…</div>
@@ -989,32 +957,30 @@ export default function OrganizationMembersSection({
 
               <div style={{ background: G.dark, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 16 }}>
                 <div style={{ fontSize: 14, fontWeight: 700, color: G.text, marginBottom: 12 }}>Actions</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <button onClick={() => sendMessageToMember(selectedMember as Member)} disabled={actionLoading} style={{
-                  padding: '12px 16px', borderRadius: 8, border: 'none', background: G.lime, color: G.dark, fontWeight: 700, cursor: actionLoading ? 'not-allowed' : 'pointer', opacity: actionLoading ? 0.7 : 1
+                  width: '100%', padding: '10px 14px', borderRadius: 6, border: 'none', background: G.lime, color: G.dark, fontWeight: 700, fontSize: 12, cursor: actionLoading ? 'not-allowed' : 'pointer', opacity: actionLoading ? 0.7 : 1
                 }}>
-                  {getButtonText('message', '✉ Send Message')}
+                  {getButtonText('message', '✉ Message')}
                 </button>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                   {selectedMember.status !== 'active' || selectedMember.role === 'inactive' ? (
-                    <button disabled={actionLoading} onClick={() => updateMemberStatus(selectedMember as Member, 'activate', { role: selectedMember?.role })} style={{ padding: '10px', borderRadius: 8, border: `1px solid ${G.lime}`, background: G.mid, color: G.lime, fontWeight: 700, cursor: actionLoading ? 'not-allowed' : 'pointer', opacity: actionLoading ? 0.7 : 1 }}>
-                      {getButtonText('activate', '▶ Activate')}
+                    <button disabled={actionLoading} onClick={() => updateMemberStatus(selectedMember as Member, 'activate', { role: selectedMember?.role })} style={{ padding: '8px 12px', borderRadius: 6, border: `1px solid ${G.lime}`, background: G.mid, color: G.lime, fontWeight: 600, fontSize: 11, cursor: actionLoading ? 'not-allowed' : 'pointer', opacity: actionLoading ? 0.7 : 1 }}>
+                      ▶ Activate
                     </button>
                   ) : (
-                    <button disabled={actionLoading} onClick={() => updateMemberStatus(selectedMember as Member, 'deactivate')} style={{ padding: '10px', borderRadius: 8, border: `1px solid ${G.yellow}`, background: '#232f2a', color: G.yellow, fontWeight: 700, cursor: actionLoading ? 'not-allowed' : 'pointer', opacity: actionLoading ? 0.7 : 1 }}>
-                      {getButtonText('deactivate', '⏸ Deactivate')}
+                    <button disabled={actionLoading} onClick={() => updateMemberStatus(selectedMember as Member, 'deactivate')} style={{ padding: '8px 12px', borderRadius: 6, border: `1px solid ${G.yellow}`, background: '#232f2a', color: G.yellow, fontWeight: 600, fontSize: 11, cursor: actionLoading ? 'not-allowed' : 'pointer', opacity: actionLoading ? 0.7 : 1 }}>
+                      ⏸ Deactivate
                     </button>
                   )}
-                  <button disabled={actionLoading} onClick={() => updateMemberStatus(selectedMember as Member, 'suspend', { until: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), reason: 'Temporarily suspended by admin' })} style={{ padding: '10px', borderRadius: 8, border: `1px solid ${G.orange}`, background: '#2b1f12', color: G.orange, fontWeight: 700, cursor: actionLoading ? 'not-allowed' : 'pointer', opacity: actionLoading ? 0.7 : 1 }}>
-                    {getButtonText('suspend', '🛑 Suspend (7d)')}
+                  <button disabled={actionLoading} onClick={() => updateMemberStatus(selectedMember as Member, 'suspend', { until: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), reason: 'Temporarily suspended by admin' })} style={{ padding: '8px 12px', borderRadius: 6, border: `1px solid ${G.orange}`, background: '#2b1f12', color: G.orange, fontWeight: 600, fontSize: 11, cursor: actionLoading ? 'not-allowed' : 'pointer', opacity: actionLoading ? 0.7 : 1 }}>
+                    🛑 Suspend
                   </button>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                  <button disabled={actionLoading} onClick={() => updateMemberStatus(selectedMember as Member, 'dismiss')} style={{ padding: '10px', borderRadius: 8, border: `1px solid ${G.red}`, background: '#2d1212', color: G.red, fontWeight: 700, cursor: actionLoading ? 'not-allowed' : 'pointer', opacity: actionLoading ? 0.7 : 1 }}>
-                    {getButtonText('dismiss', '🚫 Dismiss')}
+                  <button disabled={actionLoading} onClick={() => updateMemberStatus(selectedMember as Member, 'dismiss')} style={{ padding: '8px 12px', borderRadius: 6, border: `1px solid ${G.red}`, background: '#2d1212', color: G.red, fontWeight: 600, fontSize: 11, cursor: actionLoading ? 'not-allowed' : 'pointer', opacity: actionLoading ? 0.7 : 1 }}>
+                    🚫 Dismiss
                   </button>
-                  <button disabled={actionLoading} onClick={() => updateMemberStatus(selectedMember as Member, 'delete')} style={{ padding: '10px', borderRadius: 8, border: `1px solid ${G.red}`, background: '#220d0f', color: G.red, fontWeight: 700, cursor: actionLoading ? 'not-allowed' : 'pointer', opacity: actionLoading ? 0.7 : 1 }}>
-                    {getButtonText('delete', '❌ Delete')}
+                  <button disabled={actionLoading} onClick={() => updateMemberStatus(selectedMember as Member, 'delete')} style={{ padding: '8px 12px', borderRadius: 6, border: `1px solid ${G.red}`, background: '#220d0f', color: G.red, fontWeight: 600, fontSize: 11, cursor: actionLoading ? 'not-allowed' : 'pointer', opacity: actionLoading ? 0.7 : 1 }}>
+                    ❌ Delete
                   </button>
                 </div>
               </div>
@@ -1039,13 +1005,136 @@ export default function OrganizationMembersSection({
           <div style={{ fontSize: 13 }}>No members match your filters</div>
           <button onClick={() => { setSearchTerm(''); setRoleFilter('all'); setTierFilter('all'); setStatusFilter('all'); }} style={{ marginTop: 12, padding: '6px 16px', background: G.mid, border: 'none', borderRadius: 6, color: G.lime, fontSize: 11, cursor: 'pointer' }}>Clear filters</button>
         </div>
+      ) : view === 'list' ? (
+        /* Members List View */
+        <div className="members-list-table" style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, overflow: 'hidden', overflowX: 'auto' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 1fr 1fr', gap: 0, borderBottom: `1px solid ${G.cardBorder}`, padding: '12px 16px', background: G.dark, fontSize: 11, fontWeight: 700, color: G.muted, minWidth: '100%' }}>
+            <div>Member</div>
+            <div>Role</div>
+            <div>Tier</div>
+            <div>Status</div>
+          </div>
+          {sorted.map((member, i) => (
+            <div key={member.id} onClick={() => setSelectedMember(member)} style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 1fr 1fr', gap: 0, borderBottom: i < sorted.length - 1 ? `1px solid ${G.cardBorder}` : 'none', padding: '12px 16px', alignItems: 'center', fontSize: 11, cursor: 'pointer', transition: 'background 0.15s', minWidth: '100%' }} onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = G.dark; }} onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <Avatar member={member} size={28} />
+                <div style={{ cursor: 'pointer' }}>
+                  <div style={{ fontWeight: 700, color: G.text }}>{member.firstName} {member.lastName}</div>
+                  <div style={{ fontSize: 10, color: G.muted }}>{member.email}</div>
+                </div>
+              </div>
+              <div><RoleBadge role={member.role} /></div>
+              <div><TierBadge tier={member.tier} /></div>
+              <div><StatusDot status={member.paymentStatus || member.status} /></div>
+            </div>
+          ))}
+        </div>
       ) : (
-        <div style={{ maxHeight: 'calc(100vh - 420px)', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
-          {sorted.map(m => (
-            <MemberCard key={m.id} member={m as Member} onClick={() => setSelectedMember(m)} />
+        /* Members Grid View */
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 14 }}>
+          {sorted.map(member => (
+            <div key={member.id} onClick={() => setSelectedMember(member)} style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 16, cursor: 'pointer', transition: 'all 0.15s', textAlign: 'center' }} onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = G.lime; (e.currentTarget as HTMLElement).style.transform = 'translateY(-4px)'; }} onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = G.cardBorder; (e.currentTarget as HTMLElement).style.transform = 'translateY(0)'; }}>
+              <Avatar member={member} size={64} />
+              <div style={{ marginTop: 12 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: G.text }}>{member.firstName} {member.lastName}</div>
+                <div style={{ fontSize: 11, color: G.muted, marginTop: 4 }}>{member.email}</div>
+                <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 10 }}>
+                  <RoleBadge role={member.role} />
+                  <TierBadge tier={member.tier} />
+                </div>
+                <div style={{ marginTop: 10 }}>
+                  <StatusDot status={member.paymentStatus || member.status} />
+                </div>
+              </div>
+            </div>
           ))}
         </div>
       )}
+
+      <style>{`
+        @media (max-width: 768px) {
+          .members-bottom-grid {
+            display: grid !important;
+            grid-template-columns: 1fr !important;
+          }
+          .members-list-table {
+            overflow-x: auto;
+          }
+        }
+      `}</style>
+
+      <div className="members-bottom-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, alignItems: 'start', marginTop: 14 }}>
+        <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: G.text }}>Latest Recruits</div>
+              <div style={{ fontSize: 11, color: G.muted }}>Recently activated members in the organization.</div>
+            </div>
+            <span style={{ fontSize: 12, color: G.lime, fontWeight: 700 }}>{latestRecruits.length}</span>
+          </div>
+          {latestRecruits.length === 0 ? (
+            <div style={{ color: G.muted, fontSize: 12, padding: '18px 0' }}>No recent recruits available yet.</div>
+          ) : (
+            <div style={{ display: 'grid', gap: 10 }}>
+              {latestRecruits.map(member => (
+                <div key={member.id} style={{ background: G.dark, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 12 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
+                    <div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: G.text }}>{member.firstName} {member.lastName}</div>
+                      <div style={{ fontSize: 11, color: G.muted }}>{member.email}</div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: 11, color: G.muted }}>Joined</div>
+                      <div style={{ fontSize: 12, fontWeight: 700 }}>{member.joinDate ? new Date(member.joinDate).toLocaleDateString('en-GB', { month: 'short', day: 'numeric' }) : 'Unknown'}</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: G.text }}>Incoming Requests</div>
+              <div style={{ fontSize: 11, color: G.muted }}>Approve new membership requests and role applications.</div>
+            </div>
+            <span style={{ fontSize: 12, color: G.lime, fontWeight: 700 }}>{pendingRequests.length}</span>
+          </div>
+          {pendingRequests.length === 0 ? (
+            <div style={{ color: G.muted, fontSize: 12, padding: '18px 0' }}>No pending membership requests right now.</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {pendingRequests.map(member => (
+                <div key={member.id} style={{ background: G.dark, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 12 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
+                    <div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: G.text }}>{member.firstName} {member.lastName}</div>
+                      <div style={{ fontSize: 11, color: G.muted }}>{member.email}</div>
+                      <div style={{ marginTop: 4, display: 'flex', gap: 8, alignItems: 'center' }}>
+                        <RoleBadge role={member.role} />
+                        <StatusDot status={member.paymentStatus || member.status} />
+                      </div>
+                      {member.applicationType === 'membership' && (
+                        <div style={{ fontSize: 10, color: G.muted, marginTop: 4 }}>Role application awaiting organization review</div>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                      <button disabled={actionLoading && loadingAction === 'activate'} onClick={() => updateMemberStatus(member, 'activate', { role: member.role, isApplication: member.applicationType === 'membership' })} style={{ padding: '8px 12px', borderRadius: 8, border: 'none', background: G.lime, color: G.dark, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
+                        {getButtonText('activate', 'Approve')}
+                      </button>
+                      <button disabled={actionLoading && loadingAction === 'dismiss'} onClick={() => updateMemberStatus(member, 'dismiss', { isApplication: member.applicationType === 'membership' })} style={{ padding: '8px 12px', borderRadius: 8, border: 'none', background: G.red, color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
+                        {getButtonText('dismiss', 'Reject')}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Invite Modal */}
       {showInviteModal && (

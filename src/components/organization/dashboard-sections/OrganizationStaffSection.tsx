@@ -78,7 +78,26 @@ export default function OrganizationStaffSection({ orgId }: StaffSectionProps) {
     } finally {
       setLoading(false);
     }
-  }
+  }, [orgId, activeRole]);
+
+  useEffect(() => {
+    if (orgId) {
+      fetchStaff();
+    }
+  }, [orgId, activeRole, fetchStaff]);
+
+  useEffect(() => {
+    const handleOrganizationMembershipUpdated = (event: Event) => {
+      const detail = (event as CustomEvent<{ orgId?: string }>).detail;
+      if (!detail?.orgId || detail.orgId !== orgId) return;
+      fetchStaff();
+    };
+
+    window.addEventListener('organizationMembershipUpdated', handleOrganizationMembershipUpdated as EventListener);
+    return () => {
+      window.removeEventListener('organizationMembershipUpdated', handleOrganizationMembershipUpdated as EventListener);
+    };
+  }, [orgId, fetchStaff]);
 
   const roleOptions = selectedDepartment === 'all'
     ? ['all', ...Object.values(STAFF_DEPARTMENTS).flatMap((dept) => dept.roles.map((role) => role.roleId))]

@@ -1,4 +1,19 @@
 -- Add flexible pricing models for coaching sessions
+-- OrgCoachingPricing base table for organization-level coaching pricing
+CREATE TABLE "OrgCoachingPricing" (
+  "id" TEXT NOT NULL PRIMARY KEY,
+  "organizationId" TEXT NOT NULL UNIQUE,
+  "pricePerHour" DECIMAL(8,2) NOT NULL,
+  "currency" TEXT NOT NULL DEFAULT 'USD',
+  "minSessionDurationMinutes" INTEGER NOT NULL DEFAULT 30,
+  "roundingType" TEXT NOT NULL DEFAULT 'up',
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "OrgCoachingPricing_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization" ("id") ON DELETE CASCADE
+);
+
+CREATE INDEX "OrgCoachingPricing_organizationId_idx" ON "OrgCoachingPricing"("organizationId");
+
 -- TierCoachingPrice table for tier-based pricing overrides
 CREATE TABLE "TierCoachingPrice" (
   "id" TEXT NOT NULL PRIMARY KEY,

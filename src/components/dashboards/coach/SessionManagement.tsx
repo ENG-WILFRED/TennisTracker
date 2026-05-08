@@ -360,11 +360,11 @@ export default function SessionManagement({ coachId }: { coachId: string }) {
 
   const handleViewDetails = (sessionId: string, sessionTitle: string) => {
     // Show navigating toast
-    const toastId = addToast(`Navigating to ${sessionTitle}...`, 'info', 5000);
+    addToast(`Navigating to ${sessionTitle}...`, 'info', 5000);
     
-    // Navigate to session detail page
+    // Navigate to session detail page under dashboard route
     setTimeout(() => {
-      router.push(`/sessions/${sessionId}`);
+      router.push(`/dashboard/coach/${coachId}/session/${sessionId}`);
     }, 300);
   };
 

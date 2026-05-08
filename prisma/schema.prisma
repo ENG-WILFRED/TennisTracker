@@ -71,7 +71,7 @@ model Membership {
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, orgId])
+  @@unique([userId, orgId, role])
   @@index([userId])
   @@index([orgId])
   @@index([status])
@@ -361,8 +361,8 @@ model Organization {
   sessionPayments SessionPayment[] // Payment records for coaching sessions
   userDebts       UserOrgDebt[] // Track user debts to organization
   // Developer onboarding
-  emailLogs               DeveloperEmailLog[]
-  payments                OrganizationPayment[]
+  emailLogs       DeveloperEmailLog[]
+  payments        OrganizationPayment[]
 
   @@index([createdAt])
   @@index([slug])
@@ -3361,23 +3361,24 @@ model TestRun {
 }
 
 model SeedLog {
-  id            String   @id @default(uuid())
-  seedName      String   @unique
-  status        String   @default("pending")
-  startedAt     DateTime?
-  completedAt   DateTime?
-  error         String?
-  recordsCreated Int     @default(0)
-  version       String   @default("1.0")
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id             String    @id @default(uuid())
+  seedName       String    @unique
+  status         String    @default("pending")
+  startedAt      DateTime?
+  completedAt    DateTime?
+  error          String?
+  recordsCreated Int       @default(0)
+  version        String    @default("1.0")
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   @@index([status])
   @@index([seedName])
   @@index([createdAt])
 }
+
 model DeveloperEmailLog {
-  id                  String      @id @default(uuid())
+  id                  String       @id @default(uuid())
   organizationId      String
   organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   recipientEmail      String
@@ -3385,10 +3386,10 @@ model DeveloperEmailLog {
   body                String
   installationFee     Int
   monthlySubscription Int
-  sentBy              String      // userId of developer who sent it
-  status              String      @default("sent") // sent | delivered | bounced | failed
-  createdAt           DateTime    @default(now())
-  updatedAt           DateTime    @updatedAt
+  sentBy              String // userId of developer who sent it
+  status              String       @default("sent") // sent | delivered | bounced | failed
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
 
   @@index([organizationId])
   @@index([createdAt])
@@ -3396,16 +3397,16 @@ model DeveloperEmailLog {
 }
 
 model OrganizationPayment {
-  id                String      @id @default(uuid())
-  organizationId    String
-  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  amount            Float
-  notes             String?
-  recordedBy        String      // userId of developer who recorded it
-  status            String      @default("confirmed") // pending | confirmed | verified
-  paymentDate       DateTime    @default(now())
-  createdAt         DateTime    @default(now())
-  updatedAt         DateTime    @updatedAt
+  id             String       @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  amount         Float
+  notes          String?
+  recordedBy     String // userId of developer who recorded it
+  status         String       @default("confirmed") // pending | confirmed | verified
+  paymentDate    DateTime     @default(now())
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 
   @@index([organizationId])
   @@index([createdAt])

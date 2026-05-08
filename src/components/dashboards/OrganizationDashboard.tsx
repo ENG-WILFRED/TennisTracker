@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import Link from 'next/link';
@@ -10,22 +11,56 @@ import { chatUrlForUser, sendChallengeRequest } from '@/lib/nearby';
 import { FindNearbyPeople } from '@/components/FindNearbyPeople';
 import { FindNearbyCourts } from '@/components/FindNearbyCourts';
 import EditProfileModal from '@/app/dashboard/components/EditProfileModal';
-import OrganizationOverviewSection from '@/components/organization/dashboard-sections/OrganizationOverviewSection';
-import OrganizationMembersSection from '@/components/organization/dashboard-sections/OrganizationMembersSection';
-import OrganizationStaffSection from '@/components/organization/dashboard-sections/OrganizationStaffSection';
-import OrganizationTasksSection from '@/components/organization/dashboard-sections/OrganizationTasksSection';
-import OrganizationCourtsSection from '@/components/organization/dashboard-sections/OrganizationCourtsSection';
-import OrganizationEventsSection from '@/components/organization/dashboard-sections/OrganizationEventsSection';
-import OrganizationTournamentsSection from '@/components/organization/dashboard-sections/OrganizationTournamentsSection';
-import OrganizationReportsSection from '@/components/organization/dashboard-sections/OrganizationReportsSection';
-import OrganizationBookingsSection from '@/components/organization/dashboard-sections/OrganizationBookingsSection';
-import OrganizationPlayersSection from '@/components/organization/dashboard-sections/OrganizationPlayersSection';
-import OrganizationSettingsSection from '@/components/organization/dashboard-sections/OrganizationSettingsSection';
 import MessagingPanel from '@/components/dashboards/MessagingPanel';
 import { authenticatedFetch } from '@/lib/authenticatedFetch';
 import { clearTokens, getStoredTokens } from '@/lib/tokenManager';
-import { getCachedData, setCachedData, clearCacheEntry, fetchWithCache } from '@/lib/dashboardCache';
+import { clearAllDashboardCache, getCachedData, setCachedData, clearCacheEntry, fetchWithCache } from '@/lib/dashboardCache';
 import { MembershipSwitcher } from '@/components/MembershipSwitcher';
+
+const OrganizationOverviewSection = dynamic(
+  () => import('@/components/organization/dashboard-sections/OrganizationOverviewSection'),
+  { ssr: false, loading: () => <div className="px-6 py-8 text-sm text-neutral-300">Loading overview…</div> }
+);
+const OrganizationMembersSection = dynamic(
+  () => import('@/components/organization/dashboard-sections/OrganizationMembersSection'),
+  { ssr: false, loading: () => <div className="px-6 py-8 text-sm text-neutral-300">Loading members…</div> }
+);
+const OrganizationStaffSection = dynamic(
+  () => import('@/components/organization/dashboard-sections/OrganizationStaffSection'),
+  { ssr: false, loading: () => <div className="px-6 py-8 text-sm text-neutral-300">Loading staff…</div> }
+);
+const OrganizationTasksSection = dynamic(
+  () => import('@/components/organization/dashboard-sections/OrganizationTasksSection'),
+  { ssr: false, loading: () => <div className="px-6 py-8 text-sm text-neutral-300">Loading tasks…</div> }
+);
+const OrganizationCourtsSection = dynamic(
+  () => import('@/components/organization/dashboard-sections/OrganizationCourtsSection'),
+  { ssr: false, loading: () => <div className="px-6 py-8 text-sm text-neutral-300">Loading courts…</div> }
+);
+const OrganizationEventsSection = dynamic(
+  () => import('@/components/organization/dashboard-sections/OrganizationEventsSection'),
+  { ssr: false, loading: () => <div className="px-6 py-8 text-sm text-neutral-300">Loading events…</div> }
+);
+const OrganizationTournamentsSection = dynamic(
+  () => import('@/components/organization/dashboard-sections/OrganizationTournamentsSection'),
+  { ssr: false, loading: () => <div className="px-6 py-8 text-sm text-neutral-300">Loading tournaments…</div> }
+);
+const OrganizationReportsSection = dynamic(
+  () => import('@/components/organization/dashboard-sections/OrganizationReportsSection'),
+  { ssr: false, loading: () => <div className="px-6 py-8 text-sm text-neutral-300">Loading reports…</div> }
+);
+const OrganizationBookingsSection = dynamic(
+  () => import('@/components/organization/dashboard-sections/OrganizationBookingsSection'),
+  { ssr: false, loading: () => <div className="px-6 py-8 text-sm text-neutral-300">Loading bookings…</div> }
+);
+const OrganizationPlayersSection = dynamic(
+  () => import('@/components/organization/dashboard-sections/OrganizationPlayersSection'),
+  { ssr: false, loading: () => <div className="px-6 py-8 text-sm text-neutral-300">Loading players…</div> }
+);
+const OrganizationSettingsSection = dynamic(
+  () => import('@/components/organization/dashboard-sections/OrganizationSettingsSection'),
+  { ssr: false, loading: () => <div className="px-6 py-8 text-sm text-neutral-300">Loading settings…</div> }
+);
 
 const G = {
   dark: '#0f1f0f', sidebar: '#152515', card: '#1a3020', cardBorder: '#2d5a35',
@@ -134,54 +169,35 @@ export const OrganizationDashboard: React.FC = () => {
     photo: '',
   });
 
-  useEffect(() => {
+  const orgLoaded = Boolean(dashboardData?.organizationId);
+  const noOrgDataMessage = (
+    <div className="w-full min-h-screen flex items-center justify-center px-6 py-10 text-sm text-yellow-100">
+      Organization details are unavailable. Please refresh or sign in again to confirm access.
+    </div>
+  );
+
+  const renderOrgSection = (section: React.ReactNode) => orgLoaded ? section : noOrgDataMessage;
+
+  const fetchDashboard = useCallback(async (forceRefresh = false) => {
     if (!user?.id) return;
 
-    const fetchDashboard = async () => {
-      setIsLoading(true);
-      const cacheKey = `dashboard_${user.id}`;
-      
-      try {
-        // Check if we have cached data
-        const cached = getCachedData(cacheKey);
-        if (cached) {
-          const json = cached as any;
-          setDashboardData(json);
-          setMembers(normalizeMembersData(json.members));
-          setMembersLoading(false);
-          
-          // Sync user data silently from cache
-          if (json.manager && user) {
-            Object.assign(user, {
-              firstName: json.manager.firstName,
-              lastName: json.manager.lastName,
-              email: json.manager.email,
-              phone: json.manager.phone,
-              photo: json.manager.photo,
-              nationality: json.manager.nationality,
-              gender: json.manager.gender,
-              bio: json.manager.bio,
-              dateOfBirth: json.manager.dateOfBirth,
-            });
-          }
-          
-          setIsLoading(false);
-          toast.success('Dashboard loaded from cache', { duration: 1000 });
-          return;
-        }
+    const orgScope = searchParams.get('orgId') || 'default';
+    const cacheKey = `dashboard_org_${user.id}_${orgScope}`;
 
-        const res = await authenticatedFetch(`/api/dashboard/role?role=organization&userId=${user.id}`);
-        const json = await res.json();
+    if (forceRefresh) {
+      clearCacheEntry(cacheKey);
+    }
 
-        if (!res.ok) {
-          throw new Error(json?.error || 'Failed to load dashboard');
-        }
+    setIsLoading(true);
 
-        // Cache the response
-        setCachedData(cacheKey, json);
+    try {
+      const cached = getCachedData(cacheKey);
+      if (cached) {
+        const json = cached as any;
         setDashboardData(json);
+        setMembers(normalizeMembersData(json.members ?? []));
+        setMembersLoading(false);
 
-        // Sync manager data with user in auth context
         if (json.manager && user) {
           Object.assign(user, {
             firstName: json.manager.firstName,
@@ -196,87 +212,136 @@ export const OrganizationDashboard: React.FC = () => {
           });
         }
 
-        // Set members from dashboard data
-        if (json.members) {
-          setMembers(normalizeMembersData(json.members));
-          setMembersLoading(false);
-        }
-
-        // Fetch activities for the resolved organization
-        if (json?.organizationId) {
-          const activitiesCacheKey = `activities_${json.organizationId}`;
-          const cachedActivities = getCachedData(activitiesCacheKey);
-          
-          if (cachedActivities) {
-            setActivities(Array.isArray(cachedActivities) ? (cachedActivities as any[]).slice(0, 5) : []);
-          } else {
-            try {
-              const actRes = await authenticatedFetch(`/api/organization/${json.organizationId}/activities`);
-              if (actRes.ok) {
-                const actData = await actRes.json();
-                const activitiesArray = Array.isArray(actData) ? actData.slice(0, 5) : [];
-                setCachedData(activitiesCacheKey, activitiesArray);
-                setActivities(activitiesArray);
-              }
-            } catch (err) {
-              console.error('Failed to fetch activities:', err);
-            }
-          }
-        }
-
-        // Initialize edit form with user data
-        const userData = user as any;
         setEditForm({
-          firstName: userData?.firstName || '',
-          lastName: userData?.lastName || '',
-          email: userData?.email || '',
-          phone: userData?.phone || '',
-          gender: userData?.gender || '',
-          dateOfBirth: userData?.dateOfBirth || '',
-          nationality: userData?.nationality || '',
-          bio: userData?.bio || '',
-          photo: userData?.photo || '',
+          firstName: user?.firstName || '',
+          lastName: user?.lastName || '',
+          email: user?.email || '',
+          phone: user?.phone || '',
+          gender: user?.gender || '',
+          dateOfBirth: user?.dateOfBirth || '',
+          nationality: user?.nationality || '',
+          bio: user?.bio || '',
+          photo: user?.photo || '',
         });
 
-        toast.success('Dashboard data loaded successfully', { duration: 2000 });
-      } catch (err: any) {
-        setError(err?.message || 'Unknown error');
-        toast.error(`Error loading dashboard: ${err?.message || 'Unknown error'}`, { duration: 3000 });
-      } finally {
         setIsLoading(false);
+        return;
       }
-    };
+
+      const json = await fetchWithCache<any>(cacheKey, async () => {
+        const res = await authenticatedFetch(`/api/dashboard/role?role=organization&userId=${user.id}`);
+        const body = await res.json();
+        if (!res.ok) {
+          throw new Error(body?.error || 'Failed to load dashboard');
+        }
+        return body;
+      });
+
+      if (!json) {
+        throw new Error('Failed to load dashboard data');
+      }
+
+      setDashboardData(json);
+      setMembers(normalizeMembersData(json.members ?? []));
+      setMembersLoading(false);
+
+      if (json.manager && user) {
+        Object.assign(user, {
+          firstName: json.manager.firstName,
+          lastName: json.manager.lastName,
+          email: json.manager.email,
+          phone: json.manager.phone,
+          photo: json.manager.photo,
+          nationality: json.manager.nationality,
+          gender: json.manager.gender,
+          bio: json.manager.bio,
+          dateOfBirth: json.manager.dateOfBirth,
+        });
+      }
+
+      if (json?.organizationId) {
+        const activitiesCacheKey = `activities_${json.organizationId}`;
+        const cachedActivities = getCachedData(activitiesCacheKey);
+
+        if (cachedActivities) {
+          setActivities(Array.isArray(cachedActivities) ? (cachedActivities as any[]).slice(0, 5) : []);
+        } else {
+          const activityData = await fetchWithCache<any[]>(activitiesCacheKey, async () => {
+            const res = await authenticatedFetch(`/api/organization/${json.organizationId}/activities`);
+            if (!res.ok) {
+              const body = await res.json().catch(() => ({}));
+              throw new Error(body?.error || 'Failed to load activities');
+            }
+            return await res.json();
+          });
+
+          if (activityData) {
+            setActivities(Array.isArray(activityData) ? activityData.slice(0, 5) : []);
+          }
+        }
+      }
+
+      setEditForm({
+        firstName: user?.firstName || '',
+        lastName: user?.lastName || '',
+        email: user?.email || '',
+        phone: user?.phone || '',
+        gender: user?.gender || '',
+        dateOfBirth: user?.dateOfBirth || '',
+        nationality: user?.nationality || '',
+        bio: user?.bio || '',
+        photo: user?.photo || '',
+      });
+    } catch (err: any) {
+      setError(err?.message || 'Unknown error');
+      toast.error(`Error loading dashboard: ${err?.message || 'Unknown error'}`, { duration: 3000 });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user, searchParams.toString()]);
+
+  useEffect(() => {
     fetchDashboard();
-  }, [user?.id]);
+  }, [fetchDashboard]);
+
+  useEffect(() => {
+    const handleOrganizationMembershipUpdated = (event: Event) => {
+      const detail = (event as CustomEvent<{ orgId?: string }>).detail;
+      if (!detail?.orgId || detail.orgId !== dashboardData?.organizationId) return;
+      fetchDashboard(true);
+    };
+
+    window.addEventListener('organizationMembershipUpdated', handleOrganizationMembershipUpdated as EventListener);
+    return () => {
+      window.removeEventListener('organizationMembershipUpdated', handleOrganizationMembershipUpdated as EventListener);
+    };
+  }, [dashboardData?.organizationId, fetchDashboard]);
 
   const fetchActivities = useCallback(async () => {
     if (!dashboardData?.organizationId) {
       toast.error('Organization not found', { duration: 2000 });
       return;
     }
-    const activitiesCacheKey = `activities_${dashboardData.organizationId}`;
-    
-    try {
-      // Check cache first
-      const cached = getCachedData(activitiesCacheKey);
-      if (cached) {
-        setActivities(Array.isArray(cached) ? (cached as any[]).slice(0, 5) : []);
-        return;
-      }
 
-      const res = await authenticatedFetch(`/api/organization/${dashboardData.organizationId}/activities`);
-      if (res.ok) {
-        const data = await res.json();
-        const activitiesArray = Array.isArray(data) ? data.slice(0, 5) : [];
-        setCachedData(activitiesCacheKey, activitiesArray);
-        setActivities(activitiesArray);
+    const activitiesCacheKey = `activities_${dashboardData.organizationId}`;
+
+    try {
+      const activityData = await fetchWithCache<any[]>(activitiesCacheKey, async () => {
+        const res = await authenticatedFetch(`/api/organization/${dashboardData.organizationId}/activities`);
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body?.error || 'Failed to fetch activities');
+        }
+        return await res.json();
+      });
+
+      if (activityData) {
+        setActivities(Array.isArray(activityData) ? activityData.slice(0, 5) : []);
         toast.success('Activities refreshed', { duration: 1500 });
-      } else {
-        toast.error('Failed to fetch activities', { duration: 2000 });
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to fetch activities:', err);
-      toast.error('Error loading activities', { duration: 2000 });
+      toast.error(`Error loading activities: ${err?.message || 'Unknown error'}`, { duration: 2000 });
     }
   }, [dashboardData?.organizationId]);
 
@@ -327,9 +392,31 @@ export const OrganizationDashboard: React.FC = () => {
         Object.assign(user, updatedUserData);
       }
 
-      // Clear cache to force refresh
-      clearCacheEntry(`dashboard_${user?.id}`);
-      clearCacheEntry(`activities_${dashboardData?.organizationId}`);
+      if (dashboardData) {
+        setDashboardData({
+          ...dashboardData,
+          manager: {
+            ...dashboardData.manager,
+            firstName: updatedUserData.firstName ?? dashboardData.manager?.firstName,
+            lastName: updatedUserData.lastName ?? dashboardData.manager?.lastName,
+            email: updatedUserData.email ?? dashboardData.manager?.email,
+            phone: updatedUserData.phone ?? dashboardData.manager?.phone,
+            photo: updatedUserData.photo ?? dashboardData.manager?.photo,
+            nationality: updatedUserData.nationality ?? dashboardData.manager?.nationality,
+            gender: updatedUserData.gender ?? dashboardData.manager?.gender,
+            bio: updatedUserData.bio ?? dashboardData.manager?.bio,
+            dateOfBirth: updatedUserData.dateOfBirth ?? dashboardData.manager?.dateOfBirth,
+          },
+        });
+      }
+
+      const dashboardCacheKey = user?.id ? `dashboard_${user.id}` : undefined;
+      if (dashboardCacheKey) {
+        clearCacheEntry(dashboardCacheKey);
+      }
+      if (dashboardData?.organizationId) {
+        clearCacheEntry(`activities_${dashboardData.organizationId}`);
+      }
 
       // Log the activity
       await authenticatedFetch(`/api/organization/activities`, {
@@ -393,12 +480,14 @@ export const OrganizationDashboard: React.FC = () => {
 
       if (response.ok) {
         clearTokens();
+        clearAllDashboardCache();
         toast.dismiss(logoutToast);
         toast.success('Logged out successfully! 👋', { duration: 2000 });
         router.push('/');
       } else {
         console.error('Logout failed', await response.text());
         clearTokens();
+        clearAllDashboardCache();
         toast.dismiss(logoutToast);
         toast.success('Logged out', { duration: 2000 });
         router.push('/');
@@ -406,6 +495,7 @@ export const OrganizationDashboard: React.FC = () => {
     } catch (err) {
       console.error('Logout error:', err);
       clearTokens();
+      clearAllDashboardCache();
       toast.dismiss(logoutToast);
       toast.error('Error during logout, but session cleared', { duration: 2000 });
       router.push('/');
@@ -566,7 +656,7 @@ export const OrganizationDashboard: React.FC = () => {
 
 
         {/* Conditional Content Rendering */}
-        {activeNav === 'Overview' && (
+        {activeNav === 'Overview' && renderOrgSection(
           <div className="min-h-screen flex flex-col">
             <div className="flex-1 overflow-y-auto">
               <OrganizationOverviewSection
@@ -601,7 +691,7 @@ export const OrganizationDashboard: React.FC = () => {
           </div>
         )}
 
-        {activeNav === 'Members' && (
+        {activeNav === 'Members' && renderOrgSection(
           <OrganizationMembersSection
             organizationId={dashboardData?.organizationId}
             members={members}
@@ -609,34 +699,34 @@ export const OrganizationDashboard: React.FC = () => {
           />
         )}
 
-        {activeNav === 'My Players' && (
+        {activeNav === 'My Players' && renderOrgSection(
           <OrganizationPlayersSection
             orgId={dashboardData?.organizationId}
             coachUserId={user?.id}
           />
         )}
 
-        {activeNav === 'Staff' && (
+        {activeNav === 'Staff' && renderOrgSection(
           <OrganizationStaffSection orgId={dashboardData?.organizationId} />
         )}
 
-        {activeNav === 'Tasks' && (
+        {activeNav === 'Tasks' && renderOrgSection(
           <OrganizationTasksSection orgId={dashboardData?.organizationId} />
         )}
 
-        {activeNav === 'Courts' && (
+        {activeNav === 'Courts' && renderOrgSection(
           <OrganizationCourtsSection orgId={dashboardData?.organizationId} />
         )}
 
-        {activeNav === 'Bookings' && (
+        {activeNav === 'Bookings' && renderOrgSection(
           <OrganizationBookingsSection orgId={dashboardData?.organizationId} />
         )}
 
-        {activeNav === 'Events' && (
+        {activeNav === 'Events' && renderOrgSection(
           <OrganizationEventsSection orgId={dashboardData?.organizationId} />
         )}
 
-        {activeNav === 'Tournaments' && (
+        {activeNav === 'Tournaments' && renderOrgSection(
           <OrganizationTournamentsSection organizationId={dashboardData?.organizationId} />
         )}
 
@@ -644,11 +734,11 @@ export const OrganizationDashboard: React.FC = () => {
           <MessagingPanel userId={user?.id || ''} userType="admin" />
         )}
 
-        {activeNav === 'Reports' && (
+        {activeNav === 'Reports' && renderOrgSection(
           <OrganizationReportsSection />
         )}
 
-        {activeNav === 'Settings' && (
+        {activeNav === 'Settings' && renderOrgSection(
           <OrganizationSettingsSection orgId={dashboardData?.organizationId} />
         )}
       </main>
