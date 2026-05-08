@@ -15,7 +15,7 @@ interface UserData {
   nationality?: string;
   bio?: string;
   photo?: string;
-  role: 'player' | 'coach' | 'admin' | 'finance_officer' | 'referee' | 'spectator';
+  role: 'player' | 'coach' | 'admin' | 'staff' | 'referee' | 'spectator';
   organizationId?: string;
   playerStats?: {
     matchesPlayed: number;
@@ -434,7 +434,7 @@ export async function seedUsers(organizations: any[]) {
                       organizationId: userData.organizationId,
                     },
                   }
-                : userData.role === 'admin' || userData.role === 'finance_officer'
+                : userData.role === 'admin' || userData.role === 'staff'
                   ? {
                       create: {
                         matchesPlayed: 0,

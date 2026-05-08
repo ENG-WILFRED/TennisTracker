@@ -76,7 +76,7 @@ These are used in bottles, icon labels, or more specific UI elements.
 The dashboards share a repeated color system across these files:
 
 - `src/components/dashboards/AdminDashboard.tsx`
-- `src/components/dashboards/FinanceDashboard.tsx`
+- `src/components/dashboards/StaffDashboard.tsx`
 - `src/components/dashboards/referee/RefereeDashboard.tsx`
 - `src/components/dashboards/coach/ActivityModal.tsx`
 - `src/components/dashboards/coach/AnalyticsSection.tsx`

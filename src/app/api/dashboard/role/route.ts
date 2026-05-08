@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { cacheResponse } from '@/lib/apiCache';
-import { getCoachDashboard, getRefereeDashboard, getAdminDashboard, getFinanceDashboard, getOrganizationDashboard } from '@/actions/dashboards';
+import { getCoachDashboard, getRefereeDashboard, getAdminDashboard, getStaffDashboard, getOrganizationDashboard } from '@/actions/dashboards';
 
 export async function GET(req: Request) {
   try {
@@ -15,21 +15,23 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'userId is required' }, { status: 400 });
     }
 
-    if (!role || !['coach', 'referee', 'admin', 'finance', 'organization', 'org'].includes(role)) {
+    if (!role || !['coach', 'referee', 'admin', 'staff', 'organization', 'org'].includes(role)) {
       return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
     }
 
-    const cacheKey = `dashboard:${role}:${userId}:${orgId ?? 'none'}`;
+    // Allow legacy finance role names for backwards compatibility by normalizing to 'staff'.
+    const normalizedRole = role === 'finance' ? 'staff' : role;
+    const cacheKey = `dashboard:${normalizedRole}:${userId}:${orgId ?? 'none'}`;
     const dashboard = await cacheResponse(cacheKey, async () => {
-      switch (role) {
+      switch (normalizedRole) {
         case 'coach':
           return getCoachDashboard(userId);
         case 'referee':
           return getRefereeDashboard(userId);
         case 'admin':
           return getAdminDashboard(userId, orgId);
-        case 'finance':
-          return getFinanceDashboard(userId);
+        case 'staff':
+          return getStaffDashboard(userId);
         case 'organization':
         case 'org':
           return getOrganizationDashboard(userId, orgId);

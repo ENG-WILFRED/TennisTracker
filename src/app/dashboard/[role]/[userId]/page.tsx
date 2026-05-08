@@ -7,7 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 import { PlayerDashboard } from '@/components/dashboards/PlayerDashboard';
 import { CoachDashboard } from '@/components/dashboards/CoachDashboard';
 import { AdminDashboard } from '@/components/dashboards/AdminDashboard';
-import { FinanceDashboard } from '@/components/dashboards/FinanceDashboard';
+import { StaffDashboard } from '@/components/dashboards/StaffDashboard';
 import { RefereeDashboard } from '@/components/dashboards/referee/RefereeDashboard';
 import { OrganizationDashboard } from '@/components/dashboards/OrganizationDashboard';
 import { SpectatorDashboard } from '@/components/dashboards/spectator';
@@ -22,8 +22,21 @@ export default function DashboardRoleIdPage() {
   const params = useParams();
   const roleFromURL = params?.role as string;
   const userIdFromURL = params?.userId as string;
-  const validRoles: UserRole[] = ['player', 'coach', 'admin', 'finance_officer', 'referee', 'org', 'member', 'spectator', 'developer'];
-  const routeRole = validRoles.includes(roleFromURL as UserRole) ? (roleFromURL as UserRole) : null;
+  const validRoles: UserRole[] = [
+    'player', 'coach', 'admin', 'staff', 'referee', 'org', 'member', 'spectator', 'developer',
+    // Staff department roles
+    'finance_manager', 'finance_officer', 'hr_manager', 'hr_officer', 'receptionist',
+    'security_officer', 'watchman', 'maintenance_manager', 'maintenance_staff',
+    'inventory_manager', 'support_manager', 'support_staff', 'marketing_manager',
+    'operations_manager', 'cleaner', 'janitor'
+  ];
+  // Legacy role names are preserved for compatibility and normalized to 'staff'
+  const legacyRoleMap: Record<string, UserRole> = {
+    finance: 'staff',
+  };
+  const routeRole = validRoles.includes(roleFromURL as UserRole)
+    ? (roleFromURL as UserRole)
+    : legacyRoleMap[roleFromURL] ?? null;
   const activeRole = routeRole || currentRole;
   const [roleValidated, setRoleValidated] = React.useState(false);
   
@@ -80,7 +93,7 @@ export default function DashboardRoleIdPage() {
       {activeRole === 'player' && <PlayerDashboard />}
       {activeRole === 'coach' && <CoachDashboard />}
       {activeRole === 'admin' && <AdminDashboard />}
-      {activeRole === 'finance_officer' && <FinanceDashboard />}
+      {activeRole === 'staff' && <StaffDashboard />}
       {activeRole === 'referee' && <RefereeDashboard />}
       {activeRole === 'org' && <OrganizationDashboard />}
       {activeRole === 'member' && <MemberDashboard />}
@@ -88,7 +101,7 @@ export default function DashboardRoleIdPage() {
       {activeRole === 'developer' && <DeveloperDashboard />}
 
       {/* Fallback for unknown roles */}
-      {!['player', 'coach', 'admin', 'finance_officer', 'referee', 'org', 'member', 'spectator', 'developer'].includes(activeRole || '') && (
+      {!['player', 'coach', 'admin', 'staff', 'referee', 'org', 'member', 'spectator', 'developer'].includes(activeRole || '') && (
         <div className="min-h-screen flex items-center justify-center">
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 max-w-md">
             <h2 className="text-xl font-bold text-yellow-800 mb-2">Role Not Configured</h2>

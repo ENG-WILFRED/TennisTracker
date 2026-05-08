@@ -60,9 +60,9 @@ export async function POST(
         },
       });
 
-      // Assign roles to the creator: admin, org, and finance_officer
+      // Assign roles to the creator: admin, org, and staff
       if (org.createdBy) {
-        const roles = ['admin', 'org', 'finance_officer'];
+        const roles = ['admin', 'org', 'staff'];
 
         for (const role of roles) {
           const existing = await prisma.membership.findUnique({
@@ -135,7 +135,7 @@ export async function POST(
               targetType: 'admin',
               eventType: 'organization_approved',
               title: 'Organization Approved! 🎉',
-              body: `Your organization "${org.name}" has been approved by the development team. You now have access to the admin, organization, and finance dashboards.`,
+              body: `Your organization "${org.name}" has been approved by the development team. You now have access to the admin, organization, and staff dashboards.`, 
               deliveryChannels: ['email'],
               readAt: null,
             },

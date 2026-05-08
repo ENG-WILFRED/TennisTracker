@@ -67,7 +67,7 @@ Organizations Seeded: 3
 | Account Type | Email Template | Default Password | Roles |
 |--------------|---|---|---|
 | **Organization Admin** | `admin@{organization}.com` | `tennis123` | admins, manage_members, manage_courts, manage_announcements |
-| **Finance Officer** | `finance@{organization}.com` | `tennis123` | finance_officer, manage_finances, view_reports |
+| **Staff** | `finance@{organization}.com` | `tennis123` | staff, manage_finances, view_reports |
 
 ## Seed File Execution Order
 

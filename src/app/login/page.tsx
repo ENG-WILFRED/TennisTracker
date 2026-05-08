@@ -91,7 +91,7 @@ export default function LoginPage() {
         sessionStorage.removeItem('pendingLoginData');
         sessionStorage.removeItem('pendingTokens');
         const user = { ...data.user, acceptedTerms: true };
-        const memberships = user?.memberships?.filter((m: any) => m.status === 'accepted') || [];
+        const memberships = user?.memberships?.filter((m: any) => m.status === 'accepted') || user?.availableRoles || [];
         const shouldShowRoleSelection = memberships.length > 1 || (memberships.length === 1 && memberships[0].role !== 'spectator');
 
         if (shouldShowRoleSelection) {
@@ -101,7 +101,16 @@ export default function LoginPage() {
           setShowRoleSelection(true);
         } else {
           const selectedMembership = memberships[0];
-          completeLogin({ ...data, user }, selectedMembership?.role, selectedMembership?.orgId, selectedMembership?.orgName);
+          // For single role, ensure we have orgId
+          let finalOrgId = selectedMembership?.orgId;
+          let finalOrgName = selectedMembership?.orgName;
+
+          if (!finalOrgId && user.orgId) {
+            finalOrgId = user.orgId;
+            finalOrgName = user.orgName;
+          }
+
+          completeLogin({ ...data, user }, selectedMembership?.role, finalOrgId, finalOrgName);
         }
       }
     }
@@ -152,17 +161,36 @@ export default function LoginPage() {
   };
 
   const completeLogin = async (data: any, selectedRole: UserRole, orgId?: string, orgName?: string) => {
+    // Ensure we have orgId - get it from membership, user, or availableRoles
+    let finalOrgId = orgId;
+    let finalOrgName = orgName;
+
+    if (!finalOrgId) {
+      // Try to get orgId from user object
+      finalOrgId = data.user?.orgId;
+      finalOrgName = data.user?.orgName;
+    }
+
+    if (!finalOrgId) {
+      // Try to get orgId from availableRoles for the selected role
+      const roleData = data.user?.availableRoles?.find((r: any) => r.role === selectedRole);
+      if (roleData) {
+        finalOrgId = roleData.orgId;
+        finalOrgName = roleData.orgName;
+      }
+    }
+
     const finalUser = {
       ...data.user,
       role: selectedRole,
-      orgId,
-      orgName,
+      orgId: finalOrgId,
+      orgName: finalOrgName,
     };
 
-    setCurrentRole(selectedRole, orgId, orgName);
+    setCurrentRole(selectedRole, finalOrgId, finalOrgName);
     const memberships = data.user?.memberships?.filter((m: any) => m.status === 'accepted') || data.availableRoles || [];
     // Save memberships to context/localStorage for context switching
-    setUserMemberships(memberships.length ? memberships : [{ role: selectedRole, orgId, orgName }]);
+    setUserMemberships(memberships.length ? memberships : [{ role: selectedRole, orgId: finalOrgId, orgName: finalOrgName }]);
 
     login(
       {
@@ -174,15 +202,13 @@ export default function LoginPage() {
 
     addToast('Login successful! Redirecting…', 'success');
 
-    // Send login notification email after successful role selection
-    try {
-      const notificationResult = await sendLoginNotification({
-        email: finalUser.email,
-        firstName: finalUser.firstName || finalUser.name?.split(' ')[0] || 'there',
-        selectedRole,
-        userId: finalUser.id,
-      });
-
+    // Send login notification email asynchronously (don't block login flow)
+    sendLoginNotification({
+      email: finalUser.email,
+      firstName: finalUser.firstName || finalUser.name?.split(' ')[0] || 'there',
+      selectedRole,
+      userId: finalUser.id,
+    }).then((notificationResult) => {
       if (notificationResult?.success) {
         console.log(`[LOGIN-NOTIFICATION] Sent login email to ${finalUser.email} for user ${finalUser.firstName || finalUser.name?.split(' ')[0] || 'there'} with role ${selectedRole}`);
       } else if (notificationResult && 'error' in notificationResult) {
@@ -190,18 +216,25 @@ export default function LoginPage() {
       } else {
         console.error('[LOGIN-NOTIFICATION] Failed to send login email: unknown error');
       }
-    } catch (error) {
+    }).catch((error) => {
       console.error('[LOGIN-NOTIFICATION] Failed to send login email:', error);
       // Don't block login flow if notification fails
-    }
+    });
 
-    setTimeout(() => {
-      if (finalUser.id && selectedRole) {
-        router.push(`/dashboard/${selectedRole}/${finalUser.id}`);
+    // Immediate redirect without delay
+    if (finalUser.id && selectedRole) {
+      // Handle staff role routing - map to department-specific dashboard
+      if (selectedRole.includes('_') && ['finance', 'hr', 'reception', 'security', 'maintenance', 'inventory', 'support', 'marketing', 'operations'].some(dept => selectedRole.includes(dept))) {
+        // Extract department from role (e.g., 'finance_manager' -> 'finance')
+        const department = selectedRole.split('_')[0];
+        router.push(`/dashboard/staff/${department}/${finalUser.id}?org=${finalOrgId}`);
       } else {
-        router.push('/dashboard');
+        // Standard role routing
+        router.push(`/dashboard/${selectedRole}/${finalUser.id}`);
       }
-    }, 500);
+    } else {
+      router.push('/dashboard');
+    }
   };
 
   const handleRoleSelect = async (membership: any) => {

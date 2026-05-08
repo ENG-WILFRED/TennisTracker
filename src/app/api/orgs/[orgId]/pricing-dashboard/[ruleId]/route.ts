@@ -31,7 +31,7 @@ export async function DELETE(
       },
     });
 
-    if (!membership || !['admin', 'finance_officer'].includes(membership.role)) {
+    if (!membership || !['admin', 'staff'].includes(membership.role)) {
       return NextResponse.json(
         { error: 'Only organization admins can delete pricing rules' },
         { status: 403 }
@@ -91,7 +91,7 @@ export async function PATCH(
       },
     });
 
-    if (!membership || !['admin', 'finance_officer'].includes(membership.role)) {
+    if (!membership || !['admin', 'staff'].includes(membership.role)) {
       return NextResponse.json(
         { error: 'Only organization admins can update pricing rules' },
         { status: 403 }

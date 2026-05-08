@@ -211,7 +211,7 @@ const response = await fetch(`/api/referees/${refereeId}`, {
 | `/dashboard/coach` | CoachDashboard | (uses mock data) |
 | `/dashboard/referee` | RefereeDashboard | (uses mock data) |
 | `/dashboard/admin` | AdminDashboard | (not documented) |
-| `/dashboard/finance_officer` | FinanceDashboard | (not documented) |
+| `/dashboard/staff` | StaffDashboard | (not documented) |
 | `/dashboard/org` | OrganizationDashboard | (not documented) |
 
 ---
