@@ -67,9 +67,10 @@ export async function POST(
         for (const role of roles) {
           const existing = await prisma.membership.findUnique({
             where: {
-              userId_orgId: {
+              userId_orgId_role: {
                 userId: org.createdBy,
                 orgId: org.id,
+                role,
               },
             },
           });
@@ -88,9 +89,10 @@ export async function POST(
           } else {
             await prisma.membership.update({
               where: {
-                userId_orgId: {
+                userId_orgId_role: {
                   userId: org.createdBy,
                   orgId: org.id,
+                  role,
                 },
               },
               data: {

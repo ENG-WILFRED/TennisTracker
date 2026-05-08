@@ -70,12 +70,10 @@ export class CoachingSessionPaymentService {
    * Get player's membership tier
    */
   private async getPlayerTier(playerId: string, organizationId: string): Promise<string | null> {
-    const membership = await prisma.membership.findUnique({
+    const membership = await prisma.membership.findFirst({
       where: {
-        userId_orgId: {
-          userId: playerId,
-          orgId: organizationId,
-        },
+        userId: playerId,
+        orgId: organizationId,
       },
     });
 

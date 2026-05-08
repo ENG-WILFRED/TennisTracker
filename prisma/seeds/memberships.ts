@@ -247,9 +247,10 @@ export async function seedMemberships(organizations: any[], users: any[]) {
     try {
       await prisma.membership.upsert({
         where: {
-          userId_orgId: {
+          userId_orgId_role: {
             userId,
             orgId,
+            role,
           },
         },
         update: {

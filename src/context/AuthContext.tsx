@@ -26,6 +26,11 @@ interface User {
   lastName: string;
   photo?: string | null;
   role?: string | null;
+  phone?: string | null;
+  gender?: string | null;
+  dateOfBirth?: Date | null;
+  nationality?: string | null;
+  bio?: string | null;
 }
 
 interface AuthContextType {

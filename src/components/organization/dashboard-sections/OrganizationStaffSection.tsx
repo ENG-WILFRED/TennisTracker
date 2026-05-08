@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { StaffDepartment } from '@/types/staff-dashboard';
@@ -53,7 +53,7 @@ export default function OrganizationStaffSection({ orgId }: StaffSectionProps) {
     }
   }, [orgId, selectedDepartment, selectedRole]);
 
-  async function fetchStaff() {
+  const fetchStaff = useCallback(async () => {
     if (!orgId) {
       setError('Organization ID is missing');
       setLoading(false);
@@ -78,13 +78,13 @@ export default function OrganizationStaffSection({ orgId }: StaffSectionProps) {
     } finally {
       setLoading(false);
     }
-  }, [orgId, activeRole]);
+  }, [orgId, selectedDepartment, selectedRole]);
 
   useEffect(() => {
     if (orgId) {
       fetchStaff();
     }
-  }, [orgId, activeRole, fetchStaff]);
+  }, [orgId, fetchStaff]);
 
   useEffect(() => {
     const handleOrganizationMembershipUpdated = (event: Event) => {

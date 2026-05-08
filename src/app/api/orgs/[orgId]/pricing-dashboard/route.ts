@@ -22,12 +22,10 @@ export async function GET(
 
   try {
     // Verify user is org admin
-    const membership = await prisma.membership.findUnique({
+    const membership = await prisma.membership.findFirst({
       where: {
-        userId_orgId: {
-          userId,
-          orgId,
-        },
+        userId,
+        orgId,
       },
     });
 
@@ -71,12 +69,10 @@ export async function POST(
 
   try {
     // Verify user is org admin
-    const membership = await prisma.membership.findUnique({
+    const membership = await prisma.membership.findFirst({
       where: {
-        userId_orgId: {
-          userId,
-          orgId,
-        },
+        userId,
+        orgId,
       },
     });
 

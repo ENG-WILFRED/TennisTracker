@@ -57,12 +57,10 @@ export async function POST(req: Request) {
 
     if (action === 'accept') {
       // Create membership
-      const existingMembership = await prisma.membership.findUnique({
+      const existingMembership = await prisma.membership.findFirst({
         where: {
-          userId_orgId: {
-            userId,
-            orgId: invitation.orgId,
-          },
+          userId,
+          orgId: invitation.orgId,
         },
       });
 

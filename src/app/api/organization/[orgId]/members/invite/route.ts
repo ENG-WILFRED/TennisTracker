@@ -70,12 +70,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ org
       }
 
       // Check if user already has this organizational role
-      const existingMembership = await prisma.membership.findUnique({
+      const existingMembership = await prisma.membership.findFirst({
         where: {
-          userId_orgId: {
-            userId: invitedUser.id,
-            orgId,
-          },
+          userId: invitedUser.id,
+          orgId,
         },
       });
 

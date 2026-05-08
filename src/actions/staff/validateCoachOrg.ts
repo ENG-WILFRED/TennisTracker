@@ -68,9 +68,10 @@ export async function assignCoachToOrg(coachId: string, orgId: string) {
   // Optionally: Create a membership record if it doesn't exist
   const existingMembership = await prisma.membership.findUnique({
     where: {
-      userId_orgId: {
+      userId_orgId_role: {
         userId: coachId,
-        orgId
+        orgId,
+        role: 'coach'
       }
     }
   });

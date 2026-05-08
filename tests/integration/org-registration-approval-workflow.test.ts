@@ -408,7 +408,7 @@ describe('Organization Registration & Approval Workflow', () => {
 
       // STEP 5: Verify user has access to org
       const userAccess = await prisma.membership.findUnique({
-        where: { userId_orgId: { userId: testUser.id, orgId: org.id } },
+        where: { userId_orgId_role: { userId: testUser.id, orgId: org.id, role: 'admin' } },
         include: { organization: true },
       });
 

@@ -54,12 +54,10 @@ export async function POST(
 
   try {
     // Verify user is org admin/manager
-    const membership = await prisma.membership.findUnique({
+    const membership = await prisma.membership.findFirst({
       where: {
-        userId_orgId: {
-          userId: userId,
-          orgId,
-        },
+        userId,
+        orgId,
       },
     });
 
