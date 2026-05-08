@@ -62,7 +62,7 @@ A complete role-based authentication and authorization system with 7 distinct us
 7. **`src/components/dashboards/PlayerDashboard.tsx`** - 🎾 Blue themed
 8. **`src/components/dashboards/CoachDashboard.tsx`** - 👨‍🏫 Green themed
 9. **`src/components/dashboards/AdminDashboard.tsx`** - ⚙️ Red themed
-10. **`src/components/dashboards/FinanceDashboard.tsx`** - 💰 Purple themed
+10. **`src/components/dashboards/StaffDashboard.tsx`** - 💰 Purple themed
 11. **`src/components/dashboards/RefereeDashboard.tsx`** - 🏆 Yellow themed
 12. **`src/components/dashboards/OrganizationDashboard.tsx`** - 🏛️ Indigo themed
 

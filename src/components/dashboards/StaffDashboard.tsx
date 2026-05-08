@@ -4,9 +4,6 @@ import React, { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import Link from 'next/link';
-import { FindNearbyPeople } from '@/components/FindNearbyPeople';
-import { FindNearbyCourts } from '@/components/FindNearbyCourts';
-import { chatUrlForUser, sendChallengeRequest } from '@/lib/nearby';
 import { MembershipSwitcher } from '@/components/MembershipSwitcher';
 
 const G = {
@@ -27,10 +24,11 @@ const LineChart: React.FC<{ data: number[]; color?: string; height?: number }> =
   );
 };
 
-export const FinanceDashboard: React.FC = () => {
+export const StaffDashboard: React.FC = () => {
   const { user } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Read active section from URL, default to 'Overview'
   const activeNav = (searchParams.get('section') as string) || 'Overview';
@@ -47,25 +45,15 @@ export const FinanceDashboard: React.FC = () => {
   const activeTab = (searchParams.get('tab') as string) || 'Overview';
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
-  const handleMessageClick = (personId: string, personName: string) => {
-    router.push(chatUrlForUser(personId, personName));
-  };
-
-  const handleChallenge = async (personId: string, personName: string) => {
-    if (!user?.id) {
-      setStatusMessage('Please sign in to send a challenge.');
-      return;
-    }
-
+  const handleLogout = async () => {
     try {
-      await sendChallengeRequest(user.id, personId);
-      setStatusMessage(`Challenge request sent to ${personName}.`);
-    } catch (error: any) {
-      setStatusMessage(error?.message || 'Failed to send challenge request.');
+      await fetch('/api/auth/logout', { method: 'POST' });
+      router.push('/');
+    } catch (err) {
+      console.error('Logout error:', err);
     }
   };
-  
-  // Handle tab change
+
   const handleTabChange = (tab: string) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set('tab', tab);
@@ -121,13 +109,23 @@ export const FinanceDashboard: React.FC = () => {
   return (
     <div className="flex flex-col md:flex-row" style={{ height: '100vh', background: G.dark, color: G.text, overflow: 'hidden' }}>
 
+      {sidebarOpen && <div className="fixed inset-0 z-30 bg-black/40 md:hidden" onClick={() => setSidebarOpen(false)} />}
+
       {/* LEFT SIDEBAR */}
-      <aside className="hidden md:flex md:w-48" style={{ background: G.sidebar, borderRight: `1px solid ${G.cardBorder}`, flexDirection: 'column', flexShrink: 0 }}>
+      <aside className={`fixed inset-y-0 left-0 z-40 w-72 max-w-[80vw] transform border-r transition-transform duration-300 md:relative md:sticky md:top-0 md:translate-x-0 md:flex md:w-56 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`} style={{ background: G.sidebar, borderRight: `1px solid ${G.cardBorder}`, flexDirection: 'column', flexShrink: 0, height: '100vh', overflow: 'hidden' }}>
         <div style={{ padding: '15px 14px 10px', borderBottom: `1px solid ${G.cardBorder}`, display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontSize: 20 }}>🎾</span>
           <div style={{ color: G.lime, fontWeight: 900, fontSize: 14 }}>Vico Sports</div>
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(false)}
+            className="inline-flex items-center justify-center w-9 h-9 rounded-xl border border-[#2d5a35] text-[#7aaa6a] hover:bg-[#1e3a20] transition md:hidden ml-auto"
+            aria-label="Close navigation"
+          >
+            ✕
+          </button>
         </div>
-        <nav style={{ flex: 1, paddingTop: 8 }}>
+        <nav style={{ flex: 1, paddingTop: 8, overflowY: 'auto', paddingBottom: 12 }}>
           {navItems.map(item => (
             <button key={item.label} onClick={() => handleNavigation(item.label)} style={{
               width: '100%', display: 'flex', alignItems: 'center', gap: 9, padding: '9px 13px',
@@ -138,29 +136,59 @@ export const FinanceDashboard: React.FC = () => {
             }}><span>{item.icon}</span>{item.label}</button>
           ))}
         </nav>
-        <div style={{ padding: '10px 12px 14px' }}>
-          <button style={{ width: '100%', background: G.lime, color: '#0f1f0f', border: 'none', borderRadius: 8, padding: '9px 0', fontWeight: 800, fontSize: 12, cursor: 'pointer' }}>
-            📊 Generate Report
-          </button>
+
+        {/* Spacer */}
+        <div style={{ flex: 1, minHeight: 12 }} />
+
+        {/* Profile Card at Bottom */}
+        <div style={{ padding: '10px 12px 14px', flexShrink: 0 }}>
+          <div style={{ background: G.mid, border: `1px solid ${G.cardBorder}`, borderRadius: 8, padding: '10px 12px', textAlign: 'center' }}>
+            {user?.photo
+              ? <img src={user.photo} alt={user.firstName} style={{ width: 40, height: 40, borderRadius: '50%', border: `2px solid ${G.lime}`, objectFit: 'cover', marginBottom: 6, marginLeft: 'auto', marginRight: 'auto', display: 'block' }} />
+              : <div style={{ width: 40, height: 40, borderRadius: '50%', background: G.bright, margin: '0 auto 6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>👤</div>}
+            <div style={{ fontWeight: 800, fontSize: 11, marginTop: 4 }}>{user?.firstName ?? 'Staff'} {user?.lastName || ''}</div>
+            <div style={{ fontSize: 9, color: G.muted, marginTop: 2 }}>Finance Officer</div>
+            {user?.email && <div style={{ fontSize: 8, color: G.muted, marginTop: 2, wordBreak: 'break-word' }}>📧 {user.email}</div>}
+            <div style={{ marginTop: 8 }}>
+              <MembershipSwitcher />
+            </div>
+            <div style={{ marginTop: 6, display: 'flex', gap: 6 }}>
+              <button 
+                onClick={handleLogout}
+                style={{ flex: 1, background: '#ff6b6b', color: '#fff', border: 'none', borderRadius: 6, padding: '4px 0', fontSize: 8, fontWeight: 700, cursor: 'pointer' }}
+              >
+                Logout
+              </button>
+            </div>
+          </div>
         </div>
       </aside>
 
       {/* MAIN */}
       <main className="flex-1 overflow-y-auto" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
 
-        {/* Tabs */}
-        <div style={{ display: 'flex', gap: 0, background: G.card, borderRadius: 8, padding: 4, border: `1px solid ${G.cardBorder}` }}>
-          {tabs.map(t => (
-            <button key={t} onClick={() => handleTabChange(t)} style={{
-              flex: 1, padding: '7px 0', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700,
-              background: activeTab === t ? G.lime : 'transparent',
-              color: activeTab === t ? '#0f1f0f' : G.muted,
-            }}>{t}</button>
-          ))}
+        {/* Mobile Header */}
+        <div className="md:hidden sticky top-0 z-20 bg-[#0f1f0f] border-b border-[#2d5a35] px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-[#7dc142] flex items-center justify-center text-sm">🎾</div>
+              <div>
+                <div className="text-[11px] font-semibold text-[#e8f5e0]">Vico Sports</div>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(true)}
+              className="inline-flex items-center justify-center w-10 h-10 rounded-xl border border-[#2d5a35] text-[#7aaa6a] hover:bg-[#1e3a20] transition"
+              aria-label="Open navigation"
+            >
+              ☰
+            </button>
+          </div>
         </div>
 
         {/* Top Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-10" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10 }}>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-10" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
           {[
             { label: 'Total Revenue', value: `$${(stats.totalRevenue / 1000).toFixed(1)}k`, icon: '💵' },
             { label: 'Monthly Expenses', value: `$${stats.monthlyExpenses.toLocaleString()}`, icon: '💸' },
@@ -182,11 +210,7 @@ export const FinanceDashboard: React.FC = () => {
             {statusMessage}
           </div>
         )}
-        <div className="grid gap-4 lg:grid-cols-2 mb-6">
-          <FindNearbyPeople onMessageClick={handleMessageClick} onChallengeClick={handleChallenge} />
-          <FindNearbyCourts />
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-12" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-12" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12 }}>
           {/* Revenue Chart */}
           <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 14 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
@@ -234,7 +258,7 @@ export const FinanceDashboard: React.FC = () => {
         </div>
 
         {/* Memberships + Transactions */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-12" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12 }}>
           {/* Membership Tiers */}
           <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 14 }}>
             <div style={{ fontWeight: 800, fontSize: 13, marginBottom: 10 }}>💳 Membership Tiers</div>
@@ -302,55 +326,6 @@ export const FinanceDashboard: React.FC = () => {
           </div>
         </div>
       </main>
-
-      {/* RIGHT SIDEBAR */}
-      <aside style={{ width: 188, background: G.sidebar, borderLeft: `1px solid ${G.cardBorder}`, padding: '14px 12px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 14, flexShrink: 0 }}>
-        <div style={{ background: G.mid, borderRadius: 10, padding: 12, textAlign: 'center' }}>
-          {user?.photo
-            ? <img src={user.photo} alt={user.firstName} style={{ width: 52, height: 52, borderRadius: '50%', border: `2.5px solid ${G.lime}`, objectFit: 'cover', marginBottom: 6 }} />
-            : <div style={{ width: 52, height: 52, borderRadius: '50%', background: G.bright, margin: '0 auto 6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26 }}>💰</div>}
-          <div style={{ fontWeight: 800, fontSize: 13 }}>{user?.firstName ?? 'Finance'}</div>
-          <div style={{ color: G.muted, fontSize: 10, marginTop: 2 }}>Finance Officer</div>
-          <div style={{ marginTop: 8 }}>
-            <MembershipSwitcher />
-          </div>
-        </div>
-
-        <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 9, padding: 12 }}>
-          <div style={{ fontWeight: 800, fontSize: 12, marginBottom: 8 }}>⚠️ Outstanding</div>
-          {[
-            { name: 'Fatuma Atieno', amount: 60, days: 6 },
-            { name: 'Peter Njoroge', amount: 45, days: 12 },
-            { name: 'Club B Team', amount: 100, days: 3 },
-          ].map((inv, i) => (
-            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 0', borderBottom: i < 2 ? `1px solid ${G.cardBorder}33` : 'none' }}>
-              <div>
-                <div style={{ fontSize: 11 }}>{inv.name}</div>
-                <div style={{ fontSize: 9.5, color: G.muted }}>{inv.days}d overdue</div>
-              </div>
-              <span style={{ fontSize: 11, fontWeight: 700, color: '#e57373' }}>${inv.amount}</span>
-            </div>
-          ))}
-          <div style={{ marginTop: 8, padding: '6px 0', borderTop: `1px solid ${G.cardBorder}`, display: 'flex', justifyContent: 'space-between', fontSize: 11.5 }}>
-            <span style={{ color: G.muted }}>Total</span>
-            <span style={{ fontWeight: 800, color: '#e57373' }}>$205</span>
-          </div>
-        </div>
-
-        <div>
-          <div style={{ fontWeight: 800, fontSize: 12, marginBottom: 8 }}>⚡ Quick Actions</div>
-          {[
-            { l: 'Financial Reports', i: '📊' }, { l: 'Invoices', i: '📄' },
-            { l: 'Transactions', i: '📝' }, { l: 'Billing Plans', i: '💳' },
-          ].map((item, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 9px', background: G.card, borderRadius: 7, border: `1px solid ${G.cardBorder}`, marginBottom: 5, cursor: 'pointer' }}>
-              <span>{item.i}</span>
-              <span style={{ fontSize: 11.5 }}>{item.l}</span>
-              <span style={{ marginLeft: 'auto', color: G.muted, fontSize: 10 }}>›</span>
-            </div>
-          ))}
-        </div>
-      </aside>
     </div>
   );
 };

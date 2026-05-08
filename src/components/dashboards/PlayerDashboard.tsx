@@ -41,8 +41,9 @@ export const PlayerDashboard: React.FC = () => {
   const showProgress = searchParams.get('progress') === 'true';
   const showMessages = searchParams.get('messages') === 'true';
   const showSettings = searchParams.get('settings') === 'true';
-  const showFindPlayers = searchParams.get('findPlayers') === 'true';
-  const showFindCourts = searchParams.get('findCourts') === 'true';
+  const section = searchParams.get('section');
+  const showFindPlayers = section === 'find-players';
+  const showFindCourts = section === 'find-courts';
   const [activeNav, setActiveNav] = useState('Home');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [feedPost, setFeedPost] = useState('');
@@ -131,8 +132,8 @@ export const PlayerDashboard: React.FC = () => {
     { label: 'Tournaments', icon: '🏆', href: '?tournaments=true' }, 
     { label: 'Court Booking', icon: '🎾', href: '?booking=true' },
     { label: 'Progress', icon: '📈', href: '?progress=true' },
-    { label: 'Find Players', icon: '🧑‍🤝‍🧑', href: '?findPlayers=true' },
-    { label: 'Find Courts', icon: '🏓', href: '?findCourts=true' },
+    { label: 'Find Players', icon: '🧑‍🤝‍🧑', href: '?section=find-players' },
+    { label: 'Find Courts', icon: '🏓', href: '?section=find-courts' },
     { label: 'Messages', icon: '💬', href: '?messages=true' },
     { label: 'Stats', icon: '📊', href: '?stats=true' }, 
     { label: 'Community', icon: '👥', href: '?community=true' },

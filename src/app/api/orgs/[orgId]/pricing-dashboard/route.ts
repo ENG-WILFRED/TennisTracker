@@ -31,7 +31,7 @@ export async function GET(
       },
     });
 
-    if (!membership || !['admin', 'finance_officer'].includes(membership.role)) {
+    if (!membership || !['admin', 'staff'].includes(membership.role)) {
       return NextResponse.json(
         { error: 'Only organization admins can access pricing' },
         { status: 403 }
@@ -80,7 +80,7 @@ export async function POST(
       },
     });
 
-    if (!membership || !['admin', 'finance_officer'].includes(membership.role)) {
+    if (!membership || !['admin', 'staff'].includes(membership.role)) {
       return NextResponse.json(
         { error: 'Only organization admins can manage pricing' },
         { status: 403 }

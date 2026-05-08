@@ -109,8 +109,8 @@ The nearby discovery feature is integrated into the following dashboards:
 - **Integration**: Added to home section
 - **Features**: Administrative oversight of player locations
 
-### Finance Dashboard
-- **Location**: `src/components/dashboards/FinanceDashboard.tsx`
+### Staff Dashboard
+- **Location**: `src/components/dashboards/StaffDashboard.tsx`
 - **Integration**: Added to main content
 - **Features**: Financial analysis of local player activity
 

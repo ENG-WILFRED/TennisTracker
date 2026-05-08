@@ -8,7 +8,7 @@ import { LoadingState } from '@/components/LoadingState';
 import { PlayerDashboard } from '@/components/dashboards/PlayerDashboard';
 import { CoachDashboard } from '@/components/dashboards/CoachDashboard';
 import { AdminDashboard } from '@/components/dashboards/AdminDashboard';
-import { FinanceDashboard } from '@/components/dashboards/FinanceDashboard';
+import { StaffDashboard } from '@/components/dashboards/StaffDashboard';
 import { RefereeDashboard } from '@/components/dashboards/referee/RefereeDashboard';
 import { OrganizationDashboard } from '@/components/dashboards/OrganizationDashboard';
 import { SpectatorDashboard } from '@/components/dashboards/spectator';
@@ -39,14 +39,14 @@ export default function DashboardPage() {
         {currentRole === 'player' && <PlayerDashboard />}
         {currentRole === 'coach' && <CoachDashboard />}
         {currentRole === 'admin' && <AdminDashboard />}
-        {currentRole === 'finance_officer' && <FinanceDashboard />}
+        {currentRole === 'staff' && <StaffDashboard />}
         {currentRole === 'referee' && <RefereeDashboard />}
         {currentRole === 'org' && <OrganizationDashboard />}
         {currentRole === 'spectator' && <SpectatorDashboard />}
         {currentRole === 'developer' && <DeveloperDashboard />}
 
         {/* No dashboard for unknown roles */}
-        {!['player', 'coach', 'admin', 'finance_officer', 'referee', 'org', 'spectator', 'developer'].includes(currentRole || '') && (
+        {!['player', 'coach', 'admin', 'staff', 'referee', 'org', 'spectator', 'developer'].includes(currentRole || '') && (
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
             <h2 className="text-xl font-bold text-yellow-800">Dashboard Not Available</h2>
             <p className="text-yellow-700">Your role does not have access to a dashboard.</p>

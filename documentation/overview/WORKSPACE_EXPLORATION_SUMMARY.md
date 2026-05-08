@@ -276,7 +276,7 @@ dateOfBirth: DateTime (optional)
 - outstandingBalance: float
 - attendanceCount: int
 - lastAttendance: DateTime (optional)
-- role: "member" | "coach" | "admin" | "finance_officer" | "guest"
+- role: "member" | "coach" | "admin" | "staff" | "guest"
 - suspensionReason, suspendedUntil: (optional)
 - Relations:
   - bookings: CourtBooking[]
@@ -485,7 +485,7 @@ src/
 │   │   ├── PlayerDashboard.tsx
 │   │   ├── AdminDashboard.tsx
 │   │   ├── OrganizationDashboard.tsx
-│   │   └── FinanceDashboard.tsx
+│   │   └── StaffDashboard.tsx
 │   └── community/
 │       └── CommunityView.tsx
 └── types/

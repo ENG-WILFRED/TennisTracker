@@ -458,6 +458,27 @@ export async function getAdminDashboard(adminId: string, orgId?: string) {
     { id: 'd-565e', status: 'Failed', env: 'production', updated: '8h ago' },
   ];
 
+  const staffRoster = await prisma.staff.findMany({
+    where: { isDeleted: false },
+    include: {
+      user: { select: { firstName: true, lastName: true, photo: true, email: true } },
+      organization: { select: { id: true, name: true } },
+    },
+    orderBy: { createdAt: 'desc' },
+    take: 12,
+  });
+
+  const organizations = await prisma.organization.findMany({
+    orderBy: { createdAt: 'desc' },
+    take: 10,
+    select: {
+      id: true,
+      name: true,
+      city: true,
+      country: true,
+    },
+  });
+
   return {
     admin: {
       id: admin.id,
@@ -475,17 +496,27 @@ export async function getAdminDashboard(adminId: string, orgId?: string) {
     systemModules,
     recentDeployments,
     openIssues: incidentCount,
+    staffRoster: staffRoster.map((staff) => ({
+      id: staff.userId,
+      name: `${staff.user.firstName} ${staff.user.lastName}`,
+      photo: staff.user.photo,
+      email: staff.user.email,
+      role: staff.role,
+      orgId: staff.organization?.id || '',
+      orgName: staff.organization?.name || 'Platform',
+    })),
+    organizations,
   };
 }
 
 /**
- * Get finance dashboard data - revenue, expenses, transactions
+ * Get staff dashboard data - revenue, expenses, transactions
  */
-export async function getFinanceDashboard(financeId: string) {
-  const financeUser = await prisma.user.findUnique({
-    where: { id: financeId },
+export async function getStaffDashboard(staffId: string) {
+  const staffUser = await prisma.user.findUnique({
+    where: { id: staffId },
   });
-  if (!financeUser) throw new Error("User not found");
+  if (!staffUser) throw new Error("User not found");
 
   // Get all players for membership revenue calculation
   const allPlayers = await prisma.player.findMany({
@@ -556,11 +587,11 @@ export async function getFinanceDashboard(financeId: string) {
   }));
 
   return {
-    finance: {
-      id: financeUser.id,
-      name: `${financeUser.firstName} ${financeUser.lastName}`,
-      photo: financeUser.photo,
-      role: "Finance Officer",
+    staff: {
+      id: staffUser.id,
+      name: `${staffUser.firstName} ${staffUser.lastName}`,
+      photo: staffUser.photo,
+      role: "Staff",
     },
     stats: {
       totalRevenue,

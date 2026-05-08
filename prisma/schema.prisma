@@ -41,6 +41,8 @@ model User {
   resourceRequests   ResourceRequest[]   @relation("ResourceRequests")
   resourceApprovals  ResourceRequest[]   @relation("ResourceApprovals")
   bugReports         BugReport[]
+  gateScans          GateScanLog[]
+  reportedIncidents  SecurityIncident[]
   // Guardian relationships
   guardianOf         Guardian[]          @relation("Guardian")
   guardians          Guardian[]          @relation("Dependent")
@@ -59,7 +61,7 @@ model Membership {
   id           String       @id @default(uuid())
   userId       String
   orgId        String
-  role         String // 'player', 'coach', 'referee', 'staff', 'admin', 'finance_officer'
+  role         String // 'player', 'coach', 'referee', 'staff', 'admin'
   status       String       @default("pending") // 'pending', 'accepted', 'rejected', 'suspended'
   joinedAt     DateTime     @default(now())
   approvedAt   DateTime?
@@ -79,7 +81,7 @@ model MembershipInvitation {
   id           String       @id @default(uuid())
   orgId        String
   email        String
-  role         String // 'player', 'coach', 'referee', 'staff', 'admin', 'finance_officer'
+  role         String // 'player', 'coach', 'referee', 'staff', 'admin'
   status       String       @default("pending") // 'pending', 'accepted', 'rejected'
   invitedBy    String?
   invitedAt    DateTime     @default(now())
@@ -225,6 +227,7 @@ model Staff {
   organizationId         String?
   userId                 String                    @id
   auditLogs              AuditLog[]
+  gateScans              GateScanLog[]
   availability           Availability[]
   certifications         Certification[]
   pricing                CoachPricing?
@@ -319,6 +322,8 @@ model Organization {
   taskTemplates             TaskTemplate[]            @relation("TaskTemplates")
   assignedTasks             Task[]                    @relation("OrganizationTasks")
   communityPosts            CommunityPost[]
+  gateScanLogs              GateScanLog[]
+  securityIncidents         SecurityIncident[]
   // Operating Model Relations
   playerMetrics             PlayerMetric[]
   recommendations           Recommendation[]
@@ -508,6 +513,55 @@ model AuditLog {
   oldValue    String?
   performedBy String?
   staff       Staff    @relation(fields: [staffId], references: [userId], onDelete: Cascade)
+}
+
+model GateScanLog {
+  id             String   @id @default(uuid())
+  userId         String?
+  staffId        String?
+  name           String
+  scanType       String
+  location       String
+  status         String
+  scannerId      String
+  organizationId String?
+  scannedAt      DateTime @default(now())
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user         User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  staff        Staff?        @relation(fields: [staffId], references: [userId], onDelete: SetNull)
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([staffId])
+  @@index([scannerId])
+  @@index([organizationId])
+  @@index([scanType])
+  @@index([scannedAt])
+}
+
+model SecurityIncident {
+  id             String   @id @default(uuid())
+  summary        String
+  location       String
+  severity       String
+  status         String   @default("open")
+  reportedById   String?
+  organizationId String?
+  reportedAt     DateTime @default(now())
+  resolvedAt     DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  reportedBy   User?         @relation(fields: [reportedById], references: [id], onDelete: SetNull)
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
+  @@index([reportedById])
+  @@index([organizationId])
+  @@index([severity])
+  @@index([status])
+  @@index([reportedAt])
 }
 
 model Match {

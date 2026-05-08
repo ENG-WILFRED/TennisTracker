@@ -680,8 +680,8 @@ useEffect(() => {
 - **URL**: Routes to `/dashboard/admin`
 - **Likely contains**: User management, system analytics, moderation
 
-#### 5. **FinanceDashboard** (`/dashboard/finance_officer`)
-- **URL**: Routes to `/dashboard/finance_officer`
+#### 5. **StaffDashboard** (`/dashboard/staff`)
+- **URL**: Routes to `/dashboard/staff`
 - **Likely contains**: Financial reports, revenue, payments
 
 #### 6. **OrganizationDashboard** (`/dashboard/org`)
@@ -706,7 +706,7 @@ interface UserData {
   nationality?: string
   bio?: string
   photo?: string
-  role: 'player' | 'coach' | 'admin' | 'finance_officer' | 'referee' | 'spectator'
+  role: 'player' | 'coach' | 'admin' | 'staff' | 'referee' | 'spectator'
   organizationId?: string
   playerStats?: {
     matchesPlayed: number

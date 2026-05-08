@@ -154,7 +154,7 @@ model Certification {
 ```typescript
 interface UserData {
   // ... other fields
-  role: 'player' | 'coach' | 'admin' | 'finance_officer' | 'referee' | 'spectator';
+  role: 'player' | 'coach' | 'admin' | 'staff' | 'referee' | 'spectator';
   refereeData?: {
     matchesRefereed?: number;
     experience?: string;

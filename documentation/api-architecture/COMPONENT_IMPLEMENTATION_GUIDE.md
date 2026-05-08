@@ -1012,7 +1012,7 @@ src/
 │   │   ├── CoachDashboard.tsx
 │   │   ├── AdminDashboard.tsx
 │   │   ├── OrganizationDashboard.tsx
-│   │   ├── FinanceDashboard.tsx
+│   │   ├── StaffDashboard.tsx
 │   │   └── RefereeDashboard.tsx
 │   ├── community/
 │   │   └── CommunityView.tsx

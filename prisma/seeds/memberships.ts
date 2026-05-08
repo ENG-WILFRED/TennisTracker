@@ -238,7 +238,7 @@ export async function seedMemberships(organizations: any[], users: any[]) {
   const roleMap: Record<string, string> = {
     member: 'player',
     admin: 'admin',
-    officer: 'finance_officer',
+    officer: 'staff',
   };
 
   async function upsertOrganizationMembership(userId: string, orgId: string, role: string) {

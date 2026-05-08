@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams, useParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useRole } from '@/context/RoleContext';
 import { authenticatedFetch } from '@/lib/authenticatedFetch';
+import { getCachedData, setCachedData, clearCacheEntry } from '@/lib/dashboardCache';
 import { LoadingState } from '@/components/LoadingState';
 import { processMPesaPayment, processPayPalPayment, processStripePayment } from '@/actions/payments';
 import { usePDFDownload } from '@/hooks/usePDFDownload';
@@ -144,9 +145,6 @@ interface Transaction {
 
 interface DashboardData {
   memberships: Membership[];
-  entryCards: EntryCard[];
-  familyMembers: FamilyMember[];
-  transactions: Transaction[];
   notifications: Notification[];
   organizations: Record<string, Organization>;
   billing: any;
@@ -158,7 +156,7 @@ const ROLE_ENTITLEMENTS: Record<string, string[]> = {
   coach:         ['Player roster access', 'Training schedule tools', 'Club communication', 'Coach resources'],
   referee:       ['Match assignments', 'Score submission', 'Referee notifications', 'Official reports'],
   admin:         ['Organization control', 'Member approvals', 'Reports & analytics', 'Billing management'],
-  finance_officer:['Invoice review', 'Payment history', 'Financial summaries', 'Revenue insights'],
+  staff:['Invoice review', 'Payment history', 'Financial summaries', 'Revenue insights'],
   org:           ['Organization overview', 'Membership planning', 'Team permissions', 'Billing dashboards'],
   member:        ['Membership status', 'Organization access', 'Billing summary', 'Support channels'],
 };
@@ -273,6 +271,37 @@ const MemberDashboardComponent: React.FC = () => {
   const { currentRole } = useRole();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const params = useParams();
+  const routeRole = params?.role as string | undefined;
+  const dashboardRole = ['player', 'coach', 'admin', 'staff', 'referee', 'org', 'member', 'spectator', 'developer'].includes(routeRole || '')
+    ? (routeRole as string)
+    : currentRole || 'member';
+
+  const getDashboardTitle = (role: string) => {
+    switch (role) {
+      case 'member': return 'Member';
+      case 'org': return 'Organization';
+      case 'coach': return 'Coach';
+      case 'admin': return 'Admin';
+      case 'staff': return 'Staff';
+      case 'referee': return 'Referee';
+      case 'spectator': return 'Spectator';
+      case 'developer': return 'Developer';
+      case 'player':
+      default:
+        return 'Dashboard';
+    }
+  };
+
+  const backButtonTitle = dashboardRole === 'member'
+    ? 'Back to member dashboard'
+    : `Back to ${getDashboardTitle(dashboardRole)} dashboard`;
+
+  const backButtonSubtitle = dashboardRole === 'member'
+    ? 'Return to your membership dashboard'
+    : 'Return to your main dashboard';
+
+  const backButtonHref = `/dashboard/${dashboardRole}/${user?.id ?? ''}`;
 
   // Add responsive styles
   useEffect(() => {
@@ -306,16 +335,21 @@ const MemberDashboardComponent: React.FC = () => {
     return () => { document.head.removeChild(style); };
   }, []);
 
+  const dashboardCacheKey = useMemo(() => (user?.id ? `member_dashboard_${user.id}` : null), [user?.id]);
+
   const handleLogout = useCallback(async () => {
     try {
       await authenticatedFetch('/api/auth/logout', { method: 'POST' });
     } catch (err) {
       console.error('Logout failed', err);
     } finally {
+      if (dashboardCacheKey) {
+        clearCacheEntry(dashboardCacheKey);
+      }
       await logout();
       router.push('/login');
     }
-  }, [logout, router]);
+  }, [logout, router, dashboardCacheKey]);
 
   const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState<string | null>(null);
@@ -327,8 +361,7 @@ const MemberDashboardComponent: React.FC = () => {
   });
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [data, setData]         = useState<DashboardData>({
-    memberships: [], entryCards: [], familyMembers: [],
-    transactions: [], notifications: [], organizations: {}, billing: null,
+    memberships: [], notifications: [], organizations: {}, billing: null,
   });
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<Record<string, string>>({});
   const [newFamilyMember, setNewFamilyMember] = useState({ name: '', email: '', relation: '' });
@@ -343,115 +376,116 @@ const MemberDashboardComponent: React.FC = () => {
   }, [router, searchParams]);
 
   useEffect(() => {
-    if (!user?.id) return;
-    const load = async () => {
-      setLoading(true);
+    if (!user?.id || !dashboardCacheKey) return;
+    let isMounted = true;
+
+    const loadDashboard = async () => {
       setError(null);
+
+      const cached = getCachedData<DashboardData>(dashboardCacheKey);
+      if (cached && isMounted) {
+        setData(cached);
+        setLoading(false);
+      } else {
+        setLoading(true);
+      }
+
       try {
         const res = await authenticatedFetch('/api/user/memberships');
-        if (!res.ok) {
-          const body = await res.json();
-          throw new Error(body?.error || 'Unable to load dashboard.');
-        }
         const json = await res.json();
+        if (!res.ok) {
+          throw new Error(json?.error || 'Unable to load dashboard.');
+        }
+
         const memberships: Membership[] = json.memberships || [];
-        
-        // Fetch organization details for each membership
         const organizations: Record<string, Organization> = {};
-        await Promise.all(
-          memberships.map(async (m) => {
-            try {
-              const orgRes = await authenticatedFetch(`/api/organization/${m.orgId}`);
-              if (orgRes.ok) {
-                const orgData = await orgRes.json();
-                // Fetch additional organization details
-                const [courtsRes, tournamentsRes, eventsRes, orgNotificationsRes] = await Promise.all([
-                  authenticatedFetch(`/api/organization/${m.orgId}/courts`),
-                  authenticatedFetch(`/api/organization/${m.orgId}/tournaments`),
-                  authenticatedFetch(`/api/organization/${m.orgId}/events`),
-                  authenticatedFetch(`/api/organization/${m.orgId}/notifications`)
-                ]);
+        memberships.forEach((m) => {
+          organizations[m.orgId] = {
+            id: m.orgId,
+            name: m.orgName,
+            description: undefined,
+            paymentMethods: ['credit_card', 'bank_transfer'],
+            contactEmail: undefined,
+            phoneNumber: undefined,
+            phone: undefined,
+            address: undefined,
+            courts: [],
+            tournaments: [],
+            events: [],
+            notifications: [],
+          };
+        });
 
-                const courts = courtsRes.ok ? await courtsRes.json() : [];
-                const tournaments = tournamentsRes.ok ? await tournamentsRes.json() : [];
-                const events = eventsRes.ok ? await eventsRes.json() : [];
-                const orgNotifications = orgNotificationsRes.ok ? await orgNotificationsRes.json() : [];
-
-                organizations[m.orgId] = {
-                  ...orgData,
-                  courts,
-                  tournaments,
-                  events,
-                  notifications: orgNotifications
-                };
-              }
-            } catch (e) {
-              console.error(`Failed to fetch org ${m.orgId}:`, e);
-            }
-          })
-        );
-
-        const entryCards = memberships.map((m: any, index: number) => ({
-          id: `card-${index}`,
-          cardRef: `MEM${m.id.slice(-6)}`,
-          memberName: user?.firstName || user?.email || 'Member',
-          club: m.orgName,
-          type: m.clubMember?.tier || 'Standard',
-          validUntil: m.clubMember ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString() : 'N/A',
-          rebillEnabled: true,
-          rebillStatus: m.clubMember?.paymentStatus === 'active' ? 'active' : 'failed',
-          status: m.status === 'accepted' ? 'active' : 'suspended',
-        }));
-
-        const familyMembers = memberships.filter((m: any) => m.clubMember).map((m: any, index: number) => ({
-          id: `family-${index}`,
-          name: user?.firstName || user?.email || 'Member',
-          relation: 'Self',
-          age: null,
-          club: m.orgName,
-          entryCardRef: `MEM${m.id.slice(-6)}`,
-          entryCardStatus: m.clubMember?.paymentStatus === 'active' ? 'active' : 'failed',
-          membershipStatus: m.status,
-          role: m.role,
-          monthlyFee: m.clubMember?.monthlyPrice || 0,
-          nextDue: m.clubMember ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] : null,
-        }));
-
-        const transactions = memberships.filter((m: any) => m.clubMember).map((m: any, index: number) => ({
-          id: `txn-${index}`,
-          type: 'membership' as const,
-          amount: m.clubMember?.monthlyPrice || 0,
-          currency: 'KES',
-          description: `Monthly membership - ${m.clubMember?.tier || 'Standard'}`,
-          date: new Date().toISOString().split('T')[0],
-          status: m.clubMember?.paymentStatus === 'active' ? 'completed' as const : 'pending' as const,
-          paymentMethod: selectedPaymentMethod[m.orgId] || 'credit_card',
-          organization: m.orgName,
-        }));
-
-        setData({
+        const payload: DashboardData = {
           memberships,
-          entryCards,
-          familyMembers,
-          transactions,
           organizations,
           notifications: json.notifications || [],
           billing: json.billing || null,
-        });
+        };
+
+        if (isMounted) {
+          setData(payload);
+          setCachedData(dashboardCacheKey, payload);
+          setLoading(false);
+        }
       } catch (e: any) {
-        setError(e?.message || 'Failed to load data.');
-      } finally {
-        setLoading(false);
+        if (isMounted && !cached) {
+          setError(e?.message || 'Failed to load data.');
+          setLoading(false);
+        }
       }
     };
-    load();
-  }, [user?.id]);
+
+    loadDashboard();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.id, dashboardCacheKey]);
 
   // Derived - Calculate before any early returns (Rules of Hooks)
+  const entryCards = useMemo(() => data.memberships.map((m: any, index: number) => ({
+    id: `card-${index}`,
+    cardRef: `MEM${String(m.id || '').slice(-6)}`,
+    memberName: user?.firstName || user?.email || 'Member',
+    club: m.orgName,
+    type: m.clubMember?.membershipTier?.name || 'Standard',
+    validUntil: m.clubMember ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString() : 'N/A',
+    rebillEnabled: true,
+    rebillStatus: m.clubMember?.paymentStatus === 'active' ? 'active' : 'failed',
+    status: m.status === 'accepted' ? 'active' : 'suspended',
+  })), [data.memberships, user?.firstName, user?.email]);
+
+  const familyMembers = useMemo(() => data.memberships.filter((m: any) => m.clubMember).map((m: any, index: number) => ({
+    id: `family-${index}`,
+    name: user?.firstName || user?.email || 'Member',
+    relation: 'Self',
+    age: null,
+    club: m.orgName,
+    entryCardRef: `MEM${String(m.id || '').slice(-6)}`,
+    entryCardStatus: m.clubMember?.paymentStatus === 'active' ? 'active' : 'failed',
+    membershipStatus: m.status,
+    role: m.role,
+    monthlyFee: m.clubMember?.monthlyPrice || 0,
+    nextDue: m.clubMember ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] : null,
+  })), [data.memberships, user?.firstName, user?.email]);
+
+  const transactions = useMemo(() => data.memberships.filter((m: any) => m.clubMember).map((m: any, index: number) => ({
+    id: `txn-${index}`,
+    type: 'membership' as const,
+    amount: m.clubMember?.monthlyPrice || 0,
+    currency: 'KES',
+    description: `Monthly membership - ${m.clubMember?.membershipTier?.name || 'Standard'}`,
+    date: new Date().toISOString().split('T')[0],
+    status: m.clubMember?.paymentStatus === 'active' ? 'completed' as const : 'pending' as const,
+    paymentMethod: selectedPaymentMethod[m.orgId] || 'credit_card',
+    organization: m.orgName,
+  })), [data.memberships, selectedPaymentMethod]);
+
   const activeMem = useMemo(() => data.memberships.filter((m: { status: string; }) => m.status === 'accepted'), [data.memberships]);
   const pendingMem = useMemo(() => data.memberships.filter((m: { status: string; }) => m.status === 'pending'), [data.memberships]);
   const membershipRoles = useMemo(() => Array.from(new Set(data.memberships.map((m) => m.role))).filter(Boolean) as string[], [data.memberships]);
-  const rebillAlerts = useMemo(() => data.entryCards.filter((c: { rebillStatus: string; }) => c.rebillStatus === 'failed' || c.rebillStatus === 'expiring'), [data.entryCards]);
+  const rebillAlerts = useMemo(() => entryCards.filter((c: { rebillStatus: string; }) => c.rebillStatus === 'failed' || c.rebillStatus === 'expiring'), [entryCards]);
   const unreadNotifs = useMemo(() => data.notifications.filter((n: { severity: string; }) => n.severity !== 'info'), [data.notifications]);
 
   // Nav badge helper - Must be before early returns
@@ -460,12 +494,12 @@ const MemberDashboardComponent: React.FC = () => {
     const map: Record<string, { count: number; color?: string }> = {
       membershipCount: { count: data.memberships.length },
       rebillAlerts:    { count: rebillAlerts.length, color: G.gold },
-      familyCount:     { count: data.familyMembers.length },
+      familyCount:     { count: familyMembers.length },
       notifCount:      { count: unreadNotifs.length, color: G.danger },
     };
     const b = map[prop];
     return b && b.count > 0 ? b : null;
-  }, [data.memberships.length, rebillAlerts.length, data.familyMembers.length, unreadNotifs.length, G.gold, G.danger]);
+  }, [data.memberships.length, rebillAlerts.length, familyMembers.length, unreadNotifs.length, G.gold, G.danger]);
 
   const primaryOrganization = useMemo(() => Object.values(data.organizations)[0] || null, [data.organizations]);
 
@@ -501,6 +535,10 @@ const MemberDashboardComponent: React.FC = () => {
       if (res.ok) {
         toast.success('Family member linked successfully');
         setNewFamilyMember({ name: '', email: '', relation: '' });
+        if (dashboardCacheKey) {
+          clearCacheEntry(dashboardCacheKey);
+        }
+        router.refresh();
       } else {
         const error = await res.json();
         toast.error(error.error || 'Failed to link family member');
@@ -508,7 +546,7 @@ const MemberDashboardComponent: React.FC = () => {
     } catch (e) {
       toast.error('Error linking family member');
     }
-  }, [newFamilyMember]);
+  }, [newFamilyMember, dashboardCacheKey, router]);
 
   // Membership termination handler
   const handleMembershipTermination = useCallback(async (membership: Membership) => {
@@ -532,8 +570,10 @@ const MemberDashboardComponent: React.FC = () => {
 
       if (res.ok) {
         toast.success(`Termination request sent to ${membership.orgName}`);
-        // Optionally refresh data
-        window.location.reload();
+        if (dashboardCacheKey) {
+          clearCacheEntry(dashboardCacheKey);
+        }
+        router.refresh();
       } else {
         const error = await res.json();
         toast.error(error.error || 'Failed to request termination');
@@ -699,8 +739,8 @@ const MemberDashboardComponent: React.FC = () => {
       <div className="stat-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10, marginBottom: 24 }}>
         <StatCard label="Active" value={activeMem.length} desc="Approved memberships" />
         <StatCard label="Pending" value={pendingMem.length} desc="Awaiting review" accent={G.gold} />
-        <StatCard label="Family" value={data.familyMembers.length} desc="Linked members" accent={G.light} />
-        <StatCard label="Entry cards" value={data.entryCards.length} desc="Active passes" />
+        <StatCard label="Family" value={familyMembers.length} desc="Linked members" accent={G.light} />
+        <StatCard label="Entry cards" value={entryCards.length} desc="Active passes" />
       </div>
       {twoCol(
         <Card>
@@ -968,7 +1008,7 @@ const MemberDashboardComponent: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {data.entryCards.map((card: EntryCard) => (
+              {entryCards.map((card: EntryCard) => (
                 <tr key={card.id}>
                   <td style={{ padding: '12px 10px', fontSize: 12, color: G.light,
                     fontFamily: 'monospace', borderBottom: `1px solid ${G.raised}` }}>{card.cardRef}</td>
@@ -1026,8 +1066,8 @@ const MemberDashboardComponent: React.FC = () => {
   const SectionFamily = () => (
     <>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10, marginBottom: 24 }}>
-        <StatCard label="Linked members" value={data.familyMembers.length} desc="On your family plan" />
-        <StatCard label="Active cards" value={data.entryCards.filter((c: { status: string; }) => c.status === 'active').length} desc="Passes across family" accent={G.light} />
+        <StatCard label="Linked members" value={familyMembers.length} desc="On your family plan" />
+        <StatCard label="Active cards" value={entryCards.filter((c: { status: string; }) => c.status === 'active').length} desc="Passes across family" accent={G.light} />
         <StatCard label="Pending actions" value={rebillAlerts.length} desc="Rebill issues" accent={G.gold} />
       </div>
 
@@ -1089,7 +1129,7 @@ const MemberDashboardComponent: React.FC = () => {
           </div>
         </div>
         <div className="card-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
-          {data.familyMembers.map((fm) => (
+          {familyMembers.map((fm) => (
             <div key={fm.id} style={{ background: G.surfaceAlt, border: `1px solid ${G.border}`,
               borderRadius: 12, padding: 14 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
@@ -1145,7 +1185,7 @@ const MemberDashboardComponent: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {data.familyMembers.map((fm) => (
+              {familyMembers.map((fm) => (
                 <tr key={fm.id}>
                   <td style={{ padding: '10px', fontSize: 12, color: G.text, borderBottom: `1px solid ${G.raised}` }}>{fm.name}</td>
                   <td style={{ padding: '10px', fontSize: 12, color: G.text, borderBottom: `1px solid ${G.raised}` }}>{fm.club ?? '—'}</td>
@@ -1166,12 +1206,12 @@ const MemberDashboardComponent: React.FC = () => {
             </tbody>
           </table>
         </div>
-        {data.familyMembers.length > 0 && (
+        {familyMembers.length > 0 && (
           <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 10,
             marginTop: 14, paddingTop: 12, borderTop: `1px solid ${G.border}` }}>
             <span style={{ fontSize: 12, color: G.accent }}>Family total / month</span>
             <span style={{ fontSize: 18, fontWeight: 500, color: G.text }}>
-              KES {data.familyMembers.reduce((s, m) => s + (m.monthlyFee || 0), 0).toLocaleString()}
+              KES {familyMembers.reduce((s, m) => s + (m.monthlyFee || 0), 0).toLocaleString()}
             </span>
           </div>
         )}
@@ -1213,76 +1253,17 @@ const MemberDashboardComponent: React.FC = () => {
                 </div>
               </div>
 
-              {!organization ? (
-                <div style={{ fontSize: 12, color: G.accent }}>Loading organization data for this membership…</div>
-              ) : (
-                <>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 18 }}>
-                    <DL label="Organization" value={organization.name} />
-                    <DL label="Email" value={organization.contactEmail || 'N/A'} />
-                    <DL label="Phone" value={organization.phone || organization.phoneNumber || 'N/A'} />
-                    <DL label="Address" value={organization.address || 'N/A'} />
-                  </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 18 }}>
+                <DL label="Organization" value={organization?.name || membership.orgName} />
+                <DL label="Email" value={organization?.contactEmail || 'See organization page'} />
+                <DL label="Phone" value={organization?.phoneNumber || 'See organization page'} />
+                <DL label="Address" value={organization?.address || 'See organization page'} />
+              </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                    <div style={{ background: G.surface, border: `1px solid ${G.raised}`, borderRadius: 12, padding: 14 }}>
-                      <div style={{ fontSize: 12, color: G.accent, marginBottom: 8 }}>Courts</div>
-                      {organization.courts && organization.courts.length > 0 ? (
-                        organization.courts.map((court) => (
-                          <div key={court.id} style={{ marginBottom: 10 }}>
-                            <div style={{ fontSize: 13, fontWeight: 500, color: G.text }}>{court.name}</div>
-                            <div style={{ fontSize: 11, color: G.accent }}>{court.type} • {court.pricePerHour ? `KES ${court.pricePerHour}/hr` : 'No rate'}</div>
-                          </div>
-                        ))
-                      ) : (
-                        <div style={{ fontSize: 12, color: G.accent }}>No courts listed.</div>
-                      )}
-                    </div>
-
-                    <div style={{ background: G.surface, border: `1px solid ${G.raised}`, borderRadius: 12, padding: 14 }}>
-                      <div style={{ fontSize: 12, color: G.accent, marginBottom: 8 }}>Tournaments</div>
-                      {organization.tournaments && organization.tournaments.length > 0 ? (
-                        organization.tournaments.map((tournament: { id: React.Key | null | undefined; name: string | number | bigint | boolean | React.ReactElement<unknown, string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | React.ReactPortal | Promise<string | number | bigint | boolean | React.ReactPortal | React.ReactElement<unknown, string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | null | undefined> | null | undefined; startDate: string | null | undefined; endDate: string | null | undefined; }) => (
-                          <div key={tournament.id} style={{ marginBottom: 10 }}>
-                            <div style={{ fontSize: 13, fontWeight: 500, color: G.text }}>{tournament.name}</div>
-                            <div style={{ fontSize: 11, color: G.accent }}>{formatDate(tournament.startDate)} – {formatDate(tournament.endDate)}</div>
-                          </div>
-                        ))
-                      ) : (
-                        <div style={{ fontSize: 12, color: G.accent }}>No tournaments available.</div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div style={{ background: G.surface, border: `1px solid ${G.raised}`, borderRadius: 12, padding: 14, marginTop: 18 }}>
-                    <div style={{ fontSize: 12, color: G.accent, marginBottom: 8 }}>Upcoming events</div>
-                    {organization.events && organization.events.length > 0 ? (
-                      organization.events.map((event: { id: React.Key | null | undefined; title: string | number | bigint | boolean | React.ReactElement<unknown, string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | React.ReactPortal | Promise<string | number | bigint | boolean | React.ReactPortal | React.ReactElement<unknown, string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | null | undefined> | null | undefined; startDate: string | null | undefined; endDate: string | null | undefined; }) => (
-                        <div key={event.id} style={{ marginBottom: 10 }}>
-                          <div style={{ fontSize: 13, fontWeight: 500, color: G.text }}>{event.title}</div>
-                          <div style={{ fontSize: 11, color: G.accent }}>{formatDate(event.startDate)} – {formatDate(event.endDate)}</div>
-                        </div>
-                      ))
-                    ) : (
-                      <div style={{ fontSize: 12, color: G.accent }}>No events available.</div>
-                    )}
-                  </div>
-
-                  <div style={{ background: G.surface, border: `1px solid ${G.raised}`, borderRadius: 12, padding: 14, marginTop: 18 }}>
-                    <div style={{ fontSize: 12, color: G.accent, marginBottom: 8 }}>Notifications</div>
-                    {organization.notifications && organization.notifications.length > 0 ? (
-                      organization.notifications.map((notification: { id: React.Key | null | undefined; title: string | number | bigint | boolean | React.ReactElement<unknown, string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | React.ReactPortal | Promise<string | number | bigint | boolean | React.ReactPortal | React.ReactElement<unknown, string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | null | undefined> | null | undefined; createdAt: string | null | undefined; }) => (
-                        <div key={notification.id} style={{ marginBottom: 10 }}>
-                          <div style={{ fontSize: 13, fontWeight: 500, color: G.text }}>{notification.title}</div>
-                          <div style={{ fontSize: 11, color: G.accent }}>{formatDate(notification.createdAt)}</div>
-                        </div>
-                      ))
-                    ) : (
-                      <div style={{ fontSize: 12, color: G.accent }}>No organization notifications.</div>
-                    )}
-                  </div>
-                </>
-              )}
+              <div style={{ background: G.surface, border: `1px solid ${G.raised}`, borderRadius: 12, padding: 14 }}>
+                <div style={{ fontSize: 12, color: G.accent, marginBottom: 8 }}>Organization summary</div>
+                <div style={{ fontSize: 12, color: G.accent }}>For full club details, open the organization page. This dashboard keeps memory usage low by only loading essential membership data here.</div>
+              </div>
             </div>
           ))}
         </div>
@@ -1305,7 +1286,7 @@ const MemberDashboardComponent: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {data.transactions.map((txn: Transaction) => (
+            {transactions.map((txn: Transaction) => (
               <tr key={txn.id}>
                 <td style={{ padding: '12px 10px', fontSize: 12, color: G.light, fontFamily: 'monospace',
                   borderBottom: `1px solid ${G.raised}` }}>{txn.id}</td>
@@ -1371,7 +1352,7 @@ const MemberDashboardComponent: React.FC = () => {
       {[
         { title: 'Contact club admin', sub: 'Reach your club admins directly', action: <Btn size="sm">Email admin</Btn> },
         { title: 'SportSpace support',  sub: 'Platform issues, billing disputes, account recovery', action: <Btn size="sm">Open ticket</Btn> },
-        { title: 'Back to dashboard',   sub: 'Return to your main dashboard', action: <Btn size="sm" onClick={() => router.push(`/dashboard/${currentRole || 'spectator'}/${user!.id}`)}>Go back</Btn> },
+        { title: backButtonTitle,       sub: backButtonSubtitle, action: <Btn size="sm" onClick={() => router.push(backButtonHref)}>Go back</Btn> },
       ].map(row => (
         <div key={row.title} style={{ background: G.surfaceAlt, border: `1px solid ${G.border}`,
           borderRadius: 12, padding: 16, marginBottom: 10, display: 'flex',

@@ -14,7 +14,7 @@ export interface ProtectedRouteConfig {
 export const PROTECTED_ROUTES: Record<string, ProtectedRouteConfig> = {
   // Dashboard routes
   '/dashboard': {
-    requiredRoles: ['player', 'coach', 'admin', 'finance_officer', 'referee', 'org', 'developer'],
+    requiredRoles: ['player', 'coach', 'admin', 'staff', 'referee', 'org', 'developer'],
   },
 
   // Player routes
@@ -76,24 +76,24 @@ export const PROTECTED_ROUTES: Record<string, ProtectedRouteConfig> = {
     redirectTo: '/dashboard',
   },
 
-  // Finance Officer routes
+  // Staff routes
   '/organization/finances': {
-    requiredRoles: ['finance_officer', 'org'],
+    requiredRoles: ['staff', 'org'],
     requiredPermissions: ['view_revenue', 'view_financial_reports'],
     redirectTo: '/dashboard',
   },
   '/organization/memberships': {
-    requiredRoles: ['finance_officer', 'org'],
+    requiredRoles: ['staff', 'org'],
     requiredPermissions: ['manage_memberships'],
     redirectTo: '/dashboard',
   },
   '/organization/transactions': {
-    requiredRoles: ['finance_officer', 'org'],
+    requiredRoles: ['staff', 'org'],
     requiredPermissions: ['manage_transactions'],
     redirectTo: '/dashboard',
   },
   '/organization/invoices': {
-    requiredRoles: ['finance_officer', 'org'],
+    requiredRoles: ['staff', 'org'],
     requiredPermissions: ['generate_invoices'],
     redirectTo: '/dashboard',
   },
