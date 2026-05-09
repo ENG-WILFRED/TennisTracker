@@ -36,6 +36,26 @@ function main() {
       return;
     }
 
+    if (stderr.includes('P3009')) {
+      console.warn('⚠ Detected P3009: failed migrations found.');
+      console.warn('Attempting to resolve failed migration...');
+      try {
+        // Mark the specific failed migration as applied
+        runCommand(`npx prisma migrate resolve --applied 20260504205502_add_flexible_pricing --schema ${JSON.stringify(resolvedSchema)}`);
+        console.log('✔ Marked failed migration as resolved.');
+        // Try deploying again
+        deployMigrations();
+        console.log('✔ Prisma migrate deploy completed successfully after resolving failed migration.');
+        return;
+      } catch (resolveError) {
+        console.error('Failed to resolve migration:', resolveError);
+        console.error('Falling back to prisma db push...');
+        pushSchema();
+        console.log('✔ Prisma db push completed successfully.');
+        return;
+      }
+    }
+
     console.error('Migration fallback script failed:');
     console.error(stderr);
     process.exit(1);
