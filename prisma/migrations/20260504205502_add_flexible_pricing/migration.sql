@@ -1,4 +1,37 @@
 -- Add flexible pricing models for coaching sessions
+
+-- SessionPayment table for tracking coaching session payments and pricing rules
+CREATE TABLE "SessionPayment" (
+  "id" TEXT NOT NULL PRIMARY KEY,
+  "sessionId" TEXT NOT NULL UNIQUE,
+  "organizationId" TEXT NOT NULL,
+  "playerId" TEXT NOT NULL,
+  "coachId" TEXT NOT NULL,
+  "playerTier" TEXT,
+  "amount" DECIMAL(10,2) NOT NULL,
+  "durationMinutes" INTEGER NOT NULL,
+  "durationHours" DECIMAL(5,2) NOT NULL,
+  "pricePerHour" DECIMAL(10,2) NOT NULL,
+  "pricingRuleType" TEXT,
+  "tierPriceId" TEXT,
+  "coachPriceId" TEXT,
+  "coachEarnings" DECIMAL(10,2) NOT NULL,
+  "coachCommissionRate" DECIMAL(3,2) NOT NULL,
+  "status" TEXT NOT NULL DEFAULT 'pending',
+  "chargedAt" TIMESTAMP(3),
+  "paidToCoachAt" TIMESTAMP(3),
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" TIMESTAMP(3) NOT NULL,
+  CONSTRAINT "SessionPayment_sessionId_fkey" FOREIGN KEY ("sessionId") REFERENCES "CoachSession" ("id") ON DELETE CASCADE,
+  CONSTRAINT "SessionPayment_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization" ("id") ON DELETE CASCADE
+);
+
+CREATE INDEX "SessionPayment_organizationId_idx" ON "SessionPayment"("organizationId");
+CREATE INDEX "SessionPayment_playerId_idx" ON "SessionPayment"("playerId");
+CREATE INDEX "SessionPayment_coachId_idx" ON "SessionPayment"("coachId");
+CREATE INDEX "SessionPayment_status_idx" ON "SessionPayment"("status");
+CREATE INDEX "SessionPayment_createdAt_idx" ON "SessionPayment"("createdAt");
+
 -- OrgCoachingPricing base table for organization-level coaching pricing
 CREATE TABLE "OrgCoachingPricing" (
   "id" TEXT NOT NULL PRIMARY KEY,
@@ -44,13 +77,7 @@ CREATE TABLE "CoachSpecificPrice" (
   CONSTRAINT "CoachSpecificPrice_coachId_fkey" FOREIGN KEY ("coachId") REFERENCES "Staff" ("userId") ON DELETE CASCADE
 );
 
--- Add new columns to SessionPayment for tracking pricing rules
-ALTER TABLE "SessionPayment" ADD COLUMN "playerTier" TEXT;
-ALTER TABLE "SessionPayment" ADD COLUMN "pricingRuleType" TEXT;
-ALTER TABLE "SessionPayment" ADD COLUMN "tierPriceId" TEXT;
-ALTER TABLE "SessionPayment" ADD COLUMN "coachPriceId" TEXT;
-
--- Add foreign key constraints for the new columns
+-- Add foreign key constraints for SessionPayment pricing rules
 ALTER TABLE "SessionPayment" ADD CONSTRAINT "SessionPayment_tierPriceId_fkey" FOREIGN KEY ("tierPriceId") REFERENCES "TierCoachingPrice" ("id") ON DELETE SET NULL;
 ALTER TABLE "SessionPayment" ADD CONSTRAINT "SessionPayment_coachPriceId_fkey" FOREIGN KEY ("coachPriceId") REFERENCES "CoachSpecificPrice" ("id") ON DELETE SET NULL;
 

@@ -2,6 +2,9 @@ import ExtrasPanel from '@/components/ExtrasPanel'
 import AttendanceChartRecharts from '@/components/AttendanceChartRecharts'
 import { getClubAttendance } from '@/actions/analytics'
 
+// Mark this page as dynamic to prevent pre-rendering issues during build
+export const dynamic = 'force-dynamic';
+
 export default async function AttendanceAnalyticsPage() {
   const clubAttendance = await getClubAttendance(90)
   return (
