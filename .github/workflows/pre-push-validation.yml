@@ -1,4 +1,4 @@
-name: Pre-Push Validation & Quality Check
+name: CI/CD Quality Gates
 
 on:
   pull_request:
@@ -6,11 +6,23 @@ on:
   push:
     branches: [main, develop]
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '20'
+  DATABASE_URL: 'postgresql://vico:vico@localhost:5432/vico'
+
 jobs:
-  validate-build:
-    name: Build & Type Checking
+  # ═══════════════════════════════════════════════════════════════
+  # REQUIRED CHECKS - These MUST pass to merge
+  # ═══════════════════════════════════════════════════════════════
+
+  typecheck:
+    name: 🎯 TypeScript Check
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
 
     steps:
       - name: 📥 Checkout Code
@@ -19,28 +31,50 @@ jobs:
       - name: 🔧 Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
       - name: 📦 Install Dependencies
         run: npm ci
 
-      - name: 🎯 Run TypeScript Check
+      - name: 🎯 TypeScript Check
         run: npx tsc --noEmit
-        continue-on-error: false
+        
+      - name: ✅ Report
+        if: success()
+        run: echo "✅ TypeScript check passed - No type errors found"
 
-      - name: 🏗️ Run Build
+  build:
+    name: 🏗️ Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: typecheck
+
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 📦 Install Dependencies
+        run: npm ci
+
+      - name: 🏗️ Build Application
         run: npm run build
-        continue-on-error: false
 
-      - name: 📊 Build Summary
-        if: always()
+      - name: ✅ Report
+        if: success()
         run: |
-          echo "✅ Build completed successfully!"
-          echo "Build time: $(date)"
+          echo "✅ Build completed successfully"
+          echo "- Next.js build: ✓"
+          echo "- Prisma Client generated: ✓"
 
-  lint-check:
-    name: Linting & Code Quality
+  lint:
+    name: 🔍 Lint
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -51,18 +85,21 @@ jobs:
       - name: 🔧 Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
       - name: 📦 Install Dependencies
         run: npm ci
 
       - name: 🔍 Run ESLint
-        run: npm run lint || true
-        continue-on-error: true
+        run: npm run lint
 
-  migration-check:
-    name: Migration & Database Check
+      - name: ✅ Report
+        if: success()
+        run: echo "✅ Linting passed - Code quality verified"
+
+  migrations:
+    name: 📋 Migration Validation
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -88,28 +125,34 @@ jobs:
       - name: 🔧 Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
       - name: 📦 Install Dependencies
         run: npm ci
 
-      - name: 🔐 Setup Database URL
-        run: |
-          echo "DATABASE_URL=postgresql://vico:vico@localhost:5432/vico" >> $GITHUB_ENV
-
       - name: 📋 Check Migration Status
-        run: npx prisma migrate status || true
-        continue-on-error: true
+        run: npx prisma migrate status
 
-      - name: ✅ Push Schema to Database
-        run: npx prisma db push --skip-generate --accept-data-loss || true
-        continue-on-error: true
+      - name: 🗄️ Validate Schema
+        run: npx prisma db push --skip-generate --skip-db-push --force-skip-build
+
+      - name: ✅ Report
+        if: success()
+        run: |
+          echo "✅ Migrations validated"
+          echo "- Migration history: ✓"
+          echo "- Schema validation: ✓"
+
+  # ═══════════════════════════════════════════════════════════════
+  # INFORMATIONAL CHECKS - Can fail without blocking merge
+  # ═══════════════════════════════════════════════════════════════
 
   tests:
-    name: Run Tests
+    name: 🧪 Tests
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    continue-on-error: true
 
     services:
       postgres:
@@ -133,71 +176,105 @@ jobs:
       - name: 🔧 Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
       - name: 📦 Install Dependencies
         run: npm ci
 
-      - name: 🔐 Setup Database URL
-        run: |
-          echo "DATABASE_URL=postgresql://vico:vico@localhost:5432/vico" >> $GITHUB_ENV
-
-      - name: 🧪 Run Unit Tests
-        run: npm run test:pilot || true
+      - name: 🧪 Run Tests
+        run: npm run test:pilot
         continue-on-error: true
 
-  generate-report:
-    name: Generate Summary Report
+      - name: 📊 Test Report
+        if: always()
+        run: |
+          echo "📊 Test Results"
+          echo "- Status: Informational (non-blocking)"
+
+  # ═══════════════════════════════════════════════════════════════
+  # SUMMARY & REPORTING
+  # ═══════════════════════════════════════════════════════════════
+
+  quality-gate-summary:
+    name: ✅ Quality Gate Summary
     runs-on: ubuntu-latest
-    needs: [validate-build, lint-check, migration-check, tests]
+    needs: [typecheck, build, lint, migrations, tests]
     if: always()
 
     steps:
       - name: 📥 Checkout Code
         uses: actions/checkout@v4
 
-      - name: 🔧 Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: 📝 Generate Commit Summary
+      - name: 🎯 Determine Overall Status
         run: |
-          cat > /tmp/summary.md << 'EOF'
-          # 🚀 Pre-Push Validation Report
+          # Required checks
+          TYPECHECK_STATUS="${{ needs.typecheck.result }}"
+          BUILD_STATUS="${{ needs.build.result }}"
+          LINT_STATUS="${{ needs.lint.result }}"
+          MIGRATIONS_STATUS="${{ needs.migrations.result }}"
           
-          ## ✅ Validation Status
-          - **Build**: ${{ needs.validate-build.result }}
-          - **Lint**: ${{ needs.lint-check.result }}
-          - **Migrations**: ${{ needs.migration-check.result }}
-          - **Tests**: ${{ needs.tests.result }}
+          # Informational checks
+          TESTS_STATUS="${{ needs.tests.result }}"
           
-          ## 📊 What Was Changed
-          - Fixed TypeScript compilation errors
-          - Resolved database migration issues
-          - Updated User interface with missing fields
-          - Fixed Prisma unique constraints
-          - Applied flexible pricing models
+          # Determine overall result
+          if [[ "$TYPECHECK_STATUS" == "success" && "$BUILD_STATUS" == "success" && "$LINT_STATUS" == "success" && "$MIGRATIONS_STATUS" == "success" ]]; then
+            echo "✅ ALL REQUIRED CHECKS PASSED"
+            echo "MERGE_READY=true" >> $GITHUB_ENV
+          else
+            echo "❌ REQUIRED CHECKS FAILED"
+            echo "MERGE_READY=false" >> $GITHUB_ENV
+          fi
+
+      - name: 📝 Generate Summary Report
+        run: |
+          cat > /tmp/quality_report.txt << 'EOF'
+          ═══════════════════════════════════════════════════════════════
+          🚀 QUALITY GATE REPORT
+          ═══════════════════════════════════════════════════════════════
           
-          ## 🔍 Quality Metrics
-          - TypeScript: No errors
-          - Build: Successful
-          - Migrations: Up to date
-          - Database: Synchronized
+          REQUIRED CHECKS (Must Pass to Merge):
+          ───────────────────────────────────────────────────────────────
+          ✓ TypeScript Check:      ${{ needs.typecheck.result }}
+          ✓ Build:                 ${{ needs.build.result }}
+          ✓ Lint:                  ${{ needs.lint.result }}
+          ✓ Migrations:            ${{ needs.migrations.result }}
           
-          ## 📋 Checklist
-          - [x] Build passes
-          - [x] No TypeScript errors
-          - [x] Migrations valid
-          - [x] Database schema synced
-          - [x] All tables created
+          INFORMATIONAL CHECKS (Non-Blocking):
+          ───────────────────────────────────────────────────────────────
+          • Tests:                 ${{ needs.tests.result }}
           
-          ## 🎯 Next Steps
-          1. Review changes in this PR
-          2. All tests passed
-          3. Ready for deployment
+          ═══════════════════════════════════════════════════════════════
+          MERGE STATUS: ${{ env.MERGE_READY == 'true' && '✅ READY TO MERGE' || '❌ BLOCKED' }}
+          ═══════════════════════════════════════════════════════════════
           
+          What This Report Means:
+          
+          ✅ REQUIRED CHECKS:
+          - Build produces valid JavaScript/CSS
+          - No TypeScript compilation errors
+          - Code meets linting standards
+          - Database migrations are valid
+          
+          ℹ️ INFORMATIONAL CHECKS:
+          - Unit tests (for awareness, not blocking)
+          - Can be monitored separately
+          
+          🔐 Branch Protection:
+          - This branch requires all REQUIRED checks to pass
+          - If any required check fails, merge is blocked
+          - This prevents broken code from reaching production
+          
+          EOF
+          cat /tmp/quality_report.txt
+
+      - name: 🎯 Enforce Quality Gate
+        run: |
+          if [[ "${{ env.MERGE_READY }}" != "true" ]]; then
+            echo "❌ Quality gate failed. Required checks did not pass."
+            exit 1
+          fi
+          echo "✅ Quality gate passed. Ready for merge."
           Generated at: ${{ github.event.head_commit.timestamp }}
           Commit: ${{ github.sha }}
           Branch: ${{ github.ref_name }}
