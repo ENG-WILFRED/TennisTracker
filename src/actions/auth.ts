@@ -2,6 +2,7 @@
 
 import prisma from '@/lib/prisma';
 import bcrypt from "bcryptjs";
+import { sendPasswordResetOtpEmail } from '@/app/api/notification/producer';
 
 async function generateUsernameFromEmail(email: string): Promise<string> {
   const base = email
@@ -158,6 +159,125 @@ export async function loginPlayer({
     lastName: user.lastName,
     photo: user.photo || null,
   };
+}
+
+function generateNumericOtp(length = 6): string {
+  const min = Math.pow(10, length - 1);
+  const max = Math.pow(10, length) - 1;
+  return String(Math.floor(Math.random() * (max - min + 1) + min));
+}
+
+export async function requestPasswordResetOtp(email: string) {
+  if (!email || !email.trim()) {
+    throw new Error("Email is required.");
+  }
+
+  const normalizedEmail = email.trim().toLowerCase();
+  const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+
+  if (!user) {
+    throw new Error('No account is linked to that email address.');
+  }
+
+  const otp = generateNumericOtp(6);
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+  await prisma.passwordResetOtp.updateMany({
+    where: {
+      email: normalizedEmail,
+      status: 'PENDING',
+    },
+    data: {
+      status: 'EXPIRED',
+    },
+  });
+
+  await prisma.passwordResetOtp.create({
+    data: {
+      userId: user.id,
+      email: normalizedEmail,
+      otp,
+      status: 'PENDING',
+      expiresAt,
+    },
+  });
+
+  const resetLink = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/reset-password`;
+  await sendPasswordResetOtpEmail(user.email, otp, user.firstName || user.email, resetLink, 10);
+
+  return { success: true };
+}
+
+export async function resetPasswordWithOtp({
+  email,
+  otp,
+  newPassword,
+}: {
+  email: string;
+  otp: string;
+  newPassword: string;
+}) {
+  if (!email || !otp || !newPassword) {
+    throw new Error('Email, OTP, and new password are all required.');
+  }
+
+  const normalizedEmail = email.trim().toLowerCase();
+  const now = new Date();
+
+  const otpRecord = await prisma.passwordResetOtp.findFirst({
+    where: {
+      email: normalizedEmail,
+      status: 'PENDING',
+      expiresAt: {
+        gte: now,
+      },
+    },
+    orderBy: {
+      createdAt: 'desc',
+    },
+  });
+
+  if (!otpRecord) {
+    throw new Error('Invalid or expired OTP. Please request a new code.');
+  }
+
+  if (otpRecord.attemptCount >= 5) {
+    await prisma.passwordResetOtp.update({
+      where: { id: otpRecord.id },
+      data: { status: 'FAILED' },
+    });
+    throw new Error('Too many failed OTP attempts. Request a new code.');
+  }
+
+  if (otpRecord.otp !== otp) {
+    await prisma.passwordResetOtp.update({
+      where: { id: otpRecord.id },
+      data: {
+        attemptCount: otpRecord.attemptCount + 1,
+        status: otpRecord.attemptCount + 1 >= 5 ? 'FAILED' : 'PENDING',
+      },
+    });
+    throw new Error('Invalid OTP. Please check the code and try again.');
+  }
+
+  const passwordHash = await bcrypt.hash(newPassword, 10);
+
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id: otpRecord.userId },
+      data: { passwordHash },
+    }),
+    prisma.passwordResetOtp.update({
+      where: { id: otpRecord.id },
+      data: {
+        status: 'USED',
+        usedAt: new Date(),
+        attemptCount: otpRecord.attemptCount + 1,
+      },
+    }),
+  ]);
+
+  return { success: true };
 }
 
 export async function updateProfile(

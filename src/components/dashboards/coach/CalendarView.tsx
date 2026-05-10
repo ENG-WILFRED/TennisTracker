@@ -187,6 +187,11 @@ export default function CalendarView({ coachId }: { coachId: string }) {
     [selectedDay, sessionsByDay]
   );
 
+  const selectedDate = selectedDay ? new Date(currentDate.getFullYear(), currentDate.getMonth(), selectedDay) : null;
+  const selectedDateIsPast = selectedDate
+    ? selectedDate < new Date(today.getFullYear(), today.getMonth(), today.getDate())
+    : false;
+
   const upcomingSessions = useMemo(() => {
     const now = new Date();
     return sessions
@@ -402,15 +407,18 @@ export default function CalendarView({ coachId }: { coachId: string }) {
               {selectedDay && (
                 <button
                   onClick={handleAddActivityClick}
+                  disabled={selectedDateIsPast}
+                  title={selectedDateIsPast ? 'Cannot add activity to a past day' : 'Add activity to selected day'}
                   style={{
-                    background: G.lime,
-                    color: '#0a180a',
+                    background: selectedDateIsPast ? G.border : G.lime,
+                    color: selectedDateIsPast ? G.muted2 : '#0a180a',
                     border: 'none',
                     borderRadius: 6,
                     padding: '5px 10px',
                     fontSize: 9.5,
                     fontWeight: 700,
-                    cursor: 'pointer',
+                    cursor: selectedDateIsPast ? 'not-allowed' : 'pointer',
+                    opacity: selectedDateIsPast ? 0.65 : 1,
                   }}
                 >
                   + Add Activity

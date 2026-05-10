@@ -1,13 +1,15 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { authenticatedFetch } from '@/lib/authenticatedFetch';
 
 const G = {
   dark: '#0f1f0f', sidebar: '#152515', card: '#1a3020', cardBorder: '#2d5a35',
-  mid: '#2d5a27', bright: '#3d7a32', lime: '#7dc142', accent: '#a8d84e',
-  text: '#e8f5e0', muted: '#7aaa6a', yellow: '#f0c040', orange: '#e8944f', blue: '#4ab0d0',
+  card2: '#152515', card3: '#172a16',
+  mid: '#2d5a27', bright: '#3d7a32', lime: '#7dc142', lime2: '#c8e9a2', accent: '#a8d84e',
+  text: '#e8f5e0', text2: '#c3d8b7', muted: '#7aaa6a', yellow: '#f0c040', orange: '#e8944f', blue: '#4ab0d0',
   red: '#ff6b6b',
 };
 
@@ -16,12 +18,19 @@ interface AssignedTask {
   eventId?: string;
   title: string;
   description?: string;
+  notes?: string;
   role: string;
   responsibility?: string;
   status: string;
   priority: string;
+  rejectionReason?: string;
   dueDate?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  assignedBy?: string;
   organizationId?: string;
+  organization?: string;
+  context?: Record<string, any>;
 }
 
 interface TasksWidgetProps {
@@ -41,6 +50,12 @@ export default function AssignedTasksWidget({ userId, limit = 3 }: TasksWidgetPr
   const [rejectionReason, setRejectionReason] = useState('');
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const params = useParams();
+  const router = useRouter();
+  const routeRole = params?.role as string;
+  const routeUserId = params?.userId as string;
+  const dashboardRole = routeRole || 'coach';
+  const dashboardUserId = routeUserId || userId;
   const [filterPriority, setFilterPriority] = useState<string>('all');
 
   const priorityConfig: Record<string, { color: string; bgColor: string }> = {
@@ -178,6 +193,31 @@ export default function AssignedTasksWidget({ userId, limit = 3 }: TasksWidgetPr
     }
   }
 
+  const openTaskDetails = (taskId: string) => {
+    router.push(`/dashboard/${dashboardRole}/${dashboardUserId}/task/${taskId}`);
+  };
+
+  const formatContextKey = (key: string, context: Record<string, any> = {}) => {
+    if (key === 'selectedPlayerIds') return 'Selected Players';
+    if (key === 'courtId' && context.courtName) return 'Court';
+    return key.replace(/([A-Z])/g, ' $1').trim();
+  };
+
+  const formatContextValue = (key: string, value: any, context: Record<string, any> = {}) => {
+    if (key === 'selectedPlayerIds') {
+      if (Array.isArray(context.selectedPlayerNames) && context.selectedPlayerNames.length > 0) {
+        return context.selectedPlayerNames.join(', ');
+      }
+      return Array.isArray(value) ? value.join(', ') : String(value ?? '');
+    }
+    if (key === 'courtId' && context.courtName) {
+      return context.courtName;
+    }
+    if (Array.isArray(value)) return value.join(', ');
+    if (typeof value === 'object' && value !== null) return JSON.stringify(value);
+    return String(value ?? '');
+  };
+
   const pendingTasks = tasks.filter(t => t.status === 'pending');
   const totalPages = Math.ceil(totalTasks / TASKS_PER_PAGE);
 
@@ -195,31 +235,38 @@ export default function AssignedTasksWidget({ userId, limit = 3 }: TasksWidgetPr
     <>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <h2 style={{ fontSize: 18, fontWeight: 900, color: G.text, margin: 0 }}>📋 Assigned Tasks</h2>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 16, padding: 18 }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <h2 style={{ fontSize: 22, fontWeight: 900, color: G.text, margin: 0 }}>📋 Assigned Tasks</h2>
+              <p style={{ fontSize: 12, color: G.muted, margin: '8px 0 0', maxWidth: 660, lineHeight: 1.6 }}>
+                Review the latest coaching assignments, accept or reject tasks, and open each task in its full detail page for the same polished experience as the player dashboard.
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Stats */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 10 }}>
-          <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 8, padding: 10 }}>
-            <div style={{ fontSize: 9, color: G.muted, marginBottom: 4 }}>Total</div>
-            <div style={{ fontSize: 18, fontWeight: 900, color: G.text }}>{tasks.length}</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10 }}>
+          <div style={{ background: '#111f13', border: `1px solid ${G.cardBorder}`, borderRadius: 14, padding: 14 }}>
+            <div style={{ fontSize: 10, color: G.muted, marginBottom: 6 }}>Total tasks</div>
+            <div style={{ fontSize: 22, fontWeight: 900, color: G.text }}>{tasks.length}</div>
           </div>
-          <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 8, padding: 10 }}>
-            <div style={{ fontSize: 9, color: G.muted, marginBottom: 4 }}>Pending</div>
-            <div style={{ fontSize: 18, fontWeight: 900, color: G.yellow }}>{statsCount('pending')}</div>
+          <div style={{ background: '#111f13', border: `1px solid ${G.cardBorder}`, borderRadius: 14, padding: 14 }}>
+            <div style={{ fontSize: 10, color: G.muted, marginBottom: 6 }}>Pending</div>
+            <div style={{ fontSize: 22, fontWeight: 900, color: G.yellow }}>{statsCount('pending')}</div>
           </div>
-          <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 8, padding: 10 }}>
-            <div style={{ fontSize: 9, color: G.muted, marginBottom: 4 }}>Accepted</div>
-            <div style={{ fontSize: 18, fontWeight: 900, color: G.bright }}>{statsCount('accepted')}</div>
+          <div style={{ background: '#111f13', border: `1px solid ${G.cardBorder}`, borderRadius: 14, padding: 14 }}>
+            <div style={{ fontSize: 10, color: G.muted, marginBottom: 6 }}>Accepted</div>
+            <div style={{ fontSize: 22, fontWeight: 900, color: G.bright }}>{statsCount('accepted')}</div>
           </div>
-          <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 8, padding: 10 }}>
-            <div style={{ fontSize: 9, color: G.muted, marginBottom: 4 }}>Completed</div>
-            <div style={{ fontSize: 18, fontWeight: 900, color: G.lime }}>{statsCount('completed')}</div>
+          <div style={{ background: '#111f13', border: `1px solid ${G.cardBorder}`, borderRadius: 14, padding: 14 }}>
+            <div style={{ fontSize: 10, color: G.muted, marginBottom: 6 }}>Completed</div>
+            <div style={{ fontSize: 22, fontWeight: 900, color: G.lime }}>{statsCount('completed')}</div>
           </div>
-          <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 8, padding: 10 }}>
-            <div style={{ fontSize: 9, color: G.muted, marginBottom: 4 }}>Rejected</div>
-            <div style={{ fontSize: 18, fontWeight: 900, color: G.red }}>{statsCount('rejected')}</div>
+          <div style={{ background: '#111f13', border: `1px solid ${G.cardBorder}`, borderRadius: 14, padding: 14 }}>
+            <div style={{ fontSize: 10, color: G.muted, marginBottom: 6 }}>Rejected</div>
+            <div style={{ fontSize: 22, fontWeight: 900, color: G.red }}>{statsCount('rejected')}</div>
           </div>
         </div>
 
@@ -357,55 +404,96 @@ export default function AssignedTasksWidget({ userId, limit = 3 }: TasksWidgetPr
               {filteredTasks.map((task, idx) => (
               <div
                 key={task.id}
+                onClick={() => openTaskDetails(task.id)}
                 style={{
-                  background: '#0f1f0f',
+                  background: '#111f13',
                   border: `1px solid ${G.cardBorder}`,
-                  borderRadius: 8,
-                  padding: 10,
+                  borderRadius: 16,
+                  padding: 18,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                  boxShadow: 'inset 0 0 0 1px rgba(124, 193, 66, 0.08)',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = G.lime;
+                  e.currentTarget.style.boxShadow = `0 0 20px ${G.lime}22`;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = G.cardBorder;
+                  e.currentTarget.style.boxShadow = 'inset 0 0 0 1px rgba(124, 193, 66, 0.08)';
                 }}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: 6 }}>
-                  <div>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: G.text }}>{task.title}</div>
-                    <div style={{ fontSize: 10, color: G.muted, marginTop: 2 }}>
-                      {task.role} {task.dueDate && `• Due: ${new Date(task.dueDate).toLocaleDateString()}`}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ fontSize: 16, fontWeight: 900, color: G.text, marginBottom: 6 }}>{task.title}</div>
+                    <div style={{ fontSize: 12, color: G.muted, lineHeight: 1.6 }}>
+                      {task.responsibility || task.description || 'No task summary available.'}
                     </div>
                   </div>
-                  <span
-                    style={{
-                      padding: '3px 8px',
-                      background: (priorityConfig[task.priority] || priorityConfig.medium).bgColor,
-                      color: (priorityConfig[task.priority] || priorityConfig.medium).color,
-                      borderRadius: 4,
-                      fontSize: 9,
-                      fontWeight: 600,
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {task.priority}
-                  </span>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, minWidth: 130 }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 9999, background: 'rgba(124, 193, 66, 0.12)', color: G.lime, fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap' }}>
+                      {statusConfig[task.status]?.icon || '•'} {task.status.replace('_', ' ')}
+                    </span>
+                    {task.dueDate && (
+                      <div style={{ fontSize: 11, color: G.text2, background: '#0b1c0b', borderRadius: 10, padding: '6px 10px' }}>
+                        Due {new Date(task.dueDate).toLocaleDateString()}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                {task.responsibility && (
-                  <div style={{ fontSize: 10, color: G.text, marginBottom: 8, paddingBottom: 8, borderBottom: `1px solid ${G.cardBorder}` }}>
-                    {task.responsibility}
+                {task.context && Object.keys(task.context).length > 0 && (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10, marginBottom: 14 }}>
+                    {Object.entries(task.context).map(([key, value]) => (
+                      <div key={key} style={{ background: '#0d2613', border: `1px solid ${G.cardBorder}`, borderRadius: 12, padding: '10px 12px', fontSize: 11, color: G.text2 }}>
+                        <div style={{ fontWeight: 700, color: G.text, marginBottom: 4 }}>{formatContextKey(key, task.context)}</div>
+                        <div>{formatContextValue(key, value, task.context)}</div>
+                      </div>
+                    ))}
                   </div>
                 )}
 
-                {/* Action Buttons */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 10, color: G.muted, background: '#0d2613', borderRadius: 9999, padding: '6px 10px' }}>{task.role}</span>
+                    <span style={{ fontSize: 10, color: G.text2, background: '#0b1c0b', borderRadius: 9999, padding: '6px 10px' }}>{task.priority}</span>
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openTaskDetails(task.id);
+                    }}
+                    style={{
+                      padding: '8px 14px',
+                      background: 'transparent',
+                      color: G.lime,
+                      border: `1px solid ${G.lime}`,
+                      borderRadius: 9999,
+                      fontSize: 11,
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    View details
+                  </button>
+                </div>
+
                 {task.status === 'pending' && (
-                  <div style={{ display: 'flex', gap: 6 }}>
+                  <div style={{ display: 'flex', gap: 10, marginTop: 16, flexWrap: 'wrap' }}>
                     <button
-                      onClick={() => task.organizationId ? handleAcceptTask(task.id, task.organizationId) : toast.error('Organization ID not available')}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        task.organizationId ? handleAcceptTask(task.id, task.organizationId) : toast.error('Organization ID not available');
+                      }}
                       disabled={processingId === task.id || !task.organizationId}
                       style={{
-                        flex: 1,
-                        padding: '6px 10px',
+                        flex: '1 1 160px',
+                        padding: '10px 14px',
                         background: G.bright,
                         color: G.text,
                         border: 'none',
-                        borderRadius: 4,
-                        fontSize: 10,
+                        borderRadius: 12,
+                        fontSize: 11,
                         fontWeight: 700,
                         cursor: processingId === task.id ? 'not-allowed' : 'pointer',
                         opacity: processingId === task.id ? 0.6 : 1,
@@ -414,16 +502,19 @@ export default function AssignedTasksWidget({ userId, limit = 3 }: TasksWidgetPr
                       {processingId === task.id ? '⏳' : '✓'} Accept
                     </button>
                     <button
-                      onClick={() => setShowRejectModal(task.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowRejectModal(task.id);
+                      }}
                       disabled={processingId === task.id}
                       style={{
-                        flex: 1,
-                        padding: '6px 10px',
+                        flex: '1 1 160px',
+                        padding: '10px 14px',
                         background: 'transparent',
                         color: G.red,
                         border: `1px solid ${G.red}`,
-                        borderRadius: 4,
-                        fontSize: 10,
+                        borderRadius: 12,
+                        fontSize: 11,
                         fontWeight: 700,
                         cursor: processingId === task.id ? 'not-allowed' : 'pointer',
                         opacity: processingId === task.id ? 0.6 : 1,
@@ -437,7 +528,10 @@ export default function AssignedTasksWidget({ userId, limit = 3 }: TasksWidgetPr
                 {task.status !== 'pending' && (
                   task.status === 'rejected' ? (
                     <button
-                      onClick={() => task.organizationId && handleReopenTask(task.id, task.organizationId)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        task.organizationId && handleReopenTask(task.id, task.organizationId);
+                      }}
                       disabled={processingId === task.id || !task.organizationId}
                       style={{
                         width: '100%',

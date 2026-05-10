@@ -5,7 +5,7 @@ import { cacheResponse, clearCachePrefix } from '@/lib/apiCache';
 
 export async function GET(request: NextRequest) {
   try {
-    if (!verifyApiAuth(request)) {
+    if (!(await verifyApiAuth(request))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -74,8 +74,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    if (!verifyApiAuth(request)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      if (!(await verifyApiAuth(request))) {
     }
 
     const { userId, type, description, metadata } = await request.json();

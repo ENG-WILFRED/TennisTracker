@@ -29,6 +29,7 @@ export {
   sendOtpNotification,
   sendWelcomeEmail,
   sendPasswordResetEmail,
+  sendPasswordResetOtpEmail,
   sendBookingConfirmationEmail,
   sendPaymentReceiptEmail,
   publishNotification,

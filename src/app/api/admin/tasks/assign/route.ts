@@ -24,6 +24,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (payload.assignmentPayload.assignedToId === auth.userId) {
+      return NextResponse.json(
+        { error: "Cannot assign a task to yourself" },
+        { status: 400 }
+      );
+    }
+
     // Verify user is admin of organization
     // TODO: Add role verification
 

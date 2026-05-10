@@ -68,16 +68,24 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Verify user is admin of organization
+    // Verify user is admin of the organization or the organization owner
     const isAdmin = await prisma.staff.findFirst({
       where: {
         userId: authUser.userId,
+        organizationId: payload.organizationId,
         role: "admin",
       },
     });
 
-    if (!isAdmin) {
-      return NextResponse.json({ error: "Admin access required" }, { status: 403 });
+    const isOrgOwner = await prisma.organization.findFirst({
+      where: {
+        id: payload.organizationId,
+        createdBy: authUser.userId,
+      },
+    });
+
+    if (!isAdmin && !isOrgOwner) {
+      return NextResponse.json({ error: "Admin or organization owner access required" }, { status: 403 });
     }
     
     const template = await taskTemplateService.createTemplate(

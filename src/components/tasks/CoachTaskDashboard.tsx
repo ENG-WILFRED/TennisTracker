@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { authenticatedFetch } from '@/lib/authenticatedFetch';
 import { Task } from '@/types/task-system';
 import { TaskCard } from './TaskCard';
+import CoachTaskDetailsPanel from './CoachTaskDetailsPanel';
 
 interface CoachDashboardProps {
   coachId?: string;
@@ -18,6 +19,7 @@ export function CoachTaskDashboard({ coachId }: CoachDashboardProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>('assigned');
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchTasks = async () => {
@@ -83,9 +85,20 @@ export function CoachTaskDashboard({ coachId }: CoachDashboardProps) {
           completed,
         });
       }
+
+      // Close details panel after action
+      setSelectedTaskId(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
     }
+  };
+
+  const handleTaskSelect = (taskId: string) => {
+    setSelectedTaskId(taskId);
+  };
+
+  const handleCloseDetails = () => {
+    setSelectedTaskId(null);
   };
 
   // Expose method to add task optimistically (for parent components)
@@ -182,17 +195,32 @@ export function CoachTaskDashboard({ coachId }: CoachDashboardProps) {
               </p>
             ) : (
               tasksByTab[activeTab].map(task => (
-                <TaskCard
+                <div
                   key={task.id}
-                  task={task}
-                  onAction={handleTaskAction}
-                  showActions={activeTab !== 'completed'}
-                />
+                  onClick={() => handleTaskSelect(task.id)}
+                  className="cursor-pointer hover:opacity-80 transition-opacity"
+                >
+                  <TaskCard
+                    task={task}
+                    onAction={handleTaskAction}
+                    showActions={activeTab !== 'completed'}
+                  />
+                </div>
               ))
             )}
           </div>
         </div>
       </div>
+
+      {/* Task Details Panel */}
+      {selectedTaskId && (
+        <div className="mt-6 border-t pt-6">
+          <CoachTaskDetailsPanel 
+            taskId={selectedTaskId}
+            onClose={handleCloseDetails}
+          />
+        </div>
+      )}
     </div>
   );
 }

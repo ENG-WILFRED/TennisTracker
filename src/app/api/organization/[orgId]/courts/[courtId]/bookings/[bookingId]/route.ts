@@ -7,7 +7,7 @@ export async function PATCH(
   { params }: { params: Promise<{ orgId: string; courtId: string; bookingId: string }> }
 ) {
   try {
-    if (!verifyApiAuth(request)) {
+    if (!(await verifyApiAuth(request))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

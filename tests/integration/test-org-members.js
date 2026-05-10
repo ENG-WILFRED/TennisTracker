@@ -1,8 +1,10 @@
 import fetch from 'node-fetch';
 
+const BASE_URL = process.env.TEST_BASE_URL || process.env.BASE_URL || 'http://localhost:3001';
+
 async function testOrgMembers() {
   const orgId = 'cc06f187-b786-4410-8869-2218f6b591df'; // Central Tennis Club
-  const url = `http://localhost:3001/api/organization/${orgId}/members`;
+  const url = `${BASE_URL.replace(/\/$/, '')}/api/organization/${orgId}/members`;
 
   try {
     console.log(`Testing API: ${url}`);

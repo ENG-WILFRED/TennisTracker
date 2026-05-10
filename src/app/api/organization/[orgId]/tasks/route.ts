@@ -140,7 +140,7 @@ export async function GET(
       updatedAt: task.updatedAt,
       assignedTo: task.assignedTo ? {
         id: task.assignedTo.userId,
-        name: `${task.assignedTo.user.firstName} ${task.assignedTo.user.lastName}`,
+        name: [task.assignedTo.user.firstName, task.assignedTo.user.lastName].filter(Boolean).join(' ') || task.assignedTo.user.email,
         email: task.assignedTo.user.email,
         photo: task.assignedTo.user.photo,
         role: task.assignedTo.role,
@@ -149,7 +149,7 @@ export async function GET(
       event: null,
       context: task.context, // Include context with player info
       templateId: task.templateId,
-      assignedBy: task.assignedBy ? `${task.assignedBy.firstName} ${task.assignedBy.lastName}` : null,
+      assignedBy: task.assignedBy ? [task.assignedBy.firstName, task.assignedBy.lastName].filter(Boolean).join(' ') : null,
     }));
 
     // Format event tasks
@@ -172,7 +172,7 @@ export async function GET(
       updatedAt: task.updatedAt,
       assignedTo: task.assignedTo ? {
         id: task.assignedTo.userId,
-        name: `${task.assignedTo.user.firstName} ${task.assignedTo.user.lastName}`,
+        name: [task.assignedTo.user.firstName, task.assignedTo.user.lastName].filter(Boolean).join(' ') || task.assignedTo.user.email,
         email: task.assignedTo.user.email,
         photo: task.assignedTo.user.photo,
         role: task.assignedTo.role,

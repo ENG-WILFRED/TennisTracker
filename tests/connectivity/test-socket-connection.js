@@ -7,7 +7,8 @@
 
 import { io } from 'socket.io-client';
 
-const SOCKET_URL = process.argv[2] || 'http://localhost:3000';
+const SOCKET_BASE_URL = process.argv[2] || process.env.TEST_BASE_URL || process.env.STRESS_TEST_URL || process.env.BASE_URL || 'http://localhost:3000';
+const SOCKET_URL = SOCKET_BASE_URL.replace(/\/$/, '');
 
 console.log(`🔗 Testing Socket.IO connection to: ${SOCKET_URL}`);
 

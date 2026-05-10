@@ -43,6 +43,7 @@ model User {
   bugReports         BugReport[]
   gateScans          GateScanLog[]
   reportedIncidents  SecurityIncident[]
+  passwordResetOtps  PasswordResetOtp[]
   // Guardian relationships
   guardianOf         Guardian[]          @relation("Guardian")
   guardians          Guardian[]          @relation("Dependent")
@@ -2164,6 +2165,25 @@ model NotificationLog {
   @@index([status])
   @@index([nextRetryAt])
   @@index([createdAt])
+}
+
+model PasswordResetOtp {
+  id           String   @id @default(uuid())
+  userId       String
+  email        String
+  otp          String
+  status       String   @default("PENDING")
+  attemptCount Int      @default(0)
+  expiresAt    DateTime
+  usedAt       DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([email])
+  @@index([status])
+  @@index([expiresAt])
 }
 
 // BugReport: User-submitted bug reports for app improvement

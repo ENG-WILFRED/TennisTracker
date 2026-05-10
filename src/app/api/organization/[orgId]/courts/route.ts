@@ -7,7 +7,7 @@ export async function GET(
   { params }: { params: Promise<{ orgId: string }> }
 ) {
   try {
-    if (!verifyApiAuth(request)) {
+    if (!(await verifyApiAuth(request))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -34,7 +34,7 @@ export async function POST(
   { params }: { params: Promise<{ orgId: string }> }
 ) {
   try {
-    if (!verifyApiAuth(request)) {
+    if (!(await verifyApiAuth(request))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

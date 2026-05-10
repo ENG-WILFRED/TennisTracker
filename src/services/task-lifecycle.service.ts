@@ -32,6 +32,41 @@ class TaskLifecycleService {
       },
     ];
 
+    if (
+      payload.context &&
+      typeof payload.context === 'object' &&
+      (payload.context as any).role === 'COACH'
+    ) {
+      const selectedPlayerIds = (payload.context as any).selectedPlayerIds || [];
+      if (Array.isArray(selectedPlayerIds) && selectedPlayerIds.length > 0) {
+        const players = await prisma.player.findMany({
+          where: {
+            userId: {
+              in: selectedPlayerIds,
+            },
+          },
+          include: {
+            user: {
+              select: {
+                firstName: true,
+                lastName: true,
+                email: true,
+              },
+            },
+          },
+        });
+
+        (payload.context as any).selectedPlayerNames = players
+          .map((player) => {
+            const name = [player.user?.firstName, player.user?.lastName]
+              .filter(Boolean)
+              .join(' ');
+            return name || player.user?.email;
+          })
+          .filter((name): name is string => !!name);
+      }
+    }
+
     const task = await prisma.task.create({
       data: {
         templateId: payload.templateId,
