@@ -40,6 +40,21 @@ export default async function OrganizationPage({ params }: { params: Promise<{ i
         take: 20,
         orderBy: { joinDate: 'desc' as const },
       },
+      staff: {
+        select: {
+          userId: true,
+          role: true,
+          createdAt: true,
+          user: {
+            select: {
+              firstName: true,
+              lastName: true,
+              photo: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' as const },
+      },
       courts: {
         select: {
           id: true,
@@ -138,6 +153,11 @@ export default async function OrganizationPage({ params }: { params: Promise<{ i
     members: organization.members.map((member: any) => ({
       ...member,
       joinDate: member.joinDate?.toISOString() || null,
+    })),
+    staff: organization.staff.map((staff: any) => ({
+      ...staff,
+      role: staff.role ? staff.role.toLowerCase() : 'staff',
+      createdAt: staff.createdAt?.toISOString() || null,
     })),
     finances: organization.finances.map((finance: any) => ({
       ...finance,

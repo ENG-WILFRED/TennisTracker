@@ -13,6 +13,24 @@ const G = {
   muted: '#5e8e50', muted2: '#7aaa68', yellow: '#efc040', red: '#d94f4f', blue: '#4a9eff',
 };
 
+/**
+ * Format a Date object to datetime-local input format (YYYY-MM-DDTHH:MM)
+ * Uses the user's LOCAL timezone, not UTC
+ */
+const formatToDatetimeLocal = (date: Date | string | undefined): string => {
+  if (!date) return '';
+  const d = typeof date === 'string' ? new Date(date) : date;
+  if (isNaN(d.getTime())) return '';
+  
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const hours = String(d.getHours()).padStart(2, '0');
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
 interface Session {
   id: string
   title: string
@@ -347,8 +365,8 @@ export default function SessionManagement({ coachId }: { coachId: string }) {
     setFormData({
       title: session.title,
       description: session.description || '',
-      startTime: startDT.toISOString().slice(0, 16),
-      endTime: endDT.toISOString().slice(0, 16),
+      startTime: formatToDatetimeLocal(startDT),
+      endTime: formatToDatetimeLocal(endDT),
       sessionType: session.sessionType,
       maxParticipants: session.maxParticipants,
       price: session.price || 60,

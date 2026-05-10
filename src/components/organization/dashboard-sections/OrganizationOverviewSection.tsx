@@ -62,128 +62,277 @@ export default function OrganizationOverviewSection({
   return (
     <>
       {/* KPI Bars - Responsive: 2 rows of 2 columns */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 gap-3 mb-3">
         {kpiData.map((kpi: any, i: number) => (
-          <div key={i} className="bg-[#1a3020] border" style={{ borderColor: G.cardBorder, borderRadius: 10, padding: 12 }}>
-            <div style={{ fontSize: 11, color: G.muted, marginBottom: 6 }}>{kpi.label}</div>
-            <div style={{ fontSize: 24, fontWeight: 900, color: kpi.color, marginBottom: 6 }}>{kpi.value}</div>
-            <div style={{ height: 6, background: G.dark, borderRadius: 3, overflow: 'hidden' }}>
+          <div key={i} className="bg-[#1a3020] border" style={{ borderColor: G.cardBorder, borderRadius: 10, padding: 10 }}>
+            <div style={{ fontSize: 10, color: G.muted, marginBottom: 4 }}>{kpi.label}</div>
+            <div style={{ fontSize: 20, fontWeight: 900, color: kpi.color, marginBottom: 4 }}>{kpi.value}</div>
+            <div style={{ height: 5, background: G.dark, borderRadius: 3, overflow: 'hidden' }}>
               <div style={{ height: '100%', width: `${(kpi.value / kpi.max) * 100}%`, background: kpi.color, borderRadius: 3 }} />
             </div>
-            <div style={{ fontSize: 9, color: G.muted, marginTop: 4 }}>{kpi.max} total</div>
+            <div style={{ fontSize: 8, color: G.muted, marginTop: 3 }}>{kpi.max} total</div>
           </div>
         ))}
       </div>
 
       {/* Revenue + Schedule + Staff - Each in its own row on mobile, 3 columns on desktop */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         {/* Revenue Trend */}
-        <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 14, gridColumn: 'span 1' }}>
-          <div style={{ fontWeight: 800, fontSize: 13, marginBottom: 2 }}>💰 Revenue Trend</div>
-          <div style={{ fontSize: 20, fontWeight: 900, color: G.accent, marginBottom: 2 }}>${totalRevenue.toLocaleString()}</div>
-          <div style={{ fontSize: 9, color: G.muted, marginBottom: 10 }}>{revenueTrend.length ? `Last ${revenueTrend.length} months` : 'No finance data available'}</div>
-          <LineChart data={revenueTrend} color={G.accent} height={45} />
-          {revenueBreakdown.length > 0 && (
-            <div style={{ marginTop: 10, display: 'grid', gap: 8 }}>
-              {revenueBreakdown.map((item: any, i: number) => (
-                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, background: '#142b18', borderRadius: 6, padding: '8px 10px' }}>
-                  <span style={{ fontSize: 10, color: G.muted }}>{item.label}</span>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: G.accent }}>${item.value.toLocaleString()}</span>
-                </div>
-              ))}
-            </div>
-          )}
-          <div style={{ marginTop: 8, display: 'flex', justifyContent: 'space-between', fontSize: 9 }}>
+        <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 12, gridColumn: 'span 1', display: 'flex', flexDirection: 'column', height: '100%', maxHeight: 265 }}>
+          <div style={{ fontWeight: 800, fontSize: 13, marginBottom: 2, flexShrink: 0 }}>💰 Revenue Trend</div>
+          <div style={{ fontSize: 20, fontWeight: 900, color: G.accent, marginBottom: 2, flexShrink: 0 }}>${totalRevenue.toLocaleString()}</div>
+          <div style={{ fontSize: 9, color: G.muted, marginBottom: 10, flexShrink: 0 }}>{revenueTrend.length ? `Last ${revenueTrend.length} months` : 'No finance data available'}</div>
+          <div style={{ flexShrink: 0 }}><LineChart data={revenueTrend} color={G.accent} height={45} /></div>
+          <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', marginTop: 10, paddingRight: 4 }}>
+            {revenueBreakdown.length > 0 && (
+              <div style={{ display: 'grid', gap: 8 }}>
+                {revenueBreakdown.map((item: any, i: number) => (
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, background: '#142b18', borderRadius: 6, padding: '8px 10px' }}>
+                    <span style={{ fontSize: 10, color: G.muted }}>{item.label}</span>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: G.accent }}>${item.value.toLocaleString()}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <div style={{ marginTop: 8, display: 'flex', justifyContent: 'space-between', fontSize: 9, flexShrink: 0 }}>
             <span style={{ color: G.muted }}>Lowest: ${lowestRevenue.toLocaleString()}</span>
             <span style={{ color: changeRate >= 0 ? G.lime : '#ff6b6b', fontWeight: 700 }}>{changeLabel}</span>
           </div>
         </div>
 
         {/* Schedule */}
-        <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 14 }}>
-          <div style={{ fontWeight: 800, fontSize: 13, marginBottom: 8 }}>📅 This Week</div>
-          {scheduleItems.map((s: any, i: number) => (
-            <button
-              key={i}
-              onClick={() => openEvent(s.eventId)}
-              style={{
-                display: 'flex',
-                gap: 8,
-                padding: '6px 0',
-                borderBottom: i < scheduleItems.length - 1 ? `1px solid ${G.cardBorder}33` : 'none',
-                alignItems: 'center',
-                background: 'transparent',
-                border: 'none',
-                width: '100%',
-                textAlign: 'left',
-                cursor: 'pointer',
-              }}
-            >
-              <div style={{ background: G.dark, borderRadius: 5, padding: '4px 8px', minWidth: 40, textAlign: 'center', fontSize: 10, fontWeight: 700 }}>
-                {s.day}
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 11, fontWeight: 600 }}>{s.event}</div>
-                <div style={{ fontSize: 9, color: G.muted }}>{s.time}</div>
-              </div>
-              <span style={{ fontSize: 8, padding: '2px 5px', background: s.status === 'Active' ? G.lime + '33' : G.bright + '33', color: s.status === 'Active' ? G.lime : G.bright, borderRadius: 3, fontWeight: 700 }}>
-                {s.status === 'Active' ? '◆' : '○'} {s.status.split(' ')[0]}
-              </span>
-            </button>
-          ))}
-          <button onClick={() => openSection('Events')} style={{ width: '100%', marginTop: 8, padding: '6px', background: G.lime, color: '#0f1f0f', border: 'none', borderRadius: 6, fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>
+        <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 12, display: 'flex', flexDirection: 'column', height: '100%', maxHeight: 265 }}>
+          <div style={{ fontWeight: 800, fontSize: 13, marginBottom: 8, flexShrink: 0 }}>📅 This Week</div>
+          <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', marginBottom: 8, paddingRight: 4 }}>
+            {scheduleItems.map((s: any, i: number) => (
+              <button
+                key={i}
+                onClick={() => openEvent(s.eventId)}
+                style={{
+                  display: 'flex',
+                  gap: 8,
+                  padding: '6px 0',
+                  borderBottom: i < scheduleItems.length - 1 ? `1px solid ${G.cardBorder}33` : 'none',
+                  alignItems: 'center',
+                  background: 'transparent',
+                  border: 'none',
+                  width: '100%',
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                }}
+              >
+                <div style={{ background: G.dark, borderRadius: 5, padding: '4px 8px', minWidth: 40, textAlign: 'center', fontSize: 10, fontWeight: 700 }}>
+                  {s.day}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 11, fontWeight: 600 }}>{s.event}</div>
+                  <div style={{ fontSize: 9, color: G.muted }}>{s.time}</div>
+                </div>
+                <span style={{ fontSize: 8, padding: '2px 5px', background: s.status === 'Active' ? G.lime + '33' : G.bright + '33', color: s.status === 'Active' ? G.lime : G.bright, borderRadius: 3, fontWeight: 700 }}>
+                  {s.status === 'Active' ? '◆' : '○'} {s.status.split(' ')[0]}
+                </span>
+              </button>
+            ))}
+          </div>
+          <button onClick={() => openSection('Events')} style={{ width: '100%', padding: '6px', background: G.lime, color: '#0f1f0f', border: 'none', borderRadius: 6, fontSize: 11, fontWeight: 800, cursor: 'pointer', flexShrink: 0 }}>
             + New Event
           </button>
         </div>
 
         {/* Staff */}
-        <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 14 }}>
-          <div style={{ fontWeight: 800, fontSize: 13, marginBottom: 8 }}>👥 Team Roles</div>
-          {staffRoles.map((s: any, i: number) => (
-            <button
-              key={i}
-              onClick={() => openStaff()}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                padding: '6px 0',
-                borderBottom: i < staffRoles.length - 1 ? `1px solid ${G.cardBorder}33` : 'none',
-                background: 'transparent',
-                border: 'none',
-                width: '100%',
-                textAlign: 'left',
-                cursor: 'pointer',
-              }}
-            >
-              <div style={{ width: 32, height: 32, borderRadius: '50%', background: G.dark, border: `2px solid ${G.mid}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, flexShrink: 0 }}>
-                {s.name.charAt(0)}
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 11.5, fontWeight: 600 }}>{s.name}</div>
-                <div style={{ fontSize: 9, color: G.muted }}>{s.role}</div>
-              </div>
-              <span style={{ fontSize: 8, padding: '1px 4px', background: G.bright + '33', color: G.bright, borderRadius: 3, fontWeight: 700 }}>
-                {s.sessions}h
-              </span>
-            </button>
-          ))}
-          <button onClick={() => openStaff()} style={{ width: '100%', marginTop: 8, padding: '6px', background: G.bright, color: '#fff', border: 'none', borderRadius: 6, fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>
+        <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 12, display: 'flex', flexDirection: 'column', height: '100%', maxHeight: 265 }}>
+          <div style={{ fontWeight: 800, fontSize: 13, marginBottom: 8, flexShrink: 0 }}>👥 Team Roles</div>
+          <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', marginBottom: 8, paddingRight: 4 }}>
+            {staffRoles.length > 0 ? (
+              <>
+                {/* Coaches */}
+                {staffRoles.filter((s: any) => s.role === 'Coach').length > 0 && (
+                  <div style={{ marginBottom: 8 }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: G.accent, marginBottom: 4 }}>🏆 COACHES ({staffRoles.filter((s: any) => s.role === 'Coach').length})</div>
+                    {staffRoles.filter((s: any) => s.role === 'Coach').map((s: any, i: number) => (
+                      <button
+                        key={`coach-${i}`}
+                        onClick={() => openStaff()}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          padding: '4px 0 4px 8px',
+                          borderRadius: 4,
+                          background: 'transparent',
+                          border: 'none',
+                          width: '100%',
+                          textAlign: 'left',
+                          cursor: 'pointer',
+                          marginBottom: 2,
+                        }}
+                      >
+                        <span style={{ fontSize: 10, fontWeight: 600, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</span>
+                        {s.sessions > 0 && <span style={{ fontSize: 8, padding: '1px 4px', background: G.bright + '33', color: G.bright, borderRadius: 3, fontWeight: 700, flexShrink: 0 }}>{s.sessions}h</span>}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Referees */}
+                {staffRoles.filter((s: any) => s.role === 'Referee').length > 0 && (
+                  <div style={{ marginBottom: 8 }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: G.accent, marginBottom: 4 }}>⚖️ REFEREES ({staffRoles.filter((s: any) => s.role === 'Referee').length})</div>
+                    {staffRoles.filter((s: any) => s.role === 'Referee').map((s: any, i: number) => (
+                      <button
+                        key={`referee-${i}`}
+                        onClick={() => openStaff()}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          padding: '4px 0 4px 8px',
+                          borderRadius: 4,
+                          background: 'transparent',
+                          border: 'none',
+                          width: '100%',
+                          textAlign: 'left',
+                          cursor: 'pointer',
+                          marginBottom: 2,
+                        }}
+                      >
+                        <span style={{ fontSize: 10, fontWeight: 600, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</span>
+                        {s.sessions > 0 && <span style={{ fontSize: 8, padding: '1px 4px', background: G.bright + '33', color: G.bright, borderRadius: 3, fontWeight: 700, flexShrink: 0 }}>{s.sessions}h</span>}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Admins */}
+                {staffRoles.filter((s: any) => s.role === 'Admin').length > 0 && (
+                  <div style={{ marginBottom: 8 }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: G.accent, marginBottom: 4 }}>🔑 ADMINS ({staffRoles.filter((s: any) => s.role === 'Admin').length})</div>
+                    {staffRoles.filter((s: any) => s.role === 'Admin').map((s: any, i: number) => (
+                      <button
+                        key={`admin-${i}`}
+                        onClick={() => openStaff()}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          padding: '4px 0 4px 8px',
+                          borderRadius: 4,
+                          background: 'transparent',
+                          border: 'none',
+                          width: '100%',
+                          textAlign: 'left',
+                          cursor: 'pointer',
+                          marginBottom: 2,
+                        }}
+                      >
+                        <span style={{ fontSize: 10, fontWeight: 600, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</span>
+                        {s.sessions > 0 && <span style={{ fontSize: 8, padding: '1px 4px', background: G.bright + '33', color: G.bright, borderRadius: 3, fontWeight: 700, flexShrink: 0 }}>{s.sessions}h</span>}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Other Staff (Manager, Owner, etc) */}
+                {staffRoles.filter((s: any) => !['Coach', 'Referee', 'Admin'].includes(s.role)).length > 0 && (
+                  <div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: G.accent, marginBottom: 4 }}>👤 OTHER STAFF ({staffRoles.filter((s: any) => !['Coach', 'Referee', 'Admin'].includes(s.role)).length})</div>
+                    {staffRoles.filter((s: any) => !['Coach', 'Referee', 'Admin'].includes(s.role)).map((s: any, i: number) => (
+                      <button
+                        key={`other-${i}`}
+                        onClick={() => openStaff()}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          padding: '4px 0 4px 8px',
+                          borderRadius: 4,
+                          background: 'transparent',
+                          border: 'none',
+                          width: '100%',
+                          textAlign: 'left',
+                          cursor: 'pointer',
+                          marginBottom: 2,
+                        }}
+                      >
+                        <span style={{ fontSize: 9, color: G.muted, fontWeight: 600, flex: 1, minWidth: 0 }}>
+                          <span style={{ fontSize: 8, color: G.muted }}>[{s.role}]</span> {s.name}
+                        </span>
+                        {s.sessions > 0 && <span style={{ fontSize: 8, padding: '1px 4px', background: G.bright + '33', color: G.bright, borderRadius: 3, fontWeight: 700, flexShrink: 0 }}>{s.sessions}h</span>}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : (
+              <div style={{ fontSize: 10, color: G.muted, fontStyle: 'italic', textAlign: 'center', padding: '20px 0' }}>No staff members</div>
+            )}
+          </div>
+          <button onClick={() => openStaff()} style={{ width: '100%', padding: '6px', background: G.bright, color: '#fff', border: 'none', borderRadius: 6, fontSize: 11, fontWeight: 800, cursor: 'pointer', flexShrink: 0 }}>
             + Add Staff
           </button>
         </div>
       </div>
 
       {/* Announcements + Tasks + System - Each in its own row on mobile, 3 columns on desktop */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         {/* Announcements */}
-        <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 14 }}>
-          <div style={{ fontWeight: 800, fontSize: 13, marginBottom: 8 }}>📢 Announcements</div>
-          {hasAnnouncements ? (
-            announcements.map((a: any, i: number) => (
+        <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 12, display: 'flex', flexDirection: 'column', height: '100%', maxHeight: 265 }}>
+          <div style={{ fontWeight: 800, fontSize: 13, marginBottom: 8, flexShrink: 0 }}>📢 Announcements</div>
+          <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', paddingRight: 4 }}>
+            {hasAnnouncements ? (
+              announcements.map((a: any, i: number) => (
+                <button
+                  key={i}
+                  onClick={openOrganizationPage}
+                  style={{
+                    background: '#0f1f0f',
+                    borderRadius: 8,
+                    padding: '8px 10px',
+                    marginBottom: 6,
+                    border: 'none',
+                    width: '100%',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: 3 }}>
+                    <span style={{ fontWeight: 700, fontSize: 11.5 }}>{a.title}</span>
+                    <span style={{ fontSize: 8, color: G.muted }}>{a.date}</span>
+                  </div>
+                  <div style={{ fontSize: 10, color: G.muted }}>{a.msg}</div>
+                </button>
+              ))
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'flex-start' }}>
+                <div style={{ fontSize: 11, fontStyle: 'italic', marginBottom: 2, color: G.muted }}>No announcements</div>
+                <button
+                  onClick={openOrganizationPage}
+                  style={{ width: '100%', marginTop: 0, padding: '8px 10px', background: G.lime, color: '#0f1f0f', border: 'none', borderRadius: 6, fontSize: 11, fontWeight: 800, cursor: 'pointer' }}
+                >
+                  View past announcements
+                </button>
+              </div>
+            )}
+          </div>
+          {hasAnnouncements && (
+            <button
+              onClick={openOrganizationPage}
+              style={{ width: '100%', marginTop: 8, padding: '8px 10px', background: G.lime, color: '#0f1f0f', border: 'none', borderRadius: 6, fontSize: 11, fontWeight: 800, cursor: 'pointer', flexShrink: 0 }}
+            >
+              View all announcements
+            </button>
+          )}
+        </div>
+
+        {/* Pending Tasks */}
+        <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 12, display: 'flex', flexDirection: 'column', height: '100%', maxHeight: 265 }}>
+          <div style={{ fontWeight: 800, fontSize: 13, marginBottom: 8, flexShrink: 0 }}>✓ Pending Tasks</div>
+          <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', paddingRight: 4 }}>
+            {pendingTasks.map((t: any, i: number) => (
               <button
                 key={i}
-                onClick={openOrganizationPage}
+                onClick={openTasks}
                 style={{
                   background: '#0f1f0f',
                   borderRadius: 8,
@@ -195,72 +344,27 @@ export default function OrganizationOverviewSection({
                   cursor: 'pointer',
                 }}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: 3 }}>
-                  <span style={{ fontWeight: 700, fontSize: 11.5 }}>{a.title}</span>
-                  <span style={{ fontSize: 8, color: G.muted }}>{a.date}</span>
-                </div>
-                <div style={{ fontSize: 10, color: G.muted }}>{a.msg}</div>
-              </button>
-            ))
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'flex-start' }}>
-              <div style={{ fontSize: 11,fontStyle: 'italic',marginBottom: 2, color: G.muted }}>No announcements</div>
-              <button
-                onClick={openOrganizationPage}
-                style={{ width: '100%', marginTop: 0, padding: '8px 10px', background: G.lime, color: '#0f1f0f', border: 'none', borderRadius: 6, fontSize: 11, fontWeight: 800, cursor: 'pointer' }}
-              >
-                View past announcements
-              </button>
-            </div>
-          )}
-          {hasAnnouncements && (
-            <button
-              onClick={openOrganizationPage}
-              style={{ width: '100%', marginTop: 8, padding: '8px 10px', background: G.lime, color: '#0f1f0f', border: 'none', borderRadius: 6, fontSize: 11, fontWeight: 800, cursor: 'pointer' }}
-            >
-              View all announcements
-            </button>
-          )}
-        </div>
-
-        {/* Pending Tasks */}
-        <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 14 }}>
-          <div style={{ fontWeight: 800, fontSize: 13, marginBottom: 8 }}>✓ Pending Tasks</div>
-          {pendingTasks.map((t: any, i: number) => (
-            <button
-              key={i}
-              onClick={openTasks}
-              style={{
-                background: '#0f1f0f',
-                borderRadius: 8,
-                padding: '8px 10px',
-                marginBottom: 6,
-                border: 'none',
-                width: '100%',
-                textAlign: 'left',
-                cursor: 'pointer',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'start', gap: 6 }}>
-                <input type="checkbox" style={{ marginTop: 4, cursor: 'pointer', accentColor: G.lime }} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, fontSize: 11.5 }}>{t.task}</div>
-                  <div style={{ fontSize: 9, color: G.muted, marginTop: 2 }}>
-                    {t.owner} · {t.due}
+                <div style={{ display: 'flex', alignItems: 'start', gap: 6 }}>
+                  <input type="checkbox" style={{ marginTop: 4, cursor: 'pointer', accentColor: G.lime }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 600, fontSize: 11.5 }}>{t.task}</div>
+                    <div style={{ fontSize: 9, color: G.muted, marginTop: 2 }}>
+                      {t.owner} · {t.due}
+                    </div>
                   </div>
+                  <span style={{ fontSize: 8, padding: '2px 5px', borderRadius: 3, background: priorityBg(t.priority), color: priorityColor(t.priority), fontWeight: 700, flexShrink: 0 }}>
+                    {t.priority}
+                  </span>
                 </div>
-                <span style={{ fontSize: 8, padding: '2px 5px', borderRadius: 3, background: priorityBg(t.priority), color: priorityColor(t.priority), fontWeight: 700, flexShrink: 0 }}>
-                  {t.priority}
-                </span>
-              </div>
-            </button>
-          ))}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* System Status */}
-        <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 14 }}>
-          <div style={{ fontWeight: 800, fontSize: 13, marginBottom: 8 }}>⚙️ System Status</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 6 }}>
+        <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 12, display: 'flex', flexDirection: 'column', height: '100%', maxHeight: 265 }}>
+          <div style={{ fontWeight: 800, fontSize: 13, marginBottom: 8, flexShrink: 0 }}>⚙️ System Status</div>
+          <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', paddingRight: 4, display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 6 }}>
             {systemStatus.map((s: any, i: number) => (
               <div key={i} style={{ background: '#0f1f0f', borderRadius: 8, padding: '10px 8px', textAlign: 'center', border: `1px solid ${G.cardBorder}` }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, marginBottom: 4 }}>

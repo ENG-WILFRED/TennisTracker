@@ -7,6 +7,15 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   skipTrailingSlashRedirect: true,
+  // Memory optimization
+  swcMinify: true,
+  onDemandEntries: {
+    maxInactiveAge: 60 * 1000, // 60 seconds
+    pagesBufferLength: 5,
+  },
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production',
+  },
 };
 
 export default nextConfig;

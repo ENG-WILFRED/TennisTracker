@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { LoadingState } from '@/components/LoadingState';
 import { authenticatedFetch } from '@/lib/authenticatedFetch';
+import toast from 'react-hot-toast';
 
 // Declare google maps type
 declare global {
@@ -139,6 +140,25 @@ const statusColor = (status: string) => {
   if (['active', 'confirmed', 'resolved'].includes(status.toLowerCase())) return G.lime;
   if (['pending', 'maintenance', 'under_review'].includes(status.toLowerCase())) return G.yellow;
   return G.red;
+};
+
+/**
+ * Format a Date object to datetime-local input format (YYYY-MM-DDTHH:MM)
+ * Uses the user's LOCAL timezone, not UTC
+ */
+const formatToDatetimeLocal = (date: Date | string | undefined): string => {
+  if (!date) return '';
+  const d = typeof date === 'string' ? new Date(date) : date;
+  if (isNaN(d.getTime())) return '';
+  
+  // Get local time components without timezone conversion
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const hours = String(d.getHours()).padStart(2, '0');
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
 
 const Badge: React.FC<{ label: string; color: string; bg?: string }> = ({ label, color, bg }) => (
@@ -315,7 +335,7 @@ export default function CourtDetailPage() {
 
   // Action modals
   const [modal, setModal] = useState<
-    null | 'editCourt' | 'editStatus' | 'editPricing' | 'editSchedule' | 'editAmenities' | 'complaintResolve' | 'uploadImage' | 'editLocation'
+    null | 'editCourt' | 'editStatus' | 'editPricing' | 'editSchedule' | 'editAmenities' | 'complaintResolve' | 'uploadImage' | 'editLocation' | 'editMaintenance'
   >(null);
   const [errorMsg, setErrorMsg] = useState('');
   const [selectedComplaint, setSelectedComplaint] = useState<CourtComplaint | null>(null);
@@ -417,7 +437,10 @@ export default function CourtDetailPage() {
         body: JSON.stringify(fields),
       });
       if (!res.ok) throw new Error('Failed to update court');
-      await fetchCourtDetails();
+      
+      // Directly update the state instead of re-fetching
+      setCourt((prev) => ({ ...prev, ...fields }));
+      
       setModal(null);
       showSuccess('Court updated successfully!');
     } catch (err) {
@@ -731,7 +754,10 @@ export default function CourtDetailPage() {
 
         {/* Back */}
         <button
-          onClick={() => router.push(`/dashboard/org/${orgId}?section=courts`)}
+          onClick={() => {
+            toast('Navigating back to courts...', { icon: '⬅️', duration: 1500 });
+            router.push(`/dashboard/org/${orgId}?section=courts`);
+          }}
           style={{ background: 'transparent', color: G.lime, border: 'none', fontSize: 14, cursor: 'pointer', marginBottom: 16, fontWeight: 700 }}
         >
           ← Back to Courts
@@ -901,18 +927,48 @@ export default function CourtDetailPage() {
                 )}
               </Section>
 
-              <Section title="🔧 Maintenance" action={{ label: 'Edit', onClick: () => openEdit('editCourt') }}>
-                {court.lastInspectionDate && (
-                  <InfoRow label="Last Inspection" value={new Date(court.lastInspectionDate).toLocaleDateString()} />
-                )}
-                {court.nextMaintenanceDate && (
-                  <InfoRow label="Next Maintenance" value={
-                    <span style={{ color: G.yellow }}>{new Date(court.nextMaintenanceDate).toLocaleDateString()}</span>
-                  } />
-                )}
-                {court.maintenedUntil && (
-                  <InfoRow label="Maintained Until" value={new Date(court.maintenedUntil).toLocaleDateString()} />
-                )}
+              <Section title="🔧 Maintenance" action={{ label: 'Edit', onClick: () => openEdit('editMaintenance') }}>
+                {(() => {
+                  const now = new Date();
+                  const maintenanceStart = court.nextMaintenanceDate ? new Date(court.nextMaintenanceDate) : undefined;
+                  const maintenanceEnd = court.maintenedUntil ? new Date(court.maintenedUntil) : undefined;
+                  const isUnderMaintenance = maintenanceEnd && now < maintenanceEnd && (!maintenanceStart || now >= maintenanceStart);
+                  const hasUpcomingMaintenance = maintenanceStart && now < maintenanceStart;
+
+                  if (isUnderMaintenance) {
+                    return (
+                      <>
+                        <InfoRow label="Maintenance Started" value={
+                          maintenanceStart ? (
+                            <span style={{ color: G.orange, fontWeight: 700 }}>{maintenanceStart.toLocaleDateString()} {maintenanceStart.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                          ) : (
+                            <span style={{ color: G.orange, fontWeight: 700 }}>Ongoing</span>
+                          )
+                        } />
+                        <InfoRow label="Maintenance Ends" value={
+                          <span style={{ color: G.accent }}>{maintenanceEnd!.toLocaleDateString()} {maintenanceEnd!.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        } />
+                      </>
+                    );
+                  }
+
+                  return (
+                    <>
+                      <InfoRow label="Status" value={
+                        <span style={{ color: G.lime, fontWeight: 700 }}>Court is Active</span>
+                      } />
+                      {hasUpcomingMaintenance ? (
+                        <InfoRow label="Next Maintenance" value={
+                          <span style={{ color: G.yellow }}>{maintenanceStart!.toLocaleDateString()} {maintenanceStart!.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        } />
+                      ) : (
+                        <InfoRow label="Next Maintenance" value={
+                          <span style={{ color: G.muted }}>Not Configured</span>
+                        } />
+                      )}
+                    </>
+                  );
+                })()}
               </Section>
             </div>
 
@@ -1603,9 +1659,6 @@ export default function CourtDetailPage() {
             <FormField label="Description">
               <textarea style={{ ...inputStyle, minHeight: 80, resize: 'vertical' }} value={editData.description || ''} onChange={(e) => setEditData({ ...editData, description: e.target.value })} />
             </FormField>
-            <FormField label="Next Maintenance Date">
-              <input type="date" style={inputStyle} value={editData.nextMaintenanceDate?.split('T')[0] || ''} onChange={(e) => setEditData({ ...editData, nextMaintenanceDate: e.target.value })} />
-            </FormField>
             <button onClick={() => handleCourtUpdate(editData)} disabled={actionLoading} style={{ ...btnStyle, background: G.lime, color: G.dark, fontWeight: 900 }}>
               {actionLoading ? 'Saving…' : '✅ Save Changes'}
             </button>
@@ -1804,6 +1857,67 @@ export default function CourtDetailPage() {
               style={{ ...btnStyle, background: G.lime, color: G.dark, fontWeight: 900 }}
             >
               {actionLoading ? 'Saving…' : '✅ Save Location'}
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {modal === 'editMaintenance' && (
+        <Modal title="🔧 Edit Maintenance Schedule" onClose={() => setModal(null)}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {court.status === 'Maintenance' && (
+              <div style={{ 
+                background: G.orange + '22', 
+                border: `1px solid ${G.orange}55`, 
+                borderRadius: 8, 
+                padding: 12 
+              }}>
+                <div style={{ fontSize: 12, color: G.orange, fontWeight: 700 }}>
+                  ℹ️ This court is currently under maintenance
+                </div>
+              </div>
+            )}
+            
+            {court.status === 'Maintenance' && (
+              <FormField label="Maintenance Started">
+                <div style={{ 
+                  padding: '8px 12px', 
+                  background: G.mid, 
+                  border: `1px solid ${G.cardBorder}`, 
+                  borderRadius: 6,
+                  color: G.text,
+                  fontSize: 13,
+                  fontWeight: 600
+                }}>
+                  Ongoing
+                </div>
+              </FormField>
+            )}
+            
+            <FormField label="Maintenance Ends">
+              <input 
+                type="datetime-local" 
+                style={inputStyle} 
+                value={formatToDatetimeLocal(editData.maintenedUntil)} 
+                onChange={(e) => setEditData({ ...editData, maintenedUntil: e.target.value })} 
+              />
+            </FormField>
+            
+            <FormField label="Next Maintenance">
+              <input 
+                type="datetime-local" 
+                style={inputStyle} 
+                value={formatToDatetimeLocal(editData.nextMaintenanceDate)} 
+                onChange={(e) => setEditData({ ...editData, nextMaintenanceDate: e.target.value })} 
+              />
+            </FormField>
+            
+            <button 
+              onClick={() => handleCourtUpdate(editData)} 
+              disabled={actionLoading} 
+              style={{ ...btnStyle, background: G.lime, color: G.dark, fontWeight: 900 }}
+            >
+              {actionLoading ? 'Saving…' : '✅ Save Maintenance'}
             </button>
           </div>
         </Modal>

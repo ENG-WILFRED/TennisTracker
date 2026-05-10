@@ -17,6 +17,35 @@ export async function GET(
       return NextResponse.json({ error: 'Organization ID is required' }, { status: 400 });
     }
 
+    const now = new Date();
+    await prisma.court.updateMany({
+      where: {
+        organizationId: orgId,
+        maintenedUntil: {
+          gte: now,
+        },
+        status: {
+          not: 'Maintenance',
+        },
+      },
+      data: {
+        status: 'Maintenance',
+      },
+    });
+
+    await prisma.court.updateMany({
+      where: {
+        organizationId: orgId,
+        maintenedUntil: {
+          lt: now,
+        },
+        status: 'Maintenance',
+      },
+      data: {
+        status: 'Active',
+      },
+    });
+
     const courts = await prisma.court.findMany({
       where: { organizationId: orgId },
       orderBy: { courtNumber: 'asc' },
@@ -45,11 +74,22 @@ export async function POST(
       return NextResponse.json({ error: 'Organization ID is required' }, { status: 400 });
     }
 
-    const { name, courtNumber, surface, indoorOutdoor, lights, status } = body;
+    const { name, courtNumber, surface, indoorOutdoor, lights, status, maintenedUntil, nextMaintenanceDate } = body;
 
     if (!name || courtNumber === undefined) {
       return NextResponse.json({ error: 'Name and court number are required' }, { status: 400 });
     }
+
+    // Helper to convert datetime-local format (YYYY-MM-DDTHH:mm) to ISO-8601 with seconds
+    const formatDatetime = (value: string | undefined) => {
+      if (!value) return undefined;
+      if (value.includes(':') && value.length >= 16) {
+        if (value.length === 16) {
+          return new Date(value + ':00').toISOString();
+        }
+      }
+      return new Date(value).toISOString();
+    };
 
     const court = await prisma.court.create({
       data: {
@@ -60,6 +100,8 @@ export async function POST(
         indoorOutdoor,
         lights,
         status,
+        maintenedUntil: maintenedUntil ? new Date(formatDatetime(maintenedUntil)!) : undefined,
+        nextMaintenanceDate: nextMaintenanceDate ? new Date(formatDatetime(nextMaintenanceDate)!) : undefined,
       },
     });
 

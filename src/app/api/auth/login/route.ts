@@ -172,23 +172,6 @@ export async function POST(request: Request) {
     let user: any = null;
     let userId: string | null = null;
 
-    // Hardcoded developer login for wilfred
-    if (
-      (usernameOrEmail === 'wilfred' || usernameOrEmail === 'vicotennis0@gmail.com') &&
-      password === '123456'
-    ) {
-      user = {
-        id: 'dev-wilfred',
-        username: 'wilfred',
-        email: 'vicotennis0@gmail.com',
-        firstName: 'Wilfred',
-        lastName: 'Developer',
-        photo: null,
-        role: 'developer',
-      };
-      userId = user.id;
-    }
-
     // First try existing player login action
     try {
       user = await loginPlayer({ usernameOrEmail, password });
@@ -233,18 +216,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Login failed' }, { status: 401 });
     }
 
-    const userRecord =
-      userId === 'dev-wilfred'
-        ? null
-        : await prisma.user.findUnique({
-            where: { id: userId },
-            select: { acceptedTermsAt: true },
-          });
-    const termsAccepted = userId === 'dev-wilfred' ? true : Boolean(userRecord?.acceptedTermsAt);
+    const userRecord = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { acceptedTermsAt: true, isDeveloper: true },
+    });
+    const termsAccepted = Boolean(userRecord?.acceptedTermsAt);
 
     let availableMemberships;
 
-    if (userId === 'dev-wilfred') {
+    if (userRecord?.isDeveloper) {
       availableMemberships = [
         {
           role: 'developer' as UserRole,

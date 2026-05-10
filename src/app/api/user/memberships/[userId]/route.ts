@@ -20,7 +20,7 @@ export async function GET(
     // Get user details
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, email: true, firstName: true, lastName: true, photo: true },
+      select: { id: true, email: true, firstName: true, lastName: true, photo: true, isDeveloper: true },
     });
 
     if (!user) {
@@ -106,9 +106,18 @@ export async function GET(
       }
     }
 
-    const roles = Array.from(rolesMap.values());
+    let roles = Array.from(rolesMap.values());
 
-    if (roles.length === 0) {
+    if (user.isDeveloper) {
+      roles = [
+        {
+          role: 'developer' as UserRole,
+          orgId: '',
+          orgName: 'Developer Console',
+          status: 'accepted',
+        },
+      ];
+    } else if (roles.length === 0) {
       roles.push({
         role: 'spectator' as UserRole,
         orgId: '',

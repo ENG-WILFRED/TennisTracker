@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Organization Onboarding - VICO Tennis Tracker</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+      line-height: 1.6;
+      color: #333;
+      background-color: #f5f5f5;
+    }
+
+    .email-container {
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: white;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 40px 30px;
+      text-align: center;
+    }
+
+    .header h1 {
+      font-size: 28px;
+      margin-bottom: 10px;
+    }
+
+    .header p {
+      font-size: 16px;
+      opacity: 0.9;
+    }
+
+    .content {
+      padding: 40px 30px;
+    }
+
+    .content h2 {
+      font-size: 22px;
+      color: #333;
+      margin-bottom: 20px;
+    }
+
+    .content p {
+      font-size: 14px;
+      margin-bottom: 15px;
+      color: #666;
+      line-height: 1.8;
+    }
+
+    .pricing-section {
+      background-color: #f9f9f9;
+      border-left: 4px solid #667eea;
+      padding: 20px;
+      margin: 25px 0;
+      border-radius: 4px;
+    }
+
+    .pricing-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .pricing-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .pricing-label {
+      font-weight: 600;
+      color: #333;
+    }
+
+    .pricing-value {
+      font-size: 16px;
+      font-weight: bold;
+      color: #667eea;
+    }
+
+    .cta-button {
+      display: inline-block;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 12px 30px;
+      text-decoration: none;
+      border-radius: 4px;
+      font-weight: 600;
+      margin: 25px 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .cta-button:hover {
+      opacity: 0.9;
+    }
+
+    .next-steps {
+      background-color: #e8f4f8;
+      border-left: 4px solid #0284c7;
+      padding: 20px;
+      margin: 25px 0;
+      border-radius: 4px;
+    }
+
+    .next-steps h3 {
+      color: #0284c7;
+      margin-bottom: 15px;
+      font-size: 16px;
+    }
+
+    .next-steps ol {
+      margin-left: 20px;
+      color: #666;
+    }
+
+    .next-steps li {
+      margin-bottom: 10px;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .footer {
+      background-color: #f0f0f0;
+      padding: 30px;
+      text-align: center;
+      border-top: 1px solid #e0e0e0;
+    }
+
+    .footer p {
+      font-size: 12px;
+      color: #999;
+      margin-bottom: 10px;
+    }
+
+    .footer-links {
+      font-size: 12px;
+    }
+
+    .footer-links a {
+      color: #667eea;
+      text-decoration: none;
+      margin: 0 10px;
+    }
+
+    .highlight {
+      background-color: #fff3cd;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-weight: 600;
+    }
+
+    .contact-info {
+      background-color: #f0f8ff;
+      border-left: 4px solid #667eea;
+      padding: 15px;
+      margin: 20px 0;
+      border-radius: 4px;
+      font-size: 14px;
+      color: #666;
+    }
+
+    .divider {
+      height: 1px;
+      background-color: #e0e0e0;
+      margin: 20px 0;
+    }
+
+    @media (max-width: 600px) {
+      .header {
+        padding: 30px 20px;
+      }
+
+      .header h1 {
+        font-size: 24px;
+      }
+
+      .content {
+        padding: 20px;
+      }
+
+      .pricing-item {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .pricing-value {
+        margin-top: 5px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="email-container">
+    <!-- Header -->
+    <div class="header">
+      <h1>🎾 Welcome to VICO Tennis Tracker</h1>
+      <p>Organization Onboarding</p>
+    </div>
+
+    <!-- Main Content -->
+    <div class="content">
+      <h2>Welcome, {{organizationName}}!</h2>
+
+      <p>
+        We're excited to have <span class="highlight">{{organizationName}}</span> join the VICO Tennis Tracker
+        platform. Our comprehensive tennis management solution will help you streamline court bookings, player
+        management, coaching sessions, and more.
+      </p>
+
+      <!-- Pricing Section -->
+      <div class="pricing-section">
+        <h3 style="margin-bottom: 15px; font-size: 16px; color: #333">Your Onboarding Pricing</h3>
+
+        <div class="pricing-item">
+          <span class="pricing-label">Installation Fee:</span>
+          <span class="pricing-value">${{installationFee}}</span>
+        </div>
+
+        <div class="divider" style="margin: 15px 0"></div>
+
+        <div class="pricing-item">
+          <span class="pricing-label">Monthly Subscription:</span>
+          <span class="pricing-value">${{monthlySubscription}}/month</span>
+        </div>
+
+        <p style="font-size: 12px; color: #999; margin-top: 15px; text-align: right">
+          Billed annually or monthly — your choice
+        </p>
+      </div>
+
+      <!-- Features -->
+      <h3 style="font-size: 16px; color: #333; margin: 25px 0 15px 0">What's Included:</h3>
+
+      <ul style="margin-left: 20px; color: #666; font-size: 14px; line-height: 1.8">
+        <li>✓ Court Management & Scheduling</li>
+        <li>✓ Player Profiles & Memberships</li>
+        <li>✓ Coaching Session Tracking</li>
+        <li>✓ Payment Processing & Invoicing</li>
+        <li>✓ Real-time Notifications</li>
+        <li>✓ Analytics & Reporting Dashboard</li>
+        <li>✓ Team Management Tools</li>
+        <li>✓ 24/7 Customer Support</li>
+      </ul>
+
+      <!-- Next Steps -->
+      <div class="next-steps">
+        <h3>🚀 Next Steps:</h3>
+        <ol>
+          <li><strong>Confirm Details:</strong> Reply to this email to confirm your organization information</li>
+          <li><strong>Set Up Payment:</strong> Configure your payment method and subscription plan</li>
+          <li><strong>Team Onboarding:</strong> We'll guide your staff through platform setup</li>
+          <li><strong>Go Live:</strong> Start managing your tennis facility within 24-48 hours</li>
+        </ol>
+      </div>
+
+      <!-- Contact Information -->
+      <div class="contact-info">
+        <strong>Questions or need support?</strong><br />
+        Reach out to our onboarding team at <a href="mailto:support@vicotennis.com">support@vicotennis.com</a>
+        <br />
+        We're here to help you get the most out of VICO Tennis Tracker!
+      </div>
+
+      <!-- Additional Info -->
+      <p style="margin-top: 25px; font-size: 13px; color: #999">
+        <strong>Organization ID:</strong> {{organizationId}}<br />
+        Please reference this ID in all communications with our support team.
+      </p>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <p>© 2026 VICO Tennis Tracker. All rights reserved.</p>
+      <div class="footer-links">
+        <a href="https://vicotennis.com">Website</a> | <a href="https://vicotennis.com/terms">Terms</a> |
+        <a href="https://vicotennis.com/privacy">Privacy</a>
+      </div>
+      <p style="margin-top: 15px; color: #ccc">
+        This is an automated message. Please don't reply directly to this email.
+      </p>
+    </div>
+  </div>
+</body>
+</html>

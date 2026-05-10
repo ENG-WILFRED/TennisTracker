@@ -13,6 +13,37 @@ export async function GET(
 
     const { orgId, courtId } = await params;
 
+    const now = new Date();
+    await prisma.court.updateMany({
+      where: {
+        id: courtId,
+        organizationId: orgId,
+        maintenedUntil: {
+          gte: now,
+        },
+        status: {
+          not: 'Maintenance',
+        },
+      },
+      data: {
+        status: 'Maintenance',
+      },
+    });
+
+    await prisma.court.updateMany({
+      where: {
+        id: courtId,
+        organizationId: orgId,
+        maintenedUntil: {
+          lt: now,
+        },
+        status: 'Maintenance',
+      },
+      data: {
+        status: 'Active',
+      },
+    });
+
     const court = await prisma.court.findFirst({
       where: {
         id: courtId,
@@ -117,6 +148,17 @@ export async function PUT(
     const body = await request.json();
     const { name, courtNumber, surface, indoorOutdoor, lights, status } = body;
 
+    // Helper to convert datetime-local format (YYYY-MM-DDTHH:mm) to ISO-8601 with seconds
+    const formatDatetime = (value: string | undefined) => {
+      if (!value) return undefined;
+      if (value.includes(':') && value.length >= 16) {
+        if (value.length === 16) {
+          return new Date(value + ':00').toISOString();
+        }
+      }
+      return new Date(value).toISOString();
+    };
+
     const court = await prisma.court.updateMany({
       where: {
         id: courtId,
@@ -129,6 +171,8 @@ export async function PUT(
         indoorOutdoor,
         lights,
         status,
+        maintenedUntil: body.maintenedUntil ? new Date(formatDatetime(body.maintenedUntil)!) : undefined,
+        nextMaintenanceDate: body.nextMaintenanceDate ? new Date(formatDatetime(body.nextMaintenanceDate)!) : undefined,
       },
     });
 
@@ -155,6 +199,20 @@ export async function PATCH(
 
     const { orgId, courtId } = await params;
     const body = await request.json();
+
+    // Helper to convert datetime-local format (YYYY-MM-DDTHH:mm) to ISO-8601 with seconds
+    const formatDatetime = (value: string | undefined) => {
+      if (!value) return undefined;
+      // If it's already a valid ISO string, use it as-is
+      if (value.includes(':') && value.length >= 16) {
+        // Check if it's missing seconds (e.g., "2026-05-11T11:38")
+        if (value.length === 16) {
+          // Add :00 for seconds
+          return new Date(value + ':00').toISOString();
+        }
+      }
+      return new Date(value).toISOString();
+    };
 
     // PATCH allows partial updates - only update fields that are provided
     const updateData: any = {};
@@ -183,7 +241,8 @@ export async function PATCH(
     if (body.amenities !== undefined) updateData.amenities = body.amenities;
     if (body.rules !== undefined) updateData.rules = body.rules;
     if (body.availableDays !== undefined) updateData.availableDays = body.availableDays;
-    if (body.nextMaintenanceDate !== undefined) updateData.nextMaintenanceDate = body.nextMaintenanceDate;
+    if (body.nextMaintenanceDate !== undefined) updateData.nextMaintenanceDate = body.nextMaintenanceDate ? new Date(formatDatetime(body.nextMaintenanceDate)!) : undefined;
+    if (body.maintenedUntil !== undefined) updateData.maintenedUntil = body.maintenedUntil ? new Date(formatDatetime(body.maintenedUntil)!) : undefined;
     if (body.courtNumber !== undefined) updateData.courtNumber = parseInt(body.courtNumber);
 
     const court = await prisma.court.updateMany({

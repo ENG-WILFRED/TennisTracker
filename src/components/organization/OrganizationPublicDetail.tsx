@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useRole } from '@/context/RoleContext';
 import { authenticatedFetch } from '@/lib/authenticatedFetch';
@@ -37,12 +37,14 @@ interface OrganizationPublicDetailProps {
     finances: Array<{ id: string; month?: number | null; year?: number | null; membershipRevenue?: number | null; courtBookingRevenue?: number | null; totalRevenue?: number | null; netProfit?: number | null }>;
     ratings: Array<{ id: string; rating: number; category?: string | null; comment?: string | null; createdAt?: string | null }>;
     members: Array<{ id: string; role?: string | null; joinDate?: string | null; player?: { user?: { firstName?: string | null; lastName?: string | null; photo?: string | null } } }>;
+    staff: Array<{ id: string; role?: string | null; createdAt?: string | null; user?: { firstName?: string | null; lastName?: string | null; photo?: string | null } }>;
     _count: { members: number; courts: number; events: number };
   };
 }
 
 export default function OrganizationPublicDetail({ organization }: OrganizationPublicDetailProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, isLoggedIn } = useAuth();
   const { currentRole, currentOrgId } = useRole();
   const { addToast } = useToast();
@@ -102,13 +104,60 @@ export default function OrganizationPublicDetail({ organization }: OrganizationP
   });
   const [isSaving, setIsSaving] = useState(false);
 
+  const allowedTabs = ['overview', 'courts', 'events', 'staff'];
+
+  const updateUrlQuery = (tab: string, editMode: boolean) => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (tab) {
+      params.set('tab', tab);
+    } else {
+      params.delete('tab');
+    }
+    if (editMode) {
+      params.set('editmode', 'true');
+    } else {
+      params.delete('editmode');
+    }
+    const query = params.toString();
+    const newUrl = `${window.location.pathname}${query ? `?${query}` : ''}`;
+    window.history.replaceState(null, '', newUrl);
+  };
+
+  const setActiveTabAndSync = (tab: string) => {
+    const normalizedTab = allowedTabs.includes(tab) ? tab : 'overview';
+    setActiveTab(normalizedTab);
+    updateUrlQuery(normalizedTab, isEditMode);
+  };
+
+  const setIsEditModeAndSync = (value: boolean) => {
+    setIsEditMode(value);
+    updateUrlQuery(activeTab, value);
+  };
+
+  useEffect(() => {
+    if (!searchParams) return;
+    const tabParam = searchParams.get('tab');
+    const editParam = searchParams.get('editmode');
+    if (tabParam && allowedTabs.includes(tabParam)) {
+      setActiveTab(tabParam);
+    }
+    setIsEditMode(editParam === 'true');
+  }, [searchParams]);
+
   // Check if user is the org owner
   const isOrgOwner = currentRole === 'org' && currentOrgId === organization.id;
 
-  const coachCount = organization.members.filter((member) => member.role === 'coach').length;
-  const refereeCount = organization.members.filter((member) => member.role === 'referee').length;
-  const adminCount = organization.members.filter((member) => member.role === 'admin').length;
-  const totalStaff = organization.members.filter((member) => ['coach', 'referee', 'admin', 'staff'].includes(member.role ?? '')).length;
+  const staffRecords = organization.staff || [];
+  const coachCount = organization.members.filter((member) => member.role === 'coach').length
+    + staffRecords.filter((staff) => (staff.role || '').toLowerCase() === 'coach').length;
+  const refereeCount = organization.members.filter((member) => member.role === 'referee').length
+    + staffRecords.filter((staff) => (staff.role || '').toLowerCase() === 'referee').length;
+  const adminCount = organization.members.filter((member) => member.role === 'admin').length
+    + staffRecords.filter((staff) => (staff.role || '').toLowerCase() === 'admin').length;
+  const otherStaffCount = staffRecords.filter((staff) => !['coach', 'referee', 'admin'].includes((staff.role || '').toLowerCase())).length
+    + organization.members.filter((member) => (member.role || '').toLowerCase() === 'staff').length;
+  const totalStaff = coachCount + refereeCount + adminCount + otherStaffCount;
 
   const latestFinance = organization.finances?.[0];
 
@@ -142,7 +191,7 @@ export default function OrganizationPublicDetail({ organization }: OrganizationP
       }
 
       addToast('Organization data updated successfully!', 'success');
-      setIsEditMode(false);
+      setIsEditModeAndSync(false);
       router.refresh();
     } catch (error: any) {
       addToast(error?.message || 'Failed to save organization data', 'error');
@@ -486,8 +535,8 @@ export default function OrganizationPublicDetail({ organization }: OrganizationP
   };
 
   return (
-    <div style={{ minHeight: '100vh', padding: '24px', background: '#071008', color: '#e8f5e0' }}>
-      <div style={{ maxWidth: "auto", width: '100%', margin: '0 auto', display: 'grid', gap: 24 }}>
+    <div style={{ minHeight: '100vh', padding: '16px 12px', background: '#071008', color: '#e8f5e0' }}>
+      <div style={{ maxWidth: '100%', width: '100%', margin: '0 auto', display: 'grid', gap: 20 }}>
         {/* Back Button + Edit Button */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <button
@@ -509,7 +558,7 @@ export default function OrganizationPublicDetail({ organization }: OrganizationP
           </button>
           {isOrgOwner && (
             <button
-              onClick={() => setIsEditMode(!isEditMode)}
+              onClick={() => setIsEditModeAndSync(!isEditMode)}
               style={{
                 background: isEditMode ? '#ff6b6b' : '#7dc142',
                 border: 'none',
@@ -526,7 +575,7 @@ export default function OrganizationPublicDetail({ organization }: OrganizationP
         </div>
 
         {/* Organization Header */}
-        <section style={{ display: 'grid', gap: 24, padding: 28, borderRadius: 24, background: '#0f1f12', border: '1px solid #243e24' }}>
+        <section style={{ display: 'grid', gap: 18, padding: 20, borderRadius: 24, background: '#0f1f12', border: '1px solid #243e24' }}>
           <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: 24, alignItems: 'flex-start' }}>
             <div style={{ display: 'flex', gap: 18, minWidth: 0, alignItems: 'center' }}>
               <div style={{ width: 64, height: 64, borderRadius: 20, background: '#1e3f28', display: 'grid', placeItems: 'center', fontSize: 28 }}>
@@ -598,7 +647,7 @@ export default function OrganizationPublicDetail({ organization }: OrganizationP
 
         {/* Edit Organization Modal */}
         {isEditMode && isOrgOwner && (
-          <section style={{ display: 'grid', gap: 20, padding: 28, borderRadius: 24, background: '#0f1f12', border: '2px solid #7dc142' }}>
+          <section style={{ display: 'grid', gap: 16, padding: 20, borderRadius: 24, background: '#0f1f12', border: '2px solid #7dc142' }}>
             <div>
               <h2 style={{ margin: 0, fontSize: 20, fontWeight: 900, color: '#7dc142' }}>Edit Organization Details</h2>
               <p style={{ margin: '8px 0 0', color: '#7aaa6a', fontSize: 12 }}>Update your organization information</p>
@@ -772,7 +821,7 @@ export default function OrganizationPublicDetail({ organization }: OrganizationP
                 {isSaving ? 'Saving...' : '✓ Save Changes'}
               </button>
               <button
-                onClick={() => setIsEditMode(false)}
+                onClick={() => setIsEditModeAndSync(false)}
                 disabled={isSaving}
                 style={{
                   background: 'transparent',
@@ -791,8 +840,8 @@ export default function OrganizationPublicDetail({ organization }: OrganizationP
         )}
 
         {/* Tab Navigation */}
-        <div style={{ borderBottom: '1px solid #243e24', paddingBottom: 16 }}>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <div style={{ borderBottom: '1px solid #243e24', paddingBottom: 16, marginBottom: 20 }}>
+          <div className="org-tab-row">
             {[
               { id: 'overview', label: 'Overview', icon: '📊' },
               { id: 'courts', label: 'Courts & Facilities', icon: '🎾' },
@@ -801,7 +850,8 @@ export default function OrganizationPublicDetail({ organization }: OrganizationP
             ].map(tab => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => setActiveTabAndSync(tab.id)}
+                className="org-tab-button"
                 style={{
                   background: activeTab === tab.id ? '#1e3f28' : 'transparent',
                   border: `1px solid ${activeTab === tab.id ? '#7dc142' : '#243e24'}`,
@@ -821,11 +871,54 @@ export default function OrganizationPublicDetail({ organization }: OrganizationP
               </button>
             ))}
           </div>
+          <style jsx>{`
+            .org-tab-row {
+              display: flex;
+              flex-wrap: wrap;
+              gap: 8px;
+            }
+
+            @media (max-width: 768px) {
+              .org-tab-row {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 8px 12px;
+              }
+
+              .org-tab-button {
+                width: 100%;
+              }
+
+              .org-tab-row button:nth-child(1) {
+                grid-column: 1;
+                grid-row: 1;
+                justify-self: start;
+              }
+
+              .org-tab-row button:nth-child(2) {
+                grid-column: 1;
+                grid-row: 2;
+                justify-self: start;
+              }
+
+              .org-tab-row button:nth-child(3) {
+                grid-column: 2;
+                grid-row: 1;
+                justify-self: end;
+              }
+
+              .org-tab-row button:nth-child(4) {
+                grid-column: 2;
+                grid-row: 2;
+                justify-self: end;
+              }
+            }
+          `}</style>
         </div>
         {/* Tab Content */}
         {activeTab === 'overview' && (
-          <div style={{ display: 'grid', gap: 24 }}>
-            <section style={{ padding: 24, borderRadius: 24, background: '#0f1f12', border: '1px solid #243e24' }}>
+          <div style={{ display: 'grid', gap: 40 }}>
+            <section style={{ padding: 32, borderRadius: 24, background: '#0f1f12', border: '1px solid #243e24' }}>
               <div style={{ display: 'grid', gap: 18 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
                   <div>
@@ -978,27 +1071,27 @@ export default function OrganizationPublicDetail({ organization }: OrganizationP
                   <div style={{ color: '#a8d84e', fontSize: 13 }}>{paymentStatus}</div>
                 )}
               </div>
+            </section>
 
-              <div style={{ padding: 24, borderRadius: 24, background: '#132915', border: '1px solid #243e24' }}>
-                <h2 style={{ margin: 0, fontSize: 24, fontWeight: 800 }}>Club details</h2>
-                <p style={{ margin: '10px 0 20px', color: '#7aaa6a', fontSize: 14 }}>Quick club performance metrics and staffing summary.</p>
-                <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
-                  <div style={{ padding: 18, borderRadius: 20, background: '#0f1f12' }}>
-                    <div style={{ color: '#7dc142', fontSize: 11, textTransform: 'uppercase', letterSpacing: 1 }}>Coaches</div>
-                    <div style={{ marginTop: 10, fontSize: 28, fontWeight: 800 }}>{coachCount}</div>
-                  </div>
-                  <div style={{ padding: 18, borderRadius: 20, background: '#0f1f12' }}>
-                    <div style={{ color: '#7dc142', fontSize: 11, textTransform: 'uppercase', letterSpacing: 1 }}>Referees</div>
-                    <div style={{ marginTop: 10, fontSize: 28, fontWeight: 800 }}>{refereeCount}</div>
-                  </div>
-                  <div style={{ padding: 18, borderRadius: 20, background: '#0f1f12' }}>
-                    <div style={{ color: '#7dc142', fontSize: 11, textTransform: 'uppercase', letterSpacing: 1 }}>Admins</div>
-                    <div style={{ marginTop: 10, fontSize: 28, fontWeight: 800 }}>{adminCount}</div>
-                  </div>
-                  <div style={{ padding: 18, borderRadius: 20, background: '#0f1f12' }}>
-                    <div style={{ color: '#7dc142', fontSize: 11, textTransform: 'uppercase', letterSpacing: 1 }}>Net worth</div>
-                    <div style={{ marginTop: 10, fontSize: 28, fontWeight: 800 }}>${latestFinance?.totalRevenue ?? '—'}</div>
-                  </div>
+            <section style={{ padding: 32, borderRadius: 24, background: '#132915', border: '1px solid #243e24' }}>
+              <h2 style={{ margin: 0, fontSize: 24, fontWeight: 800 }}>Club details</h2>
+              <p style={{ margin: '10px 0 20px', color: '#7aaa6a', fontSize: 14 }}>Quick club performance metrics and staffing summary.</p>
+              <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
+                <div style={{ padding: 18, borderRadius: 20, background: '#0f1f12' }}>
+                  <div style={{ color: '#7dc142', fontSize: 11, textTransform: 'uppercase', letterSpacing: 1 }}>Coaches</div>
+                  <div style={{ marginTop: 10, fontSize: 28, fontWeight: 800 }}>{coachCount}</div>
+                </div>
+                <div style={{ padding: 18, borderRadius: 20, background: '#0f1f12' }}>
+                  <div style={{ color: '#7dc142', fontSize: 11, textTransform: 'uppercase', letterSpacing: 1 }}>Referees</div>
+                  <div style={{ marginTop: 10, fontSize: 28, fontWeight: 800 }}>{refereeCount}</div>
+                </div>
+                <div style={{ padding: 18, borderRadius: 20, background: '#0f1f12' }}>
+                  <div style={{ color: '#7dc142', fontSize: 11, textTransform: 'uppercase', letterSpacing: 1 }}>Admins</div>
+                  <div style={{ marginTop: 10, fontSize: 28, fontWeight: 800 }}>{adminCount}</div>
+                </div>
+                <div style={{ padding: 18, borderRadius: 20, background: '#0f1f12' }}>
+                  <div style={{ color: '#7dc142', fontSize: 11, textTransform: 'uppercase', letterSpacing: 1 }}>Net worth</div>
+                  <div style={{ marginTop: 10, fontSize: 28, fontWeight: 800 }}>${latestFinance?.totalRevenue ?? '—'}</div>
                 </div>
               </div>
             </section>
@@ -1259,7 +1352,7 @@ export default function OrganizationPublicDetail({ organization }: OrganizationP
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 12, padding: 20, borderRadius: 16, background: '#132915' }}>
                   <span style={{ fontSize: 16, fontWeight: 600, color: '#e8f5e0' }}>Other staff</span>
-                  <strong style={{ fontSize: 24, color: '#7dc142' }}>{totalStaff - coachCount - refereeCount - adminCount}</strong>
+                  <strong style={{ fontSize: 24, color: '#7dc142' }}>{otherStaffCount}</strong>
                 </div>
               </div>
             </section>
@@ -1271,22 +1364,44 @@ export default function OrganizationPublicDetail({ organization }: OrganizationP
                 <p style={{ margin: '8px 0 0', color: '#7aaa6a', fontSize: 14 }}>Recent members and their roles in the club.</p>
               </div>
               <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
-                {organization.members.slice(0, 10).map((member, index) => (
-                  <div key={index} style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '16px 20px', borderRadius: 16, background: '#132915' }}>
-                    <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#1e3f28', display: 'grid', placeItems: 'center', fontSize: 16 }}>
-                      {member.player?.user?.firstName?.charAt(0) || 'U'}
-                    </div>
-                    <div style={{ minWidth: 0, flex: 1 }}>
-                      <div style={{ color: '#e8f5e0', fontSize: 16, fontWeight: 700 }}>
-                        {member.player?.user?.firstName || 'Member'} {member.player?.user?.lastName || ''}
+                {[
+                  ...organization.staff.map((staff) => ({
+                    id: staff.id,
+                    name: `${staff.user?.firstName || 'Staff'} ${staff.user?.lastName || ''}`.trim(),
+                    role: staff.role || 'staff',
+                    date: staff.createdAt,
+                    photo: staff.user?.photo,
+                  })),
+                  ...organization.members.map((member) => ({
+                    id: member.id,
+                    name: `${member.player?.user?.firstName || 'Member'} ${member.player?.user?.lastName || ''}`.trim(),
+                    role: member.role || 'member',
+                    date: member.joinDate,
+                    photo: member.player?.user?.photo,
+                  })),
+                ]
+                  .sort((a, b) => {
+                    const dateA = a.date ? new Date(a.date).getTime() : 0;
+                    const dateB = b.date ? new Date(b.date).getTime() : 0;
+                    return dateB - dateA;
+                  })
+                  .slice(0, 10)
+                  .map((item, index) => (
+                    <div key={`${item.id}-${index}`} style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '16px 20px', borderRadius: 16, background: '#132915' }}>
+                      <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#1e3f28', display: 'grid', placeItems: 'center', fontSize: 16 }}>
+                        {item.name?.charAt(0) || 'U'}
                       </div>
-                      <div style={{ color: '#7aaa6a', fontSize: 14, marginTop: 2 }}>{member.role || 'member'}</div>
-                      <div style={{ color: '#c4d8b1', fontSize: 12, marginTop: 2 }}>
-                        Joined {member.joinDate ? new Date(member.joinDate).toLocaleDateString() : 'Recently'}
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ color: '#e8f5e0', fontSize: 16, fontWeight: 700 }}>
+                          {item.name}
+                        </div>
+                        <div style={{ color: '#7aaa6a', fontSize: 14, marginTop: 2 }}>{item.role}</div>
+                        <div style={{ color: '#c4d8b1', fontSize: 12, marginTop: 2 }}>
+                          Joined {item.date ? new Date(item.date).toLocaleDateString() : 'Recently'}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
               </div>
             </section>
           </div>

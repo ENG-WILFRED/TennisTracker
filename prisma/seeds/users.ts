@@ -15,8 +15,9 @@ interface UserData {
   nationality?: string;
   bio?: string;
   photo?: string;
-  role: 'player' | 'coach' | 'admin' | 'staff' | 'referee' | 'spectator';
+  role: 'player' | 'coach' | 'admin' | 'staff' | 'referee' | 'spectator' | 'developer';
   organizationId?: string;
+  isDeveloper?: boolean;
   playerStats?: {
     matchesPlayed: number;
     matchesWon: number;
@@ -40,6 +41,7 @@ interface UserData {
     certifications?: string[];
     organizationId?: string;
   };
+  acceptedTermsAt?: Date;
 }
 
 export async function seedUsers(organizations: any[]) {
@@ -199,6 +201,21 @@ export async function seedUsers(organizations: any[]) {
       bio: 'Elite administrator with full system access and management privileges.',
       photo: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=500&q=80',
       role: 'admin',
+    },
+    {
+      username: 'wilfred',
+      email: 'vicotennis0@gmail.com',
+      firstName: 'Wilfred',
+      lastName: 'Developer',
+      phone: '+1-555-0001',
+      gender: 'Male',
+      dateOfBirth: new Date('1985-10-01'),
+      nationality: 'Kenya',
+      bio: 'Platform developer and support engineer.',
+      photo: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=500&q=80',
+      acceptedTermsAt: new Date(),
+      role: 'developer',
+      isDeveloper: true,
     },
 
     // ==================== COACHES ====================
@@ -407,6 +424,7 @@ export async function seedUsers(organizations: any[]) {
             nationality: userData.nationality,
             bio: userData.bio,
             photo: userData.photo,
+            isDeveloper: userData.isDeveloper || false,
           },
         });
       } else {
@@ -473,6 +491,7 @@ export async function seedUsers(organizations: any[]) {
                     },
                   }
                 : undefined,
+            isDeveloper: userData.isDeveloper || false,
             spectator: userData.role === 'spectator' ? { create: {} } : undefined,
           },
           include: {
