@@ -7,7 +7,11 @@
 
 import WebSocket from 'ws';
 
-const WS_URL = process.argv[2] || 'ws://localhost:3000/api/websocket?token=test-token';
+const WS_BASE_URL = process.argv[2] || process.env.TEST_BASE_URL || process.env.STRESS_TEST_URL || process.env.BASE_URL || 'http://localhost:3000';
+const WS_URL = WS_BASE_URL
+  .replace(/^http:\/\//, 'ws://')
+  .replace(/^https:\/\//, 'wss://')
+  .replace(/\/$/, '') + '/api/websocket?token=test-token';
 
 console.log(`🔗 Testing WebSocket connection to: ${WS_URL}`);
 

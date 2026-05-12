@@ -711,7 +711,7 @@ export const OrganizationDashboard: React.FC = () => {
         )}
 
         {activeNav === 'Tasks' && renderOrgSection(
-          <OrganizationTasksSection orgId={dashboardData?.organizationId} />
+          <OrganizationTasksSection orgId={dashboardData?.organizationId} adminUserId={user?.id} />
         )}
 
         {activeNav === 'Courts' && renderOrgSection(

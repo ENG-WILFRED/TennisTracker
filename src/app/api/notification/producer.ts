@@ -213,8 +213,23 @@ export async function sendPasswordResetEmail(
   return notify({
     to: email,
     channel: 'email',
-    template: 'password_reset_email',
+    template: 'passwordResetOtpTemplate',
     data: { name, reset_link: resetLink },
+  });
+}
+
+export async function sendPasswordResetOtpEmail(
+  email: string,
+  otp: string,
+  name?: string,
+  resetLink?: string,
+  expiryMinutes = 10
+) {
+  return notify({
+    to: email,
+    channel: 'email',
+    template: 'passwordResetOtpTemplate',
+    data: { name, otp, reset_link: resetLink, expiryMinutes },
   });
 }
 

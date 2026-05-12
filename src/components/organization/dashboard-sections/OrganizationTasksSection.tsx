@@ -26,6 +26,8 @@ interface Task {
   dueDate?: string;
   createdAt: string;
   updatedAt: string;
+  assignedBy?: string;
+  context?: Record<string, any>;
   assignedTo?: {
     id: string;
     name: string;
@@ -50,11 +52,12 @@ interface Staff {
 interface TasksSectionProps {
   orgId?: string;
   pendingTasks?: any[];
+  adminUserId?: string;
 }
 
 const TASKS_PER_PAGE = 10;
 
-export default function OrganizationTasksSection({ orgId, pendingTasks = [] }: TasksSectionProps) {
+export default function OrganizationTasksSection({ orgId, pendingTasks = [], adminUserId }: TasksSectionProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [totalTasks, setTotalTasks] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
@@ -62,6 +65,7 @@ export default function OrganizationTasksSection({ orgId, pendingTasks = [] }: T
   const [loading, setLoading] = useState(true);
   const [staffLoading, setStaffLoading] = useState(true);
   const [showAssignModal, setShowAssignModal] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterPriority, setFilterPriority] = useState<string>('all');
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -83,20 +87,61 @@ export default function OrganizationTasksSection({ orgId, pendingTasks = [] }: T
 
   useEffect(() => {
     if (orgId) {
-      fetchTasks();
+      fetchTasks(currentPage);
       fetchStaff();
     }
   }, [orgId, currentPage]);
 
-  async function fetchTasks() {
+  // Resolve player names for tasks that have selectedPlayerIds but no selectedPlayerNames
+  useEffect(() => {
+    if (
+      selectedTask?.context?.selectedPlayerIds &&
+      Array.isArray(selectedTask.context.selectedPlayerIds) &&
+      !selectedTask.context.selectedPlayerNames
+    ) {
+      const resolvePlayerNames = async () => {
+        try {
+          const context = selectedTask?.context;
+          const ids = Array.isArray(context?.selectedPlayerIds)
+            ? context.selectedPlayerIds.join(',')
+            : '';
+          const res = await authenticatedFetch(
+            `/api/organization/${orgId}/players?ids=${ids}`
+          );
+          if (res.ok) {
+            const players = await res.json();
+            const playerNames = players
+              .map((p: any) => p.name || p.firstName + ' ' + p.lastName)
+              .filter((name: string) => !!name);
+            setSelectedTask((prev) => {
+              if (!prev) return null;
+              return {
+                ...prev,
+                context: {
+                  ...prev.context,
+                  selectedPlayerNames: playerNames,
+                },
+              };
+            });
+          }
+        } catch (err) {
+          console.error('Error resolving player names:', err);
+        }
+      };
+      resolvePlayerNames();
+    }
+  }, [selectedTask?.id, orgId]);
+
+  async function fetchTasks(page: number = currentPage) {
     try {
       setLoading(true);
-      const offset = (currentPage - 1) * TASKS_PER_PAGE;
+      const offset = (page - 1) * TASKS_PER_PAGE;
       const res = await authenticatedFetch(`/api/organization/${orgId}/tasks?offset=${offset}&limit=${TASKS_PER_PAGE}`);
       if (res.ok) {
         const data = await res.json();
         setTasks(Array.isArray(data.tasks) ? data.tasks : (Array.isArray(data) ? data : []));
         setTotalTasks(data.total || data.length || 0);
+        return true;
       }
     } catch (err) {
       toast.error('Failed to load tasks');
@@ -104,11 +149,46 @@ export default function OrganizationTasksSection({ orgId, pendingTasks = [] }: T
     } finally {
       setLoading(false);
     }
+    return false;
   }
 
+  const formatContextKey = (key: string, context: Record<string, any> = {}) => {
+    // Use player names label if available
+    if (key === 'selectedPlayerNames') {
+      return 'Selected Players';
+    }
+    return key.replace(/([A-Z])/g, ' $1').trim();
+  };
+
+  const formatContextValue = (
+    key: string,
+    value: any,
+    context: Record<string, any> = {}
+  ) => {
+    if (key === 'selectedPlayerIds') {
+      if (Array.isArray(context.selectedPlayerNames) && context.selectedPlayerNames.length > 0) {
+        return context.selectedPlayerNames.join(', ');
+      }
+      return Array.isArray(value) ? value.join(', ') : String(value);
+    }
+
+    if (Array.isArray(value)) {
+      return value.join(', ');
+    }
+
+    if (typeof value === 'object' && value !== null) {
+      return JSON.stringify(value);
+    }
+
+    return String(value ?? '');
+  };
+
   const handleRefresh = () => {
-    setCurrentPage(1);
-    fetchTasks();
+    if (currentPage === 1) {
+      fetchTasks(1);
+    } else {
+      setCurrentPage(1);
+    }
   };
 
   const handleBackgroundRefresh = async () => {
@@ -146,26 +226,20 @@ export default function OrganizationTasksSection({ orgId, pendingTasks = [] }: T
     }
   }
 
-  const handleTaskAssigned = (newTask?: any) => {
-    if (newTask) {
-      // Optimistically add the new task to the list (don't refetch)
-      const formattedTask = {
-        id: newTask.id || newTask.data?.id,
-        staffUserId: newTask.assignedToId || newTask.data?.assignedToId || '',
-        title: newTask.template?.name || newTask.data?.template?.name || 'Task',
-        description: newTask.notes || newTask.data?.notes,
-        status: newTask.status || 'pending',
-        role: newTask.template?.type || newTask.data?.template?.type || 'Task',
-        priority: newTask.context?.priority || 'normal',
-        dueDate: newTask.dueDate || newTask.data?.dueDate,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        source: 'typed_task'
-      };
-      setTasks([formattedTask as Task, ...tasks]);
-    }
-    toast.success('Task assigned successfully');
+  const handleTaskAssigned = async (newTask?: any) => {
     setShowAssignModal(false);
+    if (currentPage !== 1) {
+      setCurrentPage(1);
+      toast.success('Task assigned successfully');
+      return;
+    }
+
+    const refreshed = await fetchTasks(1);
+    if (refreshed) {
+      toast.success('Task assigned successfully');
+    } else {
+      toast.error('Task assigned successfully, but task list refresh failed.');
+    }
   };
 
   const filteredTasks = tasks.filter(t => {
@@ -173,6 +247,9 @@ export default function OrganizationTasksSection({ orgId, pendingTasks = [] }: T
     const priorityMatch = filterPriority === 'all' || t.priority === filterPriority;
     return statusMatch && priorityMatch;
   });
+
+  const openTaskDetails = (task: Task) => setSelectedTask(task);
+  const closeTaskDetails = () => setSelectedTask(null);
 
   const statsCount = (status: string) => tasks.filter(t => t.status === status).length;
   const totalPages = Math.ceil(totalTasks / TASKS_PER_PAGE);
@@ -320,6 +397,7 @@ export default function OrganizationTasksSection({ orgId, pendingTasks = [] }: T
           <div onClick={e => e.stopPropagation()}>
             <AssignCard
               organizationId={orgId || ''}
+              currentUserId={adminUserId}
               onTaskAssigned={handleTaskAssigned}
               onClose={() => setShowAssignModal(false)}
             />
@@ -350,13 +428,18 @@ export default function OrganizationTasksSection({ orgId, pendingTasks = [] }: T
             {filteredTasks.map((task, idx) => (
               <div
                 key={task.id}
+                onClick={() => openTaskDetails(task)}
                 style={{
                   padding: 14,
                   borderBottom: idx < filteredTasks.length - 1 ? `1px solid ${G.cardBorder}` : 'none',
                   display: 'flex',
                   alignItems: 'flex-start',
                   gap: 12,
+                  cursor: 'pointer',
+                  transition: 'background 0.15s ease',
                 }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.03)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
               >
                 {/* Avatar */}
                 <div
@@ -480,6 +563,146 @@ export default function OrganizationTasksSection({ orgId, pendingTasks = [] }: T
           </div>
         )}
       </div>
+
+      {selectedTask && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 10000,
+            background: 'rgba(0, 0, 0, 0.55)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 24,
+          }}
+          onClick={closeTaskDetails}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              width: '100%',
+              maxWidth: 680,
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              background: G.card,
+              border: `1px solid ${G.cardBorder}`,
+              borderRadius: 16,
+              padding: 24,
+              boxShadow: '0 24px 80px rgba(0,0,0,0.35)',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, marginBottom: 20 }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: G.text }}>{selectedTask.title}</h3>
+                <p style={{ margin: '8px 0 0', color: G.muted, fontSize: 13 }}>
+                  {selectedTask.role} • Assigned to {selectedTask.assignedTo?.name || 'Unassigned'}
+                </p>
+              </div>
+              <button
+                onClick={closeTaskDetails}
+                style={{
+                  border: 'none',
+                  background: 'transparent',
+                  color: G.text,
+                  fontSize: 18,
+                  cursor: 'pointer',
+                  padding: 4,
+                }}
+                aria-label="Close task details"
+              >
+                ×
+              </button>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 18 }}>
+              <div style={{ display: 'grid', gap: 10 }}>
+                <div>
+                  <div style={{ fontSize: 11, color: G.muted, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Status</div>
+                  <div style={{ marginTop: 4, color: G.text }}>{statusConfig[selectedTask.status]?.icon || '•'} {selectedTask.status.replace('_', ' ')}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 11, color: G.muted, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Priority</div>
+                  <div style={{ marginTop: 4, color: (priorityConfig[selectedTask.priority] || priorityConfig.medium).color }}>{selectedTask.priority}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 11, color: G.muted, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Assigned by</div>
+                  <div style={{ marginTop: 4, color: G.text }}>{selectedTask.assignedBy || 'System'}</div>
+                </div>
+              </div>
+              <div style={{ display: 'grid', gap: 10 }}>
+                <div>
+                  <div style={{ fontSize: 11, color: G.muted, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Due date</div>
+                  <div style={{ marginTop: 4, color: G.text }}>{selectedTask.dueDate ? new Date(selectedTask.dueDate).toLocaleDateString() : 'None'}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 11, color: G.muted, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Created</div>
+                  <div style={{ marginTop: 4, color: G.text }}>{new Date(selectedTask.createdAt).toLocaleDateString()}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 11, color: G.muted, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Updated</div>
+                  <div style={{ marginTop: 4, color: G.text }}>{new Date(selectedTask.updatedAt).toLocaleDateString()}</div>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 11, color: G.muted, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Description</div>
+              <div style={{ color: G.text, lineHeight: 1.6 }}>{selectedTask.description || 'No description provided.'}</div>
+            </div>
+
+            {selectedTask.responsibility && (
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 11, color: G.muted, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Responsibility</div>
+                <div style={{ color: G.text, lineHeight: 1.6 }}>{selectedTask.responsibility}</div>
+              </div>
+            )}
+
+            {selectedTask.rejectionReason && (
+              <div style={{ marginBottom: 20, padding: 14, borderRadius: 10, background: 'rgba(255, 107, 107, 0.12)', border: `1px solid ${G.red}` }}>
+                <div style={{ fontSize: 11, color: G.red, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Rejection reason</div>
+                <div style={{ color: G.text }}>{selectedTask.rejectionReason}</div>
+              </div>
+            )}
+
+            {selectedTask.context && Object.keys(selectedTask.context).length > 0 && (
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 11, color: G.muted, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>Context</div>
+                <div style={{ display: 'grid', gap: 10 }}>
+                  {Object.entries(selectedTask.context)
+                    .filter(
+                      ([key]) => !(key === 'selectedPlayerIds' &&
+                        Array.isArray(selectedTask.context?.selectedPlayerNames) &&
+                        selectedTask.context.selectedPlayerNames.length > 0)
+                    )
+                    .map(([key, value]) => (
+                      <div key={key} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, color: G.text, fontSize: 13 }}>
+                        <span style={{ color: G.muted, minWidth: 140, textTransform: 'capitalize' }}>{formatContextKey(key, selectedTask.context)}</span>
+                        <span>{formatContextValue(key, value, selectedTask.context)}</span>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+              <button
+                onClick={closeTaskDetails}
+                style={{
+                  padding: '10px 16px',
+                  borderRadius: 8,
+                  border: `1px solid ${G.cardBorder}`,
+                  background: 'transparent',
+                  color: G.text,
+                  cursor: 'pointer',
+                }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

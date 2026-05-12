@@ -11,31 +11,31 @@ const statusConfig = {
   [TaskStatus.ASSIGNED]: {
     bg: 'bg-blue-50',
     text: 'text-blue-900',
-    border: 'border-blue-200',
+    border: 'border-gray-200',
     label: 'New Assignment',
   },
   [TaskStatus.ACCEPTED]: {
     bg: 'bg-purple-50',
     text: 'text-purple-900',
-    border: 'border-purple-200',
+    border: 'border-gray-200',
     label: 'Accepted',
   },
   [TaskStatus.IN_PROGRESS]: {
     bg: 'bg-yellow-50',
     text: 'text-yellow-900',
-    border: 'border-yellow-200',
+    border: 'border-gray-200',
     label: 'In Progress',
   },
   [TaskStatus.COMPLETED]: {
     bg: 'bg-green-50',
     text: 'text-green-900',
-    border: 'border-green-200',
+    border: 'border-gray-200',
     label: 'Completed',
   },
   [TaskStatus.FAILED]: {
     bg: 'bg-red-50',
     text: 'text-red-900',
-    border: 'border-red-200',
+    border: 'border-gray-200',
     label: 'Failed',
   },
   [TaskStatus.CANCELLED]: {
@@ -47,6 +47,32 @@ const statusConfig = {
 };
 
 export function TaskCard({ task, onAction, showActions = true }: TaskCardProps) {
+  const formatContextValue = (key: string, value: any, context: Record<string, any> = {}) => {
+    if (key === 'selectedPlayerIds') {
+      if (Array.isArray(context.selectedPlayerNames) && context.selectedPlayerNames.length > 0) {
+        return context.selectedPlayerNames.join(', ');
+      }
+      return Array.isArray(value) ? value.join(', ') : String(value);
+    }
+
+    if (key === 'courtId') {
+      if (context.courtName) {
+        return context.courtName;
+      }
+      return String(value ?? '');
+    }
+
+    if (Array.isArray(value)) {
+      return value.join(', ');
+    }
+
+    if (typeof value === 'object' && value !== null) {
+      return JSON.stringify(value);
+    }
+
+    return String(value ?? '');
+  };
+
   const daysLeft = task.dueDate
     ? Math.ceil(
         (new Date(task.dueDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
@@ -59,7 +85,7 @@ export function TaskCard({ task, onAction, showActions = true }: TaskCardProps) 
   const config = statusConfig[task.status as TaskStatus] || statusConfig[TaskStatus.ASSIGNED];
 
   return (
-    <div className={`p-4 border rounded-lg hover:shadow-md transition-shadow ${config.bg} ${config.border} border-2`}>
+    <div className={`p-4 border rounded-lg hover:shadow-md transition-shadow ${config.bg} ${config.border}`}>
       {/* Header */}
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1">
@@ -70,7 +96,7 @@ export function TaskCard({ task, onAction, showActions = true }: TaskCardProps) 
             {task.template?.description}
           </p>
         </div>
-        <span className={`px-3 py-1 rounded-full font-semibold text-xs ${config.bg} ${config.text} ${config.border} border`}>
+        <span className={`px-3 py-1 rounded-full font-semibold text-xs ${config.bg} ${config.text} border border-gray-200`}>
           {config.label}
         </span>
       </div>
@@ -98,20 +124,32 @@ export function TaskCard({ task, onAction, showActions = true }: TaskCardProps) 
 
       {/* Notes Section */}
       {task.notes && (
-        <div className={`mb-3 p-2 ${config.bg} rounded text-sm ${config.text} opacity-80 border ${config.border}`}>
+        <div className={`mb-3 p-2 ${config.bg} rounded text-sm ${config.text} opacity-80 border border-gray-200`}>
           <strong>Notes:</strong> {task.notes}
         </div>
       )}
 
       {/* Context/Specifications Display */}
       {task.context && Object.keys(task.context).length > 0 && (
-        <div className={`mb-3 p-2 ${config.bg} rounded text-xs border ${config.border}`}>
+        <div className={`mb-3 p-2 ${config.bg} rounded text-xs border border-gray-200`}>
           <div className="grid grid-cols-2 gap-2">
-            {Object.entries(task.context).map(([key, value]) => (
-              <div key={key} className={config.text}>
-                <span className="font-semibold opacity-75">{key}:</span> <span>{String(value)}</span>
-              </div>
-            ))}
+            {Object.entries(task.context)
+              .filter(
+                ([key]) => !(key === 'selectedPlayerIds' &&
+                  Array.isArray(task.context?.selectedPlayerNames) &&
+                  task.context.selectedPlayerNames.length > 0)
+              )
+              .filter(
+                ([key]) => !(key === 'courtId' &&
+                  task.context?.courtName)
+              )
+              .filter(([key]) => key !== 'courtName')
+              .map(([key, value]) => (
+                <div key={key} className={config.text}>
+                  <span className="font-semibold opacity-75">{key}:</span>{' '}
+                  <span>{formatContextValue(key, value, task.context)}</span>
+                </div>
+              ))}
           </div>
         </div>
       )}

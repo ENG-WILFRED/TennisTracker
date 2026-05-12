@@ -23,7 +23,9 @@ const args = process.argv.slice(2);
 const suite = args.includes('--suite') ? args[args.indexOf('--suite') + 1] : 'all';
 const concurrent = args.includes('--concurrent') ? args[args.indexOf('--concurrent') + 1] : '50';
 const duration = args.includes('--duration') ? args[args.indexOf('--duration') + 1] : '60';
-const testUrl = args.includes('--url') ? args[args.indexOf('--url') + 1] : 'http://localhost:3000';
+const testUrl = args.includes('--url')
+  ? args[args.indexOf('--url') + 1]
+  : process.env.TEST_BASE_URL || process.env.STRESS_TEST_URL || process.env.BASE_URL || 'http://localhost:3000';
 
 const reportDir = path.join(__dirname, '..', 'reports');
 const timestamp = new Date().toISOString().replace(/:/g, '-');

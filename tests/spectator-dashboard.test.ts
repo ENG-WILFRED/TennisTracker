@@ -5,7 +5,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
  * Tests data fetching from backend endpoints and validates response shapes
  */
 
-const API_BASE_URL = 'http://localhost:3000/api';
+const API_BASE_URL = (process.env.TEST_BASE_URL || process.env.BASE_URL || 'http://localhost:3000')
+  .replace(/\/$/, '') + '/api';
 
 // Mock data fixtures
 const MOCK_PLAYERS = [

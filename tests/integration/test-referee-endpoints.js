@@ -1,8 +1,8 @@
-import { PrismaClient } from './src/generated/prisma/index.js';
+import { PrismaClient } from '../../src/generated/prisma/index.js';
 import jwt from 'jsonwebtoken';
 
 const prisma = new PrismaClient();
-const BASE_URL = 'http://localhost:3002';
+const BASE_URL = process.env.TEST_BASE_URL || process.env.BASE_URL || 'http://localhost:3002';
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-this-in-production';
 
 function generateToken(user) {

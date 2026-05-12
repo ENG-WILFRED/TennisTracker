@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { TaskRole, TaskType, Task } from '@/types/task-system';
+import { TaskRole, TaskType, Task, TaskTemplate } from '@/types/task-system';
 import { authenticatedFetch } from '@/lib/authenticatedFetch';
 
 const G = {
@@ -10,11 +10,103 @@ const G = {
 
 interface AssignCardProps {
   organizationId: string;
+  currentUserId?: string;
   onTaskAssigned?: (task: Task) => void;
   onClose?: () => void;
 }
 
 type RoleType = 'REFEREE' | 'COACH';
+
+const defaultTaskTemplates: Record<RoleType, TaskTemplate[]> = {
+  REFEREE: [
+    {
+      id: TaskType.MATCH_OFFICIATION,
+      organizationId: 'default',
+      name: 'Match Officiation',
+      role: TaskRole.REFEREE,
+      type: TaskType.MATCH_OFFICIATION,
+      isFormBased: false,
+      contextFields: ['eventId', 'courtId'],
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    {
+      id: TaskType.TOURNAMENT_CONTROL,
+      organizationId: 'default',
+      name: 'Tournament Control',
+      role: TaskRole.REFEREE,
+      type: TaskType.TOURNAMENT_CONTROL,
+      isFormBased: false,
+      contextFields: ['tournamentId', 'eventId'],
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    {
+      id: TaskType.SUBMIT_MATCH_REPORT,
+      organizationId: 'default',
+      name: 'Submit Match Report',
+      role: TaskRole.REFEREE,
+      type: TaskType.SUBMIT_MATCH_REPORT,
+      isFormBased: false,
+      contextFields: ['eventId'],
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+  ],
+  COACH: [
+    {
+      id: TaskType.TRAINING_PLAN,
+      organizationId: 'default',
+      name: 'Training Plan',
+      role: TaskRole.COACH,
+      type: TaskType.TRAINING_PLAN,
+      isFormBased: true,
+      contextFields: ['sessionDuration', 'playerCount'],
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    {
+      id: TaskType.PLAYER_EVALUATION,
+      organizationId: 'default',
+      name: 'Player Evaluation',
+      role: TaskRole.COACH,
+      type: TaskType.PLAYER_EVALUATION,
+      isFormBased: true,
+      contextFields: ['selectedPlayerIds'],
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    {
+      id: TaskType.SESSION_REPORT,
+      organizationId: 'default',
+      name: 'Session Report',
+      role: TaskRole.COACH,
+      type: TaskType.SESSION_REPORT,
+      isFormBased: true,
+      contextFields: ['sessionDuration', 'notes'],
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    {
+      id: TaskType.PREPARE_ATHLETES,
+      organizationId: 'default',
+      name: 'Prepare Athletes',
+      role: TaskRole.COACH,
+      type: TaskType.PREPARE_ATHLETES,
+      isFormBased: true,
+      contextFields: ['playerCount'],
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+  ],
+};
 
 interface AssignFormData {
   role: RoleType;
@@ -63,15 +155,9 @@ interface Player {
   email?: string;
 }
 
-interface TaskTemplate {
-  id: string;
-  name: string;
-  role: string;
-  type: string;
-}
-
 export function AssignCard({
   organizationId,
+  currentUserId,
   onTaskAssigned,
   onClose,
 }: AssignCardProps) {
@@ -96,6 +182,27 @@ export function AssignCard({
   const [loadingPlayers, setLoadingPlayers] = useState(false);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [loadingOrgPlayers, setLoadingOrgPlayers] = useState(false);
+
+  const availableTemplates = templates.length > 0 ? templates : defaultTaskTemplates[formData.role];
+  const availableUsers = currentUserId
+    ? users.filter((user) => user.id !== currentUserId)
+    : users;
+
+  const userPlaceholder = fetchingData
+    ? 'Loading...'
+    : availableUsers.length > 0
+    ? `Select a ${formData.role.toLowerCase()}...`
+    : users.length > 0 && currentUserId
+    ? `You cannot assign a task to yourself`
+    : formData.role === 'REFEREE'
+    ? 'No referees available in this organization'
+    : 'No coaches available in this organization';
+
+  useEffect(() => {
+    if (currentUserId && formData.userId === currentUserId) {
+      setFormData((prev) => ({ ...prev, userId: '' }));
+    }
+  }, [currentUserId, formData.userId]);
 
   // Fetch task templates based on role
   useEffect(() => {
@@ -305,6 +412,13 @@ export function AssignCard({
         context.eventId = formData.eventId;
         context.tournamentId = formData.tournamentId;
         context.registeredPlayerIds = players.map(p => p.id);
+        // Add court name alongside courtId
+        if (formData.courtId) {
+          const selectedCourt = courts.find((c) => c.id === formData.courtId);
+          if (selectedCourt) {
+            context.courtName = selectedCourt.name;
+          }
+        }
       } else if (formData.role === 'COACH') {
         context.trainingType = formData.coachTrainingType;
         // Use selected players count, or manual playerCount if set
@@ -313,12 +427,62 @@ export function AssignCard({
         context.courtId = formData.courtId;
         // Important: NO tournamentId for coach tasks
         context.selectedPlayerIds = selectedPlayers;
+        if (selectedPlayers.length > 0) {
+          context.selectedPlayerNames = selectedPlayers
+            .map((playerId) => orgPlayers.find((p) => p.id === playerId)?.name)
+            .filter((name): name is string => !!name);
+        }
+        // Add court name alongside courtId
+        if (formData.courtId) {
+          const selectedCourt = courts.find((c) => c.id === formData.courtId);
+          if (selectedCourt) {
+            context.courtName = selectedCourt.name;
+          }
+        }
+      }
+
+      let templateId = formData.templateType;
+      const selectedTemplate = templates.find((template) => template.id === formData.templateType);
+
+      if (!selectedTemplate && templates.length === 0) {
+        const defaultTemplate = defaultTaskTemplates[formData.role].find(
+          (template) => template.id === formData.templateType
+        );
+
+        if (defaultTemplate) {
+          const createRes = await authenticatedFetch('/api/admin/task-templates', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              organizationId,
+              template: {
+                name: defaultTemplate.name,
+                description: defaultTemplate.description || `${defaultTemplate.name} template`,
+                role: defaultTemplate.role as TaskRole,
+                type: defaultTemplate.type as TaskType,
+                isFormBased: defaultTemplate.isFormBased,
+                contextFields: defaultTemplate.contextFields,
+                instructions: defaultTemplate.instructions,
+                estimatedHours: defaultTemplate.estimatedHours,
+                successCriteria: defaultTemplate.successCriteria,
+              },
+            }),
+          });
+
+          if (!createRes.ok) {
+            const err = await createRes.json();
+            throw new Error(err.error || 'Failed to create default task template');
+          }
+
+          const createData = await createRes.json();
+          templateId = createData.data?.id || templateId;
+        }
       }
 
       const payload = {
         organizationId,
         assignmentPayload: {
-          templateId: formData.templateType,
+          templateId,
           assignedToId: formData.userId,
           context,
           dueDate: formData.dueDate
@@ -406,7 +570,15 @@ export function AssignCard({
             <button
               type="button"
               onClick={() =>
-                setFormData({ ...formData, role: 'REFEREE', userId: '' })
+                setFormData({
+                  ...formData,
+                  role: 'REFEREE',
+                  userId: '',
+                  templateType: '',
+                  refereEventType: '',
+                  tournamentId: undefined,
+                  eventId: undefined,
+                })
               }
               style={{
                 flex: 1,
@@ -426,7 +598,15 @@ export function AssignCard({
             <button
               type="button"
               onClick={() =>
-                setFormData({ ...formData, role: 'COACH', userId: '' })
+                setFormData({
+                  ...formData,
+                  role: 'COACH',
+                  userId: '',
+                  templateType: '',
+                  refereEventType: undefined,
+                  tournamentId: undefined,
+                  eventId: undefined,
+                })
               }
               style={{
                 flex: 1,
@@ -445,6 +625,76 @@ export function AssignCard({
             </button>
           </div>
         </div>
+
+        {/* Event Type Selection - Full width */}
+        {formData.role === 'REFEREE' && (
+          <>
+            <div style={{ gridColumn: '1 / -1' }}>
+              <label style={{ fontSize: 10, fontWeight: 700, color: G.muted, display: 'block', marginBottom: 4 }}>
+                Event Type
+              </label>
+              <select
+                value={formData.refereEventType || ''}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    refereEventType: e.target.value,
+                    tournamentId: e.target.value === 'tournament' ? formData.tournamentId : undefined,
+                  })
+                }
+                style={{
+                  width: '100%',
+                  padding: '8px 10px',
+                  background: G.card,
+                  border: `1px solid ${G.cardBorder}`,
+                  borderRadius: 6,
+                  color: G.text,
+                  fontSize: 11,
+                  fontFamily: 'inherit',
+                  cursor: 'pointer',
+                }}
+              >
+                <option value="">Select event type...</option>
+                <option value="match">Match</option>
+                <option value="tournament">Tournament</option>
+                <option value="practice">Practice</option>
+                <option value="exhibition">Exhibition</option>
+              </select>
+            </div>
+
+            {formData.refereEventType === 'tournament' && (
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label style={{ fontSize: 10, fontWeight: 700, color: G.muted, display: 'block', marginBottom: 4 }}>
+                  Tournament
+                </label>
+                <select
+                  value={formData.tournamentId || ''}
+                  onChange={(e) =>
+                    setFormData({ ...formData, tournamentId: e.target.value })
+                  }
+                  style={{
+                    width: '100%',
+                    padding: '8px 10px',
+                    background: G.card,
+                    border: `1px solid ${G.cardBorder}`,
+                    borderRadius: 6,
+                    color: G.text,
+                    fontSize: 11,
+                    fontFamily: 'inherit',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <option value="">Select tournament...</option>
+                  {tournaments.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </>
+        )}
 
         {/* Task Type Selection - Full width */}
         <div style={{ gridColumn: '1 / -1' }}>
@@ -471,14 +721,13 @@ export function AssignCard({
             }}
           >
             <option value="">{loadingTemplates ? 'Loading task types...' : 'Select a task type...'}</option>
-            {templates.length > 0 ? (
-              templates.map((template) => (
-                <option key={template.id} value={template.id}>
-                  {template.name}
-                </option>
-              ))
-            ) : (
-              !loadingTemplates && <option disabled>No task types available</option>
+            {availableTemplates.map((template) => (
+              <option key={template.id} value={template.id}>
+                {template.name}
+              </option>
+            ))}
+            {templates.length === 0 && !loadingTemplates && (
+              <option disabled>Default task types are shown</option>
             )}
           </select>
         </div>
@@ -493,7 +742,7 @@ export function AssignCard({
             onChange={(e) =>
               setFormData({ ...formData, userId: e.target.value })
             }
-            disabled={fetchingData}
+            disabled={fetchingData || availableUsers.length === 0}
             style={{
               width: '100%',
               padding: '8px 10px',
@@ -503,51 +752,24 @@ export function AssignCard({
               color: G.text,
               fontSize: 11,
               fontFamily: 'inherit',
-              cursor: fetchingData ? 'not-allowed' : 'pointer',
-              opacity: fetchingData ? 0.6 : 1,
+              cursor: fetchingData || availableUsers.length === 0 ? 'not-allowed' : 'pointer',
+              opacity: fetchingData ? 0.6 : availableUsers.length === 0 ? 0.7 : 1,
             }}
           >
-            <option value="">{fetchingData ? 'Loading...' : `Select a ${formData.role.toLowerCase()}...`}</option>
-            {users.map((user) => (
-              <option key={user.id} value={user.id}>
-                {user.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Tournament Selection (REFEREE only) */}
-        {formData.role === 'REFEREE' && (
-          <div>
-            <label style={{ fontSize: 10, fontWeight: 700, color: G.muted, display: 'block', marginBottom: 4 }}>
-              Tournament
-            </label>
-            <select
-              value={formData.tournamentId || ''}
-              onChange={(e) =>
-                setFormData({ ...formData, tournamentId: e.target.value })
-              }
-              style={{
-                width: '100%',
-                padding: '8px 10px',
-                background: G.card,
-                border: `1px solid ${G.cardBorder}`,
-                borderRadius: 6,
-                color: G.text,
-                fontSize: 11,
-                fontFamily: 'inherit',
-                cursor: 'pointer',
-              }}
-            >
-              <option value="">Select tournament...</option>
-              {tournaments.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
+            <option value="">{userPlaceholder}</option>
+            {availableUsers.length > 0 &&
+              availableUsers.map((user) => (
+                <option key={user.id} value={user.id}>
+                  {user.name}
                 </option>
               ))}
-            </select>
-          </div>
-        )}
+          </select>
+          {availableUsers.length === 0 && users.length > 0 && currentUserId && (
+            <div style={{ marginTop: 8, fontSize: 11, color: G.yellow }}>
+              You cannot assign a task to yourself. Choose a different staff member.
+            </div>
+          )}
+        </div>
 
         {/* Event Selection - Right column */}
         {formData.role === 'REFEREE' && (
@@ -796,39 +1018,7 @@ export function AssignCard({
               ⚖️ Referee Specifications
             </h3>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-              <div>
-                <label style={{ fontSize: 9, fontWeight: 700, color: G.muted, display: 'block', marginBottom: 3 }}>
-                  Event Type
-                </label>
-                <select
-                  value={formData.refereEventType || ''}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      refereEventType: e.target.value,
-                    })
-                  }
-                  style={{
-                    width: '100%',
-                    padding: '6px 8px',
-                    background: G.card,
-                    border: `1px solid ${G.cardBorder}`,
-                    borderRadius: 4,
-                    color: G.text,
-                    fontSize: 10,
-                    fontFamily: 'inherit',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <option value="">Select type...</option>
-                  <option value="match">Match</option>
-                  <option value="tournament">Tournament</option>
-                  <option value="practice">Practice</option>
-                  <option value="exhibition">Exhibition</option>
-                </select>
-              </div>
-
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               <div>
                 <label style={{ fontSize: 9, fontWeight: 700, color: G.muted, display: 'block', marginBottom: 3 }}>
                   Match Duration (min)
@@ -1029,18 +1219,18 @@ export function AssignCard({
         <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 8, marginTop: 4 }}>
           <button
             type="submit"
-            disabled={loading || !formData.userId || !formData.templateType}
+            disabled={loading || !formData.userId || !formData.templateType || availableUsers.length === 0}
             style={{
               flex: 1,
               padding: '10px 14px',
-              background: loading ? G.mid : G.lime,
+              background: loading || availableUsers.length === 0 ? G.mid : G.lime,
               color: loading ? G.muted : '#0f1f0f',
               border: 'none',
               borderRadius: 6,
               fontWeight: 700,
               fontSize: 11,
-              cursor: loading || !formData.userId || !formData.templateType ? 'not-allowed' : 'pointer',
-              opacity: loading || !formData.userId || !formData.templateType ? 0.6 : 1,
+              cursor: loading || !formData.userId || !formData.templateType || availableUsers.length === 0 ? 'not-allowed' : 'pointer',
+              opacity: loading || !formData.userId || !formData.templateType || availableUsers.length === 0 ? 0.6 : 1,
               transition: 'all 0.2s',
             }}
           >
