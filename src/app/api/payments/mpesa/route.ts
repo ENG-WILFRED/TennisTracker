@@ -1,4 +1,5 @@
 import { processMPesaPayment } from '@/actions/payments';
+import { formatKenyanMobileNumber } from '@/lib/phone';
 
 export async function POST(request: Request) {
   try {
@@ -31,9 +32,10 @@ export async function POST(request: Request) {
       );
     }
 
-    // Validate mobile number format before calling the action
-    if (!mobileNumber.match(/^254\d{9}$/)) {
-      const errorMsg = 'Invalid mobile number format. Use 254XXXXXXXXX';
+    // Normalize and validate mobile number before calling the action
+    const normalized = formatKenyanMobileNumber(mobileNumber || '');
+    if (!normalized.normalized) {
+      const errorMsg = normalized.error || 'Invalid mobile number format. Use 254XXXXXXXXX or 078XXXXXXXX';
       console.error('M-Pesa validation failed:', errorMsg);
       return new Response(
         JSON.stringify({ success: false, error: errorMsg }),
@@ -41,7 +43,15 @@ export async function POST(request: Request) {
       );
     }
 
-    const result = await processMPesaPayment(mobileNumber, amount, accountReference || '', transactionDesc || '', userId, eventId, bookingType);
+    const result = await processMPesaPayment(
+      normalized.normalized,
+      amount,
+      accountReference || '',
+      transactionDesc || '',
+      userId,
+      eventId,
+      bookingType
+    );
     return new Response(JSON.stringify(result), {
       status: result.success ? 200 : 400,
       headers: { 'Content-Type': 'application/json' },

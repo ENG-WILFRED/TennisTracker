@@ -31,6 +31,7 @@ export {
   sendPasswordResetEmail,
   sendBookingConfirmationEmail,
   sendPaymentReceiptEmail,
+  sendPaymentReminderEmail,
   publishNotification,
   createProducer,
   initProducer,

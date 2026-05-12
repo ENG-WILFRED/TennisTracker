@@ -6,6 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useRole } from '@/context/RoleContext';
 import { authenticatedFetch } from '@/lib/authenticatedFetch';
 import { useToast } from '@/components/ui/ToastContext';
+import { formatKenyanMobileNumber } from '@/lib/phone';
 
 interface MembershipTier {
   id: string;
@@ -103,6 +104,7 @@ export default function OrganizationPublicDetail({ organization }: OrganizationP
     website: organization.website || '',
   });
   const [isSaving, setIsSaving] = useState(false);
+  const [eventFilter, setEventFilter] = useState<'all' | 'upcoming' | 'ongoing' | 'completed'>('all');
 
   const allowedTabs = ['overview', 'courts', 'events', 'staff'];
 
@@ -160,6 +162,26 @@ export default function OrganizationPublicDetail({ organization }: OrganizationP
   const totalStaff = coachCount + refereeCount + adminCount + otherStaffCount;
 
   const latestFinance = organization.finances?.[0];
+
+  const getEventStatus = (event: { startDate?: string | null }) => {
+    if (!event.startDate) return 'upcoming';
+    const now = new Date();
+    const start = new Date(event.startDate);
+    if (start.toDateString() === now.toDateString()) return 'ongoing';
+    return start > now ? 'upcoming' : 'completed';
+  };
+
+  const filteredEvents = organization.events.filter((event) => {
+    if (eventFilter === 'all') return true;
+    return getEventStatus(event) === eventFilter;
+  });
+
+  const eventCountByStatus = {
+    all: organization.events.length,
+    upcoming: organization.events.filter((event) => getEventStatus(event) === 'upcoming').length,
+    ongoing: organization.events.filter((event) => getEventStatus(event) === 'ongoing').length,
+    completed: organization.events.filter((event) => getEventStatus(event) === 'completed').length,
+  };
 
   const handleBackButtonClick = () => {
     const dashboardRole = isOrgOwner ? (currentRole === 'org' ? 'org' : (user?.role === 'org' ? 'org' : 'org')) : 'spectator';
@@ -1178,21 +1200,52 @@ export default function OrganizationPublicDetail({ organization }: OrganizationP
           <div style={{ display: 'grid', gap: 24 }}>
             {/* Events Section */}
             <section style={{ padding: 20, borderRadius: 20, border: '1px solid #243e24', background: '#0f1f12' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 16 }}>
                 <div>
                   <h2 style={{ margin: 0, fontSize: 24, fontWeight: 800 }}>Upcoming Events</h2>
                   <p style={{ margin: '8px 0 0', color: '#7aaa6a', fontSize: 14 }}>Tournaments, clinics, and special events.</p>
                 </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+                  {(['all', 'upcoming', 'ongoing', 'completed'] as const).map((tab) => (
+                    <button
+                      key={tab}
+                      onClick={() => setEventFilter(tab)}
+                      style={{
+                        borderRadius: 999,
+                        border: '1px solid #243e24',
+                        padding: '8px 14px',
+                        background: eventFilter === tab ? '#1e3f28' : 'transparent',
+                        color: eventFilter === tab ? '#7dc142' : '#c4d8b1',
+                        fontSize: 12,
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {tab === 'all' ? 'All' : tab.charAt(0).toUpperCase() + tab.slice(1)} ({eventCountByStatus[tab]})
+                    </button>
+                  ))}
+                </div>
                 <span style={{ color: '#7dc142', fontSize: 14, fontWeight: 700 }}>
-                  {organization.events.length} Events
+                  {filteredEvents.length} of {organization.events.length} Events
                 </span>
               </div>
               <div style={{ display: 'grid', gap: 16, gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
-                {organization.events.length > 0 ? (
-                  organization.events.map((event) => (
+                {filteredEvents.length > 0 ? (
+                  filteredEvents.map((event) => (
                     <div key={event.id} style={{ padding: 20, borderRadius: 16, background: '#132915' }}>
-                      <div style={{ fontWeight: 700, fontSize: 18, color: '#e8f5e0' }}>{event.name}</div>
-                      <div style={{ color: '#7aaa6a', fontSize: 14, marginTop: 8 }}>{event.eventType || 'Event'}</div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start' }}>
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: 18, color: '#e8f5e0' }}>{event.name}</div>
+                          <div style={{ color: '#7aaa6a', fontSize: 14, marginTop: 8 }}>{event.eventType || 'Event'}</div>
+                        </div>
+                        <span style={{
+                          fontSize: 12,
+                          fontWeight: 700,
+                          color: getEventStatus(event) === 'completed' ? '#93c5fd' : getEventStatus(event) === 'ongoing' ? '#facc15' : '#a7f3d0',
+                        }}>
+                          {getEventStatus(event).toUpperCase()}
+                        </span>
+                      </div>
                       <div style={{ color: '#c4d8b1', fontSize: 14, marginTop: 4 }}>
                         {event.startDate ? new Date(event.startDate).toLocaleDateString('en-US', {
                           weekday: 'long',
@@ -1633,9 +1686,9 @@ export default function OrganizationPublicDetail({ organization }: OrganizationP
                       </label>
                       <input
                         type="tel"
-                        placeholder="254XXXXXXXXX"
+                        placeholder="254712345678 or 0789898989"
                         value={mpesaPhoneNumber}
-                        onChange={(e) => setMpesaPhoneNumber(e.target.value)}
+                        onChange={(e) => setMpesaPhoneNumber(e.target.value.replace(/\D/g, ''))}
                         style={{
                           width: '100%',
                           padding: '12px 16px',
@@ -1648,7 +1701,7 @@ export default function OrganizationPublicDetail({ organization }: OrganizationP
                         }}
                       />
                       <div style={{ color: '#7aaa6a', fontSize: 12, marginTop: 4 }}>
-                        Enter your M-Pesa registered phone number (e.g., 254712345678)
+                        Enter your M-Pesa registered phone number (e.g., 254712345678 or 0789898989)
                       </div>
                     </div>
                   )}
@@ -1674,9 +1727,13 @@ export default function OrganizationPublicDetail({ organization }: OrganizationP
                 </button>
                 <button
                   onClick={() => {
-                    if (selectedPaymentMethod === 'mpesa' && !mpesaPhoneNumber.trim()) {
-                      setPaymentStatus('Please enter your M-Pesa phone number.');
-                      return;
+                    if (selectedPaymentMethod === 'mpesa') {
+                      const normalized = formatKenyanMobileNumber(mpesaPhoneNumber);
+                      if (!normalized.normalized) {
+                        setPaymentStatus(normalized.error || 'Please enter a valid M-Pesa phone number.');
+                        return;
+                      }
+                      setMpesaPhoneNumber(normalized.normalized);
                     }
                     handlePurchaseMembership(selectedTier, selectedPaymentMethod);
                   }}

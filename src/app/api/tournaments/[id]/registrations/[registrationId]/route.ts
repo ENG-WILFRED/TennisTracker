@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
+export async function OPTIONS(request: NextRequest, context: any) {
+  return NextResponse.json({ ok: true }, { status: 200 });
+}
+
 export async function PATCH(request: NextRequest, context: any) {
   const params = await context.params;
   const registrationId = params?.registrationId || null;
