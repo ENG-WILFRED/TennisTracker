@@ -29,7 +29,6 @@ interface Tournament {
   endDate: string;
   registrationDeadline: string;
   registrationCap: number;
-  status: 'draft' | 'open' | 'closed' | 'ongoing' | 'completed';
   prizePool: number;
   entryFee: number;
   registrations?: any[];
@@ -46,6 +45,7 @@ export default function OrganizationTournamentsSection({ organizationId }: Organ
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [notify, setNotify] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'open' | 'ongoing' | 'closed' | 'completed'>('all');
   const [formData, setFormData] = useState({
     name: '',
     eventType: 'single_elimination',
@@ -201,6 +201,38 @@ export default function OrganizationTournamentsSection({ organizationId }: Organ
     }
   };
 
+  const getTournamentStatus = (tournament: Tournament) => {
+    const now = new Date();
+    const start = new Date(tournament.startDate);
+    const end = tournament.endDate ? new Date(tournament.endDate) : start;
+    const deadline = tournament.registrationDeadline ? new Date(tournament.registrationDeadline) : null;
+
+    if (end < now) {
+      return 'completed' as const;
+    }
+    if (start <= now && now <= end) {
+      return 'ongoing' as const;
+    }
+    if (deadline && deadline < now) {
+      return 'closed' as const;
+    }
+    return 'open' as const;
+  };
+
+  const filterTournamentsByStatus = (tournament: Tournament) => {
+    if (statusFilter === 'all') return true;
+    return getTournamentStatus(tournament) === statusFilter;
+  };
+
+  const filteredTournaments = tournaments.filter(filterTournamentsByStatus);
+  const statusCounts = {
+    all: tournaments.length,
+    open: tournaments.filter((t) => getTournamentStatus(t) === 'open').length,
+    ongoing: tournaments.filter((t) => getTournamentStatus(t) === 'ongoing').length,
+    closed: tournaments.filter((t) => getTournamentStatus(t) === 'closed').length,
+    completed: tournaments.filter((t) => getTournamentStatus(t) === 'completed').length,
+  };
+
   if (loading) {
     return (
       <div style={{ textAlign: 'center', padding: 40, color: G.muted }}>
@@ -248,7 +280,7 @@ export default function OrganizationTournamentsSection({ organizationId }: Organ
         </div>
         <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 12 }}>
           <div style={{ fontSize: 10, color: G.muted, marginBottom: 6, textTransform: 'uppercase' }}>Active</div>
-          <div style={{ fontSize: 22, fontWeight: 900, color: G.yellow }}>{tournaments.filter(t => t.status === 'open' || t.status === 'ongoing').length}</div>
+          <div style={{ fontSize: 22, fontWeight: 900, color: G.yellow }}>{tournaments.filter(t => { const status = getTournamentStatus(t); return status === 'open' || status === 'ongoing'; }).length}</div>
         </div>
         <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 12 }}>
           <div style={{ fontSize: 10, color: G.muted, marginBottom: 6, textTransform: 'uppercase' }}>Total Players</div>
@@ -274,9 +306,32 @@ export default function OrganizationTournamentsSection({ organizationId }: Organ
         </div>
       )}
 
+      {/* Filters */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
+        {(['all', 'open', 'ongoing', 'closed', 'completed'] as const).map((status) => (
+          <button
+            key={status}
+            type="button"
+            onClick={() => setStatusFilter(status)}
+            style={{
+              borderRadius: 999,
+              padding: '8px 14px',
+              background: statusFilter === status ? '#1f3f20' : G.dark,
+              border: `1px solid ${statusFilter === status ? G.lime : G.cardBorder}`,
+              color: statusFilter === status ? G.lime : G.textSoft,
+              fontSize: 11,
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
+          >
+            {status === 'all' ? 'All' : status.charAt(0).toUpperCase() + status.slice(1)} ({statusCounts[status]})
+          </button>
+        ))}
+      </div>
+
       {/* Tournaments List */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {tournaments.length === 0 ? (
+        {filteredTournaments.length === 0 ? (
           <div style={{
             padding: 40,
             textAlign: 'center',
@@ -286,13 +341,14 @@ export default function OrganizationTournamentsSection({ organizationId }: Organ
             border: `1px dashed ${G.cardBorder}`,
           }}>
             <div style={{ fontSize: 32, marginBottom: 8 }}>🏆</div>
-            <div>No tournaments yet. Create one to get started!</div>
+            <div>{tournaments.length === 0 ? 'No tournaments yet. Create one to get started!' : 'No tournaments match this filter.'}</div>
           </div>
         ) : (
-          tournaments.map((tournament) => {
+          filteredTournaments.map((tournament) => {
             const pendingPlayers = tournament.registrations?.filter((r: any) => r.status === 'pending') || [];
             const approvedPlayers = tournament.registrations?.filter((r: any) => r.status === 'approved') || [];
-            const statusColors = getStatusBadgeColor(tournament.status);
+            const tournamentStatus = getTournamentStatus(tournament);
+            const statusColors = getStatusBadgeColor(tournamentStatus);
             const spotsAvailable = tournament.registrationCap - approvedPlayers.length;
 
             return (
@@ -342,7 +398,7 @@ export default function OrganizationTournamentsSection({ organizationId }: Organ
                         textTransform: 'capitalize',
                       }}
                     >
-                      {tournament.status}
+                      {tournamentStatus}
                     </div>
                   </div>
 

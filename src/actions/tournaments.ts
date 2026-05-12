@@ -12,6 +12,12 @@ export async function getAllTournaments() {
         },
       },
       include: {
+        organization: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
         registrations: {
           include: {
             member: {

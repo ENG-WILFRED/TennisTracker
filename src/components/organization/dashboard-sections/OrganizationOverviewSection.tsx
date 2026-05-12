@@ -76,7 +76,7 @@ export default function OrganizationOverviewSection({
       </div>
 
       {/* Revenue + Schedule + Staff - Each in its own row on mobile, 3 columns on desktop */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-5">
         {/* Revenue Trend */}
         <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 12, gridColumn: 'span 1', display: 'flex', flexDirection: 'column', height: '100%', maxHeight: 265 }}>
           <div style={{ fontWeight: 800, fontSize: 13, marginBottom: 2, flexShrink: 0 }}>💰 Revenue Trend</div>
@@ -157,19 +157,22 @@ export default function OrganizationOverviewSection({
                         style={{
                           display: 'flex',
                           alignItems: 'center',
-                          gap: 6,
-                          padding: '4px 0 4px 8px',
-                          borderRadius: 4,
-                          background: 'transparent',
-                          border: 'none',
+                          gap: 8,
+                          padding: '8px 10px',
+                          borderRadius: 10,
+                          background: '#132215',
+                          border: '1px solid rgba(125,193,66,0.14)',
                           width: '100%',
                           textAlign: 'left',
                           cursor: 'pointer',
-                          marginBottom: 2,
+                          marginBottom: 8,
                         }}
                       >
-                        <span style={{ fontSize: 10, fontWeight: 600, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</span>
-                        {s.sessions > 0 && <span style={{ fontSize: 8, padding: '1px 4px', background: G.bright + '33', color: G.bright, borderRadius: 3, fontWeight: 700, flexShrink: 0 }}>{s.sessions}h</span>}
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: G.text, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</div>
+                          <div style={{ fontSize: 10, color: G.muted, marginTop: 2 }}>{s.role}</div>
+                        </div>
+                        {s.sessions > 0 && <span style={{ fontSize: 8, padding: '2px 6px', background: G.bright + '22', color: G.bright, borderRadius: 999, fontWeight: 700, flexShrink: 0 }}>{s.sessions}h</span>}
                       </button>
                     ))}
                   </div>
@@ -186,19 +189,22 @@ export default function OrganizationOverviewSection({
                         style={{
                           display: 'flex',
                           alignItems: 'center',
-                          gap: 6,
-                          padding: '4px 0 4px 8px',
-                          borderRadius: 4,
-                          background: 'transparent',
-                          border: 'none',
+                          gap: 8,
+                          padding: '8px 10px',
+                          borderRadius: 10,
+                          background: '#132215',
+                          border: '1px solid rgba(125,193,66,0.14)',
                           width: '100%',
                           textAlign: 'left',
                           cursor: 'pointer',
-                          marginBottom: 2,
+                          marginBottom: 8,
                         }}
                       >
-                        <span style={{ fontSize: 10, fontWeight: 600, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</span>
-                        {s.sessions > 0 && <span style={{ fontSize: 8, padding: '1px 4px', background: G.bright + '33', color: G.bright, borderRadius: 3, fontWeight: 700, flexShrink: 0 }}>{s.sessions}h</span>}
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: G.text, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</div>
+                          <div style={{ fontSize: 10, color: G.muted, marginTop: 2 }}>{s.role}</div>
+                        </div>
+                        {s.sessions > 0 && <span style={{ fontSize: 8, padding: '2px 6px', background: G.bright + '22', color: G.bright, borderRadius: 999, fontWeight: 700, flexShrink: 0 }}>{s.sessions}h</span>}
                       </button>
                     ))}
                   </div>
@@ -215,19 +221,22 @@ export default function OrganizationOverviewSection({
                         style={{
                           display: 'flex',
                           alignItems: 'center',
-                          gap: 6,
-                          padding: '4px 0 4px 8px',
-                          borderRadius: 4,
-                          background: 'transparent',
-                          border: 'none',
+                          gap: 8,
+                          padding: '8px 10px',
+                          borderRadius: 10,
+                          background: '#132215',
+                          border: '1px solid rgba(125,193,66,0.14)',
                           width: '100%',
                           textAlign: 'left',
                           cursor: 'pointer',
-                          marginBottom: 2,
+                          marginBottom: 8,
                         }}
                       >
-                        <span style={{ fontSize: 10, fontWeight: 600, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</span>
-                        {s.sessions > 0 && <span style={{ fontSize: 8, padding: '1px 4px', background: G.bright + '33', color: G.bright, borderRadius: 3, fontWeight: 700, flexShrink: 0 }}>{s.sessions}h</span>}
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: G.text, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</div>
+                          <div style={{ fontSize: 10, color: G.muted, marginTop: 2 }}>{s.role}</div>
+                        </div>
+                        {s.sessions > 0 && <span style={{ fontSize: 8, padding: '2px 6px', background: G.bright + '22', color: G.bright, borderRadius: 999, fontWeight: 700, flexShrink: 0 }}>{s.sessions}h</span>}
                       </button>
                     ))}
                   </div>
@@ -244,21 +253,22 @@ export default function OrganizationOverviewSection({
                         style={{
                           display: 'flex',
                           alignItems: 'center',
-                          gap: 6,
-                          padding: '4px 0 4px 8px',
-                          borderRadius: 4,
-                          background: 'transparent',
-                          border: 'none',
+                          gap: 8,
+                          padding: '8px 10px',
+                          borderRadius: 10,
+                          background: '#132215',
+                          border: '1px solid rgba(125,193,66,0.14)',
                           width: '100%',
                           textAlign: 'left',
                           cursor: 'pointer',
-                          marginBottom: 2,
+                          marginBottom: 8,
                         }}
                       >
-                        <span style={{ fontSize: 9, color: G.muted, fontWeight: 600, flex: 1, minWidth: 0 }}>
-                          <span style={{ fontSize: 8, color: G.muted }}>[{s.role}]</span> {s.name}
-                        </span>
-                        {s.sessions > 0 && <span style={{ fontSize: 8, padding: '1px 4px', background: G.bright + '33', color: G.bright, borderRadius: 3, fontWeight: 700, flexShrink: 0 }}>{s.sessions}h</span>}
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: G.text, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</div>
+                          <div style={{ fontSize: 10, color: G.muted, marginTop: 2 }}>{s.role}</div>
+                        </div>
+                        {s.sessions > 0 && <span style={{ fontSize: 8, padding: '2px 6px', background: G.bright + '22', color: G.bright, borderRadius: 999, fontWeight: 700, flexShrink: 0 }}>{s.sessions}h</span>}
                       </button>
                     ))}
                   </div>
@@ -275,7 +285,7 @@ export default function OrganizationOverviewSection({
       </div>
 
       {/* Announcements + Tasks + System - Each in its own row on mobile, 3 columns on desktop */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mt-5">
         {/* Announcements */}
         <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 12, display: 'flex', flexDirection: 'column', height: '100%', maxHeight: 265 }}>
           <div style={{ fontWeight: 800, fontSize: 13, marginBottom: 8, flexShrink: 0 }}>📢 Announcements</div>

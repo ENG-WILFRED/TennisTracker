@@ -1,6 +1,30 @@
 'use server';
 
 import prisma from '@/lib/prisma';
+import { sendPaymentReceiptEmail } from '@/app/api/notification/producer';
+import { formatKenyanMobileNumber } from '@/lib/phone';
+
+const REQUEST_TIMEOUT_MS = 20000;
+
+async function fetchWithTimeout(url: string, options: RequestInit = {}, timeout = REQUEST_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    return response;
+  } catch (error: any) {
+    clearTimeout(timeoutId);
+    if (error.name === 'AbortError') {
+      throw new Error(`Request timeout: ${url}`);
+    }
+    throw error;
+  }
+}
 
 // Get base URL for callbacks and cancellations
 const getBaseUrl = () => {
@@ -14,6 +38,14 @@ const getBaseUrl = () => {
   }
   // Default fallback
   return 'http://localhost:3020';
+};
+
+const getPaymentGatewayBaseUrl = () => {
+  return process.env.PAYMENT_GATEWAY_BASE_URL || 'https://payment-gateway.kimaniwilfred95.workers.dev';
+};
+
+const getMpesaGatewayBaseUrl = () => {
+  return process.env.MPESA_GATEWAY_BASE_URL || 'https://mpesa-integration-worker.kimaniwilfred95.workers.dev';
 };
 
 /**
@@ -31,17 +63,18 @@ export async function processMPesaPayment(
   metadata: Record<string, any> = {}
 ) {
   try {
-    if (!mobileNumber || !amount || amount <= 0) {
-      return { success: false, error: 'Invalid mobile number or amount' };
+    const normalized = formatKenyanMobileNumber(mobileNumber);
+    if (!normalized.normalized) {
+      return { success: false, error: normalized.error || 'Invalid mobile number or amount' };
     }
 
-    if (!mobileNumber.match(/^254\d{9}$/)) {
-      return { success: false, error: 'Invalid mobile number format. Use 254XXXXXXXXX' };
+    if (!amount || amount <= 0) {
+      return { success: false, error: 'Invalid amount' };
     }
 
+    const mobileNumberNormalized = normalized.normalized;
     const baseUrl = getBaseUrl();
     const callbackUrl = `${baseUrl}/api/payments/callback/mpesa`;
-    const cancelUrl = `${baseUrl}/api/payments/cancel/mpesa`;
 
     const record = await prisma.paymentRecord.create({
       data: {
@@ -53,19 +86,25 @@ export async function processMPesaPayment(
         provider: 'mpesa',
         providerStatus: 'pending',
         callbackUrl,
-        cancelUrl,
-        metadata: JSON.stringify({ mobileNumber, accountReference, transactionDesc, ...metadata }),
+        cancelUrl: null,
+        metadata: JSON.stringify({ mobileNumber: mobileNumberNormalized, accountReference, transactionDesc, ...metadata }),
       },
     });
 
-    const mpesaResponse = await fetch('https://mpesa-integration-worker.kimaniwilfred95.workers.dev/api/stk/push', {
+    const cancelUrl = `${baseUrl}/api/payments/cancel/mpesa/${record.id}`;
+    await prisma.paymentRecord.update({
+      where: { id: record.id },
+      data: { cancelUrl },
+    });
+
+    const mpesaResponse = await fetchWithTimeout(`${getMpesaGatewayBaseUrl()}/api/stk/push`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Accept: 'application/json',
       },
       body: JSON.stringify({
-        mobileNumber,
+        mobileNumber: mobileNumberNormalized,
         amount: Math.round(amount),
         accountReference,
         transactionDesc,
@@ -128,7 +167,6 @@ export async function processPayPalPayment(
 
     const baseUrl = getBaseUrl();
     const callbackUrl = `${baseUrl}/api/payments/callback/paypal`;
-    const cancelUrl = `${baseUrl}/api/payments/cancel/paypal`;
 
     const record = await prisma.paymentRecord.create({
       data: {
@@ -140,13 +178,19 @@ export async function processPayPalPayment(
         provider: 'paypal',
         providerStatus: 'pending',
         callbackUrl,
-        cancelUrl,
+        cancelUrl: null,
         metadata: JSON.stringify(metadata),
       },
     });
 
+    const cancelUrl = `${baseUrl}/api/payments/cancel/paypal/${record.id}`;
+    await prisma.paymentRecord.update({
+      where: { id: record.id },
+      data: { cancelUrl },
+    });
+
     const idempotencyKey = `${record.id}-${Date.now()}`;
-    const paypalResponse = await fetch('https://payment-gateway.kimaniwilfred95.workers.dev/api/payments/paypal', {
+    const paypalResponse = await fetchWithTimeout(`${getPaymentGatewayBaseUrl()}/api/payments/paypal`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -219,7 +263,6 @@ export async function processStripePayment(
 
     const baseUrl = getBaseUrl();
     const callbackUrl = `${baseUrl}/api/payments/callback/stripe`;
-    const cancelUrl = `${baseUrl}/api/payments/cancel/stripe`;
 
     const record = await prisma.paymentRecord.create({
       data: {
@@ -231,13 +274,19 @@ export async function processStripePayment(
         provider: 'stripe',
         providerStatus: 'pending',
         callbackUrl,
-        cancelUrl,
+        cancelUrl: null,
         metadata: JSON.stringify(metadata),
       },
     });
 
+    const cancelUrl = `${baseUrl}/api/payments/cancel/stripe/${record.id}`;
+    await prisma.paymentRecord.update({
+      where: { id: record.id },
+      data: { cancelUrl },
+    });
+
     const idempotencyKey = `${record.id}-${Date.now()}`;
-    const stripeResponse = await fetch('https://payment-gateway.kimaniwilfred95.workers.dev/api/payments/stripe', {
+    const stripeResponse = await fetchWithTimeout(`${getPaymentGatewayBaseUrl()}/api/payments/stripe`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -342,6 +391,35 @@ export async function completePayment(
     });
 
     if (status === 'success') {
+      const user = await prisma.user.findUnique({
+        where: { id: record.userId },
+        select: { email: true, firstName: true, lastName: true },
+      });
+
+      const event = record.eventId
+        ? await prisma.clubEvent.findUnique({
+            where: { id: record.eventId },
+            select: { name: true },
+          })
+        : null;
+
+      if (user?.email) {
+        try {
+          await sendPaymentReceiptEmail(user.email, {
+            name: `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim(),
+            amount: record.amount,
+            currency: record.currency,
+            provider: record.provider,
+            transactionId,
+            bookingType: record.bookingType,
+            eventName: event?.name || undefined,
+            paymentDate: new Date().toISOString(),
+            status: 'completed',
+          });
+        } catch (emailError) {
+          console.error('Failed to send payment receipt email:', emailError);
+        }
+      }
       // Handle different booking types
       if (record.bookingType === 'tournament_entry' && record.eventId) {
         const member = await prisma.clubMember.findFirst({ where: { playerId: record.userId } });
