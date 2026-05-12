@@ -9,7 +9,7 @@ interface DeveloperOrgListProps {
   approvedOrganizations: any[];
   suspendedOrganizations: any[];
   rejectedOrganizations: any[];
-  onOrganizationAction: (orgId: string, action: 'approve' | 'reject' | 'suspend' | 'reactivate' | 'delete', rejectionReason?: string) => Promise<void>;
+  onOrganizationAction: (orgId: string, action: 'approve' | 'reject' | 'suspend' | 'reactivate' | 'delete' | 'remindPayment', rejectionReason?: string) => Promise<void>;
   onEmailOrg: (org: any) => void;
   onRefresh: () => Promise<void>;
 }
@@ -26,7 +26,7 @@ export function DeveloperOrgList({
 }: DeveloperOrgListProps) {
   const [selectedOrg, setSelectedOrg] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [loadingActionOrgId, setLoadingActionOrgId] = useState<string | null>(null);
+  const [loadingAction, setLoadingAction] = useState<{ orgId: string; action: string } | null>(null);
 
   const handleViewDetails = (org: any) => {
     setSelectedOrg(org);
@@ -105,31 +105,31 @@ export function DeveloperOrgList({
                     <>
                       <button
                         onClick={async () => {
-                          setLoadingActionOrgId(org.id);
+                          setLoadingAction({ orgId: org.id, action: 'approve' });
                           try {
                             await onOrganizationAction(org.id, 'approve');
                           } finally {
-                            setLoadingActionOrgId(null);
+                            setLoadingAction(null);
                           }
                         }}
-                        disabled={loadingActionOrgId === org.id}
+                        disabled={loadingAction?.orgId === org.id}
                         className="rounded-xl border border-emerald-700/60 bg-emerald-900/40 hover:bg-emerald-900/60 px-4 py-2 text-sm font-semibold text-emerald-300 hover:text-emerald-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {loadingActionOrgId === org.id ? '⏳ Approving...' : '✓ Approve'}
+                        {loadingAction?.orgId === org.id && loadingAction?.action === 'approve' ? '⏳ Approving...' : '✓ Approve'}
                       </button>
                       <button
                         onClick={async () => {
-                          setLoadingActionOrgId(org.id);
+                          setLoadingAction({ orgId: org.id, action: 'reject' });
                           try {
                             await onOrganizationAction(org.id, 'reject');
                           } finally {
-                            setLoadingActionOrgId(null);
+                            setLoadingAction(null);
                           }
                         }}
-                        disabled={loadingActionOrgId === org.id}
+                        disabled={loadingAction?.orgId === org.id}
                         className="rounded-xl border border-red-700/60 bg-red-900/40 hover:bg-red-900/60 px-4 py-2 text-sm font-semibold text-red-300 hover:text-red-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {loadingActionOrgId === org.id ? '⏳ Rejecting...' : '✗ Reject'}
+                        {loadingAction?.orgId === org.id && loadingAction?.action === 'reject' ? '⏳ Rejecting...' : '✗ Reject'}
                       </button>
                     </>
                   )}
@@ -137,17 +137,31 @@ export function DeveloperOrgList({
                     <>
                       <button
                         onClick={async () => {
-                          setLoadingActionOrgId(org.id);
+                          setLoadingAction({ orgId: org.id, action: 'suspend' });
                           try {
                             await onOrganizationAction(org.id, 'suspend');
                           } finally {
-                            setLoadingActionOrgId(null);
+                            setLoadingAction(null);
                           }
                         }}
-                        disabled={loadingActionOrgId === org.id}
+                        disabled={loadingAction?.orgId === org.id}
                         className="rounded-xl border border-red-700/60 bg-red-900/40 hover:bg-red-900/60 px-4 py-2 text-sm font-semibold text-red-300 hover:text-red-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {loadingActionOrgId === org.id ? '⏳ Suspending...' : '⏸ Suspend'}
+                        {loadingAction?.orgId === org.id && loadingAction?.action === 'suspend' ? '⏳ Suspending...' : '⏸ Suspend'}
+                      </button>
+                      <button
+                        onClick={async () => {
+                          setLoadingAction({ orgId: org.id, action: 'remindPayment' });
+                          try {
+                            await onOrganizationAction(org.id, 'remindPayment');
+                          } finally {
+                            setLoadingAction(null);
+                          }
+                        }}
+                        disabled={loadingAction?.orgId === org.id}
+                        className="rounded-xl border border-amber-700/60 bg-amber-900/40 hover:bg-amber-900/60 px-4 py-2 text-sm font-semibold text-amber-300 hover:text-amber-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {loadingAction?.orgId === org.id && loadingAction?.action === 'remindPayment' ? '⏳ Sending...' : '📬 Remind Payment'}
                       </button>
                     </>
                   )}
@@ -155,17 +169,17 @@ export function DeveloperOrgList({
                     <>
                       <button
                         onClick={async () => {
-                          setLoadingActionOrgId(org.id);
+                          setLoadingAction({ orgId: org.id, action: 'reactivate' });
                           try {
                             await onOrganizationAction(org.id, 'reactivate');
                           } finally {
-                            setLoadingActionOrgId(null);
+                            setLoadingAction(null);
                           }
                         }}
-                        disabled={loadingActionOrgId === org.id}
+                        disabled={loadingAction?.orgId === org.id}
                         className="rounded-xl border border-emerald-700/60 bg-emerald-900/40 hover:bg-emerald-900/60 px-4 py-2 text-sm font-semibold text-emerald-300 hover:text-emerald-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {loadingActionOrgId === org.id ? '⏳ Reactivating...' : '▶️ Reactivate'}
+                        {loadingAction?.orgId === org.id && loadingAction?.action === 'reactivate' ? '⏳ Reactivating...' : '▶️ Reactivate'}
                       </button>
                     </>
                   )}
@@ -174,16 +188,18 @@ export function DeveloperOrgList({
                       Closed
                     </span>
                   )}
-                  <button
-                    onClick={() => {
-                      if (confirm(`Are you sure you want to permanently delete "${org.name}"? This action cannot be undone.`)) {
-                        onOrganizationAction(org.id, 'delete');
-                      }
-                    }}
-                    className="rounded-xl border border-red-700/60 bg-red-900/40 hover:bg-red-900/60 px-4 py-2 text-sm font-semibold text-red-300 hover:text-red-200 transition-all"
-                  >
-                    🗑️ Delete
-                  </button>
+                  {org.status !== 'approved' && (
+                    <button
+                      onClick={() => {
+                        if (confirm(`Are you sure you want to permanently delete "${org.name}"? This action cannot be undone.`)) {
+                          onOrganizationAction(org.id, 'delete');
+                        }
+                      }}
+                      className="rounded-xl border border-red-700/60 bg-red-900/40 hover:bg-red-900/60 px-4 py-2 text-sm font-semibold text-red-300 hover:text-red-200 transition-all"
+                    >
+                      🗑️ Delete
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

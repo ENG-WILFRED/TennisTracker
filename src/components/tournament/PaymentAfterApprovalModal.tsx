@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { authenticatedFetch } from '@/lib/authenticatedFetch';
+import { formatKenyanMobileNumber } from '@/lib/phone';
 
 interface PaymentAfterApprovalModalProps {
   tournament: any;
@@ -38,20 +39,23 @@ export function PaymentAfterApprovalModal({
     setLoading(true);
 
     try {
-      // Validate mobile number for M-Pesa
+      let normalizedMobileNumber: string | undefined;
       if (paymentMethod === 'mobile') {
-        if (!mobileNumber || !mobileNumber.match(/^254\d{9}$/)) {
-          setError('Invalid mobile number. Please use format: 254XXXXXXXXX');
+        const result = formatKenyanMobileNumber(mobileNumber);
+        if (!result.normalized) {
+          setError(result.error || 'Invalid mobile number. Use 254XXXXXXXXX or 078XXXXXXXX');
           setLoading(false);
           return;
         }
+        normalizedMobileNumber = result.normalized;
+        setMobileNumber(normalizedMobileNumber);
       }
 
       const payload = {
         userId: user.id,
         eventId: tournament.id,
         registrationId: registration.id,
-        mobileNumber: paymentMethod === 'mobile' ? mobileNumber : undefined,
+        mobileNumber: normalizedMobileNumber,
         bookingType: 'tournament_entry',
         amount: total,
         accountReference: `TOURNAMENT-${tournament.name}-${Date.now()}`,
@@ -383,8 +387,8 @@ export function PaymentAfterApprovalModal({
             <input
               type="text"
               value={mobileNumber}
-              onChange={(e) => setMobileNumber(e.target.value)}
-              placeholder="254XXXXXXXXX"
+              onChange={(e) => setMobileNumber(e.target.value.replace(/\D/g, ''))}
+              placeholder="254712345678 or 0789898989"
               style={{
                 width: '100%',
                 padding: '10px 12px',

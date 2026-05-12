@@ -32,6 +32,7 @@ export {
   sendPasswordResetOtpEmail,
   sendBookingConfirmationEmail,
   sendPaymentReceiptEmail,
+  sendPaymentReminderEmail,
   publishNotification,
   createProducer,
   initProducer,

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, memo } from 'react';
 
 const G = {
   dark: '#0f1f0f', sidebar: '#152515', card: '#1a3020', cardBorder: '#2d5a35',
@@ -8,19 +8,33 @@ const G = {
   text: '#e8f5e0', muted: '#7aaa6a', yellow: '#f0c040', red: '#e05050', blue: '#4ab0d0',
 };
 
-const ProgressBar: React.FC<{ value: number; color?: string; height?: number }> = ({ value, color = G.lime, height = 4 }) => (
+// Style constants to avoid recreating on each render
+const createContainerStyle = (isEmbedded: boolean, hasPaddingTop?: boolean) => ({
+  width: '100%',
+  background: isEmbedded ? 'linear-gradient(to bottom right, #0f2710, #0f1f0f, #0d1f0d)' : undefined,
+  paddingTop: hasPaddingTop ? 40 : (isEmbedded ? 20 : 0),
+  paddingRight: isEmbedded ? 20 : 0,
+  paddingBottom: isEmbedded ? 20 : 0,
+  paddingLeft: isEmbedded ? 20 : 0,
+  borderRadius: isEmbedded ? 8 : 0,
+  textAlign: 'center' as const,
+});
+
+const ProgressBar = memo<{ value: number; color?: string; height?: number }>(({ value, color = G.lime, height = 4 }) => (
   <div style={{ height, background: G.dark, borderRadius: 2, overflow: 'hidden', marginTop: 3 }}>
     <div style={{ height: '100%', width: `${Math.min(value, 100)}%`, background: color, borderRadius: 2 }} />
   </div>
-);
+));
+ProgressBar.displayName = 'ProgressBar';
 
-const StatCard: React.FC<{ title: string; value: string | number; subtitle?: string; color?: string }> = ({ title, value, subtitle, color = G.accent }) => (
+const StatCard = memo<{ title: string; value: string | number; subtitle?: string; color?: string }>(({ title, value, subtitle, color = G.accent }) => (
   <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 8, padding: '16px 14px', textAlign: 'center' }}>
     <div style={{ fontSize: 10, color: G.muted, textTransform: 'uppercase', marginBottom: 4 }}>{title}</div>
     <div style={{ fontSize: 24, fontWeight: 900, color, marginBottom: subtitle ? 4 : 0 }}>{value}</div>
     {subtitle && <div style={{ fontSize: 9, color: G.muted }}>{subtitle}</div>}
   </div>
-);
+));
+StatCard.displayName = 'StatCard';
 
 interface Analytics {
   playerId: string;
@@ -87,24 +101,49 @@ export function ProgressView({ isEmbedded = false, playerId }: ProgressViewProps
   const [generatingReport, setGeneratingReport] = useState(false);
   const [reminderState, setReminderState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
   const [reminderMessage, setReminderMessage] = useState<string>('');
+  const cacheRef = React.useRef<Record<string, Analytics>>({});
 
   useEffect(() => {
+    const controller = new AbortController();
+    let isMounted = true;
+
     const fetchAnalytics = async () => {
       if (!playerId) return;
+      
+      const cacheKey = `${playerId}-${timeframe}`;
+      if (cacheRef.current[cacheKey]) {
+        if (isMounted) {
+          setAnalytics(cacheRef.current[cacheKey]);
+          setLoading(false);
+        }
+        return;
+      }
+
       try {
-        const res = await fetch(`/api/players/${playerId}/analytics?timeframe=${timeframe}`);
-        if (res.ok) {
+        const res = await fetch(`/api/players/${playerId}/analytics?timeframe=${timeframe}`, {
+          signal: controller.signal,
+        });
+        if (res.ok && isMounted) {
           const data = await res.json();
+          cacheRef.current[cacheKey] = data.analytics;
           setAnalytics(data.analytics);
         }
       } catch (error) {
-        console.error('Error fetching analytics:', error);
+        if (error instanceof Error && error.name !== 'AbortError') {
+          console.error('Error fetching analytics:', error);
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
 
+    setLoading(true);
     fetchAnalytics();
+
+    return () => {
+      isMounted = false;
+      controller.abort();
+    };
   }, [playerId, timeframe]);
 
   const generateReport = async () => {
@@ -137,7 +176,7 @@ export function ProgressView({ isEmbedded = false, playerId }: ProgressViewProps
 
   if (loading) {
     return (
-      <div style={{ width: '100%', background: isEmbedded ? 'linear-gradient(to bottom right, #0f2710, #0f1f0f, #0d1f0d)' : undefined, padding: isEmbedded ? 20 : 0, borderRadius: isEmbedded ? 8 : 0, textAlign: 'center', paddingTop: 40 }}>
+      <div style={createContainerStyle(isEmbedded, true)}>
         <div style={{ fontSize: 16, color: G.muted }}>Loading analytics...</div>
       </div>
     );
@@ -145,7 +184,7 @@ export function ProgressView({ isEmbedded = false, playerId }: ProgressViewProps
 
   if (!analytics) {
     return (
-      <div style={{ width: '100%', background: isEmbedded ? 'linear-gradient(to bottom right, #0f2710, #0f1f0f, #0d1f0d)' : undefined, padding: isEmbedded ? 20 : 0, borderRadius: isEmbedded ? 8 : 0, textAlign: 'center', paddingTop: 40 }}>
+      <div style={createContainerStyle(isEmbedded, true)}>
         <div style={{ fontSize: 16, color: G.muted }}>No analytics data available</div>
       </div>
     );
@@ -214,7 +253,7 @@ export function ProgressView({ isEmbedded = false, playerId }: ProgressViewProps
 
       {/* Timeframe Selector */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
-        {(['all', '3months', '6months', 'year'] as const).map((tf) => {
+        {useMemo(() => (['all', '3months', '6months', 'year'] as const).map((tf) => {
           const labels: Record<typeof tf, string> = {
             'all': 'All Time',
             '3months': 'Last 3 Months',
@@ -239,7 +278,7 @@ export function ProgressView({ isEmbedded = false, playerId }: ProgressViewProps
               {labels[tf]}
             </button>
           );
-        })}
+        }), [timeframe])}
       </div>
 
       {/* Main Stats Grid */}

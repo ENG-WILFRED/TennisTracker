@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { formatKenyanMobileNumber } from '@/lib/phone';
 
 export function AmenityBookingModal({ amenity, onClose, onConfirm, loading }: { amenity: any; onClose: () => void; onConfirm: (data: any) => void; loading: boolean }) {
   const [startTime, setStartTime] = useState('');
@@ -16,20 +17,23 @@ export function AmenityBookingModal({ amenity, onClose, onConfirm, loading }: { 
     }
 
     // Validate mobile number if paying with M-Pesa
+    let normalizedMobileNumber: string | undefined;
     if (amenity?.price && paymentMethod === 'mobile') {
-      if (!mobileNumber || !mobileNumber.match(/^254\d{9}$/)) {
-        alert('Invalid mobile number. Please use format: 254XXXXXXXXX');
+      const normalized = formatKenyanMobileNumber(mobileNumber);
+      if (!normalized.normalized) {
+        alert(normalized.error || 'Invalid mobile number. Use 254XXXXXXXXX or 078XXXXXXXX');
         return;
       }
+      normalizedMobileNumber = normalized.normalized;
     }
 
     onConfirm({
+      mobileNumber: normalizedMobileNumber || mobileNumber,
       startTime,
       endTime,
       guestName: guestName || null,
       notes: notes || null,
       paymentMethod,
-      mobileNumber,
     });
   };
 
@@ -150,12 +154,14 @@ export function AmenityBookingModal({ amenity, onClose, onConfirm, loading }: { 
                     <label className="block text-xs font-bold uppercase tracking-wider text-[#4a6335] mb-2">Mobile Number</label>
                     <input
                       type="tel"
-                      placeholder="254XXXXXXXXX"
+                      placeholder="254712345678 or 0789898989"
                       value={mobileNumber}
-                      onChange={(e) => setMobileNumber(e.target.value)}
+                      onChange={(e) => setMobileNumber(e.target.value.replace(/\D/g, ''))}
                       className="w-full bg-[rgba(99,153,34,0.08)] border border-[rgba(99,153,34,0.2)] rounded-lg px-3 py-2 text-[#dde8d4] placeholder-[#5a7242] focus:outline-none focus:border-[#8dc843] text-sm"
                     />
-                    <p className="text-xs text-[#5a7242] mt-1">Format: 254XXXXXXXXX (Kenya)</p>
+                    <p className="text-xs text-[#5a7242] mt-1">
+                      Format: 254712345678, +254712345678, or 0789898989
+                    </p>
                   </div>
                 )}
               </>

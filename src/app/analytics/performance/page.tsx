@@ -3,6 +3,9 @@ import PerformanceClient from '@/components/PerformanceClient'
 import { getRecentPlayersForSelector, getPlayerPerformance } from '@/actions/analytics'
 import { TrendingUp, BarChart3, Users } from 'lucide-react'
 
+// Mark this page as dynamic to prevent pre-rendering issues during build
+export const dynamic = 'force-dynamic';
+
 export default async function PerformanceAnalyticsPage() {
   const players = await getRecentPlayersForSelector()
 

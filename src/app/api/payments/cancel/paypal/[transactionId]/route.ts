@@ -30,11 +30,13 @@ export async function POST(
       );
     }
 
+    const paymentGatewayBaseUrl = process.env.PAYMENT_GATEWAY_BASE_URL || 'https://payment-gateway.kimaniwilfred95.workers.dev';
+
     // Call PayPal gateway to cancel order
     if (record.providerTransactionId) {
       try {
         const cancelResponse = await fetch(
-          `https://payment-gateway.kimaniwilfred95.workers.dev/api/payments/paypal/${record.providerTransactionId}/cancel`,
+          `${paymentGatewayBaseUrl}/api/payments/paypal/${record.providerTransactionId}/cancel`,
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

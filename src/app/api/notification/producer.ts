@@ -257,6 +257,18 @@ export async function sendPaymentReceiptEmail(
   });
 }
 
+export async function sendPaymentReminderEmail(
+  email: string,
+  data: Record<string, any>
+) {
+  return notify({
+    to: email,
+    channel: 'email',
+    template: 'payment_reminder',
+    data,
+  });
+}
+
 export async function createProducer() {
   return initProducer();
 }

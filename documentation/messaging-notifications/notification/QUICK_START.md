@@ -216,10 +216,47 @@ Templates available (must be created in your consumer):
 - `password_reset_email`
 - `booking_confirmation`
 - `payment_receipt`
+- `payment_reminder`
 - `otp_email`
 - `otp_sms`
 - `team_notification`
 - Custom: any name you define
+
+## Send a Payment Reminder Email
+
+```typescript
+import { sendPaymentReminderEmail } from '@/app/api/notification';
+
+await sendPaymentReminderEmail('lucas.santos@example.com', {
+  name: 'Lucas Santos',
+  tournament_name: 'Wilfreds Tournament',
+  due_date: 'May 14, 2026',
+  amount_due: '$50',
+  payment_link: 'https://app.example.com/payments/abc123',
+  message: 'Please complete your tournament registration payment to hold your spot.',
+});
+```
+
+### Payment Reminder Template Example
+
+Subject: Payment Reminder — {{ tournament_name }}
+
+```
+Hi {{ name }},
+
+This is a friendly reminder that your payment for {{ tournament_name }} is still pending.
+
+Amount due: {{ amount_due }}
+Due date: {{ due_date }}
+
+Please complete your payment here:
+{{ payment_link }}
+
+{{ message }}
+
+Thanks,
+The TennisTracker team
+```
 
 ## Debug
 

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Tournament } from './types';
 import { authenticatedFetch } from '@/lib/authenticatedFetch';
+import { formatKenyanMobileNumber } from '@/lib/phone';
 
 export function CheckoutModal({ t, user, onClose, onSuccess }: { t: Tournament; user: any; onClose: () => void; onSuccess: () => void }) {
   const [loading, setLoading] = useState(false);
@@ -20,19 +21,22 @@ export function CheckoutModal({ t, user, onClose, onSuccess }: { t: Tournament; 
     setLoading(true);
 
     try {
-      // Validate mobile number for M-Pesa
+      let normalizedMobileNumber: string | undefined;
       if (paymentMethod === 'mobile') {
-        if (!mobileNumber || !mobileNumber.match(/^254\d{9}$/)) {
-          setError('Invalid mobile number. Please use format: 254XXXXXXXXX');
+        const normalized = formatKenyanMobileNumber(mobileNumber);
+        if (!normalized.normalized) {
+          setError(normalized.error || 'Invalid mobile number. Use 254XXXXXXXXX or 078XXXXXXXX');
           setLoading(false);
           return;
         }
+        normalizedMobileNumber = normalized.normalized;
+        setMobileNumber(normalizedMobileNumber);
       }
 
       const payload = {
         userId: user.id,
         eventId: t.id,
-        mobileNumber: paymentMethod === 'mobile' ? mobileNumber : undefined,
+        mobileNumber: normalizedMobileNumber,
         bookingType: 'tournament_entry',
         amount: total,
         accountReference: `TOURNAMENT-${t.name}-${Date.now()}`,
@@ -196,13 +200,13 @@ export function CheckoutModal({ t, user, onClose, onSuccess }: { t: Tournament; 
               </label>
               <input
                 type="tel"
-                placeholder="254XXXXXXXXX"
+                placeholder="254712345678 or 0789898989"
                 value={mobileNumber}
-                onChange={(e) => setMobileNumber(e.target.value)}
+                onChange={(e) => setMobileNumber(e.target.value.replace(/\D/g, ''))}
                 className="w-full bg-[rgba(99,153,34,0.08)] border border-[rgba(99,153,34,0.2)] rounded-lg px-3 py-2 text-[#dde8d4] placeholder-[#5a7242] focus:outline-none focus:border-[#8dc843] text-sm"
               />
               <p className="text-xs text-[#5a7242] mt-1">
-                Format: 254XXXXXXXXX (Kenya)
+                Format: 254712345678, +254712345678, or 0789898989
               </p>
             </div>
           )}

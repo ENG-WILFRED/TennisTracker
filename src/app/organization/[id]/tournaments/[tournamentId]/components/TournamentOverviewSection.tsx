@@ -49,7 +49,7 @@ export function TournamentOverviewSection({
   const data = leaderboard.length ? leaderboard : MOCK_LEADERBOARD;
 
   return (
-    <div>
+    <div style={{ width: '100%' }}>
       {/* Stat cards */}
       <div style={{
         display: 'grid',

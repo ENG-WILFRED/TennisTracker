@@ -13,6 +13,7 @@ model User {
   username           String              @unique
   email              String              @unique
   phone              String?             @unique
+  isDeveloper        Boolean             @default(false)
   passwordHash       String
   firstName          String
   lastName           String

@@ -669,6 +669,18 @@ export async function getOrganizationDashboard(orgManagerId: string, orgId?: str
   }
 
   if (!resolvedOrgId) {
+    const ownedOrganization = await prisma.organization.findFirst({
+      where: { createdBy: orgManagerId },
+      select: { id: true },
+    });
+
+    if (ownedOrganization?.id) {
+      resolvedOrgId = ownedOrganization.id;
+      console.log(`✅ Organization owner found! Resolved orgId: ${resolvedOrgId}`);
+    }
+  }
+
+  if (!resolvedOrgId) {
     throw new Error('Organization not found');
   }
 

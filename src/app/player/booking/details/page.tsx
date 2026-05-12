@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { getAvailableTimeSlots } from '@/actions/bookings';
 import { processMPesaPayment, processPayPalPayment, processStripePayment } from '@/actions/payments';
+import { formatKenyanMobileNumber } from '@/lib/phone';
 
 const G = {
   dark: '#0f1f0f', sidebar: '#152515', card: '#1a3020', cardBorder: '#2d5a35',
@@ -122,9 +123,13 @@ function BookingDetailsContent() {
       return;
     }
 
-    if (paymentMethod === 'mpesa' && !mobileNumber) {
-      setPaymentError('Please enter your M-Pesa number');
-      return;
+    if (paymentMethod === 'mpesa') {
+      const normalized = formatKenyanMobileNumber(mobileNumber);
+      if (!normalized.normalized) {
+        setPaymentError(normalized.error || 'Please enter a valid M-Pesa number');
+        return;
+      }
+      setMobileNumber(normalized.normalized);
     }
 
     setProcessing(true);
@@ -575,7 +580,7 @@ function BookingDetailsContent() {
                       type="tel"
                       value={mobileNumber}
                       onChange={(e) => setMobileNumber(e.target.value.replace(/\D/g, ''))}
-                      placeholder="254712345678"
+                      placeholder="254712345678 or 0789898989"
                       maxLength={12}
                       className="w-full px-3 py-2 rounded-lg border text-xs outline-none transition-colors"
                       style={{
@@ -585,7 +590,7 @@ function BookingDetailsContent() {
                       }}
                     />
                     <p className="text-[9px] mt-2" style={{ color: G.muted }}>
-                      Format: 254712345678 (12 digits)
+                      Format: 254712345678, +254712345678, or 0789898989
                     </p>
                   </div>
                 )}
@@ -610,7 +615,12 @@ function BookingDetailsContent() {
 
                 {/* CTA Button */}
                 <button
-                  disabled={!selectedSlot || !paymentMethod || processing || (paymentMethod === 'mpesa' && mobileNumber.length < 12)}
+                  disabled={
+                  !selectedSlot ||
+                  !paymentMethod ||
+                  processing ||
+                  (paymentMethod === 'mpesa' && !formatKenyanMobileNumber(mobileNumber).normalized)
+                }
                   onClick={handlePayment}
                   className="w-full py-4 rounded-lg font-black text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{
