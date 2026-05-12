@@ -30,11 +30,13 @@ export async function POST(
       );
     }
 
+    const paymentGatewayBaseUrl = process.env.PAYMENT_GATEWAY_BASE_URL || 'https://payment-gateway.kimaniwilfred95.workers.dev';
+
     // Call Stripe gateway to cancel payment intent
     if (record.providerTransactionId) {
       try {
         const cancelResponse = await fetch(
-          `https://payment-gateway.kimaniwilfred95.workers.dev/api/payments/stripe/${record.providerTransactionId}/cancel`,
+          `${paymentGatewayBaseUrl}/api/payments/stripe/${record.providerTransactionId}/cancel`,
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

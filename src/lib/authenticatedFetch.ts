@@ -35,10 +35,14 @@ export async function authenticatedFetch(
   async function fetchWithTimeout(url: string, opts: RequestInit, timeout: number): Promise<Response> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);
+    const requestUrl = (typeof window !== 'undefined' && url.startsWith('/'))
+      ? `${window.location.origin}${url}`
+      : url;
 
     try {
-      const response = await fetch(url, {
+      const response = await fetch(requestUrl, {
         ...opts,
+        credentials: 'same-origin',
         signal: controller.signal,
       });
       clearTimeout(timeoutId);
@@ -48,8 +52,8 @@ export async function authenticatedFetch(
       
       // Handle timeout
       if (error.name === 'AbortError') {
-        console.error(`[authenticatedFetch] Request timeout for ${url} after ${timeout}ms`);
-        throw new Error(`Request timeout: ${url}`);
+        console.error(`[authenticatedFetch] Request timeout for ${requestUrl} after ${timeout}ms`);
+        throw new Error(`Request timeout: ${requestUrl}`);
       }
       throw error;
     }

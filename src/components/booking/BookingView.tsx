@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useRole } from '@/context/RoleContext';
 import { LoadingState } from '@/components/LoadingState';
+import { formatKenyanMobileNumber } from '@/lib/phone';
 import {
   getAvailableCourts,
   getAvailableTimeSlots,
@@ -14,6 +15,11 @@ import {
   getPlayerOrganizations,
   getAllAvailableOrganizations,
 } from '@/actions/bookings';
+import {
+  processMPesaPayment,
+  processPayPalPayment,
+  processStripePayment,
+} from '@/actions/payments';
 import { BookingConfirmation } from './BookingConfirmation';
 import { CourtDetailModal } from './CourtDetailModal';
 
@@ -366,44 +372,112 @@ export function BookingView({ onClose, isEmbedded = false, canBook = true, organ
       setLastBookingStatus(bookingResult.membershipStatus);
       setShowBookingConfirmation(true);
 
-      // Call simulated payment endpoint for development/testing
-      const paymentRes = await fetch('/api/bookings/simulate-payment', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          playerId: userIdFromURL,
-          courtId: selectedCourt,
-          startTime: startTime.toISOString(),
-          endTime: endTime.toISOString(),
-          organizationId: selectedOrgId,
-          amount: bookingResult.booking.price,
-          bookingId: bookingResult.booking.id,
-        }),
-      });
+      // Process real payment based on selected payment method
+      let paymentResult: any = null;
 
-      if (!paymentRes.ok) {
-        const errorData = await paymentRes.json();
-        showToast('error', `❌ Booking failed: ${errorData.error}`);
-        console.error('Simulated payment failed:', errorData);
-        return;
-      }
+      let normalizedMobileNumber: string | undefined;
+      if (paymentMethod === 'mpesa') {
+        const result = formatKenyanMobileNumber(mobileNumber);
+        if (!result.normalized) {
+          showToast('error', result.error || 'Invalid mobile number. Use 254XXXXXXXXX or 078XXXXXXXX');
+          setBooking(false);
+          return;
+        }
+        normalizedMobileNumber = result.normalized;
+        setMobileNumber(normalizedMobileNumber);
 
-      const paymentData = await paymentRes.json();
+        paymentResult = await processMPesaPayment(
+          normalizedMobileNumber,
+          bookingResult.booking.price,
+          `COURT-${selectedCourt}-${Date.now()}`,
+          `Court booking for ${selectedCourtData?.name || 'Tennis Court'}`,
+          userIdFromURL,
+          selectedOrgId,
+          'court_booking',
+          {
+            courtId: selectedCourt,
+            courtName: selectedCourtData?.name,
+            startTime: startTime.toISOString(),
+            endTime: endTime.toISOString(),
+            bookingId: bookingResult.booking.id,
+            notes: notes,
+          }
+        );
 
-      if (paymentData.success) {
-        showToast('success', '✅ Booking confirmed! Your court is reserved.');
+        if (paymentResult.success) {
+          showToast('success', '✅ M-Pesa STK push sent. Complete payment on your phone.');
+          // Reset form
+          setSelectedSlot('');
+          setDuration(1);
+          setNotes('');
+          setMobileNumber('');
 
-        // Reset form
-        setSelectedSlot('');
-        setDuration(1);
-        setNotes('');
-        setMobileNumber('');
+          // Reload bookings after short delay
+          setTimeout(async () => {
+            const bookingsData = await getPlayerBookings(userIdFromURL, selectedOrgId);
+            setExistingBookings(bookingsData);
+          }, 2000);
+        } else {
+          showToast('error', `❌ Payment failed: ${paymentResult.error}`);
+        }
+      } else if (paymentMethod === 'paypal') {
+        paymentResult = await processPayPalPayment(
+          bookingResult.booking.price,
+          'USD',
+          userIdFromURL,
+          selectedOrgId,
+          'court_booking',
+          {
+            courtId: selectedCourt,
+            courtName: selectedCourtData?.name,
+            startTime: startTime.toISOString(),
+            endTime: endTime.toISOString(),
+            bookingId: bookingResult.booking.id,
+            notes: notes,
+          }
+        );
 
-        // Reload bookings after short delay
-        setTimeout(async () => {
-          const bookingsData = await getPlayerBookings(userIdFromURL, selectedOrgId);
-          setExistingBookings(bookingsData);
-        }, 2000);
+        if (paymentResult.success) {
+          if (paymentResult.checkoutUrl) {
+            showToast('success', 'Redirecting to PayPal...');
+            setTimeout(() => {
+              window.location.href = paymentResult.checkoutUrl;
+            }, 1500);
+          } else {
+            showToast('error', 'PayPal checkout URL not available');
+          }
+        } else {
+          showToast('error', `❌ Payment failed: ${paymentResult.error}`);
+        }
+      } else if (paymentMethod === 'stripe') {
+        paymentResult = await processStripePayment(
+          bookingResult.booking.price,
+          'USD',
+          userIdFromURL,
+          selectedOrgId,
+          'court_booking',
+          {
+            courtId: selectedCourt,
+            courtName: selectedCourtData?.name,
+            startTime: startTime.toISOString(),
+            endTime: endTime.toISOString(),
+            bookingId: bookingResult.booking.id,
+            notes: notes,
+          }
+        );
+
+        if (paymentResult.success) {
+          if (paymentResult.checkoutUrl) {
+            showToast('success', 'Redirecting to Stripe...');
+            setTimeout(() => {
+              window.location.href = paymentResult.checkoutUrl;
+            }, 1500);
+          } else {
+            showToast('error', 'Stripe checkout URL not available');
+          }
+        } else {
+          showToast('error', `❌ Payment failed: ${paymentResult.error}`);
+        }
       }
     } catch (error: any) {
       showToast('error', error.message || 'Booking failed');
@@ -750,17 +824,23 @@ export function BookingView({ onClose, isEmbedded = false, canBook = true, organ
                     type="tel"
                     value={mobileNumber}
                     onChange={e => setMobileNumber(e.target.value.replace(/\D/g, ''))}
-                    placeholder="254712345678"
+                    placeholder="254712345678 or 0789898989"
                     maxLength={12}
                     className="w-full bg-[#2d5a27] border border-[#2d5a35] text-[#e8f5e0] rounded-lg px-3 py-2 text-sm outline-none focus:border-[#7dc142] placeholder-[#7aaa6a] transition-colors"
                   />
-                  <p className="text-[10px] text-[#7aaa6a]">Format: 254712345678 (12 digits)</p>
+                  <p className="text-[10px] text-[#7aaa6a]">
+                    Format: 254712345678, +254712345678, or 0789898989
+                  </p>
                 </div>
               )}
 
               <button
                 onClick={handleBooking}
-                disabled={!selectedSlot || booking || (paymentMethod === 'mpesa' && mobileNumber.length < 12)}
+                disabled={
+                  !selectedSlot ||
+                  booking ||
+                  (paymentMethod === 'mpesa' && !formatKenyanMobileNumber(mobileNumber).normalized)
+                }
                 className="w-full py-3 bg-[#7dc142] hover:bg-[#a8d84e] disabled:bg-[#2d5a27] disabled:text-[#7aaa6a] text-[#0f1f0f] font-black text-sm rounded-xl transition-all disabled:cursor-not-allowed"
               >
                 {booking ? '⏳ Processing…' : selectedSlot ? `✓ Confirm & Pay via ${paymentMethod === 'mpesa' ? 'M-Pesa' : paymentMethod === 'stripe' ? 'Stripe' : 'PayPal'}` : 'Select a time slot'}

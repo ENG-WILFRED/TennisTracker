@@ -1,5 +1,6 @@
 import prisma from '@/lib/prisma';
 import { verifyApiAuth } from '@/lib/authMiddleware';
+import { notify } from '@/app/api/notification/producer';
 import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
@@ -71,6 +72,25 @@ export async function POST(request: Request) {
         },
       },
     });
+
+    const recipientEmail = registration.member.player.user.email;
+    const recipientName = registration.member.player.user.firstName || registration.member.player.user.name || 'Player';
+
+    if (recipientEmail) {
+      await notify({
+        to: recipientEmail,
+        channel: 'email',
+        template: 'payment_reminder',
+        data: {
+          name: recipientName,
+          tournament_name: tournament.name,
+          due_date: tournament.startDate ? tournament.startDate.toISOString().split('T')[0] : null,
+          payment_link: `${process.env.NEXT_PUBLIC_APP_URL || 'https://app.example.com'}/payments`,
+          amount_due: tournament.entryFee ? `$${tournament.entryFee}` : undefined,
+          message: reminder.message,
+        },
+      });
+    }
 
     return NextResponse.json({
       success: true,

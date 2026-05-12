@@ -44,13 +44,10 @@ export async function POST(request: Request) {
       return new Response(JSON.stringify({ error: `Organization is already ${org.status}` }), { status: 400 });
     }
 
-    // Get all developer users (users with developer role or specific emails)
+    // Get all developer users from the database
     const developers = await prisma.user.findMany({
       where: {
-        OR: [
-          { email: { endsWith: '@tennistrack.dev' } },
-          { memberships: { some: { role: 'developer' } } },
-        ],
+        isDeveloper: true,
       },
       select: {
         id: true,

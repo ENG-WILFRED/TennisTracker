@@ -18,6 +18,7 @@ interface Court {
   lights: boolean;
   status: string;
   maintenedUntil?: string;
+  nextMaintenanceDate?: string;
 }
 
 interface CourtsProps {
@@ -30,6 +31,8 @@ export default function OrganizationCourtsSection({ orgId }: CourtsProps) {
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     courtNumber: '',
@@ -37,7 +40,17 @@ export default function OrganizationCourtsSection({ orgId }: CourtsProps) {
     indoorOutdoor: 'Outdoor',
     lights: false,
     status: 'Active',
+    maintenedUntil: '',
+    nextMaintenanceDate: '',
   });
+
+  // Auto-dismiss toast after 3 seconds
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
 
   useEffect(() => {
     if (orgId) fetchCourts();
@@ -67,6 +80,7 @@ export default function OrganizationCourtsSection({ orgId }: CourtsProps) {
     e.preventDefault();
     if (!orgId) return;
 
+    setIsSubmitting(true);
     try {
       const method = editingId ? 'PUT' : 'POST';
       const url = editingId 
@@ -80,14 +94,42 @@ export default function OrganizationCourtsSection({ orgId }: CourtsProps) {
           ...formData,
           courtNumber: parseInt(formData.courtNumber),
           lights: Boolean(formData.lights),
+          maintenedUntil: formData.maintenedUntil || undefined,
+          nextMaintenanceDate: formData.nextMaintenanceDate || undefined,
         }),
       });
 
       if (!res.ok) throw new Error('Failed to save court');
-      await fetchCourts();
+      
+      const responseData = await res.json();
+      
+      if (editingId) {
+        // Update existing court in state
+        setCourts(courts.map(c => c.id === editingId ? { ...c, ...formData, courtNumber: parseInt(formData.courtNumber), lights: Boolean(formData.lights) } : c));
+        setToast({ type: 'success', message: '✅ Court updated successfully!' });
+      } else {
+        // Add new court to state
+        const newCourt = {
+          id: responseData.id || Date.now().toString(),
+          name: formData.name,
+          courtNumber: parseInt(formData.courtNumber),
+          surface: formData.surface,
+          indoorOutdoor: formData.indoorOutdoor,
+          lights: Boolean(formData.lights),
+          status: formData.status,
+          maintenedUntil: formData.maintenedUntil || undefined,
+          nextMaintenanceDate: formData.nextMaintenanceDate || undefined,
+        };
+        setCourts([...courts, newCourt]);
+        setToast({ type: 'success', message: '✅ Court created successfully!' });
+      }
+      
       resetForm();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error saving court');
+      const errorMsg = err instanceof Error ? err.message : 'Error saving court';
+      setToast({ type: 'error', message: `❌ ${errorMsg}` });
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -98,9 +140,13 @@ export default function OrganizationCourtsSection({ orgId }: CourtsProps) {
         method: 'DELETE',
       });
       if (!res.ok) throw new Error('Failed to delete court');
-      await fetchCourts();
+      
+      // Remove from state immediately
+      setCourts(courts.filter(c => c.id !== courtId));
+      setToast({ type: 'success', message: '✅ Court deleted successfully!' });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error deleting court');
+      const errorMsg = err instanceof Error ? err.message : 'Error deleting court';
+      setToast({ type: 'error', message: `❌ ${errorMsg}` });
     }
   }
 
@@ -112,6 +158,8 @@ export default function OrganizationCourtsSection({ orgId }: CourtsProps) {
       indoorOutdoor: 'Outdoor',
       lights: false,
       status: 'Active',
+      maintenedUntil: '',
+      nextMaintenanceDate: '',
     });
     setEditingId(null);
     setShowForm(false);
@@ -125,6 +173,8 @@ export default function OrganizationCourtsSection({ orgId }: CourtsProps) {
       indoorOutdoor: court.indoorOutdoor,
       lights: court.lights,
       status: court.status,
+      maintenedUntil: court.maintenedUntil ? court.maintenedUntil.slice(0, 16) : '',
+      nextMaintenanceDate: court.nextMaintenanceDate ? court.nextMaintenanceDate.slice(0, 16) : '',
     });
     setEditingId(court.id);
     setShowForm(true);
@@ -158,85 +208,188 @@ export default function OrganizationCourtsSection({ orgId }: CourtsProps) {
         </div>
       </div>
 
-      {/* Form */}
+      {/* Modal */}
       {showForm && (
-        <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 14 }}>
-          <div style={{ fontWeight: 800, fontSize: 13, marginBottom: 12 }}>{editingId ? '✏️ Edit Court' : '➕ Add New Court'}</div>
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <div style={{ display: 'flex', gap: 10 }}>
-              <input
-                type="text"
-                placeholder="Court Name"
-                value={formData.name}
-                onChange={(e) => setFormData({...formData, name: e.target.value})}
-                required
-                style={{ flex: 1, background: G.dark, border: `1px solid ${G.cardBorder}`, color: G.text, borderRadius: 6, padding: '8px 12px', fontSize: 12 }}
-              />
-              <input
-                type="number"
-                placeholder="Court #"
-                value={formData.courtNumber}
-                onChange={(e) => setFormData({...formData, courtNumber: e.target.value})}
-                required
-                style={{ width: 80, background: G.dark, border: `1px solid ${G.cardBorder}`, color: G.text, borderRadius: 6, padding: '8px 12px', fontSize: 12 }}
-              />
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: 16,
+        }} onClick={resetForm}>
+          <div style={{
+            background: G.card,
+            border: `2px solid ${G.cardBorder}`,
+            borderRadius: 16,
+            padding: 24,
+            maxWidth: 500,
+            width: '100%',
+            maxHeight: '90vh',
+            overflowY: 'auto',
+          }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontWeight: 800, fontSize: 18, marginBottom: 20, color: G.text }}>
+              {editingId ? '✏️ Edit Court' : '➕ Add New Court'}
             </div>
-            <div style={{ display: 'flex', gap: 10 }}>
-              <select
-                value={formData.surface}
-                onChange={(e) => setFormData({...formData, surface: e.target.value})}
-                style={{ flex: 1, background: G.dark, border: `1px solid ${G.cardBorder}`, color: G.text, borderRadius: 6, padding: '8px 12px', fontSize: 12 }}
-              >
-                <option value="Clay">Clay</option>
-                <option value="Hard">Hard</option>
-                <option value="Grass">Grass</option>
-              </select>
-              <select
-                value={formData.indoorOutdoor}
-                onChange={(e) => setFormData({...formData, indoorOutdoor: e.target.value})}
-                style={{ flex: 1, background: G.dark, border: `1px solid ${G.cardBorder}`, color: G.text, borderRadius: 6, padding: '8px 12px', fontSize: 12 }}
-              >
-                <option value="Indoor">Indoor</option>
-                <option value="Outdoor">Outdoor</option>
-              </select>
-            </div>
-            <div style={{ display: 'flex', gap: 10 }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 6, color: G.text, fontSize: 12, flex: 1 }}>
+            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div style={{ display: 'flex', gap: 10 }}>
                 <input
-                  type="checkbox"
-                  checked={Boolean(formData.lights)}
-                  onChange={(e) => setFormData({...formData, lights: e.target.checked})}
+                  type="text"
+                  placeholder="Court Name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({...formData, name: e.target.value})}
+                  required
+                  style={{ flex: 1, background: G.dark, border: `1px solid ${G.cardBorder}`, color: G.text, borderRadius: 6, padding: '10px 12px', fontSize: 13 }}
                 />
-                Has Lights
-              </label>
-              <select
-                value={formData.status}
-                onChange={(e) => setFormData({...formData, status: e.target.value})}
-                style={{ flex: 1, background: G.dark, border: `1px solid ${G.cardBorder}`, color: G.text, borderRadius: 6, padding: '8px 12px', fontSize: 12 }}
-              >
-                <option value="Active">Active</option>
-                <option value="Maintenance">Maintenance</option>
-              </select>
-            </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button type="submit" style={{ flex: 1, background: G.lime, color: G.dark, border: 'none', borderRadius: 6, padding: '8px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
-                {editingId ? 'Update Court' : 'Add Court'}
-              </button>
-              <button type="button" onClick={resetForm} style={{ flex: 1, background: G.mid, color: G.text, border: `1px solid ${G.cardBorder}`, borderRadius: 6, padding: '8px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
-                Cancel
-              </button>
-            </div>
-          </form>
+                <input
+                  type="number"
+                  placeholder="Court #"
+                  value={formData.courtNumber}
+                  onChange={(e) => setFormData({...formData, courtNumber: e.target.value})}
+                  required
+                  style={{ width: 90, background: G.dark, border: `1px solid ${G.cardBorder}`, color: G.text, borderRadius: 6, padding: '10px 12px', fontSize: 13 }}
+                />
+              </div>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <select
+                  value={formData.surface}
+                  onChange={(e) => setFormData({...formData, surface: e.target.value})}
+                  style={{ flex: 1, background: G.dark, border: `1px solid ${G.cardBorder}`, color: G.text, borderRadius: 6, padding: '10px 12px', fontSize: 13 }}
+                >
+                  <option value="Clay">Clay</option>
+                  <option value="Hard">Hard</option>
+                  <option value="Grass">Grass</option>
+                </select>
+                <select
+                  value={formData.indoorOutdoor}
+                  onChange={(e) => setFormData({...formData, indoorOutdoor: e.target.value})}
+                  style={{ flex: 1, background: G.dark, border: `1px solid ${G.cardBorder}`, color: G.text, borderRadius: 6, padding: '10px 12px', fontSize: 13 }}
+                >
+                  <option value="Indoor">Indoor</option>
+                  <option value="Outdoor">Outdoor</option>
+                </select>
+              </div>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: G.text, fontSize: 13, flex: 1, cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={Boolean(formData.lights)}
+                    onChange={(e) => setFormData({...formData, lights: e.target.checked})}
+                    style={{ cursor: 'pointer' }}
+                  />
+                  Has Lights
+                </label>
+                <select
+                  value={formData.status}
+                  onChange={(e) => setFormData({...formData, status: e.target.value})}
+                  style={{ flex: 1, background: G.dark, border: `1px solid ${G.cardBorder}`, color: G.text, borderRadius: 6, padding: '10px 12px', fontSize: 13 }}
+                >
+                  <option value="Active">Active</option>
+                  <option value="Maintenance">Maintenance</option>
+                </select>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <input
+                  type="datetime-local"
+                  placeholder="Maintenance end"
+                  value={formData.maintenedUntil}
+                  onChange={(e) => setFormData({...formData, maintenedUntil: e.target.value})}
+                  style={{ background: G.dark, border: `1px solid ${G.cardBorder}`, color: G.text, borderRadius: 6, padding: '10px 12px', fontSize: 13 }}
+                />
+                <input
+                  type="datetime-local"
+                  placeholder="Next maintenance"
+                  value={formData.nextMaintenanceDate}
+                  onChange={(e) => setFormData({...formData, nextMaintenanceDate: e.target.value})}
+                  style={{ background: G.dark, border: `1px solid ${G.cardBorder}`, color: G.text, borderRadius: 6, padding: '10px 12px', fontSize: 13 }}
+                />
+              </div>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button 
+                  type="submit" 
+                  disabled={isSubmitting}
+                  style={{ 
+                    flex: 1, 
+                    background: G.lime, 
+                    color: G.dark, 
+                    border: 'none', 
+                    borderRadius: 8, 
+                    padding: '12px 16px', 
+                    fontSize: 13, 
+                    fontWeight: 700, 
+                    cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                    opacity: isSubmitting ? 0.6 : 1,
+                  }}
+                >
+                  {isSubmitting ? 'Saving...' : editingId ? 'Update Court' : 'Add Court'}
+                </button>
+                <button 
+                  type="button" 
+                  onClick={resetForm}
+                  disabled={isSubmitting}
+                  style={{ 
+                    flex: 1, 
+                    background: G.mid, 
+                    color: G.text, 
+                    border: `1px solid ${G.cardBorder}`, 
+                    borderRadius: 8, 
+                    padding: '12px 16px', 
+                    fontSize: 13, 
+                    fontWeight: 700, 
+                    cursor: 'pointer' 
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
       {!showForm && (
         <button
           onClick={() => setShowForm(true)}
-          style={{ background: G.lime, color: G.dark, border: 'none', borderRadius: 8, padding: '12px 16px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
+          style={{ background: G.lime, color: G.dark, border: 'none', borderRadius: 8, padding: '12px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
         >
           ➕ Add New Court
         </button>
+      )}
+
+      {/* Toast Notification */}
+      {toast && (
+        <div style={{
+          position: 'fixed',
+          top: 20,
+          right: 20,
+          background: toast.type === 'success' ? '#1a3520' : '#3a1a1a',
+          border: `2px solid ${toast.type === 'success' ? G.lime : '#ff6b6b'}`,
+          color: toast.type === 'success' ? G.lime : '#ff9b9b',
+          padding: '14px 18px',
+          borderRadius: 10,
+          fontSize: 13,
+          fontWeight: 700,
+          zIndex: 2000,
+          animation: 'slideInRight 0.3s ease-out',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+        }}>
+          {toast.message}
+          <style>{`
+            @keyframes slideInRight {
+              from {
+                transform: translateX(100%);
+                opacity: 0;
+              }
+              to {
+                transform: translateX(0);
+                opacity: 1;
+              }
+            }
+          `}</style>
+        </div>
       )}
 
       {/* Courts Cards Grid */}
@@ -283,27 +436,40 @@ export default function OrganizationCourtsSection({ orgId }: CourtsProps) {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontSize: 13, color: G.muted, fontWeight: 600 }}>Surface</span>
-                    <span style={{ fontSize: 14, fontWeight: 700, color: G.bright }}>{court.surface}</span>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: G.lime }}>{court.surface}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontSize: 13, color: G.muted, fontWeight: 600 }}>Type</span>
-                    <span style={{ fontSize: 14, fontWeight: 700, color: G.accent }}>{court.indoorOutdoor}</span>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: G.lime }}>{court.indoorOutdoor}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontSize: 13, color: G.muted, fontWeight: 600 }}>Lights</span>
-                    <span style={{ fontSize: 14, fontWeight: 700, color: court.lights ? G.yellow : G.muted }}>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: court.lights ? G.lime : G.muted }}>
                       {court.lights ? '💡 Yes' : 'No'}
                     </span>
                   </div>
+                  {court.nextMaintenanceDate && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: 13, color: G.muted, fontWeight: 600 }}>Next Maint.</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: G.yellow }}>{new Date(court.nextMaintenanceDate).toLocaleString()}</span>
+                    </div>
+                  )}
+                  {court.maintenedUntil && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: 13, color: G.muted, fontWeight: 600 }}>Maint. Until</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: G.yellow }}>{new Date(court.maintenedUntil).toLocaleString()}</span>
+                    </div>
+                  )}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontSize: 13, color: G.muted, fontWeight: 600 }}>Status</span>
                     <span style={{ 
-                      fontSize: 14, 
+                      fontSize: 13, 
                       fontWeight: 700, 
-                      color: court.status === 'Active' ? G.lime : G.yellow,
-                      background: court.status === 'Active' ? G.lime + '20' : G.yellow + '20',
-                      padding: '4px 8px',
-                      borderRadius: 4
+                      color: court.status === 'Active' ? G.lime : court.status === 'Maintenance' ? G.yellow : G.text,
+                      background: court.status === 'Active' ? G.lime + '15' : court.status === 'Maintenance' ? G.yellow + '15' : G.cardBorder,
+                      padding: '6px 10px',
+                      borderRadius: 6,
+                      border: `1px solid ${court.status === 'Active' ? G.lime + '40' : court.status === 'Maintenance' ? G.yellow + '40' : G.cardBorder}`
                     }}>
                       {court.status}
                     </span>
@@ -323,8 +489,11 @@ export default function OrganizationCourtsSection({ orgId }: CourtsProps) {
                       padding: '10px 12px', 
                       fontSize: 13, 
                       fontWeight: 700, 
-                      cursor: 'pointer'
+                      cursor: 'pointer',
+                      transition: 'opacity 0.2s'
                     }}
+                    onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.85')}
+                    onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
                   >
                     ✏️ Edit
                   </button>
@@ -332,14 +501,23 @@ export default function OrganizationCourtsSection({ orgId }: CourtsProps) {
                     onClick={() => handleDelete(court.id)}
                     style={{ 
                       flex: 1, 
-                      background: '#ff6b6b', 
-                      color: '#fff', 
-                      border: 'none', 
+                      background: 'transparent', 
+                      color: G.lime, 
+                      border: `2px solid ${G.cardBorder}`, 
                       borderRadius: 6, 
                       padding: '10px 12px', 
                       fontSize: 13, 
                       fontWeight: 700, 
-                      cursor: 'pointer'
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = G.lime;
+                      e.currentTarget.style.background = G.lime + '15';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = G.cardBorder;
+                      e.currentTarget.style.background = 'transparent';
                     }}
                   >
                     🗑️ Delete

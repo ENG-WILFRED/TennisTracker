@@ -18,8 +18,8 @@ export async function POST(
     // Verify user is a developer
     const isDeveloper = await prisma.user.findUnique({
       where: { id: auth.userId },
-      select: { email: true },
-    }).then(user => user?.email?.endsWith('@tennistrack.dev') || false);
+      select: { isDeveloper: true },
+    }).then(user => Boolean(user?.isDeveloper));
 
     if (!isDeveloper) {
       return new Response(JSON.stringify({ error: 'Only developers can approve organizations' }), { status: 403 });
@@ -27,10 +27,10 @@ export async function POST(
 
     const { orgId } = await params;
     const body = await request.json();
-    const { action, rejectionReason } = body as { action: 'approve' | 'reject' | 'suspend' | 'reactivate' | 'email' | 'delete'; rejectionReason?: string };
+    const { action, rejectionReason } = body as { action: 'approve' | 'reject' | 'suspend' | 'reactivate' | 'email' | 'delete' | 'remindPayment'; rejectionReason?: string };
 
-    if (!action || !['approve', 'reject', 'suspend', 'reactivate', 'email', 'delete'].includes(action)) {
-      return new Response(JSON.stringify({ error: 'Action must be approve, reject, suspend, reactivate, email, or delete' }), { status: 400 });
+    if (!action || !['approve', 'reject', 'suspend', 'reactivate', 'email', 'delete', 'remindPayment'].includes(action)) {
+      return new Response(JSON.stringify({ error: 'Action must be approve, reject, suspend, reactivate, email, delete, or remindPayment' }), { status: 400 });
     }
 
     // Get the organization
@@ -169,6 +169,54 @@ export async function POST(
         success: true,
         message: `Organization "${org.name}" has been ${action === 'suspend' ? 'suspended' : 'reactivated'}`,
         organization: updatedOrg,
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (action === 'remindPayment') {
+      const recipient = org.email || creator?.email;
+      if (!recipient) {
+        return new Response(JSON.stringify({ error: 'No recipient email available for this organization' }), { status: 400 });
+      }
+
+      const subject = `Payment reminder for ${org.name}`;
+      const bodyMessage = `Hello ${creator?.firstName || 'there'},\n\nThis is a friendly reminder from TennisTracker regarding your approved organization "${org.name}". Please review your outstanding payment details and reach out if you need assistance.\n\nThank you,\nTennisTracker Team`;
+
+      try {
+        const { notify } = await import('@/app/api/notification/producer');
+        await notify({
+          to: recipient,
+          channel: 'email',
+          template: 'developer_org_message',
+          data: {
+            organizationName: org.name,
+            subject,
+            message: bodyMessage,
+          },
+        });
+      } catch (notifyError) {
+        console.warn('Failed to send payment reminder:', notifyError);
+        return new Response(JSON.stringify({ error: 'Failed to queue payment reminder' }), { status: 500 });
+      }
+
+      await prisma.developerEmailLog.create({
+        data: {
+          organizationId: orgId,
+          recipientEmail: recipient,
+          subject,
+          body: bodyMessage,
+          installationFee: 0,
+          monthlySubscription: 0,
+          sentBy: auth.userId,
+          status: 'sent',
+        },
+      });
+
+      return new Response(JSON.stringify({
+        success: true,
+        message: `Payment reminder queued for ${recipient}`,
       }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' },

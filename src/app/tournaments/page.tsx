@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { LoadingState } from '@/components/LoadingState';
 import PageHeader from '@/components/PageHeader';
@@ -21,6 +20,10 @@ interface TournamentData {
   bracket?: any;
   matches: any[];
   organizationId: string;
+  organization?: {
+    id: string;
+    name: string;
+  } | null;
 }
 
 interface TournamentStats {
@@ -36,20 +39,29 @@ interface TournamentStats {
   };
   bracketType?: string;
   prizePool?: number;
+  organizationId: string;
+  organizationName: string;
 }
 
 export default function TournamentsPage() {
-  const router = useRouter();
   const [tournaments, setTournaments] = useState<TournamentStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'active' | 'completed'>('all');
+  const [orgFilter, setOrgFilter] = useState<'all' | string>('all');
 
   useEffect(() => {
     async function loadTournaments() {
       try {
         setLoading(true);
         const data = await getAllTournaments();
-        const statsPromises = data.map((t: TournamentData) => getTournamentStats(t.id));
+        const statsPromises = data.map(async (t: TournamentData) => {
+          const stat = await getTournamentStats(t.id);
+          return stat ? {
+            ...stat,
+            organizationId: t.organizationId,
+            organizationName: t.organization?.name || 'Unknown Organization',
+          } : null;
+        });
         const stats = await Promise.all(statsPromises);
         const validStats = stats.filter((s) => s !== null) as TournamentStats[];
         setTournaments(validStats);
@@ -63,7 +75,8 @@ export default function TournamentsPage() {
     loadTournaments();
   }, []);
 
-  const filteredTournaments = tournaments.filter((t) => {
+  const filteredByOrg = orgFilter === 'all' ? tournaments : tournaments.filter((t) => t.organizationId === orgFilter);
+  const filteredTournaments = filteredByOrg.filter((t) => {
     if (filter === 'active') return t.status === 'active' || t.status === 'in_progress';
     if (filter === 'completed') return t.status === 'completed';
     return true;
@@ -135,21 +148,43 @@ export default function TournamentsPage() {
           </div>
         </div>
 
-        {/* Filter Tabs */}
-        <div className="mt-8 flex gap-2 border-b border-gray-200">
-          {(['all', 'active', 'completed'] as const).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setFilter(tab)}
-              className={`px-4 py-3 font-medium transition-all border-b-2 ${
-                filter === tab
-                  ? 'border-green-600 text-green-700'
-                  : 'border-transparent text-gray-600 hover:text-gray-900'
-              }`}
+        {/* Filter Controls */}
+        <div className="mt-8 grid gap-4 md:grid-cols-[1fr_auto] items-end">
+          <div className="flex flex-col gap-2 md:flex-row md:items-center">
+            <label className="text-sm font-medium text-gray-700">Organization</label>
+            <select
+              value={orgFilter}
+              onChange={(e) => setOrgFilter(e.target.value as 'all' | string)}
+              className="rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 shadow-sm focus:border-green-500 focus:ring-2 focus:ring-green-200"
             >
-              {tab.charAt(0).toUpperCase() + tab.slice(1)} ({filteredTournaments.length})
-            </button>
-          ))}
+              <option value="all">All organizations</option>
+              {Array.from(new Map(tournaments.map((t) => [t.organizationId, t.organizationName]))).map(([orgId, orgName]) => (
+                <option key={orgId} value={orgId}>{orgName}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex flex-wrap gap-2 border-b border-gray-200 pb-2">
+            {(['all', 'active', 'completed'] as const).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setFilter(tab)}
+                className={`px-4 py-3 font-medium transition-all border-b-2 ${
+                  filter === tab
+                    ? 'border-green-600 text-green-700'
+                    : 'border-transparent text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                {tab.charAt(0).toUpperCase() + tab.slice(1)} ({
+                  filteredByOrg.filter((t) => {
+                    if (tab === 'active') return t.status === 'active' || t.status === 'in_progress';
+                    if (tab === 'completed') return t.status === 'completed';
+                    return true;
+                  }).length
+                })
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Tournaments Grid */}
@@ -167,6 +202,7 @@ export default function TournamentsPage() {
                     <p className="text-sm text-gray-500 mt-1">
                       {tournament.bracketType ? tournament.bracketType.replace(/_/g, ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : 'Tournament'}
                     </p>
+                    <p className="text-sm text-gray-500 mt-2">{tournament.organizationName}</p>
                   </div>
                   <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(tournament.status)}`}>
                     {tournament.status.replace(/_/g, ' ').toUpperCase()}

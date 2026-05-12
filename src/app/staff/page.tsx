@@ -1,6 +1,8 @@
 import { getAllStaff, unemployCoach } from '@/actions/staff';
 import StaffList from '@/components/StaffList';
 
+export const dynamic = 'force-dynamic';
+
 export default async function StaffPage() {
     const staff = await getAllStaff();
 

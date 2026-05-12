@@ -9,7 +9,7 @@ interface OrgOnboardingModalProps {
   isOpen: boolean;
   onClose: () => void;
   onRefresh: () => Promise<void>;
-  onOrganizationAction: (orgId: string, action: 'approve' | 'reject' | 'suspend' | 'reactivate' | 'delete', rejectionReason?: string) => Promise<void>;
+  onOrganizationAction: (orgId: string, action: 'approve' | 'reject' | 'suspend' | 'reactivate' | 'delete' | 'remindPayment', rejectionReason?: string) => Promise<void>;
 }
 
 export function OrgOnboardingModal({ org, isOpen, onClose, onRefresh, onOrganizationAction }: OrgOnboardingModalProps) {
@@ -186,23 +186,8 @@ TennisTracker Development Team`,
     }
   }, [org, installationFee, monthlySubscription, totalPaid, remainingBalance, addToast]);
 
-  const handleRevokeAccess = useCallback(async () => {
-    if (!confirm('Are you sure you want to revoke access for this organization?')) return;
-
-    setIsLoading(true);
-    try {
-      await onOrganizationAction(org.id, 'suspend');
-      await onRefresh();
-      onClose();
-    } catch (err) {
-      addToast('Failed to revoke access', 'error');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [org.id, addToast, onRefresh, onClose, onOrganizationAction]);
-
   const handleOrganizationAction = useCallback(
-    async (action: 'approve' | 'reject' | 'suspend' | 'reactivate' | 'delete') => {
+    async (action: 'approve' | 'reject' | 'suspend' | 'reactivate' | 'delete' | 'remindPayment') => {
       setIsLoading(true);
       try {
         await onOrganizationAction(org.id, action);
@@ -355,14 +340,24 @@ TennisTracker Development Team`,
                   </>
                 )}
                 {org.status === 'approved' && (
-                  <button
-                    type="button"
-                    onClick={() => handleOrganizationAction('suspend')}
-                    disabled={isLoading}
-                    className="rounded-xl border border-red-700/60 bg-red-900/40 px-4 py-2 text-sm font-semibold text-red-300 hover:bg-red-900/60 transition-all disabled:opacity-50"
-                  >
-                    ⏸ Suspend
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => handleOrganizationAction('suspend')}
+                      disabled={isLoading}
+                      className="rounded-xl border border-red-700/60 bg-red-900/40 px-4 py-2 text-sm font-semibold text-red-300 hover:bg-red-900/60 transition-all disabled:opacity-50"
+                    >
+                      ⏸ Suspend
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleOrganizationAction('remindPayment')}
+                      disabled={isLoading}
+                      className="rounded-xl border border-amber-700/60 bg-amber-900/40 px-4 py-2 text-sm font-semibold text-amber-300 hover:bg-amber-900/60 transition-all disabled:opacity-50"
+                    >
+                      📬 Remind Payment
+                    </button>
+                  </>
                 )}
                 {org.status === 'suspended' && (
                   <button
@@ -376,29 +371,21 @@ TennisTracker Development Team`,
                 )}
               </div>
 
-              <div className="flex flex-wrap gap-2 pt-4">
-                <button
-                  onClick={() => {
-                    if (confirm(`Are you sure you want to permanently delete "${org.name}"? This action cannot be undone and will remove all associated data.`)) {
-                      handleOrganizationAction('delete');
-                      onClose();
-                    }
-                  }}
-                  disabled={isLoading}
-                  className="rounded-xl border border-red-700/60 bg-red-900/40 hover:bg-red-900/60 px-4 py-2 text-sm font-semibold text-red-300 hover:text-red-200 transition-all disabled:opacity-50"
-                >
-                  🗑️ Delete Organization
-                </button>
-              </div>
-
-              {org.status === 'approved' && (
-                <button
-                  onClick={handleRevokeAccess}
-                  disabled={isLoading}
-                  className="w-full mt-6 rounded-xl border border-red-700/60 bg-red-900/40 hover:bg-red-900/60 px-4 py-3 font-semibold text-red-300 hover:text-red-200 transition-all disabled:opacity-50"
-                >
-                  {isLoading ? '⏳ Revoking...' : '🔒 Revoke Access'}
-                </button>
+              {org.status !== 'approved' && (
+                <div className="flex flex-wrap gap-2 pt-4">
+                  <button
+                    onClick={() => {
+                      if (confirm(`Are you sure you want to permanently delete "${org.name}"? This action cannot be undone and will remove all associated data.`)) {
+                        handleOrganizationAction('delete');
+                        onClose();
+                      }
+                    }}
+                    disabled={isLoading}
+                    className="rounded-xl border border-red-700/60 bg-red-900/40 hover:bg-red-900/60 px-4 py-2 text-sm font-semibold text-red-300 hover:text-red-200 transition-all disabled:opacity-50"
+                  >
+                    🗑️ Delete Organization
+                  </button>
+                </div>
               )}
             </div>
           )}

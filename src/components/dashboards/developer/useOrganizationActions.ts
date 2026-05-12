@@ -9,7 +9,7 @@ export function useOrganizationActions(
   const { addToast } = useToast();
 
   const handleOrganizationAction = useCallback(
-    async (orgId: string, action: 'approve' | 'reject' | 'suspend' | 'reactivate' | 'delete', rejectionReason?: string) => {
+    async (orgId: string, action: 'approve' | 'reject' | 'suspend' | 'reactivate' | 'delete' | 'remindPayment', rejectionReason?: string) => {
       try {
         const response = await authenticatedFetch(`/api/developer/organizations/${orgId}`, {
           method: 'POST',
