@@ -41,25 +41,68 @@ export async function getPlayerDashboard(playerId: string) {
       playerA: { include: { user: { select: { firstName: true, lastName: true } } } },
     },
   });
+
+  const pendingChallenges = await prisma.rankingChallenge.findMany({
+    where: {
+      status: 'pending',
+      OR: [
+        { challenger: { playerId } },
+        { opponent: { playerId } },
+      ],
+    },
+    include: {
+      challenger: {
+        include: {
+          player: { include: { user: { select: { firstName: true, lastName: true } } } },
+        },
+      },
+      opponent: {
+        include: {
+          player: { include: { user: { select: { firstName: true, lastName: true } } } },
+        },
+      },
+    },
+  });
+
   // Optionally, add referee/ball crew roles here
 
-  // Merge and format matches
+  // Merge and format matches and challenge requests
   const upcomingMatches = [
+    ...pendingChallenges.map((challenge) => {
+      const isChallenger = challenge.challenger.playerId === playerId;
+      const opponent = isChallenger ? challenge.opponent.player : challenge.challenger.player;
+      const opponentName = `${opponent.user.firstName} ${opponent.user.lastName}`;
+      const scheduledDate = challenge.matchDate ?? challenge.challengeDate;
+
+      return {
+        id: challenge.id,
+        opponent: opponentName,
+        role: isChallenger ? 'Challenger' : 'Challenged',
+        round: 0,
+        date: scheduledDate.toISOString(),
+        type: challenge.isFormal ? 'Formal Challenge' : 'Challenge Request',
+        court: 'TBD',
+      };
+    }),
     ...matchesA.map((m) => ({
       id: m.id,
       opponent: m.playerB.user.firstName + ' ' + m.playerB.user.lastName,
-      role: "Player A",
+      role: 'Player A',
       round: m.round,
       date: m.createdAt.toISOString(),
+      type: 'Scheduled Match',
+      court: 'TBD',
     })),
     ...matchesB.map((m) => ({
       id: m.id,
       opponent: m.playerA.user.firstName + ' ' + m.playerA.user.lastName,
-      role: "Player B",
+      role: 'Player B',
       round: m.round,
       date: m.createdAt.toISOString(),
+      type: 'Scheduled Match',
+      court: 'TBD',
     })),
-  ];
+  ].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   // Badges
   const badges = player.playerBadges.map((pb) => ({

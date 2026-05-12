@@ -47,6 +47,8 @@ interface Analytics {
     winRate: number;
     currentRank: number;
     streak: number;
+    coachRatingsCount?: number;
+    averageCoachRating?: number;
   };
   monthly: Array<{
     month: string;
@@ -72,6 +74,19 @@ interface Analytics {
     progress: number;
     target: string;
   }>;
+  coachRatings?: Array<{
+    id: string;
+    coachName: string;
+    overallRating: number;
+    techniquRating?: number;
+    mentalRating?: number;
+    fitnessRating?: number;
+    teamworkRating?: number;
+    strengths?: string;
+    areasForImprovement?: string;
+    notes?: string;
+    createdAt: string;
+  }>;
 }
 
 interface ProgressViewProps {
@@ -84,6 +99,8 @@ export function ProgressView({ isEmbedded = false, playerId }: ProgressViewProps
   const [loading, setLoading] = useState(true);
   const [timeframe, setTimeframe] = useState<'all' | '3months' | '6months' | 'year'>('all');
   const [generatingReport, setGeneratingReport] = useState(false);
+  const [reminderState, setReminderState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
+  const [reminderMessage, setReminderMessage] = useState<string>('');
   const cacheRef = React.useRef<Record<string, Analytics>>({});
 
   useEffect(() => {
@@ -176,6 +193,33 @@ export function ProgressView({ isEmbedded = false, playerId }: ProgressViewProps
   const { stats, monthly, performance, recentMatches, goals } = analytics;
   const recentFormResults = recentMatches.slice(0, 5).map(m => m.result);
 
+  const remindCoach = async () => {
+    if (!playerId) return;
+    setReminderState('sending');
+    setReminderMessage('');
+
+    try {
+      const res = await fetch(`/api/players/${playerId}/remind-coach`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playerName: analytics.playerName }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        setReminderState('sent');
+        setReminderMessage(data.message || 'Coach reminder sent');
+      } else {
+        setReminderState('error');
+        setReminderMessage(data.error || 'Unable to send reminder');
+      }
+    } catch (error) {
+      console.error('Error sending coach reminder:', error);
+      setReminderState('error');
+      setReminderMessage('Unable to send reminder');
+    }
+  };
+
   return (
     <div style={{ width: '100%', background: isEmbedded ? 'linear-gradient(to bottom right, #0f2710, #0f1f0f, #0d1f0d)' : undefined, padding: isEmbedded ? 20 : 0, borderRadius: isEmbedded ? 8 : 0 }}>
       {/* Header */}
@@ -241,7 +285,7 @@ export function ProgressView({ isEmbedded = false, playerId }: ProgressViewProps
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 24 }}>
         <StatCard title="Matches" value={stats.totalMatches} />
         <StatCard title="Win Rate" value={`${stats.winRate.toFixed(1)}%`} color={G.lime} />
-        <StatCard title="Rank" value={`#${stats.currentRank}`} color={G.blue} />
+        <StatCard title={`Rank (${stats.coachRatingsCount || 0} ratings)`} value={`#${stats.currentRank}`} color={G.blue} subtitle={stats.averageCoachRating ? `Avg: ${stats.averageCoachRating}⭐` : undefined} />
         <StatCard title="Streak" value={stats.streak} color={G.yellow} />
       </div>
 
@@ -373,7 +417,7 @@ export function ProgressView({ isEmbedded = false, playerId }: ProgressViewProps
 
       {/* Recent Matches */}
       {recentMatches.length > 0 && (
-        <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 8, padding: '16px 14px' }}>
+        <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 8, padding: '16px 14px', marginBottom: 24 }}>
           <div style={{ fontSize: 14, fontWeight: 700, color: G.text, marginBottom: 12 }}>
             🎾 Recent Matches
           </div>
@@ -401,6 +445,120 @@ export function ProgressView({ isEmbedded = false, playerId }: ProgressViewProps
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Coach Ratings Section - Real data from coaches */}
+      {analytics?.coachRatings && analytics.coachRatings.length > 0 ? (
+        <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 8, padding: '16px 14px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: G.text }}>
+              👨‍🏫 Coach Ratings ({analytics.coachRatings.length})
+            </div>
+            <button
+              onClick={remindCoach}
+              disabled={reminderState === 'sending'}
+              style={{
+                background: reminderState === 'sent' ? G.blue : G.lime,
+                color: '#0f1f0f',
+                border: 'none',
+                borderRadius: 6,
+                padding: '8px 12px',
+                fontSize: 11,
+                fontWeight: 700,
+                cursor: reminderState === 'sending' ? 'not-allowed' : 'pointer',
+              }}
+            >
+              {reminderState === 'sending' ? 'Sending...' : 'Remind Coach'}
+            </button>
+          </div>
+          {reminderMessage ? (
+            <div style={{ marginBottom: 12, fontSize: 11, color: reminderState === 'error' ? G.red : G.lime }}>
+              {reminderMessage}
+            </div>
+          ) : null}
+          <div style={{ display: 'grid', gap: 12 }}>
+            {analytics.coachRatings.map((rating, i) => (
+              <div key={rating.id} style={{ background: G.mid, borderRadius: 6, padding: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: G.text }}>{rating.coachName}</div>
+                    <div style={{ fontSize: 9, color: G.muted }}>{new Date(rating.createdAt).toLocaleDateString()}</div>
+                  </div>
+                  <div style={{ fontSize: 18, fontWeight: 900, color: G.lime }}>{rating.overallRating.toFixed(1)} ⭐</div>
+                </div>
+
+                {/* Rating Breakdown */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, marginBottom: 10 }}>
+                  {[
+                    { label: 'Technique', value: rating.techniquRating },
+                    { label: 'Mental', value: rating.mentalRating },
+                    { label: 'Fitness', value: rating.fitnessRating },
+                    { label: 'Teamwork', value: rating.teamworkRating },
+                  ].map((metric, idx) => (
+                    metric.value && (
+                      <div key={idx} style={{ background: G.dark, borderRadius: 4, padding: '6px 8px', textAlign: 'center' }}>
+                        <div style={{ fontSize: 8, color: G.muted, marginBottom: 2 }}>{metric.label}</div>
+                        <div style={{ fontSize: 13, fontWeight: 800, color: G.yellow }}>{metric.value}</div>
+                      </div>
+                    )
+                  ))}
+                </div>
+
+                {/* Feedback */}
+                {rating.strengths && (
+                  <div style={{ marginBottom: 8 }}>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: G.lime, marginBottom: 3 }}>Strengths:</div>
+                    <div style={{ fontSize: 10, color: G.text, lineHeight: 1.4 }}>{rating.strengths}</div>
+                  </div>
+                )}
+                {rating.areasForImprovement && (
+                  <div style={{ marginBottom: 8 }}>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: G.yellow, marginBottom: 3 }}>Areas for Improvement:</div>
+                    <div style={{ fontSize: 10, color: G.text, lineHeight: 1.4 }}>{rating.areasForImprovement}</div>
+                  </div>
+                )}
+                {rating.notes && (
+                  <div>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: G.blue, marginBottom: 3 }}>Notes:</div>
+                    <div style={{ fontSize: 10, color: G.muted, lineHeight: 1.4, fontStyle: 'italic' }}>{rating.notes}</div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 8, padding: '16px 14px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: G.text }}>
+              👨‍🏫 Coach Ratings
+            </div>
+            <button
+              onClick={remindCoach}
+              disabled={reminderState === 'sending'}
+              style={{
+                background: reminderState === 'sent' ? G.blue : G.lime,
+                color: '#0f1f0f',
+                border: 'none',
+                borderRadius: 6,
+                padding: '8px 12px',
+                fontSize: 11,
+                fontWeight: 700,
+                cursor: reminderState === 'sending' ? 'not-allowed' : 'pointer',
+              }}
+            >
+              {reminderState === 'sending' ? 'Sending...' : 'Remind Coach'}
+            </button>
+          </div>
+          {reminderMessage ? (
+            <div style={{ marginBottom: 12, fontSize: 11, color: reminderState === 'error' ? G.red : G.lime }}>
+              {reminderMessage}
+            </div>
+          ) : null}
+          <div style={{ color: G.muted, fontSize: 12, textAlign: 'center', padding: '20px 0' }}>
+            📋 No coach ratings yet. Your coaches will rate you as they work with you to help track your progress!
           </div>
         </div>
       )}

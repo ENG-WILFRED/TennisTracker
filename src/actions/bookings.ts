@@ -222,14 +222,37 @@ export async function getAvailableTimeSlots(
       end: new Date(b.endTime).getTime(),
     }));
 
+    const court = await prisma.court.findUnique({
+      where: { id: courtId },
+      select: {
+        peakHourStart: true,
+        peakHourEnd: true,
+        peakPrice: true,
+        offPeakPrice: true,
+      },
+    });
+
+    if (!court) {
+      throw new Error('Court not found');
+    }
+
+    const parseHour = (value?: string | null) => {
+      if (!value) return null;
+      const normalized = value.split(':')[0]?.trim();
+      const parsed = Number(normalized);
+      return Number.isInteger(parsed) ? parsed : null;
+    };
+
+    const configuredPeakStart = parseHour(court.peakHourStart);
+    const configuredPeakEnd = parseHour(court.peakHourEnd);
+    const hasPeakConfig = configuredPeakStart != null && configuredPeakEnd != null && configuredPeakEnd > configuredPeakStart;
+    const peakRate = court.peakPrice ?? 80;
+    const offPeakRate = court.offPeakPrice ?? 50;
+
     // Generate time slots (6 AM to 10 PM, 1-hour slots)
     const slots = [];
     const hoursStart = 6;
     const hoursEnd = 22;
-
-    // Define peak hours (typically 5 PM - 9 PM)
-    const peakHourStart = 17;
-    const peakHourEnd = 21;
 
     for (let hour = hoursStart; hour < hoursEnd; hour++) {
       const slotStart = new Date(year, month - 1, day, hour, 0, 0, 0);
@@ -249,7 +272,8 @@ export async function getAvailableTimeSlots(
         (booking: any) => booking.start < slotEndTime && booking.end > slotStartTime
       ).length;
 
-      const isPeak = hour >= peakHourStart && hour < peakHourEnd;
+      const isPeak = hasPeakConfig ? hour >= configuredPeakStart! && hour < configuredPeakEnd! : false;
+      const price = isPeak ? peakRate : offPeakRate;
 
       slots.push({
         hour,
@@ -257,7 +281,12 @@ export async function getAvailableTimeSlots(
         available: !isBooked,
         pendingCount,
         isPeak,
-        price: isPeak ? 80 : 50, // Default pricing - can be customized per organization
+        price,
+        peakHourStart: court.peakHourStart || null,
+        peakHourEnd: court.peakHourEnd || null,
+        hasPeakConfig,
+        peakPrice: peakRate,
+        offPeakPrice: offPeakRate,
       });
     }
 
