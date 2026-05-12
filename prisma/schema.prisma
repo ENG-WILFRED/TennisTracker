@@ -161,6 +161,7 @@ model Player {
   sessionBookings            SessionBooking[]            @relation("SessionBookings")
   coachRelationships         CoachPlayerRelationship[]   @relation("CoachPlayers")
   coachSessionReviews        CoachSessionReview[]        @relation("CoachSessionReviews")
+  coachPlayerRatings         CoachPlayerRating[]         @relation("PlayerCoachRatings")
   playerReports              PlayerReport[]
   invoices                   Invoice[]
   subscriptions              Subscription[]
@@ -233,6 +234,7 @@ model Staff {
   certifications         Certification[]
   pricing                CoachPricing?
   reviews                CoachReview[]
+  playerRatings          CoachPlayerRating[]       @relation("CoachRatings")
   specializations        Specialization[]
   employedBy             Player?                   @relation(fields: [employedById], references: [userId])
   organization           Organization?             @relation(fields: [organizationId], references: [id])
@@ -1535,6 +1537,7 @@ model CoachSession {
   earnings        CoachEarning[]
   activities      Activity[]        @relation("ActivitySessions")
   sessionPayment  SessionPayment? // Link to payment record
+  sessionRatings  CoachPlayerRating[] @relation("SessionRatings")
 
   @@index([coachId, startTime])
   @@index([organizationId, startTime])
@@ -1912,6 +1915,36 @@ model CoachSessionReview {
   @@index([coachId])
   @@index([playerId])
   @@index([createdAt])
+}
+
+model CoachPlayerRating {
+  id                   String         @id @default(uuid())
+  coachId              String
+  playerId             String
+  sessionId            String?
+  overallRating        Float
+  techniquRating       Float?
+  mentalRating         Float?
+  fitnessRating        Float?
+  teamworkRating       Float?
+  strengths            String?
+  areasForImprovement  String?
+  notes                String?
+  sessionType          String?
+  trainingFocus        String?
+  isConcluded          Boolean        @default(false)
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+
+  coach   Staff         @relation("CoachRatings", fields: [coachId], references: [userId], onDelete: Cascade)
+  player  Player        @relation("PlayerCoachRatings", fields: [playerId], references: [userId], onDelete: Cascade)
+  session CoachSession? @relation("SessionRatings", fields: [sessionId], references: [id], onDelete: SetNull)
+
+  @@index([coachId])
+  @@index([playerId])
+  @@index([sessionId])
+  @@index([createdAt])
+  @@index([isConcluded])
 }
 
 model Activity {

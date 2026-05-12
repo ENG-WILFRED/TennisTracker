@@ -24,18 +24,15 @@ const Label: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   </div>
 );
 
-const POPULAR_TIMES = [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21];
-const POPULARITY = [2, 4, 7, 9, 6, 4, 5, 6, 7, 8, 9, 10, 9, 8, 6, 3];
-
-const PopularityBar: React.FC<{ hour: number; value: number; max: number; selected?: boolean }> = ({ hour, value, max, selected }) => {
-  const pct = Math.round((value / max) * 100);
-  const color = pct >= 80 ? 'bg-red-500/70' : pct >= 50 ? 'bg-[#f0c040]/70' : 'bg-[#7dc142]/70';
+const PopularityBar: React.FC<{ hour: number; isPeak: boolean; selected?: boolean }> = ({ hour, isPeak, selected }) => {
+  const value = isPeak ? 100 : 36;
+  const color = isPeak ? 'bg-red-500/70' : 'bg-[#7dc142]/70';
   return (
     <div className="flex flex-col items-center gap-1">
       <div className="w-4 rounded-t overflow-hidden" style={{ height: 36, backgroundColor: G.sidebar }}>
-        <div className={`w-full rounded-t transition-all ${color} ${selected ? 'ring-1 ring-white' : ''}`} style={{ height: `${pct}%`, marginTop: `${100 - pct}%` }} />
+        <div className={`w-full rounded-t transition-all ${color} ${selected ? 'ring-1 ring-white' : ''}`} style={{ height: `${value}%`, marginTop: `${100 - value}%` }} />
       </div>
-      <span className="text-[8px]" style={{ color: G.muted }}>{hour}</span>
+      <span className="text-[8px]" style={{ color: G.muted }}>{String(hour).padStart(2, '0')}</span>
     </div>
   );
 };
@@ -322,31 +319,30 @@ function BookingDetailsContent() {
             {/* Peak Hours Chart */}
             <Card className="border">
               <Label>Peak Hours This Day</Label>
-              <div className="flex items-end gap-2 justify-between px-2 py-4" style={{ backgroundColor: G.sidebar, borderRadius: '8px' }}>
-                {POPULAR_TIMES.map((h, i) => (
-                  <PopularityBar
-                    key={h}
-                    hour={h}
-                    value={POPULARITY[i]}
-                    max={Math.max(...POPULARITY)}
-                    selected={selectedSlot?.startsWith(`${String(h).padStart(2, '0')}`)}
-                  />
-                ))}
-              </div>
-              <div className="flex gap-4 mt-4 text-xs">
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded" style={{ backgroundColor: G.lime }}></span>
-                  <span style={{ color: G.muted }}>Low</span>
+              {timeSlots.length > 0 && timeSlots[0]?.hasPeakConfig ? (
+                <>
+                  <div className="flex items-end gap-2 justify-between px-2 py-4" style={{ backgroundColor: G.sidebar, borderRadius: '8px' }}>
+                    {timeSlots.map((slot) => (
+                      <PopularityBar
+                        key={slot.hour}
+                        hour={slot.hour}
+                        isPeak={slot.isPeak}
+                        selected={selectedSlot?.startsWith(`${String(slot.hour).padStart(2, '0')}`)}
+                      />
+                    ))}
+                  </div>
+                  <div className="mt-4 text-xs text-[#7aaa6a]">
+                    Configured peak hours: <span className="text-[#e8f5e0] font-semibold">{timeSlots[0].peakHourStart} – {timeSlots[0].peakHourEnd}</span>
+                    {timeSlots[0].peakPrice != null && (
+                      <span className="block mt-1">Peak rate: ${timeSlots[0].peakPrice}/hr, off-peak rate: ${timeSlots[0].offPeakPrice}/hr</span>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div className="rounded-3xl border border-dashed border-[#2d5a35] bg-[#152515] p-6 text-center text-sm text-[#7aaa6a]">
+                  Peak hours are not configured for this court yet. Evening times may still be peak, so ask the organization or admin to register peak hours in court settings for accurate pricing and availability.
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded" style={{ backgroundColor: G.yellow }}></span>
-                  <span style={{ color: G.muted }}>Medium</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded" style={{ backgroundColor: G.red }}></span>
-                  <span style={{ color: G.muted }}>High</span>
-                </div>
-              </div>
+              )}
             </Card>
 
             {/* Time Slots */}

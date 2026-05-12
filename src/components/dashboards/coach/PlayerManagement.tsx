@@ -88,6 +88,20 @@ export default function PlayerManagement({ coachId }: { coachId: string }) {
   const [noteForm, setNoteForm] = useState({ title: '', content: '', category: 'general' });
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
+  
+  // Rating form state
+  const [ratingForm, setRatingForm] = useState({
+    overallRating: 5,
+    techniquRating: 5,
+    mentalRating: 5,
+    fitnessRating: 5,
+    teamworkRating: 5,
+    strengths: '',
+    areasForImprovement: '',
+    notes: '',
+  });
+  const [submittingRating, setSubmittingRating] = useState(false);
+  const [ratingSuccess, setRatingSuccess] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -123,6 +137,48 @@ export default function PlayerManagement({ coachId }: { coachId: string }) {
     try {
       await fetch(`/api/coaches/players/${playerId}/notes`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ coachId, ...noteForm }) });
     } catch { }
+  };
+
+  const submitRating = async (playerId: string) => {
+    if (!ratingForm.strengths.trim() || !ratingForm.areasForImprovement.trim()) {
+      alert('Please fill in strengths and areas for improvement');
+      return;
+    }
+
+    setSubmittingRating(true);
+    try {
+      const res = await fetch('/api/coaches/rate-player', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          coachId,
+          playerId,
+          ...ratingForm,
+        }),
+      });
+
+      if (res.ok) {
+        setRatingSuccess(true);
+        setRatingForm({
+          overallRating: 5,
+          techniquRating: 5,
+          mentalRating: 5,
+          fitnessRating: 5,
+          teamworkRating: 5,
+          strengths: '',
+          areasForImprovement: '',
+          notes: '',
+        });
+        setTimeout(() => setRatingSuccess(false), 3000);
+      } else {
+        alert('Failed to submit rating');
+      }
+    } catch (error) {
+      console.error('Error submitting rating:', error);
+      alert('Error submitting rating');
+    } finally {
+      setSubmittingRating(false);
+    }
   };
 
   const selectPlayer = useCallback(async (player: Player) => {
@@ -283,6 +339,95 @@ export default function PlayerManagement({ coachId }: { coachId: string }) {
                   </button>
                 </div>
                 <textarea style={{ ...inputSt, resize: 'none' }} rows={3} placeholder="Describe the coaching observation..." value={noteForm.content} onChange={e => setNoteForm({ ...noteForm, content: e.target.value })} />
+              </div>
+            </div>
+
+            {/* Rate Player */}
+            <div style={card}>
+              <SectionLabel>⭐ Rate Player Performance</SectionLabel>
+              {ratingSuccess && <div style={{ background: `${G.lime}33`, color: G.lime, padding: '8px 11px', borderRadius: 6, fontSize: 10.5, marginBottom: 9, fontWeight: 700 }}>✓ Rating submitted successfully!</div>}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+                {/* Overall Rating Slider */}
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                    <label style={{ fontSize: 10.5, fontWeight: 700, color: G.text2 }}>Overall Rating</label>
+                    <span style={{ fontSize: 14, fontWeight: 900, color: G.lime2 }}>{ratingForm.overallRating.toFixed(1)}</span>
+                  </div>
+                  <input type="range" min="1" max="5" step="0.5" value={ratingForm.overallRating} onChange={e => setRatingForm({ ...ratingForm, overallRating: parseFloat(e.target.value) })} style={{ width: '100%', cursor: 'pointer' }} />
+                </div>
+
+                {/* Skill ratings in grid */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                  {[
+                    { key: 'techniquRating', label: 'Technique', color: G.blue },
+                    { key: 'mentalRating', label: 'Mental', color: G.yellow },
+                    { key: 'fitnessRating', label: 'Fitness', color: G.lime },
+                    { key: 'teamworkRating', label: 'Teamwork', color: G.accent || '#a8d84e' },
+                  ].map(({ key, label, color }) => (
+                    <div key={key}>
+                      <div style={{ fontSize: 9, fontWeight: 700, color: G.muted2, marginBottom: 4 }}>{label}</div>
+                      <div style={{ display: 'flex', gap: 3 }}>
+                        {[1, 2, 3, 4, 5].map((rating) => (
+                          <button
+                            key={rating}
+                            onClick={() => setRatingForm({ ...ratingForm, [key]: rating })}
+                            style={{
+                              flex: 1,
+                              padding: '6px 0',
+                              background: (ratingForm as any)[key] >= rating ? color : G.dark,
+                              border: `1px solid ${(ratingForm as any)[key] >= rating ? color : G.border}`,
+                              borderRadius: 4,
+                              color: (ratingForm as any)[key] >= rating ? '#0a180a' : G.muted,
+                              fontWeight: 700,
+                              fontSize: 10,
+                              cursor: 'pointer',
+                            }}
+                          >
+                            {rating}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Strengths & Areas */}
+                <textarea
+                  style={{ ...inputSt, resize: 'none', minHeight: '60px' }}
+                  placeholder="Strengths (e.g., excellent serve, great footwork)..."
+                  value={ratingForm.strengths}
+                  onChange={e => setRatingForm({ ...ratingForm, strengths: e.target.value })}
+                />
+                <textarea
+                  style={{ ...inputSt, resize: 'none', minHeight: '60px' }}
+                  placeholder="Areas for improvement (e.g., backhand consistency, mental focus)..."
+                  value={ratingForm.areasForImprovement}
+                  onChange={e => setRatingForm({ ...ratingForm, areasForImprovement: e.target.value })}
+                />
+                <textarea
+                  style={{ ...inputSt, resize: 'none', minHeight: '50px' }}
+                  placeholder="Additional notes (optional)..."
+                  value={ratingForm.notes}
+                  onChange={e => setRatingForm({ ...ratingForm, notes: e.target.value })}
+                />
+
+                <button
+                  onClick={() => submitRating(sp.id)}
+                  disabled={submittingRating}
+                  style={{
+                    background: submittingRating ? G.muted : G.lime,
+                    color: '#0a180a',
+                    border: 'none',
+                    borderRadius: 7,
+                    fontWeight: 800,
+                    fontSize: 11,
+                    cursor: submittingRating ? 'not-allowed' : 'pointer',
+                    padding: '10px 0',
+                    opacity: submittingRating ? 0.6 : 1,
+                  }}
+                >
+                  {submittingRating ? '⏳ Submitting...' : '✓ Submit Rating'}
+                </button>
               </div>
             </div>
           </div>

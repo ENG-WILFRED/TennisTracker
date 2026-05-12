@@ -4,7 +4,7 @@ import prisma from '@/lib/prisma';
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { challengerUserId, opponentUserId } = body;
+    const { challengerUserId, opponentUserId, isFormal = false } = body;
 
     if (!challengerUserId || !opponentUserId) {
       return NextResponse.json({ error: 'Missing challengerUserId or opponentUserId' }, { status: 400 });
@@ -42,6 +42,7 @@ export async function POST(req: NextRequest) {
         organizationId: sharedOrganizationId,
         challengeDate: new Date(),
         status: 'pending',
+        isFormal,
       },
     });
 
@@ -49,6 +50,7 @@ export async function POST(req: NextRequest) {
       message: 'Challenge request created successfully.',
       challengeId: challenge.id,
       status: challenge.status,
+      isFormal: challenge.isFormal,
     });
   } catch (error) {
     console.error('Error creating challenge:', error);
