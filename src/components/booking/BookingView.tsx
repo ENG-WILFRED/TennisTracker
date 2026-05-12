@@ -388,7 +388,7 @@ export function BookingView({ onClose, isEmbedded = false, canBook = true, organ
 
         paymentResult = await processMPesaPayment(
           normalizedMobileNumber,
-          bookingResult.booking.price,
+          bookingResult.booking.price || 0,
           `COURT-${selectedCourt}-${Date.now()}`,
           `Court booking for ${selectedCourtData?.name || 'Tennis Court'}`,
           userIdFromURL,
@@ -422,7 +422,7 @@ export function BookingView({ onClose, isEmbedded = false, canBook = true, organ
         }
       } else if (paymentMethod === 'paypal') {
         paymentResult = await processPayPalPayment(
-          bookingResult.booking.price,
+          bookingResult.booking.price || 0,
           'USD',
           userIdFromURL,
           selectedOrgId,
@@ -451,7 +451,7 @@ export function BookingView({ onClose, isEmbedded = false, canBook = true, organ
         }
       } else if (paymentMethod === 'stripe') {
         paymentResult = await processStripePayment(
-          bookingResult.booking.price,
+          bookingResult.booking.price || 0,
           'USD',
           userIdFromURL,
           selectedOrgId,

@@ -124,6 +124,8 @@ model Player {
   matchesPlayed              Int                         @default(0)
   matchesWon                 Int                         @default(0)
   matchesLost                Int                         @default(0)
+  ratingPoints               Int                         @default(1500)
+  winRate                    Int                         @default(0)
   createdAt                  DateTime                    @default(now())
   updatedAt                  DateTime                    @updatedAt
   isClub                     Boolean                     @default(false)
@@ -960,6 +962,7 @@ model RankingChallenge {
   challengeDate  DateTime
   matchDate      DateTime?
   status         String        @default("pending")
+  isFormal       Boolean       @default(false)
   winnerId       String?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt

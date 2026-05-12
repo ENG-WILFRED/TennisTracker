@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import prisma from '@/lib/prisma';
 
 // GET analytics for a player - Now fetching REAL coach ratings instead of hardcoded data
@@ -107,7 +108,7 @@ export async function GET(
     }
 
     // Fetch REAL coach ratings instead of hardcoded data
-    let coachRatings = [];
+    let coachRatings: any[] = [];
     let coachRatingsTableExists = true;
 
     try {
@@ -120,10 +121,10 @@ export async function GET(
       });
     } catch (error) {
       if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2021'
+        error instanceof PrismaClientKnownRequestError &&
+        (error as any).code === 'P2021'
       ) {
-        console.warn('Coach ratings table does not exist yet', error.message);
+        console.warn('Coach ratings table does not exist yet', (error as any).message);
         coachRatingsTableExists = false;
         coachRatings = [];
       } else {

@@ -132,7 +132,7 @@ export async function POST(req: NextRequest) {
       challenge: updatedChallenge,
       winner: {
         userId: winnerPlayer.userId,
-        name: winnerPlayer.user.name,
+        name: `${winnerPlayer.user.firstName} ${winnerPlayer.user.lastName}`,
         email: winnerPlayer.user.email,
         previousRating: winnerCurrentRating,
         newRating: updatedWinner.ratingPoints,
@@ -142,7 +142,7 @@ export async function POST(req: NextRequest) {
       },
       loser: {
         userId: loserPlayer.userId,
-        name: loserPlayer.user.name,
+        name: `${loserPlayer.user.firstName} ${loserPlayer.user.lastName}`,
         email: loserPlayer.user.email,
         previousRating: loserCurrentRating,
         newRating: updatedLoser.ratingPoints,

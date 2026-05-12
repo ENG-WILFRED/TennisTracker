@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
           },
         },
         ratingPoints: true,
-        ranking: true,
+        winRate: true,
         matchesWon: true,
         matchesLost: true,
         clubMembers: {
@@ -78,10 +78,10 @@ export async function GET(req: NextRequest) {
         name: [p.user.firstName, p.user.lastName].filter(Boolean).join(' ').trim() || p.user.username || p.user.email,
         image: p.user.photo,
         ratingPoints: p.ratingPoints,
-        ranking: p.ranking,
+        winRate: p.winRate,
         matchesWon: p.matchesWon,
         matchesLost: p.matchesLost,
-        organizations: p.clubMembers.map((m) => ({
+        organizations: p.clubMembers.map((m: any) => ({
           id: m.organizationId,
           name: m.organization.name,
         })),

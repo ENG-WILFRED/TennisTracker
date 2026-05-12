@@ -439,7 +439,7 @@ export default function CourtDetailPage() {
       if (!res.ok) throw new Error('Failed to update court');
       
       // Directly update the state instead of re-fetching
-      setCourt((prev) => ({ ...prev, ...fields }));
+      setCourt((prev) => prev ? { ...prev, ...fields } : null);
       
       setModal(null);
       showSuccess('Court updated successfully!');

@@ -362,7 +362,7 @@ export default function PlayerManagement({ coachId }: { coachId: string }) {
                     { key: 'techniquRating', label: 'Technique', color: G.blue },
                     { key: 'mentalRating', label: 'Mental', color: G.yellow },
                     { key: 'fitnessRating', label: 'Fitness', color: G.lime },
-                    { key: 'teamworkRating', label: 'Teamwork', color: G.accent || '#a8d84e' },
+                    { key: 'teamworkRating', label: 'Teamwork', color: G.bright },
                   ].map(({ key, label, color }) => (
                     <div key={key}>
                       <div style={{ fontSize: 9, fontWeight: 700, color: G.muted2, marginBottom: 4 }}>{label}</div>

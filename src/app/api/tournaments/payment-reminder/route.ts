@@ -74,7 +74,9 @@ export async function POST(request: Request) {
     });
 
     const recipientEmail = registration.member.player.user.email;
-    const recipientName = registration.member.player.user.firstName || registration.member.player.user.name || 'Player';
+    const recipientName = registration.member.player.user.firstName 
+      ? `${registration.member.player.user.firstName} ${registration.member.player.user.lastName || ''}`.trim()
+      : 'Player';
 
     if (recipientEmail) {
       await notify({

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Prisma } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { prisma } from '@/lib/prisma';
 
 /**
@@ -38,7 +39,7 @@ export async function GET(req: NextRequest) {
           session: {
             select: {
               id: true,
-              scheduledAt: true,
+              startTime: true,
               status: true,
             },
           },
@@ -47,10 +48,10 @@ export async function GET(req: NextRequest) {
       });
     } catch (error) {
       if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2021'
+        error instanceof PrismaClientKnownRequestError &&
+        (error as any).code === 'P2021'
       ) {
-        console.warn('Coach ratings table does not exist yet', error.message);
+        console.warn('Coach ratings table does not exist yet', (error as any).message);
         return NextResponse.json([]);
       }
       throw error;
@@ -239,8 +240,8 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error('Error submitting rating:', error);
     if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === 'P2021'
+      error instanceof PrismaClientKnownRequestError &&
+      (error as any).code === 'P2021'
     ) {
       return NextResponse.json(
         { error: 'Coach ratings table does not exist. Please run Prisma migrations.' },
