@@ -17,6 +17,7 @@ import { DashboardHome, ProfileSnapshot } from '@/components/dashboards/Dashboar
 import MessagingPanel from '@/components/dashboards/MessagingPanel';
 import { FindNearbyPeople } from '@/components/FindNearbyPeople';
 import { FindNearbyCourts } from '@/components/FindNearbyCourts';
+import { PlayerSearchChallenge } from '@/components/PlayerSearchChallenge';
 import { chatUrlForUser, sendChallengeRequest } from '@/lib/nearby';
 import { MembershipSwitcher } from '@/components/MembershipSwitcher';
 import toast from 'react-hot-toast';
@@ -141,18 +142,7 @@ export const PlayerDashboard: React.FC = () => {
   ];
 
 
-  const activityFeed = [
-    { user: 'Sarah', avatar: '👩', action: 'posted: "Great match today! 🎾 #tennislife"', time: '15 mins ago' },
-    { user: 'Mike', avatar: '👨', action: 'commented on your photo: "Nice shot, John!"', time: '30 mins ago' },
-    { user: 'Emily', avatar: '👧', action: 'shared an event: "Saturday Tennis Social - Join us!"', time: '10 mins ago' },
-    { user: 'Coach David', avatar: '👨‍🏫', action: 'posted a training tip: "Focus on your serve stance!"', time: '1h ago' },
-  ];
-
-  const upcomingEvents = [
-    { name: 'Doubles Clinic', date: 'May 24', icon: '🎾' },
-    { name: 'Junior Tournament', date: 'May 30', icon: '🏆' },
-    { name: 'Social Mixer', date: 'June 5', icon: '🎉' },
-  ];
+  const activityFeed = playerData?.activityFeed || [];
 
   const handleLogout = async () => {
     const storedTokens = getStoredTokens();
@@ -173,15 +163,15 @@ export const PlayerDashboard: React.FC = () => {
     }
   };
 
-  const handleChallenge = async (personId: string, personName: string) => {
+  const handleChallenge = async (personId: string, personName: string, isFormal: boolean = false) => {
     if (!user?.id) {
       alert('Please sign in to challenge a player.');
       return;
     }
 
     try {
-      const result = await sendChallengeRequest(user.id, personId);
-      alert(result?.message || `Challenge sent to ${personName}.`);
+      const result = await sendChallengeRequest(user.id, personId, isFormal);
+      alert(result?.message || `Challenge sent to ${personName}${isFormal ? ' as a formal challenge' : ''}.`);
     } catch (error) {
       console.error('Challenge error:', error);
       alert(error instanceof Error ? error.message : 'Failed to send challenge.');
@@ -364,10 +354,11 @@ export const PlayerDashboard: React.FC = () => {
               <div className="flex items-center justify-between gap-4 rounded-3xl border border-[#2d5a35] bg-[#152515] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
                 <div>
                   <div className="text-sm uppercase tracking-[0.32em] text-[#7dc142]">Player Tools</div>
-                  <h1 className="mt-2 text-3xl font-black text-white">Find Players Near You</h1>
-                  <p className="mt-2 max-w-2xl text-sm text-[#c2dbb0]">Search for nearby players, message them directly, or send challenge requests from the dashboard body.</p>
+                  <h1 className="mt-2 text-3xl font-black text-white">Find Players and Send Challenges</h1>
+                  <p className="mt-2 max-w-2xl text-sm text-[#c2dbb0]">Search by email, username, or nearby players, then choose a formal or informal challenge option.</p>
                 </div>
               </div>
+              <PlayerSearchChallenge organizationId={organizationId} />
               <FindNearbyPeople
                 onMessageClick={(personId, personName) => router.push(chatUrlForUser(personId, personName))}
                 onChallengeClick={handleChallenge}
