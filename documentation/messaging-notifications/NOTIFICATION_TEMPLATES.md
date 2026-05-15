@@ -335,6 +335,31 @@ Each template below must exist in the Kafka consumer. The producer and API code 
 }
 ```
 
+### `recruit`
+- Purpose: Staff recruitment notification email
+- Channel: `email`
+- Required `data` fields:
+  - `name`
+  - `organizationName`
+  - `role`
+  - `expertise` (optional)
+  - `coachingLevel` (optional)
+- Source: `src/app/api/organization/[orgId]/recruit/route.ts`
+- Example:
+
+```json
+{
+  "template": "recruit",
+  "data": {
+    "name": "John",
+    "organizationName": "Ace Tennis Club",
+    "role": "Coach",
+    "expertise": "Tennis Coaching",
+    "coachingLevel": "Advanced"
+  }
+}
+```
+
 ## Consumer template design expectations
 
 - The consumer must implement every template name exactly as listed.

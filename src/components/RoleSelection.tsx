@@ -39,10 +39,10 @@ export const RoleSelection: React.FC<RoleSelectionProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center z-50" style={{ background: 'rgba(15,31,15,0.92)' }}>
+    <div className="fixed inset-0 z-50 overflow-y-auto px-4 py-6 flex items-start justify-center" style={{ background: 'rgba(15,31,15,0.92)' }}>
       <div
-        className="rounded-lg shadow-2xl max-w-md w-full mx-4 p-8"
-        style={{ background: G.card, border: `1.5px solid ${G.cardBorder}`, color: G.text }}
+        className="rounded-lg shadow-2xl max-w-md w-full mx-auto p-8 mt-6"
+        style={{ background: G.card, border: `1.5px solid ${G.cardBorder}`, color: G.text, maxHeight: 'calc(100vh - 48px)', overflowY: 'auto' }}
       >
         {/* Header */}
         <div className="text-center mb-8">
@@ -66,9 +66,7 @@ export const RoleSelection: React.FC<RoleSelectionProps> = ({
                 key={`${membership.role}-${membership.orgId}`}
                 onClick={() => setSelectedMembership(membership)}
                 className={`w-full p-4 rounded-lg border-2 transition-all text-left ${
-                  isSelected
-                    ? ''
-                    : ''
+                  isSelected ? 'shadow-lg' : 'hover:border-[#5a7d1c]'
                 }`}
                 style={{
                   background: isSelected ? G.lime : G.card,
@@ -81,11 +79,11 @@ export const RoleSelection: React.FC<RoleSelectionProps> = ({
                 <div className="flex items-start gap-3">
                   <span className="text-3xl mt-1">{config.icon}</span>
                   <div className="flex-1">
-                    <h3 className={`font-semibold text-lg`} style={{ color: isSelected ? G.dark : config.color.text }}>{config.displayName}</h3>
-                    <p className={`text-sm`} style={{ color: isSelected ? G.dark : G.muted }}>{membership.orgName}</p>
+                    <h3 className={`font-semibold text-lg`} style={{ color: isSelected ? '#ffffff' : G.text }}>{config.displayName}</h3>
+                    <p className={`text-sm italic`} style={{ color: isSelected ? 'rgba(255,255,255,0.75)' : G.muted }}>{membership.orgName}</p>
                   </div>
                   <div
-                    className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 mt-1`}
+                    className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 mt-1 ${isSelected ? 'shadow-md' : ''}`}
                     style={{
                       background: isSelected ? G.lime : G.card,
                       borderColor: isSelected ? G.dark : G.cardBorder,

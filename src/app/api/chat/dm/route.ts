@@ -97,7 +97,7 @@ export async function POST(request: Request) {
 
     // Get target user info for room name
     const targetUser = await prisma.player.findUnique({
-      where: { userId: targetUserId },
+      where: { userId: targetId },
       include: {
         user: {
           select: { firstName: true, lastName: true }

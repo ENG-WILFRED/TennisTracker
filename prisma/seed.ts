@@ -17,7 +17,8 @@ import { seedTaskTemplates } from './seeds/task-templates-complete.js';
 import { seedTournamentPlayers } from './seeds/tournament-players-seeding.js';
 import { seedKenyaPlayersAndCourts } from './seeds/kenya-tennis-seed.js';
 import { seedCoachSessions } from './seeds/coach-sessions.js';
-import { PrismaClient } from '../src/generated/prisma/index.js';
+import { seedAdminDashboardData } from './seeds/admin-dashboard-data.js';
+import { PrismaClient, User } from '../src/generated/prisma/index.js';
 import {
   initializeSeedCheckpoints,
   shouldSkipSeed,
@@ -75,7 +76,7 @@ async function main() {
     console.log('\n📍 STEP 2: Users & Roles');
     console.log('───────────────────────────────────────────────────────────────');
     const usersResult = await executeSeed('users', () => seedUsers(organizations));
-    const users = (usersResult.result || []) as any[];
+    const users = (usersResult.result || []) as User[];
 
     // 3. Create courts for each organization
     console.log('\n📍 STEP 3: Courts');
@@ -160,6 +161,11 @@ async function main() {
     console.log('\n📍 STEP 12C: Staff Dashboard Security Data');
     console.log('───────────────────────────────────────────────────────────────');
     await executeSeed('staff-dashboard-data', () => seedStaffDashboardData());
+
+    // 12D. Seed admin dashboard operational data
+    console.log('\n📍 STEP 12D: Admin Dashboard Operational Data');
+    console.log('───────────────────────────────────────────────────────────────');
+    await executeSeed('admin-dashboard-data', () => seedAdminDashboardData());
 
     // 13. Seed coach sessions and activity links
     console.log('\n📍 STEP 13: Coach Sessions');
