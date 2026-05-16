@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'playerId required' }, { status: 400 });
     }
 
-    // Get coaches this player is assigned to
+    // Get coaches this player is assigned to, include coach stats and organization
     const relationships = await prisma.coachPlayerRelationship.findMany({
       where: { playerId },
       include: {
@@ -23,6 +23,23 @@ export async function GET(req: NextRequest) {
                 lastName: true,
                 email: true,
                 photo: true,
+                bio: true,
+              },
+            },
+            stats: {
+              select: {
+                avgRating: true,
+                ratingCount: true,
+                totalSessions: true,
+                completedSessions: true,
+              },
+            },
+            organization: {
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+                logo: true,
               },
             },
           },
@@ -36,13 +53,33 @@ export async function GET(req: NextRequest) {
     if (relationships.length > 0) {
       console.log('   Coaches:');
       relationships.forEach((rel: typeof relationships[number], idx: number) => {
-        console.log(`     ${idx + 1}. ${rel.coach.user.firstName} ${rel.coach.user.lastName}`);
+        const coachName = `${rel.coach.user.firstName} ${rel.coach.user.lastName}`;
+        console.log(`     ${idx + 1}. ${coachName} — rating: ${rel.coach.stats?.avgRating ?? 'n/a'} (${rel.coach.stats?.ratingCount ?? 0})`);
       });
     } else {
       console.log('   ⚠️  No coaches found!');
     }
 
-    return NextResponse.json(relationships);
+    // Map to a cleaner response shape for the client UI
+    const response = relationships.map((rel) => ({
+      id: rel.id,
+      status: rel.status,
+      joinedAt: rel.joinedAt,
+      lastSessionAt: rel.lastSessionAt,
+      sessionsCount: rel.sessionsCount,
+      coach: {
+        id: rel.coach.userId,
+        firstName: rel.coach.user.firstName,
+        lastName: rel.coach.user.lastName,
+        email: rel.coach.user.email,
+        photo: rel.coach.user.photo,
+        bio: rel.coach.user.bio,
+        stats: rel.coach.stats || null,
+        organization: rel.coach.organization || null,
+      },
+    }));
+
+    return NextResponse.json(response);
   } catch (error) {
     console.error('Error fetching coaches:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

@@ -560,8 +560,8 @@ export default function SessionManagement({ coachId }: { coachId: string }) {
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
           <Tag>{sessions.length} total</Tag>
-          <button onClick={() => setShowForm(!showForm)} style={{ background: showForm ? G.border : G.lime, color: showForm ? G.text : '#0a180a', border: 'none', borderRadius: 7, padding: '7px 13px', fontWeight: 800, fontSize: 10.5, cursor: 'pointer' }}>
-            {showForm ? '✕ Cancel' : '+ Create Session'}
+          <button onClick={() => setShowForm(true)} style={{ background: G.lime, color: '#0a180a', border: 'none', borderRadius: 7, padding: '7px 13px', fontWeight: 800, fontSize: 10.5, cursor: 'pointer' }}>
+            + Create Session
           </button>
         </div>
       </div>
@@ -581,16 +581,20 @@ export default function SessionManagement({ coachId }: { coachId: string }) {
         ))}
       </div>
 
-      {/* Create Form */}
+      {/* Create Form Modal */}
       {showForm && (
-        <div style={card}>
-          <SectionLabel>{editingId ? 'Edit Session Details' : 'New Session Details'}</SectionLabel>
-          <form onSubmit={editingId ? handleUpdate : handleSubmit}>
-            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 10 }}>
-              <div>
-                <label style={{ fontSize: 9.5, color: G.muted2, display: 'block', marginBottom: 4 }}>SESSION TITLE *</label>
-                <input style={inputSt} placeholder="e.g. Alex – Serve Clinic" value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} required />
-              </div>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div style={{ width: 'min(960px, 100%)', maxHeight: 'calc(100vh - 32px)', overflowY: 'auto', background: G.card, border: `1px solid ${G.border}`, borderRadius: 14, padding: 20, boxShadow: '0 20px 60px rgba(0,0,0,0.45)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
+              <SectionLabel>{editingId ? 'Edit Session Details' : 'New Session Details'}</SectionLabel>
+              <button type="button" onClick={handleCancelEdit} style={{ background: 'transparent', border: 'none', color: G.muted, fontSize: 20, cursor: 'pointer' }}>×</button>
+            </div>
+            <form onSubmit={editingId ? handleUpdate : handleSubmit}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 10 }}>
+                <div>
+                  <label style={{ fontSize: 9.5, color: G.muted2, display: 'block', marginBottom: 4 }}>SESSION TITLE *</label>
+                  <input style={inputSt} placeholder="e.g. Alex – Serve Clinic" value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} required />
+                </div>
               <div>
                 <label style={{ fontSize: 9.5, color: G.muted2, display: 'block', marginBottom: 4 }}>SESSION TYPE</label>
                 <select style={inputSt} value={formData.sessionType} onChange={e => setFormData({ ...formData, sessionType: e.target.value })}>
@@ -710,6 +714,7 @@ export default function SessionManagement({ coachId }: { coachId: string }) {
             </div>
           </form>
         </div>
+      </div>
       )}
 
       {/* Filter Tabs */}
