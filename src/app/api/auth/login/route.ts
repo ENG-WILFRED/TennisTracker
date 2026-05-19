@@ -218,9 +218,10 @@ export async function POST(request: Request) {
 
     const userRecord = await prisma.user.findUnique({
       where: { id: userId },
-      select: { acceptedTermsAt: true, isDeveloper: true },
+      select: { acceptedTermsAt: true, isDeveloper: true, profileComplete: true },
     });
     const termsAccepted = Boolean(userRecord?.acceptedTermsAt);
+    const profileComplete = Boolean(userRecord?.profileComplete);
 
     let availableMemberships;
 
@@ -278,6 +279,7 @@ export async function POST(request: Request) {
       availableRoles: availableMemberships,
       memberships: availableMemberships,
       acceptedTerms: termsAccepted,
+      profileComplete,
     };
 
     // If user has multiple active memberships, require role selection
