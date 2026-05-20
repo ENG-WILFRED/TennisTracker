@@ -22,6 +22,7 @@ model User {
   dateOfBirth        DateTime?
   nationality        String?
   bio                String?
+  profileComplete    Boolean             @default(true)
   latitude           Float?
   longitude          Float?
   city               String?

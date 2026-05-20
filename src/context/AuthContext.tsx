@@ -31,6 +31,7 @@ interface User {
   dateOfBirth?: Date | null;
   nationality?: string | null;
   bio?: string | null;
+  profileComplete?: boolean;
 }
 
 interface AuthContextType {

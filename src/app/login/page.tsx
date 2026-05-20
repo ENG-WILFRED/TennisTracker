@@ -254,7 +254,8 @@ export default function LoginPage() {
   };
 
   const handleGoogleClicked = () => {
-    addToast('Google login is coming soon. Please sign in with username or email.', 'error');
+    // Redirect to Google OAuth sign-in
+    window.location.href = '/auth/google-signin';
   };
 
   if (showRoleSelection && availableMemberships.length > 0 && pendingUser) {
@@ -592,7 +593,7 @@ export default function LoginPage() {
 
             <div style={{ display: "flex", gap: 8, marginBottom: "1.2rem" }}>
               <button type="button" className="btn-oauth" onClick={handleGoogleClicked}>
-                <GoogleIcon /> Google (coming soon)
+                <GoogleIcon /> Google
               </button>
             </div>
 

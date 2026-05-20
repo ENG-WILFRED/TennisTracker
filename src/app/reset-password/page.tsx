@@ -1,7 +1,9 @@
 'use client';
 
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useToast } from '@/components/ui/ToastContext';
 
 const G = {
   dark: '#0a180a',
@@ -35,6 +37,17 @@ export default function ResetPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const router = useRouter();
+  const { addToast } = useToast();
+  const redirectTimeout = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (redirectTimeout.current) {
+        window.clearTimeout(redirectTimeout.current);
+      }
+    };
+  }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -59,7 +72,12 @@ export default function ResetPasswordPage() {
       if (!response.ok) {
         setError(result?.error || 'Unable to reset password.');
       } else {
-        setMessage(result?.message || 'Password has been reset successfully.');
+        const successMessage = result?.message || 'Password reset successfully. Redirecting to login…';
+        addToast(successMessage, 'success', 2500);
+        setMessage(successMessage);
+        redirectTimeout.current = window.setTimeout(() => {
+          router.push('/login');
+        }, 1500);
       }
     } catch (err) {
       setError('Unable to reset password. Please try again.');
