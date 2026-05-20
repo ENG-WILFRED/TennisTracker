@@ -147,10 +147,12 @@ export async function GET(request: NextRequest) {
       username: user.username,
     });
 
+    const appUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+
     // If new user, redirect to complete profile
     if (result.isNew) {
       // Store in session storage on client side
-      const responseUrl = new URL('/auth/complete-google-profile', request.nextUrl.origin);
+      const responseUrl = new URL('/auth/complete-google-profile', appUrl);
       responseUrl.searchParams.set('userId', user.id);
       responseUrl.searchParams.set('email', user.email);
       responseUrl.searchParams.set('username', user.username);
@@ -166,7 +168,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Existing user - redirect to OAuth role selection flow
-    const responseUrl = new URL('/auth/oauth-role-select', request.nextUrl.origin);
+    const responseUrl = new URL('/auth/oauth-role-select', appUrl);
     responseUrl.searchParams.set('userId', user.id);
     responseUrl.searchParams.set('email', user.email);
     responseUrl.searchParams.set('username', user.username || '');
