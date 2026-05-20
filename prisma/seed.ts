@@ -76,7 +76,7 @@ async function main() {
     console.log('\n📍 STEP 2: Users & Roles');
     console.log('───────────────────────────────────────────────────────────────');
     const usersResult = await executeSeed('users', () => seedUsers(organizations));
-    const users = (usersResult.result || []) as User[];
+    const users = (usersResult.result || []) as any[];
 
     // 3. Create courts for each organization
     console.log('\n📍 STEP 3: Courts');

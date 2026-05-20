@@ -3,10 +3,12 @@ import prisma from '@/lib/prisma';
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { orgId: string } }
+  context: any
 ) {
   try {
-    const orgId = params.orgId;
+    const maybeParams = context?.params;
+    const params = maybeParams && typeof maybeParams.then === 'function' ? await maybeParams : maybeParams;
+    const orgId = params?.orgId;
     const { searchParams } = new URL(req.url);
     const status = searchParams.get('status');
     const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : 10;
@@ -37,10 +39,12 @@ export async function GET(
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { orgId: string } }
+  context: any
 ) {
   try {
-    const orgId = params.orgId;
+    const maybeParams = context?.params;
+    const params = maybeParams && typeof maybeParams.then === 'function' ? await maybeParams : maybeParams;
+    const orgId = params?.orgId;
     const { summary, location, severity, reportedById } = await req.json();
 
     if (!summary || !location || !severity) {
