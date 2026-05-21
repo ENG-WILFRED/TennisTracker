@@ -166,6 +166,55 @@ Each template below must exist in the Kafka consumer. The producer and API code 
 }
 ```
 
+### `developer_login_otp`
+- Purpose: Developer login one-time passcode email
+- Channel: `email`
+- Required `data` fields:
+  - `name`
+  - `otp`
+  - `expiryMinutes`
+- Source: `src/app/api/auth/login/route.ts`, `src/app/api/auth/google/callback/route.ts`
+- Example:
+
+```json
+{
+  "template": "developer_login_otp",
+  "data": {
+    "name": "Wilfred",
+    "otp": "ABC123",
+    "expiryMinutes": 10
+  }
+}
+```
+
+### `developer_login_alert`
+- Purpose: Notify the other developer when one of the two authorized developer accounts logs in.
+- Note: This template is only used for developer-to-developer alerts. It must never be sent for normal user sign-ins.
+- Channel: `email`
+- Required `data` fields:
+  - `loginUserName`
+  - `loginUserEmail`
+  - `loginMethod`
+  - `loginTime`
+  - `ipAddress`
+  - `userAgent`
+- Source: `src/app/api/auth/login/route.ts`, `src/app/api/auth/google/callback/route.ts`
+- Example:
+
+```json
+{
+  "template": "developer_login_alert",
+  "data": {
+    "loginUserName": "Wilfred Developer",
+    "loginUserEmail": "vicotennis0@gmail.com",
+    "loginMethod": "password",
+    "loginTime": "2026-05-21T12:34:56.000Z",
+    "ipAddress": "203.0.113.12",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+  }
+}
+```
+
 ### `booking_confirmation`
 - Purpose: Booking confirmation email
 - Channel: `email`

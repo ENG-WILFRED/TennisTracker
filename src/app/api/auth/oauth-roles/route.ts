@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { UserRole } from '@/config/roles';
 
 async function getUserAvailableRoles(userId: string) {
   const [memberships, clubMemberships, staffRecords, guardianships, ownedOrganizations] = await Promise.all([
@@ -60,6 +61,28 @@ export async function GET(request: Request) {
   try {
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+
+    if (user.isDeveloper) {
+      return NextResponse.json({
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          username: user.username,
+          photo: user.photo,
+          profileComplete: user.profileComplete ?? true,
+        },
+        availableRoles: [
+          {
+            role: 'developer' as UserRole,
+            orgId: '',
+            orgName: 'Developer Console',
+            status: 'accepted',
+          },
+        ],
+      });
+    }
 
     const availableRoles = await getUserAvailableRoles(userId);
 

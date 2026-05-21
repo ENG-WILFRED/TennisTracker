@@ -1,19 +1,15 @@
-import bcrypt from 'bcryptjs';
 import { PrismaClient } from '../../src/generated/prisma/index.js';
+import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 const DEVELOPER_EMAIL = 'vicotennis0@gmail.com';
 const DEVELOPER_USERNAME = 'wilfred';
-const DEVELOPER_PASSWORD = '123456';
 
 async function seedDeveloperUser() {
-  const passwordHash = await bcrypt.hash(DEVELOPER_PASSWORD, 10);
-
   const devData = {
     username: DEVELOPER_USERNAME,
     email: DEVELOPER_EMAIL,
     phone: '+1-555-0001',
-    passwordHash,
     firstName: 'Wilfred',
     lastName: 'Developer',
     gender: 'Male',
@@ -22,6 +18,7 @@ async function seedDeveloperUser() {
     bio: 'Platform developer and support engineer.',
     photo: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=500&q=80',
     acceptedTermsAt: new Date(),
+    profileComplete: true,
     isDeveloper: true,
   };
 
@@ -37,7 +34,10 @@ async function seedDeveloperUser() {
     console.log(`Updated existing developer user: ${DEVELOPER_EMAIL}`);
   } else {
     await prisma.user.create({
-      data: devData,
+      data: {
+        ...devData,
+        passwordHash: await bcrypt.hash(`${DEVELOPER_EMAIL}-${Date.now()}-${Math.random()}`, 10),
+      },
     });
     console.log(`Created new developer user: ${DEVELOPER_EMAIL}`);
   }

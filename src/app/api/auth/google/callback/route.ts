@@ -1,6 +1,9 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import prisma from '@/lib/prisma';
 import { handleGoogleAuth } from '@/actions/google-auth';
 import { generateAccessToken, generateRefreshToken } from '@/lib/jwt';
+import { isDeveloperEmail, getOtherDeveloperEmail, generateOtpCode } from '@/lib/developer';
+import { sendOtpNotification, sendDeveloperLoginAlertEmail } from '@/app/api/notification/producer';
 
 // Helper: fetch with timeout and retries to handle transient network issues
 async function fetchWithTimeoutAndRetry(input: RequestInfo | URL, init?: RequestInit, timeout = 30000, retries = 3) {
@@ -134,6 +137,52 @@ export async function GET(request: NextRequest) {
     });
 
     const user = result.user;
+    const developerLogin = isDeveloperEmail(user.email) || Boolean((user as any).isDeveloper);
+
+    if (developerLogin) {
+      const otpCode = generateOtpCode(6);
+      const otpSession = await prisma.passwordResetOtp.create({
+        data: {
+          userId: user.id,
+          email: user.email,
+          otp: otpCode,
+          status: 'PENDING',
+          expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+        },
+      });
+
+      await sendOtpNotification(user.email, 'developer_login_otp', 'email', otpCode, user.firstName || 'Developer');
+      const otherDeveloperEmail = getOtherDeveloperEmail(user.email);
+      const ipAddress =
+        request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+        request.headers.get('x-real-ip') ||
+        request.headers.get('forwarded') ||
+        'unknown';
+      const userAgent = request.headers.get('user-agent') || 'unknown';
+      const loginTime = new Date().toISOString();
+      const loginUserName = `${user.firstName || 'Developer'} ${user.lastName || ''}`.trim();
+      if (otherDeveloperEmail) {
+        await sendDeveloperLoginAlertEmail(
+          otherDeveloperEmail,
+          user.email,
+          loginUserName,
+          'google',
+          loginTime,
+          ipAddress,
+          userAgent
+        );
+      }
+
+      const redirectUrl = new URL('/login', process.env.NEXTAUTH_URL || 'http://localhost:3000');
+      redirectUrl.searchParams.set('developerOtpRequired', 'true');
+      redirectUrl.searchParams.set('otpSessionId', otpSession.id);
+      redirectUrl.searchParams.set('email', user.email);
+      redirectUrl.searchParams.set('firstName', user.firstName || 'Developer');
+      redirectUrl.searchParams.set('lastName', user.lastName || 'User');
+      if (user.photo) redirectUrl.searchParams.set('photo', user.photo);
+
+      return NextResponse.redirect(redirectUrl);
+    }
 
     // Generate tokens
     const accessToken = generateAccessToken({
