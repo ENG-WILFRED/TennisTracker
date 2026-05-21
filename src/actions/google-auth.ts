@@ -3,6 +3,7 @@
 import prisma from '@/lib/prisma';
 import { generateAccessToken, generateRefreshToken } from '@/lib/jwt';
 import bcrypt from 'bcryptjs';
+import { isDeveloperEmail } from '@/lib/developer';
 
 /**
  * Handle Google OAuth callback and auto-register as spectator if needed
@@ -25,7 +26,9 @@ export async function handleGoogleAuth({
   // Check if user already exists
   let user = await prisma.user.findUnique({ where: { email } });
 
-  // If user doesn't exist, auto-register as spectator
+  const isDeveloperUser = isDeveloperEmail(email);
+
+  // If user doesn't exist, auto-register as spectator or developer
   if (!user) {
     // Generate username from email
     const baseUsername = email.split('@')[0].toLowerCase().replace(/[^a-z0-9]+/g, '').replace(/(^-+|-+$)/g, '') || 'user';
@@ -47,21 +50,23 @@ export async function handleGoogleAuth({
         email,
         passwordHash,
         firstName: firstName || email.split('@')[0],
-        lastName: lastName || 'Spectator',
+        lastName: lastName || (isDeveloperUser ? 'Developer' : 'Spectator'),
         photo: image || null,
         acceptedTermsAt: new Date(), // Accept on behalf of user for OAuth
-        profileComplete: false,
+        profileComplete: isDeveloperUser ? true : false,
+        isDeveloper: isDeveloperUser,
       },
     });
 
-    // Create spectator profile
-    await prisma.spectator.create({
-      data: {
-        userId: user.id,
-      },
-    });
+    if (!isDeveloperUser) {
+      // Create spectator profile for normal OAuth users
+      await prisma.spectator.create({
+        data: {
+          userId: user.id,
+        },
+      });
+    }
 
-    // Mark as needs profile completion
     return {
       isNew: true,
       user: {
@@ -71,9 +76,24 @@ export async function handleGoogleAuth({
         firstName: user.firstName,
         lastName: user.lastName,
         photo: user.photo || null,
-        profileComplete: false,
+        profileComplete: isDeveloperUser ? true : false,
+        isDeveloper: isDeveloperUser,
       },
     };
+  }
+
+  if (isDeveloperUser && !user.isDeveloper) {
+    user = await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        isDeveloper: true,
+        profileComplete: true,
+      },
+    });
+  }
+
+  if (!isDeveloperUser && user.isDeveloper) {
+    throw new Error('Developer email not authorized for Google OAuth login');
   }
 
   // User already exists - just return user data

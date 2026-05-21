@@ -45,10 +45,10 @@ export default function OAuthRoleSelectPage() {
 
         // Decide whether to show role selector
         const memberships = data.availableRoles || [];
-        const shouldShowRoleSelection = memberships.length > 1 || (memberships.length === 1 && memberships[0].role !== 'spectator');
+        const shouldShowRoleSelection = memberships.length > 1 || (memberships.length === 1 && memberships[0].role !== 'spectator' && memberships[0].role !== 'developer');
 
         if (!shouldShowRoleSelection) {
-          // Auto-select first (or spectator) and login
+          // Auto-select first (or spectator/developer) and login
           const selected = memberships[0] || { role: 'spectator', orgId: '', orgName: 'Platform' };
 
           // Set local role state
