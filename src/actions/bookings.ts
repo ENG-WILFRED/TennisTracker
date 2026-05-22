@@ -131,10 +131,14 @@ export async function getAvailableCourts(playerId: string, organizationId?: stri
     }
 
     // Get courts for the organization
+    // Accept multiple status variants because some parts of the app use
+    // 'available' (lowercase) while others use 'Active' (PascalCase).
+    // Treat any of these as bookable: available / Active / active / Available
+    const bookableStatuses = ["available", "booked", "Active", "active", "Available"];
     const courts = await prisma.court.findMany({
       where: {
         organizationId: orgId,
-        status: { in: ["available", "booked"] },
+        status: { in: bookableStatuses },
       },
       select: {
         id: true,
@@ -143,6 +147,7 @@ export async function getAvailableCourts(playerId: string, organizationId?: stri
         surface: true,
         indoorOutdoor: true,
         lights: true,
+        status: true,
       },
     });
 

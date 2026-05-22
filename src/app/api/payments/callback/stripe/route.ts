@@ -1,93 +1,62 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { handlePaymentCallback } from '@/actions/payments';
-import prisma from '@/lib/prisma';
-import crypto from 'crypto';
 
-/**
- * Stripe Payment Webhook Handler
- * Receives webhook events from Stripe
- */
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.text();
-    const signature = req.headers.get('stripe-signature');
+    const gatewaySecret = process.env.GATEWAY_SECRET;
+    const requestSecret = req.headers.get('x-gateway-secret');
 
-    // Verify webhook signature
-    const secret = process.env.STRIPE_WEBHOOK_SECRET;
-    if (!secret || !signature) {
-      console.warn('Missing webhook signature or secret');
-      return NextResponse.json({ success: false, error: 'Signature verification failed' }, { status: 400 });
+    if (!gatewaySecret || !requestSecret || requestSecret !== gatewaySecret) {
+      console.warn('Unauthorized internal payment event request');
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Verify signature (simplified - use Stripe's verifySignature in production)
-    const data = JSON.parse(body);
-    console.log('Stripe webhook received:', data.type);
+    const payload = await req.json();
+    console.log('Internal payment callback payload:', JSON.stringify(payload, null, 2));
+    const provider = String(payload?.provider || '').toLowerCase();
 
-    // Handle payment_intent.succeeded and charge.succeeded events
-    if (!['payment_intent.succeeded', 'charge.succeeded', 'payment_intent.payment_failed'].includes(data.type)) {
-      return NextResponse.json({ success: true, message: 'Event ignored' });
+    if (!payload || !payload.paymentId || !payload.status || !provider) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Invalid payment event payload: paymentId, status, and provider are required',
+        },
+        { status: 400 }
+      );
     }
 
-    const paymentData = data.data?.object || {};
-    const transactionId = paymentData.metadata?.transactionId;
+    if (!['stripe', 'paypal', 'mpesa'].includes(provider)) {
+      return NextResponse.json(
+        { success: false, error: `Unsupported payment provider: ${provider}` },
+        { status: 400 }
+      );
+    }
 
-    // Get the payment record to access callback URL
-    const record = transactionId
-      ? await prisma.paymentRecord.findUnique({
-          where: { id: transactionId },
-        })
-      : null;
-    
-    const result = await handlePaymentCallback('stripe', {
-      type: data.type,
-      id: paymentData.id,
-      status: paymentData.status,
-      metadata: paymentData.metadata,
-      transactionId,
-      sessionId: paymentData.id,
+    const result = await handlePaymentCallback(provider as 'stripe' | 'paypal' | 'mpesa', {
+      ...payload,
+      transactionId: payload.paymentId,
     });
 
-    // Send callback notification if registered and payment succeeded
-    if (
-      record &&
-      record.callbackUrl &&
-      ['payment_intent.succeeded', 'charge.succeeded'].includes(data.type)
-    ) {
-      try {
-        await fetch(record.callbackUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Payment-Callback': 'true',
-            'X-Callback-Version': '1.0',
-          },
-          body: JSON.stringify({
-            idempotencyKey: transactionId,
-            gateway: 'stripe',
-            status: 'completed',
-            transactionId: paymentData.id,
-            amount: record.amount,
-            currency: record.currency,
-            timestamp: new Date().toISOString(),
-            error: null,
-            metadata: JSON.parse(record.metadata || '{}'),
-          }),
-        }).catch(err => console.error('Callback notification send failed:', err));
-      } catch (error) {
-        console.error('Error sending callback notification:', error);
-      }
+    if (result.success) {
+      console.log(`✅ Payment recorded successfully: ${payload.paymentId} (${payload.status}) - ${provider}`);
+    } else {
+      console.error(`❌ Payment recording failed: ${payload.paymentId} - ${result.error}`);
     }
 
-    if (!result.success) {
-      console.error('Stripe webhook processing failed:', result.error);
-      return NextResponse.json({ success: false, error: result.error }, { status: 400 });
-    }
-
-    return NextResponse.json({ success: true, message: 'Webhook processed' });
+    return NextResponse.json({
+      success: true,
+      provider,
+      paymentId: payload.paymentId,
+      status: payload.status,
+      result,
+    });
   } catch (error) {
-    console.error('Stripe webhook error:', error);
+    console.error('Internal payment callback error:', error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Webhook processing failed' },
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Payment callback processing failed',
+      },
       { status: 500 }
     );
   }

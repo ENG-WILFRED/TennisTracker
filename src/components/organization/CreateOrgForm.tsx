@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { authenticatedFetch } from '@/lib/authenticatedFetch';
 import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/components/ui/ToastContext';
 import LoginModal from '@/components/LoginModal';
 
 interface CreateOrgFormProps {
@@ -13,8 +13,8 @@ interface CreateOrgFormProps {
 }
 
 export default function CreateOrgForm({ isOpen, onClose, onSuccess }: CreateOrgFormProps) {
-  const router = useRouter();
   const { isLoggedIn } = useAuth();
+  const { addToast } = useToast();
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -78,11 +78,19 @@ export default function CreateOrgForm({ isOpen, onClose, onSuccess }: CreateOrgF
 
       if (!res.ok) {
         const data = (await res.json()) as any;
-        setError(data.error || 'Failed to create organization');
+        const message = data.error || 'Failed to create organization';
+        setError(message);
+        addToast(message, 'error', 6000);
         return;
       }
 
-      const org = (await res.json()) as any;
+      const data = (await res.json()) as any;
+      const org = data.org || data;
+      if (data.notificationSent === false) {
+        addToast('Organization created, but developer notification failed.', 'warning', 6000);
+      } else {
+        addToast('Organization created successfully.', 'success', 6000);
+      }
       onSuccess(org);
       setFormData({
         name: '',

@@ -446,6 +446,8 @@ export const SpectatorDashboard: React.FC = () => {
           userId: user.id,
           eventId: selectedOrg.id,
           bookingType: 'membership_purchase',
+          successRedirectUrl: window.location.href,
+          failureRedirectUrl: window.location.href,
           metadata: {
             membershipTier: tier.name,
             organization: selectedOrg.name,

@@ -21,24 +21,36 @@ export async function POST(request: Request) {
       },
     } = payload;
 
-    // Only process checkout.session.completed events
-    if (type !== 'checkout.session.completed' && type !== 'payment_intent.succeeded') {
+    // Only process checkout.session.completed events to avoid duplicate fulfillment.
+    if (type !== 'checkout.session.completed') {
       return new Response(
         JSON.stringify({ received: true }),
         { status: 200 }
       );
     }
 
-    const transactionId = stripeMetadata?.transactionId;
+    let transactionId = stripeMetadata?.transactionId;
+    let payment = null;
 
-    if (!transactionId) {
-      console.error('No transaction ID in Stripe metadata');
-      return new Response(JSON.stringify({ error: 'Missing transaction ID in metadata' }), { status: 400 });
+    if (transactionId) {
+      payment = await prisma.paymentRecord.findUnique({ where: { id: transactionId } });
     }
 
-    const payment = await prisma.paymentRecord.findUnique({ where: { id: transactionId } });
+    if (!payment && stripeMetadata?.eventId && stripeMetadata?.userId) {
+      payment = await prisma.paymentRecord.findFirst({
+        where: {
+          provider: 'stripe',
+          eventId: stripeMetadata.eventId,
+          userId: stripeMetadata.userId,
+          providerStatus: 'pending',
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+      transactionId = payment?.id || transactionId;
+    }
 
     if (!payment) {
+      console.error('Payment record not found for Stripe webhook', { transactionId, metadata: stripeMetadata });
       return new Response(JSON.stringify({ error: 'Payment record not found' }), { status: 404 });
     }
 
@@ -93,21 +105,47 @@ export async function POST(request: Request) {
     }
 
     if (paymentSuccessful && payment.bookingType === 'tournament_entry' && payment.eventId) {
+      console.log(`🎾 Processing tournament entry payment with eventId: ${payment.eventId}, userId: ${payment.userId}`);
       const member = await prisma.clubMember.findFirst({ where: { playerId: payment.userId } });
       if (member) {
-        const latestRegistration = await prisma.eventRegistration.findFirst({
-          where: { eventId: payment.eventId },
-          orderBy: { signupOrder: 'desc' },
-        });
-        const signupOrder = (latestRegistration?.signupOrder || 0) + 1;
-        await prisma.eventRegistration.create({
-          data: {
+        console.log(`✓ Found member: ${member.id} for userId: ${payment.userId}`);
+        const existingRegistration = await prisma.eventRegistration.findFirst({
+          where: {
             eventId: payment.eventId,
             memberId: member.id,
-            status: 'registered',
-            signupOrder,
           },
         });
+
+        if (existingRegistration) {
+          console.log(`✓ Found existing registration: ${existingRegistration.id}, current status: ${existingRegistration.status}`);
+          if (existingRegistration.status !== 'registered') {
+            await prisma.eventRegistration.update({
+              where: { id: existingRegistration.id },
+              data: { status: 'registered' },
+            });
+            console.log(`✅ Updated registration to registered: ${existingRegistration.id}`);
+          } else {
+            console.log(`ℹ️ Registration already registered: ${existingRegistration.id}`);
+          }
+        } else {
+          console.log(`→ Creating new registration for eventId: ${payment.eventId}, memberId: ${member.id}`);
+          const latestRegistration = await prisma.eventRegistration.findFirst({
+            where: { eventId: payment.eventId },
+            orderBy: { signupOrder: 'desc' },
+          });
+          const signupOrder = (latestRegistration?.signupOrder || 0) + 1;
+          const newRegistration = await prisma.eventRegistration.create({
+            data: {
+              eventId: payment.eventId,
+              memberId: member.id,
+              status: 'registered',
+              signupOrder,
+            },
+          });
+          console.log(`✅ Created new registration: ${newRegistration.id} with signupOrder: ${signupOrder}`);
+        }
+      } else {
+        console.warn(`⚠️ No club member found for playerId: ${payment.userId}`);
       }
     }
 

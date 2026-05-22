@@ -8,8 +8,7 @@ import { authenticatedFetch } from '@/lib/authenticatedFetch';
 import { getCachedData, setCachedData, clearCacheEntry } from '@/lib/dashboardCache';
 import { LoadingState } from '@/components/LoadingState';
 import { processMPesaPayment, processPayPalPayment, processStripePayment } from '@/actions/payments';
-import { usePDFDownload } from '@/hooks/usePDFDownload';
-import { generateMembershipCardHTML } from '@/utils/generateMembershipCardPDF';
+import { downloadUnifiedPDF } from '@/actions/downloads/downloadPDF';
 import toast from 'react-hot-toast';
 import { MembershipSwitcher } from '@/components/MembershipSwitcher';
 
@@ -583,8 +582,6 @@ const MemberDashboardComponent: React.FC = () => {
     }
   }, [data.organizations]);
 
-  const { downloadPDF } = usePDFDownload();
-
   // PDF generation function
   const generateAccessPDF = useCallback(async (membership: Membership) => {
     try {
@@ -593,28 +590,11 @@ const MemberDashboardComponent: React.FC = () => {
       const sanitizedOrgName = (membership.orgName || org?.name || 'Membership').replace(/[^a-z0-9]/gi, '_');
       const filename = `VicoTennis_${sanitizedOrgName}_access_${String(user?.id || 'member')}.pdf`;
 
-      // Generate the membership card HTML using the utility
-      const cardHTML = await generateMembershipCardHTML({
-        memberName: `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'Member',
-        memberId: String(user?.id || 'N/A'),
-        organizationName: org?.name || membership.orgName || '—',
-        organizationEmail: org?.email || undefined,
-        organizationPhone: org?.phone || undefined,
-        role: cap(membership.role) || 'Member',
-        status: cap(membership.status) || '—',
-        accessLevel: membership.clubMember?.membershipTier?.name || 'Standard',
-        joinedDate: formatDate(membership.joinedAt),
-        approvedDate: formatDate(membership.approvedAt),
-        expiryDate: formatDate(new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()), // 1 year from now
-        qrCodeData: `${typeof window !== 'undefined' && window.location.hostname === 'localhost' ? process.env.NEXT_PUBLIC_TEST_BASE_URL : process.env.NEXT_PUBLIC_SITE_URL}/api/verify/${user?.id}?org=${membership.orgId}`,
-      });
-
-      // Download the single-page PDF
-      await downloadPDF(cardHTML, {
+      // Download the membership card PDF using unified server-side rendering
+      await downloadUnifiedPDF({
+        kind: 'membershipCard',
+        memberId: String(user?.id || ''),
         filename,
-        orientation: 'portrait',
-        format: 'a4',
-        margin: 0, // No extra margin needed for full-page design
       });
 
       toast.success('Vico Tennis member access card generated');
@@ -624,7 +604,7 @@ const MemberDashboardComponent: React.FC = () => {
     } finally {
       setGeneratingPDFFor(null);
     }
-  }, [data.organizations, downloadPDF, user]);
+  }, [data.organizations, user]);
 
   // Receipt generation function
   const generateReceipt = useCallback((transaction: Transaction) => {
@@ -824,56 +804,186 @@ const MemberDashboardComponent: React.FC = () => {
             </div>
           ) : data.memberships.map((m: Membership) => {
             const org = data.organizations[m.orgId];
+            const statusColor = m.status === 'accepted' ? G.green : m.status === 'pending' ? G.gold : G.danger;
+            const statusText = m.status === 'accepted' ? '✓ VALID ACCESS' : m.status === 'pending' ? '⏳ PENDING APPROVAL' : '✕ TERMINATED';
             return (
-              <div key={m.id} style={{ background: G.surfaceAlt, border: `1px solid ${G.border}`,
-                borderRadius: 12, padding: 16, marginBottom: 10 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
-                  gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
+              <div key={m.id} style={{ 
+                background: G.surfaceAlt, 
+                border: `2px solid ${statusColor}88`,
+                borderRadius: 14, 
+                padding: 0,
+                marginBottom: 14,
+                overflow: 'hidden',
+                boxShadow: `0 4px 16px rgba(0,0,0,0.2)`
+              }}>
+                {/* Header with Status */}
+                <div style={{
+                  background: `linear-gradient(135deg, ${statusColor}22, ${statusColor}11)`,
+                  borderBottom: `1px solid ${statusColor}44`,
+                  padding: '14px 16px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  gap: 12
+                }}>
                   <div>
-                    <div style={{ fontSize: 16, fontWeight: 500, color: G.text }}>{m.orgName}</div>
-                    <div style={{ fontSize: 11, color: G.accent, marginTop: 2 }}>Role: {cap(m.role)}</div>
-                    {org?.description && (
-                      <div style={{ fontSize: 11, color: G.accent, marginTop: 2 }}>{org.description}</div>
-                    )}
+                    <div style={{ fontSize: 10, letterSpacing: '0.15em', textTransform: 'uppercase', color: statusColor, fontWeight: 700 }}>
+                      {m.orgName}
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                    <Badge variant={m.status === 'accepted' ? 'green' : m.status === 'pending' ? 'gold' : 'red'}>
-                      {m.status}
-                    </Badge>
-                    {m.clubMember?.membershipTier?.name && (
-                      <Badge variant="gold">{m.clubMember.membershipTier.name} tier</Badge>
-                    )}
+                  <div style={{
+                    background: statusColor,
+                    color: G.bg,
+                    padding: '4px 10px',
+                    borderRadius: 6,
+                    fontSize: 9,
+                    fontWeight: 700,
+                    letterSpacing: '0.08em',
+                    whiteSpace: 'nowrap'
+                  }}>
+                    {statusText}
                   </div>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8,
-                  padding: 10, background: G.surface, borderRadius: 8, marginBottom: 12 }}>
-                  <DL label="Joined"   value={formatDate(m.joinedAt)} />
-                  <DL label="Approved" value={formatDate(m.approvedAt)} />
-                </div>
-                {org && (
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8,
-                    padding: 10, background: G.surface, borderRadius: 8, marginBottom: 12 }}>
-                    <DL label="Contact" value={org.contactEmail || 'N/A'} />
-                    <DL label="Phone" value={org.phoneNumber || 'N/A'} />
+
+                {/* Main Content */}
+                <div style={{ padding: '16px', display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 16, alignItems: 'start' }}>
+                  {/* Left Column - Info */}
+                  <div>
+                    <div style={{ marginBottom: 16 }}>
+                      <div style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: G.accent, fontWeight: 700, marginBottom: 4 }}>
+                        Member
+                      </div>
+                      <div style={{ fontSize: 18, fontWeight: 700, color: G.text }}>
+                        {user?.firstName || 'Member'}
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                      <div>
+                        <div style={{ fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: G.accent, fontWeight: 700, marginBottom: 3 }}>
+                          Role
+                        </div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: G.text }}>
+                          {cap(m.role)}
+                        </div>
+                      </div>
+                      {m.clubMember?.membershipTier?.name && (
+                        <div>
+                          <div style={{ fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: G.accent, fontWeight: 700, marginBottom: 3 }}>
+                            Tier
+                          </div>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: G.green }}>
+                            {m.clubMember.membershipTier.name}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 12 }}>
+                      <div>
+                        <div style={{ fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: G.accent, fontWeight: 700, marginBottom: 3 }}>
+                          Joined
+                        </div>
+                        <div style={{ fontSize: 12, color: G.light }}>
+                          {formatDate(m.joinedAt)}
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: G.accent, fontWeight: 700, marginBottom: 3 }}>
+                          Approved
+                        </div>
+                        <div style={{ fontSize: 12, color: G.light }}>
+                          {formatDate(m.approvedAt)}
+                        </div>
+                      </div>
+                    </div>
+
+                    {org && (
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 12 }}>
+                        <div>
+                          <div style={{ fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: G.accent, fontWeight: 700, marginBottom: 3 }}>
+                            Contact
+                          </div>
+                          <div style={{ fontSize: 11, color: G.light, wordBreak: 'break-word' }}>
+                            {org.contactEmail || 'N/A'}
+                          </div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: G.accent, fontWeight: 700, marginBottom: 3 }}>
+                            Phone
+                          </div>
+                          <div style={{ fontSize: 11, color: G.light }}>
+                            {org.phoneNumber || 'N/A'}
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                )}
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+
+                  {/* Right Column - Card Preview / Download */}
+                  <div style={{
+                    background: `linear-gradient(135deg, ${G.green}22, ${G.green}11)`,
+                    border: `1px solid ${G.green}44`,
+                    borderRadius: 10,
+                    padding: 12,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 10,
+                    justifyContent: 'center',
+                    minHeight: 200
+                  }}>
+                    <div style={{ fontSize: 32, lineHeight: 1 }}>🎫</div>
+                    <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: G.green, textAlign: 'center' }}>
+                      Member Card
+                    </div>
+                    <div style={{ fontSize: 11, color: G.accent, textAlign: 'center', marginTop: 6 }}>
+                      Digital access pass
+                    </div>
+                    <button
+                      onClick={() => generateAccessPDF(m)}
+                      disabled={generatingPDFFor === m.id}
+                      style={{
+                        marginTop: 'auto',
+                        width: '100%',
+                        padding: '8px 12px',
+                        background: generatingPDFFor === m.id ? G.accent : G.green,
+                        color: G.bg,
+                        border: 'none',
+                        borderRadius: 6,
+                        fontSize: 12,
+                        fontWeight: 600,
+                        cursor: generatingPDFFor === m.id ? 'not-allowed' : 'pointer',
+                        opacity: generatingPDFFor === m.id ? 0.7 : 1,
+                        transition: 'all 0.2s',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 6
+                      }}
+                    >
+                      {generatingPDFFor === m.id ? (
+                        <>
+                          <span style={{ display: 'inline-block', width: '8px', height: '8px', border: '2px solid currentColor', borderRadius: '50%', borderTopColor: 'transparent', animation: 'spin 0.8s linear infinite' }} />
+                          Generating...
+                        </>
+                      ) : (
+                        '↓ Download Card'
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Footer Actions */}
+                <div style={{
+                  display: 'flex',
+                  gap: 8,
+                  padding: '12px 16px',
+                  borderTop: `1px solid ${G.border}`,
+                  background: G.surface,
+                  flexWrap: 'wrap'
+                }}>
                   <Btn variant="primary" size="sm" onClick={() => router.push(`/organization/${m.orgId}`)}>Open org</Btn>
-                  <Btn 
-                    size="sm" 
-                    onClick={() => generateAccessPDF(m)}
-                    disabled={generatingPDFFor === m.id}
-                    style={{ opacity: generatingPDFFor === m.id ? 0.7 : 1, cursor: generatingPDFFor === m.id ? 'not-allowed' : 'pointer' }}
-                  >
-                    {generatingPDFFor === m.id ? (
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                        <span style={{ display: 'inline-block', width: '10px', height: '10px', border: '2px solid currentColor', borderRadius: '50%', borderTopColor: 'transparent', animation: 'spin 0.8s linear infinite' }} />
-                        Generating...
-                      </span>
-                    ) : (
-                      'Generate PDF'
-                    )}
-                  </Btn>
                   <Btn size="sm" variant="ghost" onClick={() => handleMembershipTermination(m)} style={{ color: G.danger }}>Terminate</Btn>
                   <Btn size="sm" onClick={() => router.push('/support')}>Support</Btn>
                 </div>

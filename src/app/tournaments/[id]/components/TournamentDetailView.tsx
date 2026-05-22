@@ -3,7 +3,7 @@ import { TournamentApplicationForm } from '@/components/tournament/TournamentApp
 import { CancelApplicationModal } from '@/components/tournament/CancelApplicationModal';
 import { PlayerProfileModal } from './PlayerProfileModal';
 import { RejectionReasonModal } from './RejectionReasonModal';
-import { authenticatedFetch } from '@/lib/authenticatedFetch';
+import { downloadUnifiedPDF } from '@/actions/downloads/downloadPDF';
 import {
   CheckoutModal,
   ContactModal,
@@ -125,6 +125,7 @@ export function TournamentDetailView({
   const [selectedPlayer, setSelectedPlayer] = useState<any>(null);
   const [rejectingRegistrationId, setRejectingRegistrationId] = useState<string | null>(null);
   const [rejectionLoading, setRejectionLoading] = useState(false);
+  const [downloadingTicket, setDownloadingTicket] = useState(false);
 
   const [appeals, setAppeals] = useState<any[]>([]);
   const [appealsLoading, setAppealsLoading] = useState(false);
@@ -236,6 +237,22 @@ export function TournamentDetailView({
     }
   };
 
+  const downloadEntranceTicket = async () => {
+    setDownloadingTicket(true);
+    try {
+      await downloadUnifiedPDF({
+        kind: 'tournamentEntryTicket',
+        tournamentId: tournament.id,
+        filename: `entrance-ticket-${tournament.id}.pdf`,
+      });
+    } catch (error) {
+      console.error('Error downloading entrance ticket:', error);
+      alert('Failed to download entrance ticket');
+    } finally {
+      setDownloadingTicket(false);
+    }
+  };
+
   // Determine button state based on user's registration
   const getButtonState = () => {
     if (!userRegistration) {
@@ -248,7 +265,7 @@ export function TournamentDetailView({
       return { label: `Proceed to Payment - $${tournament.entryFee || 0}`, status: 'payment', className: 'bg-[linear-gradient(135deg,#3b6d11,#639922)] text-[#f0fae8] hover:brightness-110 hover:-translate-y-0.5', disabled: false };
     }
     if (userRegistration.status === 'registered') {
-      return { label: '✓ Applied & Registered', status: 'registered', className: 'bg-[#1a3a0a] text-[#8dc843] hover:bg-[#2a4a1a]', disabled: true };
+      return { label: '✅ Paid - Download Ticket', status: 'download-ticket', className: 'bg-[linear-gradient(135deg,#2a7a1a,#5dc142)] text-[#f0fae8] hover:brightness-110 hover:-translate-y-0.5', disabled: false };
     }
     if (userRegistration.status === 'rejected') {
       return { label: '❌ Application Rejected - Click to View', status: 'rejected', className: 'bg-[rgba(220,76,100,0.15)] text-[#ff6b7a] hover:bg-[rgba(220,76,100,0.25)] border border-[rgba(220,76,100,0.3)]', disabled: false };
@@ -617,8 +634,8 @@ export function TournamentDetailView({
         
         <div className="action-buttons">
           <button 
-            className={`btn-primary ${buttonState.disabled ? 'opacity-60 cursor-not-allowed' : ''}`}
-            disabled={buttonState.disabled}
+            className={`btn-primary ${buttonState.disabled ? 'opacity-60 cursor-not-allowed' : ''} ${downloadingTicket ? 'opacity-75' : ''}`}
+            disabled={buttonState.disabled || downloadingTicket}
             onClick={() => {
               if (buttonState.status === 'apply') {
                 onOpenModal('apply');
@@ -628,6 +645,9 @@ export function TournamentDetailView({
                 alert('Your application is under review. You will receive an email when the organizer makes a decision.');
               } else if (buttonState.status === 'registered') {
                 alert('You are registered for this tournament!');
+              } else if (buttonState.status === 'download-ticket') {
+                // Generate and download entrance ticket PDF
+                downloadEntranceTicket();
               } else if (buttonState.status === 'rejected') {
                 if (setShowRejectionReason) {
                   setShowRejectionReason(true);
@@ -635,7 +655,7 @@ export function TournamentDetailView({
               }
             }}
           >
-            {buttonState.label}
+            {downloadingTicket ? '⬇️ Downloading...' : buttonState.label}
           </button>
           
           {userRegistration?.status === 'registered' && (

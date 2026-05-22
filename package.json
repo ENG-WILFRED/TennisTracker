@@ -43,6 +43,7 @@
     "start": "NODE_OPTIONS=--max-old-space-size=2048 next start",
     "lint": "eslint",
     "migrate": "tsx scripts/prisma-deploy-or-push.ts",
+    "normalize-court-statuses": "tsx scripts/normalize-court-statuses.ts",
     "seed": "prisma db seed",
     "migrate:reset": "prisma migrate reset"
   },

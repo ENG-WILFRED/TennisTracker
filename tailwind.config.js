@@ -1,5 +1,8 @@
+import designSystemPreset from './packages/design-system/src/styles/tailwind-preset.js';
+
 /** @type {import('tailwindcss').Config} */
 export default {
+  presets: [designSystemPreset],
   content: [
     './src/app/**/*.{js,ts,jsx,tsx}',
     './src/components/**/*.{js,ts,jsx,tsx}',

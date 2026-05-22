@@ -77,14 +77,14 @@ export function TournamentAnalyticsSection({
           <span style={{ textAlign: 'center' }}>Trend</span>
         </div>
 
-        {data.map((p: any) => {
+        {data.map((p: any, idx: number) => {
           const rankColor = p.rank === 1 ? '#ffd700' : p.rank === 2 ? '#c0c0c0' : p.rank === 3 ? '#cd7f32' : '#4a6a3a';
           const trendIcon = p.trend === '+' ? '▲' : p.trend === '-' ? '▼' : '—';
           const trendColor = p.trend === '+' ? '#7dc142' : p.trend === '-' ? '#e05050' : '#6a9058';
 
           return (
             <div
-              key={p.rank}
+              key={`${p.rank}-${p.name || 'player'}-${idx}`}
               style={{
                 display: 'grid',
                 gridTemplateColumns: isMobile ? '40px 1fr 40px 40px 60px 40px' : '40px 1fr 60px 60px 80px 50px',
@@ -147,8 +147,8 @@ export function TournamentAnalyticsSection({
             marginBottom: 12,
           }}>📊 Win Distribution</h4>
           <div>
-            {data.map(p => (
-              <div key={p.rank} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10, fontSize: isMobile ? 12 : 13 }}>
+            {data.map((p: any, idx: number) => (
+              <div key={`${p.rank}-${p.name || 'player'}-${idx}`} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10, fontSize: isMobile ? 12 : 13 }}>
                 <span style={{ width: isMobile ? 80 : 120, color: '#9dc880', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {p.name.split(' ')[0]}
                 </span>

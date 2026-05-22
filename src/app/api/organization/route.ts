@@ -1,5 +1,6 @@
 import prisma from '@/lib/prisma';
 import { verifyApiAuth } from '@/lib/authMiddleware';
+import { Prisma } from '@prisma/client';
 
 export async function GET(request: Request) {
   try {
@@ -122,9 +123,10 @@ export async function POST(request: Request) {
     });
 
     // Notify developers that a new organization registration was submitted
+    let notificationSent = true;
     try {
       const { notify } = await import('@/app/api/notification/producer');
-      await notify({
+      const notifyResult = await notify({
         to: process.env.ADMIN_EMAIL || 'admin@tennistracker.com',
         channel: 'email',
         template: 'orgRegistered',
@@ -137,15 +139,41 @@ export async function POST(request: Request) {
           status: org.status,
         },
       });
+      notificationSent = notifyResult.success;
+      if (!notificationSent) {
+        console.warn('Notification delivery failed for orgRegistered:', org.id);
+      }
     } catch (notifyError) {
+      notificationSent = false;
       console.warn('Failed to publish orgRegistered notification:', notifyError);
     }
 
-    return new Response(JSON.stringify(org), {
+    return new Response(JSON.stringify({ org, notificationSent }), {
       status: 201,
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
+    const isPrismaKnownRequestError =
+      typeof error === 'object' &&
+      error !== null &&
+      'name' in error &&
+      (error as any).name === 'PrismaClientKnownRequestError';
+
+    if (isPrismaKnownRequestError && (error as any).code === 'P2002') {
+      const errorObj = error as Prisma.PrismaClientKnownRequestError;
+      const target = Array.isArray(errorObj.meta?.target)
+        ? errorObj.meta.target.join(', ')
+        : errorObj.meta?.target;
+      const message = target?.includes('name')
+        ? 'Organization name already exists. Please choose a different name.'
+        : target?.includes('slug')
+        ? 'Organization slug already exists. Please choose a different identifier.'
+        : target?.includes('email')
+        ? 'Organization email already exists. Please choose a different email.'
+        : 'Duplicate value error. Please check the input and try again.';
+      return new Response(JSON.stringify({ error: message }), { status: 409 });
+    }
+
     console.error('Error creating organization:', error);
     return new Response(JSON.stringify({ error: 'Internal server error' }), { status: 500 });
   }

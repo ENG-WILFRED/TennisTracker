@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { LoadingState } from '@/components/LoadingState';
+import { DashboardErrorPage } from '@/components/DashboardErrorPage';
 import Link from 'next/link';
 import { FindNearbyPeople } from '@/components/FindNearbyPeople';
 import { FindNearbyCourts } from '@/components/FindNearbyCourts';
@@ -149,9 +150,11 @@ export const AdminDashboard: React.FC = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-red-50 text-red-700">
-        <div>Error loading dashboard: {error}</div>
-      </div>
+      <DashboardErrorPage
+        error={error}
+        title="Admin Dashboard Error"
+        icon="⚙️"
+      />
     );
   }
 

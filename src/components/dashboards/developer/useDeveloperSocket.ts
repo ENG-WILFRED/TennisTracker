@@ -52,6 +52,12 @@ export function useDeveloperSocket(
           onNotificationUpdate(`Bug "${data.title}" → ${data.status}`);
           addToast(`Bug "${data.title}" → ${data.status}`, 'info');
         });
+        socket.on('notification_failure', (payload: any) => {
+          const message = payload?.error || 'A notification delivery failed';
+          onNotificationUpdate(`Notification failure: ${payload?.template || 'unknown template'}`);
+          onTimelineUpdate(`Notification failed — ${new Date().toLocaleTimeString()}`);
+          addToast(`Notification failed: ${message}`, 'error', 7000);
+        });
         socket.on('test_run_completed', async (data: any) => {
           onTestCompleted(data);
           onNotificationUpdate(`Test run completed: ${data.suite || 'all'}`);
