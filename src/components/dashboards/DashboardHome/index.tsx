@@ -187,6 +187,8 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
   recentResults = [],
 }) => {
   const [feedPost, setFeedPost] = useState('');
+  const [sendingReminder, setSendingReminder] = useState<Record<string, boolean>>({});
+  const [reminderStatus, setReminderStatus] = useState<Record<string, string>>({});
   const nextMatch = upcomingMatches?.[0];
   const playerName = playerData?.player?.firstName || 'Player';
   const opponentName = nextMatch?.opponent || 'Opponent';
@@ -195,6 +197,42 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
   const matchType = nextMatch?.type || 'Singles';
   const leaderboardPresent = leaderboard?.length > 0;
   const activityPresent = activityFeed?.length > 0;
+
+  const handleRemindCoach = async (coachId: string) => {
+    const playerId = playerData?.player?.id;
+    if (!playerId) return;
+
+    setSendingReminder((prev) => ({ ...prev, [coachId]: true }));
+    setReminderStatus((prev) => ({ ...prev, [coachId]: 'Sending reminder…' }));
+
+    try {
+      const response = await fetch(`/api/players/${encodeURIComponent(playerId)}/remind-coach`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ coachId }),
+      });
+      const result = await response.json();
+
+      if (!response.ok) {
+        setReminderStatus((prev) => ({
+          ...prev,
+          [coachId]: result?.error || 'Unable to send reminder',
+        }));
+      } else {
+        setReminderStatus((prev) => ({
+          ...prev,
+          [coachId]: result?.message || 'Reminder sent',
+        }));
+      }
+    } catch (error) {
+      setReminderStatus((prev) => ({
+        ...prev,
+        [coachId]: error instanceof Error ? error.message : 'Network error',
+      }));
+    } finally {
+      setSendingReminder((prev) => ({ ...prev, [coachId]: false }));
+    }
+  };
 
   return (
     <div className="space-y-4 px-1">
@@ -434,7 +472,59 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      {/* ── Coaches + Achievements + Recent Results ───────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <Card>
+          <SectionLabel action={<Link href="/coaches">View All →</Link>}>🏅 Coaches</SectionLabel>
+          {playerData?.coaches && playerData.coaches.length > 0 ? (
+            <div className="space-y-2">
+              {playerData.coaches.slice(0, 6).map((c: any) => (
+                <div key={c.id} className="flex items-center gap-3 px-3 py-2.5 bg-[#0d160e] border border-[#1e3321] rounded-xl hover:border-[#243d27] transition-all">
+                  <div className="w-10 h-10 rounded-lg bg-[#1e3321] flex items-center justify-center text-lg overflow-hidden">
+                    {c.photo ? (
+                      <img src={c.photo} alt={c.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <span>🏋️</span>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <div className="text-xs font-bold text-[#e8f5e0] truncate">{c.name}</div>
+                      <div className="text-[11px] text-[#9fd78b] font-mono">{c.stats?.avgRating ? Number(c.stats.avgRating).toFixed(1) : '—'}</div>
+                    </div>
+                    <div className="flex items-center gap-2 mt-1">
+                      <div className="text-[10px] text-[#4d8a56]">{c.role || 'Coach'}</div>
+                      <div className="text-[10px] text-[#7dc142]">{c.stats?.ratingCount ? `(${c.stats.ratingCount})` : ''}</div>
+                      {c.organization && (
+                        <div className="ml-2 px-2 py-0.5 bg-[#0f2710] border border-[#243d27] rounded-full text-[10px] text-[#7dc142]">{c.organization.name}</div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end gap-2">
+                    <div className="text-[#7dc142] text-[10px] font-mono">{c.email || ''}</div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemindCoach(c.id)}
+                      disabled={sendingReminder[c.id]}
+                      className={`text-[10px] font-bold rounded-full px-3 py-1 transition-all ${sendingReminder[c.id]
+                        ? 'bg-[#1e3321] text-[#4d8a56] border border-[#1e3321] cursor-not-allowed'
+                        : 'bg-[#7dc142] text-[#0a1a0b] hover:bg-[#a8d84e]'}
+                      `}
+                    >
+                      {sendingReminder[c.id] ? 'Sending…' : 'Remind Coach'}
+                    </button>
+                    {reminderStatus[c.id] && (
+                      <span className="text-[9px] text-[#a8d84e] text-right">{reminderStatus[c.id]}</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex items-center justify-center py-6 text-sm text-[#4d8a56]">No coaches found</div>
+          )}
+        </Card>
+
         <Achievements badges={playerData?.badges} />
         <RecentResults results={recentResults} />
       </div>

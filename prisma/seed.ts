@@ -5,29 +5,23 @@ import { seedOrganizations } from './seeds/organizations.js';
 import { seedUsers } from './seeds/users.js';
 import { seedCourts } from './seeds/courts.js';
 import { seedMemberships } from './seeds/memberships.js';
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// DISABLED SEEDS - Large data seeds (commented out to prevent excessive seeding)
-// These are available if needed. Uncomment the imports and add to main() to enable.
-// ═══════════════════════════════════════════════════════════════════════════════
-// import { seedTournaments } from './seeds/tournaments.js';
-// import { seedMatches } from './seeds/matches.js';
-// import { seedCoachSessions } from './seeds/seeds/coach-sessions.js';
-// import { seedPayments } from './seeds/payments.js';
-// import { seedStats } from './seeds/stats.js';
-// import { seedCommunity } from './seeds/community.js';
-// import { seedBookingsEnhanced } from './seeds/bookings-enhanced.js';
-// import { seedTournamentPlayers } from './seeds/tournament-players-seeding.js';
-// import { seedTournamentTasks } from './seeds/tournament-tasks.js';
-// import { seedTournamentComments } from './seeds/tournament-comments.js';
-// import { seedTaskTemplates } from './seeds/task-templates-complete.js';
-// import { seedStaffDashboard } from './seeds/staff-dashboard-data.js';
-// import { seedStaffNewSystem } from './seeds/staff-new-system.js';
-// import { seedStaff } from './seeds/staff.js';
-// import { seedKenyaTennis } from './seeds/kenya-tennis-seed.js';
-// import { seedDeveloperUser } from './seeds/seed-developer-user.js';
-
-import { PrismaClient } from '../src/generated/prisma/index.js';
+import { seedEnhancedBookings } from './seeds/bookings-enhanced.js';
+import { seedPaymentRecords } from './seeds/payments.js';
+import { seedMatches } from './seeds/matches.js';
+import { seedCommunity } from './seeds/community.js';
+import { seedTournaments } from './seeds/tournaments.js';
+import { seedStats } from './seeds/stats.js';
+import { seedTournamentComments } from './seeds/tournament-comments.js';
+import { seedStaffForAllOrgs } from './seeds/staff.js';
+import { seedNewStaffSystem } from './seeds/staff-new-system.js';
+import { seedStaffDashboardData } from './seeds/staff-dashboard-data.js';
+import { seedTournamentTasks } from './seeds/tournament-tasks.js';
+import { seedTaskTemplates } from './seeds/task-templates-complete.js';
+import { seedTournamentPlayers } from './seeds/tournament-players-seeding.js';
+import { seedKenyaPlayersAndCourts } from './seeds/kenya-tennis-seed.js';
+import { seedCoachSessions } from './seeds/coach-sessions.js';
+import { seedAdminDashboardData } from './seeds/admin-dashboard-data.js';
+import { PrismaClient, User } from '../src/generated/prisma/index.js';
 import {
   initializeSeedCheckpoints,
   shouldSkipSeed,
@@ -101,6 +95,91 @@ async function main() {
     console.log('───────────────────────────────────────────────────────────────');
     const membershipsResult = await executeSeed('memberships', () => seedMemberships(organizations, users));
     const { tiers = [], members = [] } = membershipsResult.result || {};
+
+    // 5. Create enhanced bookings with realistic patterns
+    console.log('\n📍 STEP 5: Enhanced Booking Data (Realistic Patterns)');
+    console.log('───────────────────────────────────────────────────────────────');
+    const bookingsResult = await executeSeed('enhanced-bookings', () =>
+      seedEnhancedBookings(organizations, users, courts),
+    );
+    const enhancedBookings = bookingsResult.result || [];
+
+    // 6. Create payment records
+    console.log('\n📍 STEP 6: Payment Records');
+    console.log('───────────────────────────────────────────────────────────────');
+    const paymentsResult = await executeSeed('payments', () => seedPaymentRecords());
+    const payments = paymentsResult.result || [];
+
+    // 7. Create matches between players
+    console.log('\n📍 STEP 7: Matches');
+    console.log('───────────────────────────────────────────────────────────────');
+    const referees = users.filter((u) => u.referee);
+    const matchesResult = await executeSeed('matches', () => seedMatches(users, referees));
+    const matches = matchesResult.result || [];
+
+    // 8. Seed community (posts, comments, reactions, follows)
+    console.log('\n📍 STEP 8: Community');
+    console.log('───────────────────────────────────────────────────────────────');
+    const communityResult = await executeSeed('community', () => seedCommunity(users));
+    const { posts = [], comments = [], reactions = [], follows = [] } = communityResult.result || {};
+
+    // 9. Seed tournaments
+    console.log('\n📍 STEP 9: Tournaments');
+    console.log('───────────────────────────────────────────────────────────────');
+    await executeSeed('tournaments', () => seedTournaments());
+
+    // 10. Seed tournament comments
+    console.log('\n📍 STEP 10: Tournament Comments');
+    console.log('───────────────────────────────────────────────────────────────');
+    const tournamentCommentsResult = await executeSeed('tournament-comments', () =>
+      seedTournamentComments(),
+    );
+    const tournamentComments = tournamentCommentsResult.result || 0;
+
+    // 11. Seed player statistics and rankings
+    console.log('\n📍 STEP 11: Player Statistics & Rankings');
+    console.log('───────────────────────────────────────────────────────────────');
+    await executeSeed('player-stats', () => seedStats());
+
+    // 12. Seed staff members
+    console.log('\n📍 STEP 12: Staff Members');
+    console.log('───────────────────────────────────────────────────────────────');
+    await executeSeed('staff', () => seedStaffForAllOrgs());
+
+    // 12B. Seed new enterprise staff system with departments and roles
+    console.log('\n📍 STEP 12B: New Enterprise Staff System');
+    console.log('───────────────────────────────────────────────────────────────');
+    await executeSeed('staff-new-system', () => seedNewStaffSystem());
+
+    // 12C. Seed staff dashboard sample security logs and incidents
+    console.log('\n📍 STEP 12C: Staff Dashboard Security Data');
+    console.log('───────────────────────────────────────────────────────────────');
+    await executeSeed('staff-dashboard-data', () => seedStaffDashboardData());
+
+    // 12D. Seed admin dashboard operational data
+    console.log('\n📍 STEP 12D: Admin Dashboard Operational Data');
+    console.log('───────────────────────────────────────────────────────────────');
+    await executeSeed('admin-dashboard-data', () => seedAdminDashboardData());
+
+    // 13. Seed coach sessions and activity links
+    console.log('\n📍 STEP 13: Coach Sessions');
+    console.log('───────────────────────────────────────────────────────────────');
+    await executeSeed('coach-sessions', () => seedCoachSessions());
+
+    // 14. Seed task templates
+    console.log('\n📍 STEP 14: Task Templates');
+    console.log('───────────────────────────────────────────────────────────────');
+    await executeSeed('task-templates', () => seedTaskTemplates());
+
+    // 15. Seed tournament tasks
+    console.log('\n📍 STEP 15: Tournament Tasks');
+    console.log('───────────────────────────────────────────────────────────────');
+    await executeSeed('tournament-tasks', () => seedTournamentTasks());
+
+    // 16. Seed tournament players (may fail due to duplicates - will retry next run)
+    console.log('\n📍 STEP 16: Tournament Players');
+    console.log('───────────────────────────────────────────────────────────────');
+    await executeSeed('tournament-players', () => seedTournamentPlayers());
 
     console.log('\n═══════════════════════════════════════════════════════════════');
     console.log('✨ MINIMAL SEEDING SESSION COMPLETED!\n');
