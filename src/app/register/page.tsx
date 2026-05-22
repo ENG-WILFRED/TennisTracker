@@ -415,7 +415,7 @@ export default function RegisterPage() {
             <form onSubmit={handleRegister}>
               {/* Disclaimer */}
               <div className="disclaimer-box">
-                📝 You're signing up as a user. After login, you can explore organizations, apply for roles (Player/Coach/Referee), or create your own organization.
+                📝 You're signing up as a spectator (guest). After login, you can explore organizations, apply for roles (Player/Coach/Referee), or create your own organization.
               </div>
 
               {/* First and Last Name */}

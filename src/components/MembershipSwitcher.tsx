@@ -5,10 +5,21 @@ import { useRole } from '@/context/RoleContext';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { SwitchConfirmModal } from './SwitchConfirmModal';
+import { Card, Button, colors } from '@vico/design-system';
 
 interface MembershipSwitcherProps {
   style?: React.CSSProperties;
 }
+
+const G = {
+  surface: colors.surface,
+  surfaceSecondary: colors.surfaceSecondary,
+  border: colors.border,
+  primary: colors.primary,
+  primaryHover: colors.primaryHover || colors.primary,
+  text: colors.textPrimary,
+  muted: colors.textMuted,
+};
 
 export const MembershipSwitcher: React.FC<MembershipSwitcherProps> = ({ style }) => {
   const { availableMemberships, currentRole, currentOrgName, setCurrentRole } = useRole();
@@ -96,9 +107,9 @@ export const MembershipSwitcher: React.FC<MembershipSwitcherProps> = ({ style })
             disabled={isSwitching}
             style={{
               width: '100%',
-              background: 'rgba(121, 191, 62, 0.1)',
-              border: '1px solid rgba(121, 191, 62, 0.3)',
-              color: '#7dc142',
+              background: G.surfaceSecondary,
+              border: `1px solid ${G.border}`,
+              color: G.primary,
               borderRadius: 6,
               padding: '6px 8px',
               fontSize: 9,
@@ -136,12 +147,12 @@ export const MembershipSwitcher: React.FC<MembershipSwitcherProps> = ({ style })
                 bottom: '100%',
                 left: 0,
                 right: 0,
-                background: '#1a3020',
-                border: '1px solid #2d5a35',
+                background: G.surfaceSecondary,
+                border: `1px solid ${G.border}`,
                 borderRadius: 6,
                 marginBottom: 4,
                 zIndex: 1000,
-                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.25)',
                 maxHeight: '240px',
                 overflowY: 'auto',
               }}
@@ -157,11 +168,11 @@ export const MembershipSwitcher: React.FC<MembershipSwitcherProps> = ({ style })
                     style={{
                       width: '100%',
                       padding: '8px 10px',
-                      background: isActive ? '#2d5a27' : 'transparent',
+                      background: isActive ? G.surface : 'transparent',
                       border: 'none',
                       borderBottom:
-                        index < availableMemberships.length - 1 ? '1px solid #2d5a3533' : 'none',
-                      color: isActive ? '#7dc142' : '#e8f5e0',
+                        index < availableMemberships.length - 1 ? `1px solid ${G.border}33` : 'none',
+                      color: isActive ? G.primary : colors.textPrimary,
                       textAlign: 'left',
                       cursor: isActive ? 'default' : 'pointer',
                       fontSize: 10,
@@ -173,7 +184,7 @@ export const MembershipSwitcher: React.FC<MembershipSwitcherProps> = ({ style })
                     }}
                     onMouseEnter={(e) => {
                       if (!isActive) {
-                        e.currentTarget.style.background = '#203520';
+                        e.currentTarget.style.background = G.surface;
                       }
                     }}
                     onMouseLeave={(e) => {
@@ -199,7 +210,7 @@ export const MembershipSwitcher: React.FC<MembershipSwitcherProps> = ({ style })
                       <div
                         style={{
                           fontSize: 8,
-                          color: isActive ? '#a8d84e' : '#7aaa6a',
+                          color: isActive ? G.primary : G.muted,
                           marginTop: 1,
                           textOverflow: 'ellipsis',
                           overflow: 'hidden',

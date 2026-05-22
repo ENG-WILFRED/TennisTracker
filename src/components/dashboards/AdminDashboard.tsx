@@ -755,9 +755,11 @@ export const AdminDashboard: React.FC = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-red-50 text-red-700">
-        <div>Error loading dashboard: {error}</div>
-      </div>
+      <DashboardErrorPage
+        error={error}
+        title="Admin Dashboard Error"
+        icon="⚙️"
+      />
     );
   }
 

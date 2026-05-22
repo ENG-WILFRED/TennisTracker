@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { MapPin, Home, AlertCircle, TrendingUp, Search, ChevronDown, Zap, Target, SlidersHorizontal } from 'lucide-react';
+import { Card, Button, colors } from '@vico/design-system';
 
 interface NearbyCourt {
   id: string;
@@ -218,10 +219,10 @@ export const FindNearbyCourts: React.FC<FindNearbyCourtsProps> = ({
       {/* Header */}
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-2.5">
-          <Home className="w-4 h-4 text-[#7dc142]" />
+          <Home className="w-4 h-4" style={{ color: colors.primary }} />
           <h2 className="text-sm font-semibold tracking-widest uppercase text-white/70">Find Courts Near You</h2>
         </div>
-        {loading && <span className="w-1.5 h-1.5 rounded-full bg-[#7dc142] animate-pulse" />}
+        {loading && <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: colors.primary }} />}
       </div>
 
       {/* Search inputs */}
@@ -258,27 +259,30 @@ export const FindNearbyCourts: React.FC<FindNearbyCourtsProps> = ({
 
       {/* Action buttons */}
       <div className="grid grid-cols-3 gap-2 mb-5">
-        <button
+        <Button
           onClick={() => fetchNearbyCourts('radius')} disabled={loading}
-          className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg bg-[#7dc142] hover:bg-[#8dd152] text-[#071207] text-xs font-bold tracking-wide uppercase transition-all disabled:opacity-50"
+          variant="primary" size="md"
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}
         >
           <Target className="w-3.5 h-3.5" />
           {loading ? 'Searching…' : `${radiusKm} km`}
-        </button>
-        <button
+        </Button>
+        <Button
           onClick={() => fetchNearbyCourts('nearest')} disabled={loading}
-          className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg bg-white/[0.05] hover:bg-white/[0.09] border border-white/[0.07] text-white/70 hover:text-white text-xs font-semibold tracking-wide uppercase transition-all disabled:opacity-50"
+          variant="secondary" size="md"
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}
         >
           <Zap className="w-3.5 h-3.5" />
           Nearest
-        </button>
-        <button
+        </Button>
+        <Button
           onClick={() => fetchNearbyCourts('location')} disabled={loading}
-          className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg bg-white/[0.05] hover:bg-white/[0.09] border border-white/[0.07] text-white/70 hover:text-white text-xs font-semibold tracking-wide uppercase transition-all disabled:opacity-50"
+          variant="secondary" size="md"
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}
         >
           <MapPin className="w-3.5 h-3.5" />
           By city
-        </button>
+        </Button>
       </div>
 
       {/* Error */}

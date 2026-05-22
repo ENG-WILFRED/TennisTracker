@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { getTournamentDetails, getTournamentLeaderboard } from '@/actions/tournaments';
 import { authenticatedFetch } from '@/lib/authenticatedFetch';
+import { fetchWithCache, clearCacheEntry } from '@/lib/dashboardCache';
 import React from 'react';
 import { LoadingState } from '@/components/LoadingState';
 
@@ -62,22 +63,29 @@ export default function OrganizationTournamentManagementPage({
   const orgId = resolvedParams.id;
   const tournamentId = resolvedParams.tournamentId;
 
-  const fetchTournamentData = async () => {
+  const fetchTournamentData = async (forceReload = false) => {
     if (!tournamentId || !orgId) {
       setLoading(false);
       return;
     }
 
+    const tournamentCacheKey = `org_tournament_detail_${orgId}_${tournamentId}`;
+    const leaderboardCacheKey = `org_tournament_leaderboard_${orgId}_${tournamentId}`;
+
+    if (forceReload) {
+      clearCacheEntry(tournamentCacheKey);
+      clearCacheEntry(leaderboardCacheKey);
+    }
+
     try {
-      const [tournamentData, leaderboardData, announcementsData] = await Promise.all([
-        getTournamentDetails(tournamentId),
-        getTournamentLeaderboard(tournamentId),
-        authenticatedFetch(`/api/tournaments/${tournamentId}/announcements`),
-      ]);
+      const tournamentData = await fetchWithCache(tournamentCacheKey, () => getTournamentDetails(tournamentId));
 
       let parsedAnnouncements: any[] = [];
-      if (announcementsData?.ok) {
-        parsedAnnouncements = await announcementsData.json().catch(() => []);
+      if (activeTab === 'announcements') {
+        const announcementsResponse = await authenticatedFetch(`/api/tournaments/${tournamentId}/announcements`);
+        if (announcementsResponse?.ok) {
+          parsedAnnouncements = await announcementsResponse.json().catch(() => []);
+        }
       }
 
       if (tournamentData) {
@@ -97,7 +105,7 @@ export default function OrganizationTournamentManagementPage({
             tournamentData.registrations.filter((r: any) => r.status === 'pending')
           );
           setApprovedRegistrations(
-            tournamentData.registrations.filter((r: any) => r.status === 'approved')
+            tournamentData.registrations.filter((r: any) => r.status === 'approved' || r.status === 'registered')
           );
           setRejectedRegistrations(
             tournamentData.registrations.filter((r: any) => r.status === 'rejected')
@@ -105,9 +113,14 @@ export default function OrganizationTournamentManagementPage({
         }
       }
 
-      if (leaderboardData) {
-        setLeaderboard(leaderboardData);
+      if (activeTab === 'analytics') {
+        const leaderboardData = await fetchWithCache(leaderboardCacheKey, () => getTournamentLeaderboard(tournamentId));
+        if (leaderboardData) {
+          setLeaderboard(leaderboardData);
+        }
       }
+
+      setAnnouncements(parsedAnnouncements);
     } catch (error) {
       console.error('Error fetching tournament data:', error);
     } finally {
@@ -126,7 +139,7 @@ export default function OrganizationTournamentManagementPage({
 
       if (res.ok) {
         // Refetch tournament to update registrations
-        await fetchTournamentData();
+        await fetchTournamentData(true);
       }
     } catch (error) {
       console.error('Error updating registration:', error);
@@ -154,7 +167,7 @@ export default function OrganizationTournamentManagementPage({
         throw new Error(errMsg);
       }
 
-      await fetchTournamentData();
+      await fetchTournamentData(true);
       setSaveSuccess('Tournament updated successfully.');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to save tournament';
@@ -169,6 +182,17 @@ export default function OrganizationTournamentManagementPage({
   useEffect(() => {
     fetchTournamentData();
   }, [tournamentId, orgId]);
+
+  useEffect(() => {
+    if (tournamentId) {
+      if (activeTab === 'announcements') {
+        fetchTournamentData();
+      }
+      if (activeTab === 'analytics') {
+        fetchTournamentData();
+      }
+    }
+  }, [activeTab, tournamentId]);
 
   if (loading) {
     return <LoadingState icon="🏆" message="Loading tournament details..." />;

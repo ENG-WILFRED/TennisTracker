@@ -7,6 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { LoadingState } from '@/components/LoadingState';
+import { DashboardErrorPage } from '@/components/DashboardErrorPage';
 import { chatUrlForUser, sendChallengeRequest } from '@/lib/nearby';
 import { FindNearbyPeople } from '@/components/FindNearbyPeople';
 import { FindNearbyCourts } from '@/components/FindNearbyCourts';
@@ -520,9 +521,11 @@ export const OrganizationDashboard: React.FC = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-red-50 text-red-700">
-        <div>Error loading dashboard: {error}</div>
-      </div>
+      <DashboardErrorPage
+        error={error}
+        title="Organization Dashboard Error"
+        icon="🏢"
+      />
     );
   }
 

@@ -4,8 +4,7 @@ import Providers from "@/components/Providers";
 import { RoleProvider } from "@/context/RoleContext";
 import { ToastProvider, ToastContainer } from "@/components/ui/ToastContext";
 import { Metadata } from "next";
-import { Toaster } from "react-hot-toast";
-
+import { Toaster } from "react-hot-toast";import { toastOptions } from '@vico/design-system';
 export const metadata: Metadata = {
   title: "Vico Sports | Tennis Club Management",
   description:
@@ -145,7 +144,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <RoleProvider>
             <Providers>
               {children}
-              <Toaster position="top-right" />
+              <Toaster toastOptions={toastOptions} position="top-right" />
               <ToastContainer />
             </Providers>
           </RoleProvider>

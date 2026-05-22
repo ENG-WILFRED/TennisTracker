@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { MapPin, Users, AlertCircle, TrendingUp, Search, Filter, ChevronDown, Zap, Target, SlidersHorizontal } from 'lucide-react';
+import { Card, Button, colors } from '@vico/design-system';
 
 interface NearbyPerson {
   id: string;
@@ -229,10 +230,10 @@ export const FindNearbyPeople: React.FC<FindNearbyPeopleProps> = ({
       {/* Header */}
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-2.5">
-          <MapPin className="w-4 h-4 text-[#7dc142]" />
+          <MapPin className="w-4 h-4" style={{ color: colors.primary }} />
           <h2 className="text-sm font-semibold tracking-widest uppercase text-white/70">Find Players Near You</h2>
         </div>
-        {loading && <span className="w-1.5 h-1.5 rounded-full bg-[#7dc142] animate-pulse" />}
+        {loading && <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: colors.primary }} />}
       </div>
 
       {/* Search inputs */}
@@ -269,27 +270,30 @@ export const FindNearbyPeople: React.FC<FindNearbyPeopleProps> = ({
 
       {/* Action buttons */}
       <div className="grid grid-cols-3 gap-2 mb-5">
-        <button
+        <Button
           onClick={() => fetchNearbyPeople('radius')} disabled={loading}
-          className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg bg-[#7dc142] hover:bg-[#8dd152] text-[#071207] text-xs font-bold tracking-wide uppercase transition-all disabled:opacity-50 col-span-1"
+          variant="primary" size="md"
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}
         >
           <Target className="w-3.5 h-3.5" />
           {loading ? 'Searching…' : `${radiusKm} km`}
-        </button>
-        <button
+        </Button>
+        <Button
           onClick={() => fetchNearbyPeople('nearest')} disabled={loading}
-          className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg bg-white/[0.05] hover:bg-white/[0.09] border border-white/[0.07] text-white/70 hover:text-white text-xs font-semibold tracking-wide uppercase transition-all disabled:opacity-50"
+          variant="secondary" size="md"
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}
         >
           <Zap className="w-3.5 h-3.5" />
           Nearest
-        </button>
-        <button
+        </Button>
+        <Button
           onClick={() => fetchNearbyPeople('location')} disabled={loading}
-          className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg bg-white/[0.05] hover:bg-white/[0.09] border border-white/[0.07] text-white/70 hover:text-white text-xs font-semibold tracking-wide uppercase transition-all disabled:opacity-50"
+          variant="secondary" size="md"
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}
         >
           <MapPin className="w-3.5 h-3.5" />
           By city
-        </button>
+        </Button>
       </div>
 
       {/* Error */}

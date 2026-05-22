@@ -71,7 +71,11 @@ export function CheckoutModal({ t, user, onClose, onSuccess }: { t: Tournament; 
           body: JSON.stringify({
             ...payload,
             currency: 'USD',
-            metadata: { source: 'tournament_entry' },
+            metadata: { 
+              source: 'tournament_entry',
+              eventId: t.id,
+              tournamentName: t.name,
+            },
           }),
         });
 
@@ -107,7 +111,13 @@ export function CheckoutModal({ t, user, onClose, onSuccess }: { t: Tournament; 
           body: JSON.stringify({
             ...payload,
             currency: 'usd',
-            metadata: { source: 'tournament_entry' },
+            successRedirectUrl: window.location.href,
+            failureRedirectUrl: window.location.href,
+            metadata: { 
+              source: 'tournament_entry',
+              eventId: t.id,
+              tournamentName: t.name,
+            },
           }),
         });
 

@@ -463,12 +463,20 @@ export function BookingView({ onClose, isEmbedded = false, canBook = true, organ
             endTime: endTime.toISOString(),
             bookingId: bookingResult.booking.id,
             notes: notes,
-          }
+          },
+          window.location.href,
+          window.location.href
         );
 
         if (paymentResult.success) {
-          if (paymentResult.checkoutUrl) {
+          // Show retry feedback if retries were attempted
+          if (paymentResult.retriesAttempted && paymentResult.retriesAttempted > 0) {
+            showToast('info', `⚠️ Payment gateway was slow, retried ${paymentResult.retriesAttempted} time(s). Redirecting to Stripe...`);
+          } else {
             showToast('success', 'Redirecting to Stripe...');
+          }
+
+          if (paymentResult.checkoutUrl) {
             setTimeout(() => {
               window.location.href = paymentResult.checkoutUrl;
             }, 1500);

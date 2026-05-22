@@ -3,6 +3,7 @@
 import React, { useState, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { getAccessToken } from '@/lib/tokenManager';
+import { Card, Button, Input, colors } from '@vico/design-system';
 
 interface ToggleSetting {
   id: string;
@@ -10,6 +11,21 @@ interface ToggleSetting {
   description: string;
   enabled: boolean;
 }
+
+const G = {
+  background: colors.background,
+  surface: colors.surface,
+  surfaceSecondary: colors.surfaceSecondary,
+  surfaceTertiary: colors.surfaceTertiary,
+  border: colors.border,
+  primary: colors.primary,
+  primaryHover: colors.primaryHover,
+  accent: colors.accent,
+  text: colors.textPrimary,
+  muted: colors.textMuted,
+  warning: colors.warning,
+  danger: colors.danger,
+};
 
 export const SettingsView: React.FC<{ isEmbedded?: boolean }> = ({ isEmbedded = false }) => {
   const { user, logout } = useAuth();
@@ -49,6 +65,27 @@ export const SettingsView: React.FC<{ isEmbedded?: boolean }> = ({ isEmbedded = 
   const [playingLevel, setPlayingLevel] = useState('intermediate');
   const [preferredTime, setPreferredTime] = useState('evening');
 
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    background: G.surfaceSecondary,
+    border: `1px solid ${G.border}`,
+    color: G.text,
+    borderRadius: 12,
+    padding: '12px 14px',
+    fontSize: 13,
+    outline: 'none',
+  };
+
+  const labelStyle: React.CSSProperties = {
+    display: 'block',
+    fontSize: 10,
+    fontWeight: 700,
+    letterSpacing: '0.12em',
+    textTransform: 'uppercase',
+    color: G.primary,
+    marginBottom: 8,
+  };
+
   const handleToggle = (id: string, settingArray: ToggleSetting[], setter: React.Dispatch<React.SetStateAction<ToggleSetting[]>>) => {
     setter(settingArray.map(s => (s.id === id ? { ...s, enabled: !s.enabled } : s)));
   };
@@ -82,6 +119,18 @@ export const SettingsView: React.FC<{ isEmbedded?: boolean }> = ({ isEmbedded = 
     setTimeout(() => setShowSaveMessage(false), 3000);
   };
 
+  const SaveButton = ({ onClick, label = '💾 Save Changes' }: { onClick: () => void; label?: string }) => (
+    <Button
+      onClick={onClick}
+      disabled={isLoading}
+      variant="primary"
+      size="md"
+      style={{ width: '100%', marginTop: 16 }}
+    >
+      {label}
+    </Button>
+  );
+
   const handleSave = useCallback(async () => {
     if (!user?.id) return setErrorMessage('User not found');
     const result = await makeApiCall(`/api/players/${user.id}`, { firstName, lastName, email, phone, bio });
@@ -112,10 +161,6 @@ export const SettingsView: React.FC<{ isEmbedded?: boolean }> = ({ isEmbedded = 
     if (result?.success) showSuccess();
   }, [user?.id, makeApiCall]);
 
-  // Shared input class
-  const inputCls = 'w-full bg-[#2d5a27] border border-[#2d5a35] text-[#e8f5e0] rounded-md px-3 py-2 text-sm outline-none focus:border-[#7dc142] focus:ring-1 focus:ring-[#7dc142]/40 transition-colors placeholder-[#7aaa6a]';
-  const labelCls = 'block text-[10px] font-bold uppercase tracking-wider text-[#a8d84e] mb-1.5';
-
   const tabs = [
     { id: 'account', icon: '👤', label: 'Account' },
     { id: 'privacy', icon: '🔐', label: 'Privacy' },
@@ -128,77 +173,88 @@ export const SettingsView: React.FC<{ isEmbedded?: boolean }> = ({ isEmbedded = 
   const Toggle = ({ enabled, onToggle }: { enabled: boolean; onToggle: () => void }) => (
     <button
       onClick={onToggle}
-      className={`relative w-11 h-6 rounded-full border transition-all flex-shrink-0 ${
-        enabled ? 'bg-[#7dc142] border-[#7dc142]' : 'bg-[#152515] border-[#2d5a35]'
-      }`}
+      style={{
+        position: 'relative',
+        width: 44,
+        height: 26,
+        borderRadius: 999,
+        border: `1px solid ${enabled ? G.primary : G.border}`,
+        background: enabled ? G.primary : G.surfaceSecondary,
+        transition: 'all .15s ease',
+        flexShrink: 0,
+      }}
     >
       <span
-        className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
-          enabled ? 'translate-x-5' : 'translate-x-0.5'
-        }`}
+        style={{
+          position: 'absolute',
+          top: 2,
+          left: enabled ? 20 : 2,
+          width: 20,
+          height: 20,
+          borderRadius: '50%',
+          background: colors.background,
+          transition: 'all .15s ease',
+        }}
       />
     </button>
   );
 
   const ToggleRow = ({ setting, onToggle }: { setting: ToggleSetting; onToggle: () => void }) => (
-    <div className="flex items-center justify-between px-4 py-3 bg-[#152515] border border-[#2d5a35] rounded-lg hover:border-[#7dc142]/50 transition-colors">
-      <div className="flex-1 min-w-0 mr-4">
-        <div className="text-sm font-semibold text-[#e8f5e0]">{setting.label}</div>
-        <div className="text-xs text-[#7aaa6a] mt-0.5">{setting.description}</div>
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '16px',
+        background: G.surfaceSecondary,
+        border: `1px solid ${G.border}`,
+        borderRadius: 16,
+        transition: 'border-color .15s ease',
+      }}
+      onMouseEnter={e => (e.currentTarget.style.borderColor = G.primary)}
+      onMouseLeave={e => (e.currentTarget.style.borderColor = G.border)}
+    >
+      <div style={{ flex: 1, minWidth: 0, marginRight: 16 }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: G.text }}>{setting.label}</div>
+        <div style={{ fontSize: 12, color: G.muted, marginTop: 4 }}>{setting.description}</div>
       </div>
       <Toggle enabled={setting.enabled} onToggle={onToggle} />
     </div>
   );
 
-  const SaveButton = ({ onClick, label = '💾 Save Changes' }: { onClick: () => void; label?: string }) => (
-    <button
-      onClick={onClick}
-      disabled={isLoading}
-      className="w-full mt-4 bg-[#7dc142] hover:bg-[#a8d84e] text-[#0f1f0f] font-bold text-sm rounded-lg py-2.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-    >
-      {label}
-    </button>
-  );
-
-  const Card = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => (
-    <div className={`bg-[#1a3020] border border-[#2d5a35] rounded-xl p-5 ${className}`}>
-      {children}
-    </div>
-  );
-
   const CardTitle = ({ children }: { children: React.ReactNode }) => (
-    <h2 className="text-base font-bold text-[#7dc142] mb-4">{children}</h2>
+    <h2 style={{ fontSize: 16, fontWeight: 700, color: G.primary, marginBottom: 16 }}>{children}</h2>
   );
 
   return (
-    <div className={`w-full ${isEmbedded ? 'bg-gradient-to-br from-[#0f2710] via-[#0f1f0f] to-[#0d1f0d] p-5 rounded-xl' : ''}`}>
+    <div className="w-full" style={{ background: isEmbedded ? G.background : undefined, padding: isEmbedded ? 20 : 0, borderRadius: isEmbedded ? 16 : 0 }}>
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-black text-[#7dc142] tracking-tight">⚙️ Settings</h1>
-        <p className="text-sm text-[#7aaa6a] mt-1">Manage your account and preferences</p>
+        <h1 className="text-2xl font-black" style={{ color: G.primary, letterSpacing: '-0.03em' }}>⚙️ Settings</h1>
+        <p className="text-sm mt-1" style={{ color: G.muted }}>Manage your account and preferences</p>
       </div>
 
       {/* Coming Soon Implementation Notice */}
-      <div className="mb-6 p-5 bg-gradient-to-br from-[#1a3020] to-[#152515] border-2 border-[#f0c040] rounded-xl shadow-lg shadow-[#f0c040]/20">
+      <Card style={{ marginBottom: 24, background: G.surfaceSecondary, border: `1px solid ${G.primary}`, boxShadow: '0 16px 40px rgba(0,0,0,0.18)' }}>
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">
               <span className="text-2xl">✨</span>
-              <h2 className="text-base font-bold text-[#f0c040]">Settings Implementation</h2>
+              <h2 className="text-base font-bold" style={{ color: G.warning }}>Settings Implementation</h2>
             </div>
-            <p className="text-sm text-[#7aaa6a] leading-relaxed">
+            <p className="text-sm leading-relaxed" style={{ color: G.muted }}>
               We're rolling out enhanced settings management with improved functionality, better organization, and more customization options. Stay tuned for the complete implementation!
             </p>
           </div>
           <div className="flex flex-col items-end gap-2 whitespace-nowrap">
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-[#f0c040] text-[#0f1f0f] rounded-lg">
-              <span className="inline-block w-2 h-2 bg-[#0f1f0f] rounded-full animate-pulse"></span>
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg" style={{ background: G.warning, color: G.background }}>
+              <span className="inline-block w-2 h-2 rounded-full animate-pulse" style={{ background: G.primary }}></span>
               <span className="text-xs font-bold">In Progress</span>
             </div>
-            <p className="text-xs text-[#7aaa6a] italic">Rolling out soon</p>
+            <p className="text-xs" style={{ color: G.muted }}>Rolling out soon</p>
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Error */}
       {errorMessage && (
@@ -210,9 +266,9 @@ export const SettingsView: React.FC<{ isEmbedded?: boolean }> = ({ isEmbedded = 
       {/* Loading overlay */}
       {isLoading && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center">
-          <div className="bg-[#1a3020] border border-[#7dc142] rounded-xl px-8 py-6 text-center shadow-2xl">
+          <div className="rounded-xl px-8 py-6 text-center shadow-2xl" style={{ background: G.surfaceSecondary, border: `1px solid ${G.primary}` }}>
             <div className="text-3xl mb-2 animate-spin">⏳</div>
-            <p className="text-[#7dc142] font-bold text-sm">Saving changes…</p>
+            <p className="font-bold text-sm" style={{ color: G.primary }}>Saving changes…</p>
           </div>
         </div>
       )}
@@ -245,26 +301,26 @@ export const SettingsView: React.FC<{ isEmbedded?: boolean }> = ({ isEmbedded = 
               <CardTitle>Personal Information</CardTitle>
               <div className="grid grid-cols-2 gap-3 mb-3">
                 <div>
-                  <label className={labelCls}>First Name</label>
-                  <input value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="First name" className={inputCls} />
+                  <label style={labelStyle}>First Name</label>
+                  <input value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="First name" style={inputStyle} />
                 </div>
                 <div>
-                  <label className={labelCls}>Last Name</label>
-                  <input value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Last name" className={inputCls} />
+                  <label style={labelStyle}>Last Name</label>
+                  <input value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Last name" style={inputStyle} />
                 </div>
               </div>
               <div className="space-y-3 mb-1">
                 <div>
-                  <label className={labelCls}>Email Address</label>
-                  <input value={email} onChange={e => setEmail(e.target.value)} type="email" placeholder="your@email.com" className={inputCls} />
+                  <label style={labelStyle}>Email Address</label>
+                  <input value={email} onChange={e => setEmail(e.target.value)} type="email" placeholder="your@email.com" style={inputStyle} />
                 </div>
                 <div>
-                  <label className={labelCls}>Phone Number</label>
-                  <input value={phone} onChange={e => setPhone(e.target.value)} type="tel" placeholder="+1-555-0000" className={inputCls} />
+                  <label style={labelStyle}>Phone Number</label>
+                  <input value={phone} onChange={e => setPhone(e.target.value)} type="tel" placeholder="+1-555-0000" style={inputStyle} />
                 </div>
                 <div>
-                  <label className={labelCls}>Bio</label>
-                  <textarea value={bio} onChange={e => setBio(e.target.value)} rows={3} placeholder="Tell us about your tennis journey…" className={`${inputCls} resize-none`} />
+                  <label style={labelStyle}>Bio</label>
+                  <textarea value={bio} onChange={e => setBio(e.target.value)} rows={3} placeholder="Tell us about your tennis journey…" style={{ ...inputStyle, resize: 'none' }} />
                 </div>
               </div>
               <SaveButton onClick={handleSave} />
@@ -328,7 +384,7 @@ export const SettingsView: React.FC<{ isEmbedded?: boolean }> = ({ isEmbedded = 
               <CardTitle>Playing Preferences</CardTitle>
               <div className="space-y-4">
                 <div>
-                  <label className={labelCls}>Preferred Court Surface</label>
+                  <label style={labelStyle}>Preferred Court Surface</label>
                   <div className="grid grid-cols-3 gap-2">
                     {courtSurfacePrefs.map(surface => (
                       <button
@@ -346,8 +402,8 @@ export const SettingsView: React.FC<{ isEmbedded?: boolean }> = ({ isEmbedded = 
                   </div>
                 </div>
                 <div>
-                  <label className={labelCls}>Playing Level</label>
-                  <select value={playingLevel} onChange={e => setPlayingLevel(e.target.value)} className={inputCls}>
+                  <label style={labelStyle}>Playing Level</label>
+                  <select value={playingLevel} onChange={e => setPlayingLevel(e.target.value)} style={inputStyle}>
                     <option value="beginner">🟢 Beginner</option>
                     <option value="intermediate">🟡 Intermediate</option>
                     <option value="advanced">🔴 Advanced</option>
@@ -355,8 +411,8 @@ export const SettingsView: React.FC<{ isEmbedded?: boolean }> = ({ isEmbedded = 
                   </select>
                 </div>
                 <div>
-                  <label className={labelCls}>Preferred Playing Time</label>
-                  <select value={preferredTime} onChange={e => setPreferredTime(e.target.value)} className={inputCls}>
+                  <label style={labelStyle}>Preferred Playing Time</label>
+                  <select value={preferredTime} onChange={e => setPreferredTime(e.target.value)} style={inputStyle}>
                     <option value="morning">🌅 Morning (6–10 AM)</option>
                     <option value="afternoon">☀️ Afternoon (10 AM–6 PM)</option>
                     <option value="evening">🌆 Evening (6–10 PM)</option>
@@ -430,7 +486,7 @@ export const SettingsView: React.FC<{ isEmbedded?: boolean }> = ({ isEmbedded = 
             <CardTitle>Appearance Settings</CardTitle>
             <div className="space-y-5">
               <div>
-                <label className={labelCls}>Theme</label>
+                <label style={labelStyle}>Theme</label>
                 <div className="grid grid-cols-3 gap-2">
                   {[
                     { label: '🌙 Dark', active: true },
@@ -452,7 +508,7 @@ export const SettingsView: React.FC<{ isEmbedded?: boolean }> = ({ isEmbedded = 
               </div>
 
               <div>
-                <label className={labelCls}>Color Scheme</label>
+                <label style={labelStyle}>Color Scheme</label>
                 <div className="grid grid-cols-4 gap-2">
                   {[
                     { color: 'bg-green-600', active: true, title: 'Forest Green' },
@@ -472,7 +528,7 @@ export const SettingsView: React.FC<{ isEmbedded?: boolean }> = ({ isEmbedded = 
               </div>
 
               <div>
-                <label className={labelCls}>Font Size</label>
+                <label style={labelStyle}>Font Size</label>
                 <div className="flex gap-2">
                   {[
                     { label: 'A', size: 'text-xs', sizeLabel: 'Small', active: false },

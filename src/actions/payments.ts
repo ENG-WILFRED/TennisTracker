@@ -5,6 +5,8 @@ import { sendPaymentReceiptEmail } from '@/app/api/notification/producer';
 import { formatKenyanMobileNumber } from '@/lib/phone';
 
 const REQUEST_TIMEOUT_MS = 20000;
+const MAX_RETRIES = 3;
+const RETRY_DELAY_MS = 2000;
 
 async function fetchWithTimeout(url: string, options: RequestInit = {}, timeout = REQUEST_TIMEOUT_MS) {
   const controller = new AbortController();
@@ -26,8 +28,34 @@ async function fetchWithTimeout(url: string, options: RequestInit = {}, timeout 
   }
 }
 
-// Get base URL for callbacks and cancellations
-const getBaseUrl = () => {
+async function fetchWithRetry(url: string, options: RequestInit = {}, onRetry?: (attempt: number) => void) {
+  let lastError: Error;
+
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const response = await fetchWithTimeout(url, options);
+      return response;
+    } catch (error) {
+      lastError = error as Error;
+      console.warn(`Request attempt ${attempt}/${MAX_RETRIES} failed:`, lastError.message);
+
+      if (attempt < MAX_RETRIES) {
+        // Notify about retry if callback provided
+        if (onRetry) {
+          onRetry(attempt);
+        }
+
+        // Wait before retrying
+        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
+      }
+    }
+  }
+
+  throw lastError!;
+}
+
+// Get base URL for callbacks (backend-to-backend)
+const getCallbackBaseUrl = () => {
   // Use NEXT_PUBLIC_TEST_BASE_URL for development/testing
   if (process.env.NEXT_PUBLIC_TEST_BASE_URL) {
     return process.env.NEXT_PUBLIC_TEST_BASE_URL;
@@ -37,16 +65,44 @@ const getBaseUrl = () => {
     return process.env.NEXT_PUBLIC_SITE_URL;
   }
   // Default fallback
-  return 'http://localhost:3020';
+  return 'http://localhost:3010';
+};
+
+// Get base URL for redirect URLs (frontend)
+const getRedirectBaseUrl = () => {
+  // Use TEST_BASE_URL for development/testing
+  if (process.env.TEST_BASE_URL) {
+    return process.env.TEST_BASE_URL;
+  }
+  // Fallback to NEXT_PUBLIC_SITE_URL for production
+  if (process.env.NEXT_PUBLIC_SITE_URL) {
+    return process.env.NEXT_PUBLIC_SITE_URL;
+  }
+  // Default fallback
+  return 'http://localhost:3010';
 };
 
 const getPaymentGatewayBaseUrl = () => {
-  return process.env.PAYMENT_GATEWAY_BASE_URL || 'https://payment-gateway.kimaniwilfred95.workers.dev';
+  return process.env.PAYMENT_GATEWAY_BASE_URL || 'http://localhost:8787';
 };
 
 const getMpesaGatewayBaseUrl = () => {
   return process.env.MPESA_GATEWAY_BASE_URL || 'https://mpesa-integration-worker.kimaniwilfred95.workers.dev';
 };
+
+function appendQueryParams(url: string, params: Record<string, string | undefined>) {
+  const [baseUrl, existingQuery] = url.split('?');
+  const searchParams = new URLSearchParams(existingQuery || '');
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      searchParams.set(key, value);
+    }
+  });
+
+  const queryString = searchParams.toString();
+  return queryString ? `${baseUrl}?${queryString}` : baseUrl;
+}
 
 /**
  * M-Pesa STK Push Payment Action
@@ -73,8 +129,8 @@ export async function processMPesaPayment(
     }
 
     const mobileNumberNormalized = normalized.normalized;
-    const baseUrl = getBaseUrl();
-    const callbackUrl = `${baseUrl}/api/payments/callback/mpesa`;
+    const callbackBaseUrl = getCallbackBaseUrl();
+    const callbackUrl = `${callbackBaseUrl}/api/payments/callback/mpesa`;
 
     const record = await prisma.paymentRecord.create({
       data: {
@@ -91,7 +147,7 @@ export async function processMPesaPayment(
       },
     });
 
-    const cancelUrl = `${baseUrl}/api/payments/cancel/mpesa/${record.id}`;
+    const cancelUrl = `${callbackBaseUrl}/api/payments/cancel/mpesa/${record.id}`;
     await prisma.paymentRecord.update({
       where: { id: record.id },
       data: { cancelUrl },
@@ -165,8 +221,8 @@ export async function processPayPalPayment(
       return { success: false, error: 'Invalid amount' };
     }
 
-    const baseUrl = getBaseUrl();
-    const callbackUrl = `${baseUrl}/api/payments/callback/paypal`;
+    const callbackBaseUrl = getCallbackBaseUrl();
+    const callbackUrl = `${callbackBaseUrl}/api/payments/callback/paypal`;
 
     const record = await prisma.paymentRecord.create({
       data: {
@@ -183,7 +239,7 @@ export async function processPayPalPayment(
       },
     });
 
-    const cancelUrl = `${baseUrl}/api/payments/cancel/paypal/${record.id}`;
+    const cancelUrl = `${callbackBaseUrl}/api/payments/cancel/paypal/${record.id}`;
     await prisma.paymentRecord.update({
       where: { id: record.id },
       data: { cancelUrl },
@@ -254,15 +310,21 @@ export async function processStripePayment(
   userId: string,
   eventId: string,
   bookingType: 'tournament_entry' | 'amenity_booking' | 'court_booking',
-  metadata: Record<string, any> = {}
+  metadata: Record<string, any> = {},
+  successRedirectUrl?: string,
+  failureRedirectUrl?: string,
+  customCallbackUrl?: string,
+  customCancelUrl?: string
 ) {
   try {
     if (!amount || amount <= 0) {
       return { success: false, error: 'Invalid amount' };
     }
 
-    const baseUrl = getBaseUrl();
-    const callbackUrl = `${baseUrl}/api/payments/callback/stripe`;
+    const callbackBaseUrl = getCallbackBaseUrl();
+    const redirectBaseUrl = getRedirectBaseUrl();
+    // Use custom callback URL if provided, otherwise generate default internal gateway callback endpoint
+    const callbackUrl = customCallbackUrl || `${callbackBaseUrl}/api/payments/callback/stripe`;
 
     const record = await prisma.paymentRecord.create({
       data: {
@@ -275,40 +337,113 @@ export async function processStripePayment(
         providerStatus: 'pending',
         callbackUrl,
         cancelUrl: null,
-        metadata: JSON.stringify(metadata),
+        metadata: JSON.stringify({
+          eventId,
+          userId,
+          bookingType,
+          ...metadata,
+        }),
       },
     });
 
-    const cancelUrl = `${baseUrl}/api/payments/cancel/stripe/${record.id}`;
+    // Update metadata with transactionId after record creation
+    await prisma.paymentRecord.update({
+      where: { id: record.id },
+      data: {
+        metadata: JSON.stringify({
+          transactionId: record.id,
+          paymentAttemptId: record.id,
+          eventId,
+          userId,
+          bookingType,
+          ...metadata,
+        }),
+      },
+    });
+
+    // Use custom cancel URL if provided, otherwise generate default
+    const cancelUrl = customCancelUrl || `${redirectBaseUrl}/api/payments/cancel/stripe/${record.id}`;
     await prisma.paymentRecord.update({
       where: { id: record.id },
       data: { cancelUrl },
     });
 
     const idempotencyKey = `${record.id}-${Date.now()}`;
-    const stripeResponse = await fetchWithTimeout(`${getPaymentGatewayBaseUrl()}/api/payments/stripe`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Idempotency-Key': idempotencyKey,
-      },
-      body: JSON.stringify({
-        amount: Math.round(amount * 100),
-        currency: currency.toLowerCase(),
-        callbackUrl,
-        cancelUrl,
-        metadata: {
-          transactionId: record.id,
-          eventId,
-          userId,
-          bookingType,
-          ...metadata,
-        },
-      }),
+
+    const defaultSuccessPage = successRedirectUrl ? successRedirectUrl : `${redirectBaseUrl}/player/booking/success`;
+    const defaultFailurePage = failureRedirectUrl ? failureRedirectUrl : successRedirectUrl ? successRedirectUrl : `${redirectBaseUrl}/player/booking/success`;
+
+    const successUrl = appendQueryParams(defaultSuccessPage, {
+      success: 'true',
+      transactionId: record.id,
+      source: 'stripe',
     });
+
+    const failureUrl = appendQueryParams(defaultFailurePage, {
+      failed: '1',
+      transactionId: record.id,
+      source: 'stripe',
+    });
+
+    const stripePayload = {
+      amount,
+      currency: currency.toLowerCase(),
+      successRedirectUrl: successUrl,
+      failureRedirectUrl: failureUrl,
+      callbackUrl,
+      cancelUrl,
+      metadata: {
+        transactionId: record.id,
+        paymentAttemptId: record.id,
+        eventId,
+        userId,
+        bookingType,
+        ...metadata,
+      },
+    };
+
+    console.log('[Stripe Payment Request]', {
+      transactionId: record.id,
+      amount: stripePayload.amount,
+      currency: stripePayload.currency,
+      successRedirectUrl: stripePayload.successRedirectUrl,
+      failureRedirectUrl: stripePayload.failureRedirectUrl,
+      callbackUrl: stripePayload.callbackUrl,
+      cancelUrl: stripePayload.cancelUrl,
+      redirectBaseUrl,
+      callbackBaseUrl,
+      idempotencyKey,
+      timestamp: new Date().toISOString(),
+    });
+
+    // Track retry attempts for user feedback
+    let retryAttempt = 0;
+
+    const stripeResponse = await fetchWithRetry(
+      `${getPaymentGatewayBaseUrl()}/api/payments/stripe`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Idempotency-Key': idempotencyKey,
+        },
+        body: JSON.stringify(stripePayload),
+      },
+      (attempt) => {
+        retryAttempt = attempt;
+        console.log(`Retrying Stripe payment request (attempt ${attempt + 1}/${MAX_RETRIES}) for transaction ${record.id}`);
+      }
+    );
 
     if (!stripeResponse.ok) {
       const error = await stripeResponse.json();
+      console.error('[Stripe Payment Failed]', {
+        transactionId: record.id,
+        status: stripeResponse.status,
+        statusText: stripeResponse.statusText,
+        error: error?.message || 'Unknown error',
+        timestamp: new Date().toISOString(),
+      });
       await prisma.paymentRecord.update({
         where: { id: record.id },
         data: { providerStatus: 'failed' },
@@ -317,6 +452,15 @@ export async function processStripePayment(
     }
 
     const stripeData = await stripeResponse.json();
+
+    console.log('[Stripe Payment Response]', {
+      transactionId: record.id,
+      sessionId: stripeData.sessionId,
+      paymentIntentId: stripeData.paymentIntentId,
+      checkoutUrl: stripeData.checkoutUrl || stripeData.url ? 'provided' : 'missing',
+      status: stripeResponse.status,
+      timestamp: new Date().toISOString(),
+    });
 
     const checkoutUrl = stripeData.checkoutUrl || stripeData.url || null;
 
@@ -336,6 +480,7 @@ export async function processStripePayment(
       clientSecret: stripeData.clientSecret,
       callbackUrlRegistered: true,
       cancelUrlRegistered: true,
+      retriesAttempted: retryAttempt,
     };
   } catch (error) {
     console.error('Stripe payment error:', error);
@@ -360,6 +505,7 @@ export async function verifyPaymentStatus(transactionId: string) {
       provider: record.provider,
       amount: record.amount,
       currency: record.currency,
+      metadata: record.metadata ? JSON.parse(record.metadata) : null,
       updatedAt: record.updatedAt.toISOString(),
     };
   } catch (error) {
@@ -382,6 +528,8 @@ export async function completePayment(
       return { success: false, error: 'Transaction not found' };
     }
 
+    console.log(`💰 Processing payment completion: ${transactionId} (${status}) - ${record.bookingType}`);
+
     await prisma.paymentRecord.update({
       where: { id: transactionId },
       data: {
@@ -391,57 +539,97 @@ export async function completePayment(
     });
 
     if (status === 'success') {
-      const user = await prisma.user.findUnique({
-        where: { id: record.userId },
-        select: { email: true, firstName: true, lastName: true },
-      });
+      console.log(`✅ Payment status updated to completed: ${transactionId}`);
 
-      const event = record.eventId
-        ? await prisma.clubEvent.findUnique({
-            where: { id: record.eventId },
-            select: { name: true },
-          })
-        : null;
+      // ... existing email sending code ...
 
-      if (user?.email) {
-        try {
-          await sendPaymentReceiptEmail(user.email, {
-            name: `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim(),
-            amount: record.amount,
-            currency: record.currency,
-            provider: record.provider,
-            transactionId,
-            bookingType: record.bookingType,
-            eventName: event?.name || undefined,
-            paymentDate: new Date().toISOString(),
-            status: 'completed',
-          });
-        } catch (emailError) {
-          console.error('Failed to send payment receipt email:', emailError);
-        }
-      }
       // Handle different booking types
       if (record.bookingType === 'tournament_entry' && record.eventId) {
-        const member = await prisma.clubMember.findFirst({ where: { playerId: record.userId } });
+        console.log(`🎾 Processing tournament entry payment: ${transactionId}`);
+        // Create or update event registration for tournament entry
+        const member = await prisma.clubMember.findFirst({
+          where: { playerId: record.userId }
+        });
+        
+        // Fetch tournament/event details to get organization
+        const tournament = await prisma.clubEvent.findUnique({
+          where: { id: record.eventId },
+          include: { organization: true }
+        });
+        
         if (member) {
-          const latestRegistration = await prisma.eventRegistration.findFirst({
-            where: { eventId: record.eventId },
-            orderBy: { signupOrder: 'desc' },
-          });
-          const signupOrder = (latestRegistration?.signupOrder || 0) + 1;
-          await prisma.eventRegistration.create({
-            data: {
+          console.log(`✓ Found member: ${member.id} for userId: ${record.userId}`);
+          const existingRegistration = await prisma.eventRegistration.findFirst({
+            where: {
               eventId: record.eventId,
               memberId: member.id,
-              status: 'registered',
-              signupOrder,
             },
           });
+
+          if (existingRegistration) {
+            console.log(`✓ Found existing registration: ${existingRegistration.id}, current status: ${existingRegistration.status}`);
+            if (existingRegistration.status !== 'registered') {
+              await prisma.eventRegistration.update({
+                where: { id: existingRegistration.id },
+                data: { status: 'registered' },
+              });
+              console.log(`✅ Updated registration to registered: ${existingRegistration.id}`);
+            }
+          } else {
+            console.log(`→ Creating new registration for eventId: ${record.eventId}, memberId: ${member.id}`);
+            const latestRegistration = await prisma.eventRegistration.findFirst({
+              where: { eventId: record.eventId },
+              orderBy: { signupOrder: 'desc' },
+            });
+            const signupOrder = (latestRegistration?.signupOrder || 0) + 1;
+            const newRegistration = await prisma.eventRegistration.create({
+              data: {
+                eventId: record.eventId,
+                memberId: member.id,
+                status: 'registered',
+                signupOrder,
+              },
+            });
+            console.log(`✅ Created new registration: ${newRegistration.id} with signupOrder: ${signupOrder}`);
+          }
+          
+          // Create revenue record for the organization
+          if (tournament?.organization?.id) {
+            try {
+              await prisma.orgRevenue.create({
+                data: {
+                  organizationId: tournament.organization.id,
+                  paymentType: 'tournament',
+                  fromPlayerId: record.userId,
+                  amount: record.amount,
+                  currency: record.currency,
+                  status: 'confirmed',
+                  paymentMethod: record.provider,
+                  mpesaTransactionId: providerTransactionId,
+                },
+              });
+              console.log(`💰 Created revenue record for organization: ${tournament.organization.id}`);
+            } catch (revenueError) {
+              console.error('Error creating revenue record:', revenueError);
+            }
+          }
+        } else {
+          console.warn(`⚠️ No club member found for playerId: ${record.userId}`);
         }
+        console.log(`✅ Tournament registration completed: ${transactionId}`);
       } else if (record.bookingType === 'court_booking' && record.eventId) {
-        // Create court booking after successful payment
+        console.log(`🏓 Processing court booking payment: ${transactionId}`);
         await createCourtBooking(record.userId, record.eventId, record);
+        console.log(`✅ Court booking completed: ${transactionId}`);
+      } else if (record.bookingType === 'amenity_booking' && record.eventId) {
+        console.log(`🏨 Processing amenity booking payment: ${transactionId}`);
+        await createAmenityBooking(record.userId, record.eventId, record);
+        console.log(`✅ Amenity booking completed: ${transactionId}`);
+      } else {
+        console.log(`ℹ️ Payment completed for ${record.bookingType}: ${transactionId} (no additional business logic)`);
       }
+    } else {
+      console.log(`❌ Payment marked as failed: ${transactionId}`);
     }
 
     return { success: true, transactionId, status };
@@ -457,21 +645,41 @@ export async function createCourtBooking(
   paymentRecord: any
 ) {
   try {
-    const metadata = typeof paymentRecord.metadata === 'string' 
-      ? JSON.parse(paymentRecord.metadata) 
+    const metadata = typeof paymentRecord.metadata === 'string'
+      ? JSON.parse(paymentRecord.metadata)
       : paymentRecord.metadata || {};
 
     // Extract booking details from metadata
-    const { startTime, endTime, organizationId, matchType } = metadata;
+    const { startTime, endTime, organizationId, matchType, originalAmount } = metadata;
 
     if (!startTime || !endTime || !organizationId) {
       return { success: false, error: 'Missing booking details' };
     }
 
+    // Check if user is a club member (don't create if not - allow guest bookings)
+    const member = await prisma.clubMember.findFirst({
+      where: {
+        playerId: userId,
+        organizationId,
+      },
+      include: {
+        membershipTier: true, // Include membership tier to check for discounts
+      },
+    });
+
+    // Calculate discount if user is a member
+    let discountAmount = 0;
+    let discountPercentage = 0;
+    if (member?.membershipTier?.discountPercentage) {
+      discountPercentage = member.membershipTier.discountPercentage;
+      discountAmount = Math.round((originalAmount || 0) * (discountPercentage / 100));
+    }
+
     // Create the booking record
+    // If user is a member, use their memberId; otherwise use null (guest booking)
     const booking = await prisma.courtBooking.create({
       data: {
-        memberId: userId,
+        memberId: member?.id || null,
         courtId,
         organizationId,
         startTime: new Date(startTime),
@@ -482,16 +690,105 @@ export async function createCourtBooking(
       },
     });
 
-    return { success: true, bookingId: booking.id };
+    // Store bookingId in payment metadata so success pages can link to booking details
+    await prisma.paymentRecord.update({
+      where: { id: paymentRecord.id },
+      data: {
+        metadata: JSON.stringify({
+          ...metadata,
+          bookingId: booking.id,
+        }),
+      },
+    });
+
+    return { 
+      success: true, 
+      bookingId: booking.id,
+      isMember: !!member,
+      discountPercentage,
+      discountAmount,
+      membershipName: member?.membershipTier?.name,
+    };
   } catch (error) {
     console.error('Create court booking error:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Booking creation failed' };
   }
 }
 
+export async function createAmenityBooking(
+  userId: string,
+  amenityId: string,
+  paymentRecord: any
+) {
+  try {
+    const metadata = typeof paymentRecord.metadata === 'string'
+      ? JSON.parse(paymentRecord.metadata)
+      : paymentRecord.metadata || {};
+
+    // Extract booking details from metadata
+    const { startTime, endTime, guestName, notes } = metadata;
+
+    if (!startTime || !endTime) {
+      return { success: false, error: 'Missing booking details: startTime and endTime are required' };
+    }
+
+    // Get member ID for the user
+    const member = await prisma.clubMember.findFirst({
+      where: { playerId: userId },
+    });
+
+    if (!member) {
+      return { success: false, error: 'User is not a club member' };
+    }
+
+    // Verify amenity exists and belongs to an event
+    const amenity = await prisma.eventAmenity.findUnique({
+      where: { id: amenityId },
+      include: { event: true },
+    });
+
+    if (!amenity) {
+      return { success: false, error: 'Amenity not found' };
+    }
+
+    // Check availability
+    const bookingStart = new Date(startTime);
+    const bookingEnd = new Date(endTime);
+
+    if (amenity.availableFrom && bookingStart < amenity.availableFrom) {
+      return { success: false, error: 'Booking starts before amenity is available' };
+    }
+
+    if (amenity.availableUntil && bookingEnd > amenity.availableUntil) {
+      return { success: false, error: 'Booking ends after amenity is available' };
+    }
+
+    // Create the amenity booking record
+    const booking = await prisma.amenityBooking.create({
+      data: {
+        amenityId,
+        memberId: member.id,
+        guestName: guestName || null,
+        startTime: bookingStart,
+        endTime: bookingEnd,
+        status: 'confirmed',
+        price: paymentRecord.amount,
+        notes: notes || null,
+      },
+    });
+
+    console.log(`Amenity booking created for user ${userId}: amenity ${amenityId}, booking ${booking.id}`);
+
+    return { success: true, bookingId: booking.id };
+  } catch (error) {
+    console.error('Create amenity booking error:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Amenity booking creation failed' };
+  }
+}
+
 export async function getPaymentStatus(transactionId: string) {
   try {
-    const record = await prisma.paymentRecord.findUnique({
+    let record = await prisma.paymentRecord.findUnique({
       where: { id: transactionId },
       select: {
         id: true,
@@ -502,16 +799,31 @@ export async function getPaymentStatus(transactionId: string) {
         createdAt: true,
         updatedAt: true,
         bookingType: true,
+        metadata: true,
       },
     });
 
     if (!record) {
-      return { success: false, error: 'Transaction not found' };
+      // Try to resolve by provider transaction ID if the caller passed a Stripe session/payment ID
+      const fallbackRecord = await prisma.paymentRecord.findFirst({
+        where: {
+          providerTransactionId: transactionId,
+        },
+      });
+
+      if (!fallbackRecord) {
+        return { success: false, error: 'Transaction not found' };
+      }
+
+      record = fallbackRecord;
     }
+
+    const parsedMetadata = record.metadata ? JSON.parse(record.metadata) : null;
 
     return {
       success: true,
       payment: record,
+      metadata: parsedMetadata,
       isCompleted: record.providerStatus === 'completed',
     };
   } catch (error) {
@@ -527,16 +839,47 @@ export async function handlePaymentCallback(
   try {
     let transactionId = '';
     let status: 'success' | 'failed' = 'failed';
+    const providerTransactionId = String(data.id || data.paymentId || data.orderId || data.sessionId || '');
 
     if (provider === 'mpesa') {
       transactionId = data.transactionId;
       status = data.resultCode === '0' ? 'success' : 'failed';
     } else if (provider === 'paypal') {
       transactionId = data.custom || data.transactionId;
-      status = ['COMPLETED', 'APPROVED'].includes(data.status) ? 'success' : 'failed';
+      status = ['COMPLETED', 'APPROVED'].includes(String(data.status || '')) ? 'success' : 'failed';
     } else if (provider === 'stripe') {
-      transactionId = data.metadata?.transactionId;
-      status = ['payment_intent.succeeded', 'charge.succeeded'].includes(data.type) ? 'success' : 'failed';
+      transactionId = data.transactionId || data.paymentId || data.metadata?.transactionId || data.metadata?.paymentAttemptId || data.sessionId || data.id;
+      const statusValue = String(data.status || '').toUpperCase();
+      status = statusValue === 'SUCCESS'
+        ? 'success'
+        : statusValue === 'FAILED'
+        ? 'failed'
+        : ['payment_intent.succeeded', 'charge.succeeded', 'checkout.session.completed'].includes(String(data.type))
+        ? 'success'
+        : 'failed';
+    }
+
+    // If transactionId looks like an idempotency key (localId-timestamp) try to extract the UUID portion
+    if (transactionId && typeof transactionId === 'string') {
+      const uuidMatch = transactionId.match(/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/);
+      if (uuidMatch) {
+        transactionId = uuidMatch[0];
+      }
+    }
+
+    if (!transactionId && data.eventId && data.userId) {
+      const fallback = await prisma.paymentRecord.findFirst({
+        where: {
+          provider,
+          eventId: data.eventId,
+          userId: data.userId,
+          providerStatus: 'pending',
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+      if (fallback) {
+        transactionId = fallback.id;
+      }
     }
 
     if (!transactionId) {
@@ -544,7 +887,6 @@ export async function handlePaymentCallback(
       return { success: false, error: 'Missing transaction ID' };
     }
 
-    const providerTransactionId = data.id || data.transactionId || data.orderId || data.sessionId || '';
     return await completePayment(transactionId, providerTransactionId, status);
   } catch (error) {
     console.error('Payment callback error:', error);

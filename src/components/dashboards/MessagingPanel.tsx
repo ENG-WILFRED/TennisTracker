@@ -3,26 +3,37 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useChatWebSocket } from '@/hooks/useChatWebSocket';
 import { useToast, ToastContainer } from '@/components/ui/Toast';
+import { Card, Button, colors } from '@vico/design-system';
+
+const hexToRgb = (hex: string) => {
+  const c = hex.replace('#', '');
+  const full = c.length === 3 ? c.split('').map(ch => ch + ch).join('') : c;
+  const num = parseInt(full, 16);
+  const r = (num >> 16) & 255;
+  const g = (num >> 8) & 255;
+  const b = num & 255;
+  return `${r},${g},${b}`;
+};
 
 const G = {
-  dark: '#0a180a',
-  sidebar: '#0f1e0f',
-  card: '#162616',
-  card2: '#1b2f1b',
-  card3: '#203520',
-  border: '#243e24',
-  border2: '#326832',
-  mid: '#2a5224',
-  bright: '#3a7230',
-  lime: '#79bf3e',
-  lime2: '#a8d84e',
-  text: '#e4f2da',
-  text2: '#c2dbb0',
-  muted: '#5e8e50',
-  muted2: '#7aaa68',
-  yellow: '#efc040',
-  red: '#d94f4f',
-  blue: '#4a9eff',
+  dark: colors.inverse || colors.background,
+  sidebar: colors.surface,
+  card: colors.surfaceSecondary,
+  card2: colors.surfaceTertiary,
+  card3: colors.surfaceSecondary,
+  border: colors.border,
+  border2: colors.primary,
+  mid: colors.info || colors.primary,
+  bright: colors.primaryHover || colors.primary,
+  lime: colors.primary,
+  lime2: colors.accent,
+  text: colors.textPrimary,
+  text2: colors.textMuted,
+  muted: colors.textMuted,
+  muted2: colors.textMuted,
+  yellow: colors.warning,
+  red: colors.danger,
+  blue: colors.info,
 };
 
 interface Message {
@@ -50,9 +61,9 @@ interface ChatRoom {
 const Tag = ({ children, red }: { children: React.ReactNode; red?: boolean }) => (
   <span style={{
     fontSize: 9, fontWeight: 700, borderRadius: 5, padding: '3px 8px',
-    background: red ? 'rgba(217,79,79,.1)' : 'rgba(121,191,62,.12)',
-    border: `1px solid ${red ? 'rgba(217,79,79,.3)' : 'rgba(121,191,62,.28)'}`,
-    color: red ? G.red : G.lime,
+    background: red ? `rgba(${hexToRgb(colors.danger)},0.12)` : `rgba(${hexToRgb(colors.primary)},0.12)`,
+    border: `1px solid ${red ? `${colors.danger}33` : `${colors.primary}47`}`,
+    color: red ? colors.danger : colors.primary,
     display: 'inline-flex', alignItems: 'center', gap: 4,
   }}>
     {children}

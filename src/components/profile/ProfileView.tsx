@@ -5,11 +5,21 @@ import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { LoadingState } from '@/components/LoadingState';
 import { getUserProfile, updateProfile } from '@/actions/auth';
+import { Card, Button, Input, colors } from '@vico/design-system';
 
 const G = {
-  dark: '#0f1f0f', sidebar: '#152515', card: '#1a3020', cardBorder: '#2d5a35',
-  mid: '#2d5a27', bright: '#3d7a32', lime: '#7dc142', accent: '#a8d84e',
-  text: '#e8f5e0', muted: '#7aaa6a', yellow: '#f0c040', red: '#dc2626',
+  dark: colors.inverse || colors.background,
+  sidebar: colors.surface,
+  card: colors.surfaceSecondary,
+  cardBorder: colors.border,
+  mid: colors.surfaceTertiary,
+  bright: colors.primaryHover || colors.primary,
+  lime: colors.primary,
+  accent: colors.accent,
+  text: colors.textPrimary,
+  muted: colors.textMuted,
+  yellow: colors.warning,
+  red: colors.danger,
 };
 
 interface ProfileViewProps {
@@ -171,12 +181,17 @@ export function ProfileView({ onClose, isEmbedded = false, canEdit = false }: Pr
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%', background: isEmbedded ? 'linear-gradient(to bottom right, #0f2710, #0f1f0f, #0d1f0d)' : undefined, padding: isEmbedded ? 20 : 0, borderRadius: isEmbedded ? 8 : 0 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%', background: isEmbedded ? G.dark : undefined, padding: isEmbedded ? 20 : 0, borderRadius: isEmbedded ? 8 : 0 }}>
       {/* Toast Notification */}
       {toast && (
         <div style={{
-          position: 'fixed', top: 20, right: 20, background: toast.type === 'success' ? '#4caf50' : '#f44336',
-          color: 'white', padding: '12px 20px', borderRadius: 6, fontSize: 12, zIndex: 1000,
+          position: 'fixed', top: 20, right: 20,
+          background: toast.type === 'success' ? G.lime : G.red,
+          color: G.dark,
+          padding: '12px 20px',
+          borderRadius: 6,
+          fontSize: 12,
+          zIndex: 1000,
         }}>
           {toast.message}
         </div>
