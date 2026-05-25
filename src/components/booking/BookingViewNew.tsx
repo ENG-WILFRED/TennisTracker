@@ -6,8 +6,8 @@ import { useAuth } from '@/context/AuthContext';
 import { getAvailableCourts, getPlayerBookings, getAllAvailableOrganizations } from '@/actions/bookings';
 import { BookingItem } from './BookingItem';
 import { CourtDetailModal } from './CourtDetailModal';
-
-import { Card, Button, colors } from '@vico/design-system';
+import { Label } from '@/components/ui/label';
+import { Card, Button, colors } from '@/lib/vico-design-fallback';
 
 
 interface BookingViewProps {

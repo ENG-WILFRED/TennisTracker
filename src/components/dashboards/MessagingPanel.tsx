@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useChatWebSocket } from '@/hooks/useChatWebSocket';
 import { useToast, ToastContainer } from '@/components/ui/Toast';
-import { Card, Button, colors } from '@vico/design-system';
+import { Card, Button, colors } from '@/lib/vico-design-fallback';
 
 const hexToRgb = (hex: string) => {
   const c = hex.replace('#', '');

@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { LoadingState } from '@/components/LoadingState';
 import { getUserProfile, updateProfile } from '@/actions/auth';
-import { Card, Button, Input, colors } from '@vico/design-system';
+import { Card, Button, Input, colors } from '@/lib/vico-design-fallback';
 
 const G = {
   dark: colors.inverse || colors.background,

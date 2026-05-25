@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { Button, Card, Input } from '@vico/design-system';
+import { Button, Card, Input } from '@/lib/vico-design-fallback';
 
 const SectionLabel: React.FC<{ children: React.ReactNode; action?: React.ReactNode }> = ({ children, action }) => (
   <div className="flex items-center justify-between mb-4">
