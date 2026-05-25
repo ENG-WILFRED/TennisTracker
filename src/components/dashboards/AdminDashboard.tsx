@@ -8,6 +8,7 @@ import { MembershipSwitcher } from '@/components/MembershipSwitcher';
 import { authenticatedFetch } from '@/lib/authenticatedFetch';
 import { downloadReportPdf } from '@/lib/reportPdf';
 import { useToast } from '@/components/ui/ToastContext';
+import { DashboardErrorPage } from '@/components/DashboardErrorPage';
 
 type Task = {
   id: string;

@@ -4,6 +4,7 @@ import { CancelApplicationModal } from '@/components/tournament/CancelApplicatio
 import { PlayerProfileModal } from './PlayerProfileModal';
 import { RejectionReasonModal } from './RejectionReasonModal';
 import { downloadUnifiedPDF } from '@/actions/downloads/downloadPDF';
+import { authenticatedFetch } from '@/lib/authenticatedFetch';
 import {
   CheckoutModal,
   ContactModal,
