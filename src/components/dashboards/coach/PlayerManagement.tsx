@@ -1,7 +1,9 @@
 'use client';
 
-import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { LoadingState } from '@/components/LoadingState';
+import { useToast } from '@/components/ui/ToastContext';
+import { usePDFDownload } from '@/hooks/usePDFDownload';
 
 const G = {
   dark: '#0a180a', sidebar: '#0f1e0f', card: '#162616', card2: '#1b2f1b', card3: '#203520',
@@ -10,86 +12,45 @@ const G = {
   muted: '#5e8e50', muted2: '#7aaa68', yellow: '#efc040', red: '#d94f4f', blue: '#4a9eff',
 };
 
-interface Player {
-  id: string;
-  user: { firstName: string; lastName: string; email: string; photo: string };
-  status: string;
-  joinedAt: string;
-  sessionsCount: number;
-  notes: { id: string; title: string; content: string; category: string; createdAt?: string }[];
-  totalSpent?: number;
-  level?: string;
-  lastSession?: string;
-  upcomingSessions?: number;
-  progress?: {
-    stats: {
-      totalMatches: number;
-      wins: number;
-      losses: number;
-      winRate: number;
-      coachSessions: number;
-      attendanceRate: number;
-      badgesEarned: number;
-    };
-    progress: {
-      monthly: Array<{
-        month: string;
-        matches: number;
-        wins: number;
-        losses: number;
-        winRate: number;
-      }>;
-      recentWinRate: number;
-      overallWinRate: number;
-      improvement: number;
-    };
-    badges: Array<{
-      id: string;
-      name: string;
-      description: string;
-      icon: string;
-      earnedAt: string;
-    }>;
-    attendance: Array<{
-      date: string;
-      present: boolean;
-    }>;
-  };
-}
-
-const SectionLabel = ({ children }: { children: React.ReactNode }) => (
-  <div style={{ fontSize: 8.5, color: G.lime2, fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 7 }}>{children}</div>
-);
-
 const Tag = ({ children, yellow, red, color }: { children: React.ReactNode; yellow?: boolean; red?: boolean; color?: string }) => {
   const c = color || (yellow ? G.yellow : red ? G.red : G.lime);
   return <span style={{ fontSize: 8.5, fontWeight: 700, borderRadius: 4, padding: '2px 7px', background: `${c}22`, border: `1px solid ${c}44`, color: c, display: 'inline-block' }}>{children}</span>;
 };
 
-const ProgressBar = ({ value, color = G.lime }: { value: number; color?: string }) => (
-  <div style={{ height: 4, background: G.dark, borderRadius: 2, overflow: 'hidden', marginTop: 3 }}>
-    <div style={{ height: '100%', width: `${Math.min(value, 100)}%`, background: color, borderRadius: 2 }} />
-  </div>
-);
-
-const noteCategoryColors: Record<string, string> = {
-  general: G.lime, performance: G.blue, injury: G.red, progress: G.yellow,
-};
-
-const levelColors: Record<string, string> = {
-  Beginner: G.muted2, Intermediate: G.lime, Advanced: G.yellow,
-};
-
 export default function PlayerManagement({ coachId }: { coachId: string }) {
-  const [players, setPlayers] = useState<Player[]>([]);
+  type EligiblePlayer = {
+    userId: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone?: string;
+    photo?: string | null;
+    organizationId?: string | null;
+    relationshipType: 'direct' | 'organization';
+  };
+
+  type PlayerDetails = EligiblePlayer & {
+    status: 'active' | 'organization';
+    joinedAt?: string;
+    matchesPlayed?: number;
+    matchesWon?: number;
+    matchesLost?: number;
+    winRate?: string | number;
+    bio?: string;
+    progress?: any;
+    notes: any[];
+  };
+
+  const [players, setPlayers] = useState<PlayerDetails[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
+  const [selectedPlayer, setSelectedPlayer] = useState<PlayerDetails | null>(null);
+  const [playerProgress, setPlayerProgress] = useState<any>(null);
+  const [currentCoach, setCurrentCoach] = useState<any>(null);
+  const [notes, setNotes] = useState<any[]>([]);
   const [loadingProgress, setLoadingProgress] = useState(false);
-  const [noteForm, setNoteForm] = useState({ title: '', content: '', category: 'general' });
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
-  
-  // Rating form state
+  const [activeTab, setActiveTab] = useState<'all' | 'our' | 'org'>('all');
+  const [noteForm, setNoteForm] = useState({ title: '', content: '', category: 'general' });
   const [ratingForm, setRatingForm] = useState({
     overallRating: 5,
     techniquRating: 5,
@@ -102,46 +63,157 @@ export default function PlayerManagement({ coachId }: { coachId: string }) {
   });
   const [submittingRating, setSubmittingRating] = useState(false);
   const [ratingSuccess, setRatingSuccess] = useState(false);
+  const [requestingPlayerId, setRequestingPlayerId] = useState<string | null>(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const [savingNote, setSavingNote] = useState(false);
+  const profileRef = useRef<HTMLDivElement | null>(null);
+  const { addToast } = useToast();
+  const { downloadPDF, isDownloading } = usePDFDownload();
 
   useEffect(() => {
-    const load = async () => {
+    const loadRoster = async () => {
+      setLoading(true);
       try {
-        const res = await fetch(`/api/coaches/players?coachId=${coachId}`);
-        if (res.ok) {
-          const d = await res.json();
-          const transformed = Array.isArray(d) ? d.map((rel: any) => ({
-            id: rel.playerId,
-            user: rel.player.user,
-            status: rel.status,
-            joinedAt: rel.joinedAt,
-            sessionsCount: rel.sessionsCount,
-            notes: rel.notes || [],
-          })) : [];
-          setPlayers(transformed);
+        const res = await fetch(`/api/coaches/players/eligible?coachId=${coachId}`);
+        if (!res.ok) {
+          throw new Error('Unable to fetch roster');
         }
+        const data = await res.json();
+        if (!Array.isArray(data.players)) {
+          throw new Error('Invalid roster response');
+        }
+
+        const list: PlayerDetails[] = data.players.map((player: EligiblePlayer) => ({
+          ...player,
+          status: player.relationshipType === 'direct' ? 'active' : 'organization',
+          joinedAt: new Date().toISOString(),
+          matchesPlayed: 0,
+          notes: [],
+        }));
+
+        setPlayers(list);
       } catch (error) {
-        console.error('Error fetching players:', error);
+        console.error(error);
+        addToast('Unable to load coach players', 'error');
       } finally {
         setLoading(false);
       }
     };
-    load();
-  }, [coachId]);
 
-  const addNote = async (playerId: string) => {
-    if (!noteForm.title || !noteForm.content) return;
-    const newNote = { id: `n${Date.now()}`, ...noteForm, createdAt: new Date().toISOString() };
-    setPlayers(prev => prev.map(p => p.id === playerId ? { ...p, notes: [newNote, ...p.notes] } : p));
-    setSelectedPlayer(prev => prev ? { ...prev, notes: [newNote, ...prev.notes] } : null);
-    setNoteForm({ title: '', content: '', category: 'general' });
+    loadRoster();
+  }, [coachId, addToast]);
+
+  const totalDirect = useMemo(() => players.filter(player => player.status === 'active').length, [players]);
+  const totalOrg = useMemo(() => players.filter(player => player.status !== 'active').length, [players]);
+
+  const fetchPlayerDetails = useCallback(async (player: PlayerDetails) => {
+    setSelectedPlayer(player);
+    setLoadingProgress(true);
+    setCurrentCoach(null);
+    setPlayerProgress(null);
+    setNotes([]);
+
     try {
-      await fetch(`/api/coaches/players/${playerId}/notes`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ coachId, ...noteForm }) });
-    } catch { }
+      const [profileRes, progressRes, coachesRes] = await Promise.all([
+        fetch(`/api/players/${player.userId}`),
+        fetch(`/api/players/${player.userId}/progress`),
+        fetch(`/api/players/coaches?playerId=${player.userId}`),
+      ]);
+
+      if (profileRes.ok) {
+        const profileData = await profileRes.json();
+        if (profileData.player) {
+          setSelectedPlayer(prev => prev ? { ...prev, ...profileData.player } : { ...player, ...profileData.player });
+        }
+      }
+
+      if (progressRes.ok) {
+        const progressData = await progressRes.json();
+        setPlayerProgress(progressData);
+      }
+
+      if (coachesRes.ok) {
+        const coachData = await coachesRes.json();
+        setCurrentCoach(Array.isArray(coachData) && coachData.length > 0 ? coachData[0].coach : null);
+      }
+
+      if (player.status === 'active') {
+        const notesRes = await fetch(`/api/coaches/players/${player.userId}/notes?coachId=${coachId}`);
+        if (notesRes.ok) {
+          const notesData = await notesRes.json();
+          setNotes(Array.isArray(notesData) ? notesData : []);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading player details:', error);
+      addToast('Unable to load player details', 'error');
+    } finally {
+      setLoadingProgress(false);
+    }
+  }, [coachId, addToast]);
+
+  const handleRequestPlayer = useCallback(async (player: PlayerDetails) => {
+    setRequestingPlayerId(player.userId);
+    try {
+      const res = await fetch('/api/coaches/players', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ coachId, playerId: player.userId }),
+      });
+
+      if (!res.ok) {
+        const payload = await res.json();
+        throw new Error(payload?.error || 'Failed to request player');
+      }
+
+      setPlayers(prev => prev.map(p => p.userId === player.userId ? { ...p, status: 'active' } : p));
+      if (selectedPlayer?.userId === player.userId) {
+        setSelectedPlayer(prev => prev ? { ...prev, status: 'active' } : prev);
+      }
+      addToast(`${player.firstName} ${player.lastName} has been added to your roster`, 'success');
+    } catch (error) {
+      console.error(error);
+      addToast('Unable to request player', 'error');
+    } finally {
+      setRequestingPlayerId(null);
+    }
+  }, [coachId, selectedPlayer, addToast]);
+
+  const handleAddNote = async () => {
+    if (!selectedPlayer) return;
+    if (!noteForm.title.trim() || !noteForm.content.trim()) {
+      addToast('Please complete title and content before saving', 'warning');
+      return;
+    }
+
+    setSavingNote(true);
+    try {
+      const res = await fetch(`/api/coaches/players/${selectedPlayer.userId}/notes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ coachId, title: noteForm.title, content: noteForm.content, category: noteForm.category }),
+      });
+
+      if (!res.ok) {
+        const payload = await res.json();
+        throw new Error(payload?.error || 'Failed to save note');
+      }
+      const noteData = await res.json();
+      setNotes(prev => [noteData, ...prev]);
+      setNoteForm({ title: '', content: '', category: 'general' });
+      addToast('Coaching note saved', 'success');
+    } catch (error) {
+      console.error(error);
+      addToast('Unable to save note', 'error');
+    } finally {
+      setSavingNote(false);
+    }
   };
 
-  const submitRating = async (playerId: string) => {
+  const submitRating = async () => {
+    if (!selectedPlayer) return;
     if (!ratingForm.strengths.trim() || !ratingForm.areasForImprovement.trim()) {
-      alert('Please fill in strengths and areas for improvement');
+      addToast('Please fill strengths and areas for improvement', 'warning');
       return;
     }
 
@@ -152,398 +224,473 @@ export default function PlayerManagement({ coachId }: { coachId: string }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           coachId,
-          playerId,
+          playerId: selectedPlayer.userId,
           ...ratingForm,
         }),
       });
 
-      if (res.ok) {
-        setRatingSuccess(true);
-        setRatingForm({
-          overallRating: 5,
-          techniquRating: 5,
-          mentalRating: 5,
-          fitnessRating: 5,
-          teamworkRating: 5,
-          strengths: '',
-          areasForImprovement: '',
-          notes: '',
-        });
-        setTimeout(() => setRatingSuccess(false), 3000);
-      } else {
-        alert('Failed to submit rating');
+      if (!res.ok) {
+        const payload = await res.json();
+        throw new Error(payload?.error || 'Failed to submit rating');
       }
+
+      setRatingSuccess(true);
+      setTimeout(() => setRatingSuccess(false), 3000);
+      setRatingForm({
+        overallRating: 5,
+        techniquRating: 5,
+        mentalRating: 5,
+        fitnessRating: 5,
+        teamworkRating: 5,
+        strengths: '',
+        areasForImprovement: '',
+        notes: '',
+      });
+      addToast('Rating submitted successfully', 'success');
     } catch (error) {
-      console.error('Error submitting rating:', error);
-      alert('Error submitting rating');
+      console.error(error);
+      addToast('Unable to submit rating', 'error');
     } finally {
       setSubmittingRating(false);
     }
   };
 
-  const selectPlayer = useCallback(async (player: Player) => {
-    setSelectedPlayer(player);
-    setLoadingProgress(true);
-    try {
-      const res = await fetch(`/api/player/progress?playerId=${player.id}`);
-      if (res.ok) {
-        const progressData = await res.json();
-        setSelectedPlayer(prev => prev ? { ...prev, progress: progressData } : null);
-      }
-    } catch (error) {
-      console.error('Error fetching player progress:', error);
-    } finally {
-      setLoadingProgress(false);
+  const exportPlayerPDF = async () => {
+    if (!profileRef.current || !selectedPlayer) {
+      addToast('Unable to generate PDF', 'error');
+      return;
     }
-  }, []);
 
-  const filtered = useMemo(() => players.filter(p => {
-    const matchSearch = p.user ? `${p.user.firstName} ${p.user.lastName}`.toLowerCase().includes(searchQuery.toLowerCase()) : false;
-    const matchStatus = filterStatus === 'all' || p.status === filterStatus;
-    return matchSearch && matchStatus;
-  }), [players, searchQuery, filterStatus]);
+    setPdfLoading(true);
+    try {
+      await downloadPDF(profileRef.current, {
+        filename: `${selectedPlayer.firstName}-${selectedPlayer.lastName}-profile.pdf`,
+        reportTitle: `${selectedPlayer.firstName} ${selectedPlayer.lastName}`,
+        reportDescription: 'Player profile, organization membership, coach details, and progress summary',
+      });
+    } catch (error) {
+      console.error(error);
+      addToast('PDF export failed', 'error');
+    } finally {
+      setPdfLoading(false);
+    }
+  };
 
-  // Memoized stats for header
-  const playerStats = useMemo(() => ({
-    active: players.filter(p => p.status === 'active').length,
-    inactive: players.filter(p => p.status === 'inactive').length,
-  }), [players]);
+  const filtered = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    return players.filter(player => {
+      const searchable = `${player.firstName} ${player.lastName} ${player.email}`.toLowerCase();
+      const matchesSearch = !query || searchable.includes(query);
+      const matchesTab =
+        activeTab === 'all' ||
+        (activeTab === 'our' && player.status === 'active') ||
+        (activeTab === 'org' && player.status !== 'active');
+      return matchesSearch && matchesTab;
+    });
+  }, [players, searchQuery, activeTab]);
 
-  const card = { background: G.card, border: `1px solid ${G.border}`, borderRadius: 12, padding: 14 } as const;
-  const inputSt = { width: '100%', padding: '8px 11px', background: G.dark, border: `1px solid ${G.border}`, color: G.text, borderRadius: 7, fontSize: 11.5, outline: 'none', boxSizing: 'border-box' } as const;
+  const playerCountLabel = `${totalDirect} roster player${totalDirect === 1 ? '' : 's'} · ${totalOrg} org player${totalOrg === 1 ? '' : 's'}`;
+  const selectedIsDirect = selectedPlayer?.status === 'active';
 
-  if (loading) return <LoadingState icon="👨‍💻" message="Loading players..." fullPage={false} />;
-
-  if (selectedPlayer) {
-    const sp = selectedPlayer;
-    const initials = `${sp.user.firstName[0]}${sp.user.lastName[0]}`;
-    const sessionProgress = useMemo(() => Math.min((sp.sessionsCount / 30) * 100, 100), [sp.sessionsCount]);
-
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
-        {/* Back */}
-        <button onClick={() => setSelectedPlayer(null)} style={{ background: 'none', border: 'none', color: G.lime, cursor: 'pointer', fontSize: 11.5, fontWeight: 700, textAlign: 'left', padding: 0 }}>
-          ← Back to Players
-        </button>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 11 }}>
-
-          {/* Player Profile */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
-            <div style={card}>
-              <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
-                <div style={{ width: 60, height: 60, borderRadius: '50%', background: G.mid, border: `2px solid ${G.lime}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 900, color: G.lime, flexShrink: 0 }}>
-                  {sp.user.photo ? <img src={sp.user.photo} alt="" style={{ width: 60, height: 60, borderRadius: '50%', objectFit: 'cover' }} /> : initials}
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', gap: 7, alignItems: 'center', marginBottom: 4 }}>
-                    <span style={{ fontSize: 16, fontWeight: 900 }}>{sp.user.firstName} {sp.user.lastName}</span>
-                    <Tag color={sp.status === 'active' ? G.lime : G.muted}>{sp.status}</Tag>
-                    {sp.level && <Tag color={levelColors[sp.level]}>{sp.level}</Tag>}
-                  </div>
-                  <div style={{ fontSize: 10.5, color: G.muted2, marginBottom: 8 }}>{sp.user.email}</div>
-                  <div style={{ display: 'flex', gap: 16, fontSize: 10 }}>
-                    <span style={{ color: G.muted }}>📅 Joined {new Date(sp.joinedAt).toLocaleDateString()}</span>
-                    {sp.lastSession && <span style={{ color: G.muted }}>🎾 Last: {sp.lastSession}</span>}
-                    {sp.upcomingSessions ? <span style={{ color: G.lime2 }}>⏰ {sp.upcomingSessions} upcoming</span> : null}
-                  </div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: 22, fontWeight: 900, color: G.lime2 }}>{sp.sessionsCount}</div>
-                  <div style={{ fontSize: 9, color: G.muted }}>sessions</div>
-                  {sp.totalSpent && <div style={{ fontSize: 13, fontWeight: 800, color: G.yellow, marginTop: 4 }}>${sp.totalSpent.toLocaleString()}</div>}
-                </div>
-              </div>
-
-              <div style={{ marginTop: 14, paddingTop: 12, borderTop: `1px solid ${G.border}` }}>
-                <SectionLabel>Session Progress</SectionLabel>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <span style={{ fontSize: 10.5, color: G.text2 }}>{sp.sessionsCount} of 30 sessions milestone</span>
-                  <span style={{ fontSize: 10.5, color: G.lime2, fontWeight: 800 }}>{Math.round(sessionProgress)}%</span>
-                </div>
-                <ProgressBar value={sessionProgress} />
-              </div>
-
-              {/* Progress Stats */}
-              {sp.progress && (
-                <div style={{ marginTop: 14, paddingTop: 12, borderTop: `1px solid ${G.border}` }}>
-                  <SectionLabel>Performance Progress</SectionLabel>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 12 }}>
-                    <div style={{ background: G.dark, borderRadius: 6, padding: '8px 10px', textAlign: 'center' }}>
-                      <div style={{ fontSize: 16, fontWeight: 900, color: G.lime2 }}>{sp.progress.stats.winRate}%</div>
-                      <div style={{ fontSize: 8, color: G.muted, textTransform: 'uppercase' }}>Win Rate</div>
-                    </div>
-                    <div style={{ background: G.dark, borderRadius: 6, padding: '8px 10px', textAlign: 'center' }}>
-                      <div style={{ fontSize: 16, fontWeight: 900, color: G.lime2 }}>{sp.progress.stats.totalMatches}</div>
-                      <div style={{ fontSize: 8, color: G.muted, textTransform: 'uppercase' }}>Matches</div>
-                    </div>
-                    <div style={{ background: G.dark, borderRadius: 6, padding: '8px 10px', textAlign: 'center' }}>
-                      <div style={{ fontSize: 16, fontWeight: 900, color: G.lime2 }}>{sp.progress.stats.badgesEarned}</div>
-                      <div style={{ fontSize: 8, color: G.muted, textTransform: 'uppercase' }}>Badges</div>
-                    </div>
-                  </div>
-
-                  {sp.progress.progress.monthly.length > 0 && (
-                    <div style={{ marginTop: 12 }}>
-                      <div style={{ fontSize: 9.5, color: G.muted2, marginBottom: 6 }}>Recent Monthly Performance</div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        {sp.progress.progress.monthly.slice(-3).map((month, i) => (
-                          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: G.dark, borderRadius: 4, padding: '4px 8px' }}>
-                            <span style={{ fontSize: 9, color: G.text2 }}>{month.month}</span>
-                            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                              <span style={{ fontSize: 8, color: G.muted }}>{month.wins}W-{month.losses}L</span>
-                              <span style={{ fontSize: 9, fontWeight: 700, color: month.winRate >= 50 ? G.lime : G.yellow }}>{month.winRate}%</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {sp.progress.badges.length > 0 && (
-                    <div style={{ marginTop: 12 }}>
-                      <div style={{ fontSize: 9.5, color: G.muted2, marginBottom: 6 }}>Recent Achievements</div>
-                      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                        {sp.progress.badges.slice(0, 3).map((badge, i) => (
-                          <span key={i} style={{ fontSize: 8, background: G.mid, color: G.lime, borderRadius: 10, padding: '2px 6px' }}>
-                            {badge.icon} {badge.name}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {loadingProgress && (
-                <div style={{ marginTop: 14, paddingTop: 12, borderTop: `1px solid ${G.border}`, textAlign: 'center', color: G.muted }}>
-                  Loading progress data...
-                </div>
-              )}
-            </div>
-
-            {/* Add Note */}
-            <div style={card}>
-              <SectionLabel>Add Coaching Note</SectionLabel>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
-                <input style={inputSt} placeholder="Note title (e.g. Serve Improvement)" value={noteForm.title} onChange={e => setNoteForm({ ...noteForm, title: e.target.value })} />
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9 }}>
-                  <select style={inputSt} value={noteForm.category} onChange={e => setNoteForm({ ...noteForm, category: e.target.value })}>
-                    <option value="general">📝 General</option>
-                    <option value="performance">📊 Performance</option>
-                    <option value="injury">🩹 Injury</option>
-                    <option value="progress">📈 Progress</option>
-                  </select>
-                  <button onClick={() => addNote(sp.id)} style={{ background: G.lime, color: '#0a180a', border: 'none', borderRadius: 7, fontWeight: 800, fontSize: 11, cursor: 'pointer' }}>
-                    ✓ Save Note
-                  </button>
-                </div>
-                <textarea style={{ ...inputSt, resize: 'none' }} rows={3} placeholder="Describe the coaching observation..." value={noteForm.content} onChange={e => setNoteForm({ ...noteForm, content: e.target.value })} />
-              </div>
-            </div>
-
-            {/* Rate Player */}
-            <div style={card}>
-              <SectionLabel>⭐ Rate Player Performance</SectionLabel>
-              {ratingSuccess && <div style={{ background: `${G.lime}33`, color: G.lime, padding: '8px 11px', borderRadius: 6, fontSize: 10.5, marginBottom: 9, fontWeight: 700 }}>✓ Rating submitted successfully!</div>}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
-                {/* Overall Rating Slider */}
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                    <label style={{ fontSize: 10.5, fontWeight: 700, color: G.text2 }}>Overall Rating</label>
-                    <span style={{ fontSize: 14, fontWeight: 900, color: G.lime2 }}>{ratingForm.overallRating.toFixed(1)}</span>
-                  </div>
-                  <input type="range" min="1" max="5" step="0.5" value={ratingForm.overallRating} onChange={e => setRatingForm({ ...ratingForm, overallRating: parseFloat(e.target.value) })} style={{ width: '100%', cursor: 'pointer' }} />
-                </div>
-
-                {/* Skill ratings in grid */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                  {[
-                    { key: 'techniquRating', label: 'Technique', color: G.blue },
-                    { key: 'mentalRating', label: 'Mental', color: G.yellow },
-                    { key: 'fitnessRating', label: 'Fitness', color: G.lime },
-                    { key: 'teamworkRating', label: 'Teamwork', color: G.bright },
-                  ].map(({ key, label, color }) => (
-                    <div key={key}>
-                      <div style={{ fontSize: 9, fontWeight: 700, color: G.muted2, marginBottom: 4 }}>{label}</div>
-                      <div style={{ display: 'flex', gap: 3 }}>
-                        {[1, 2, 3, 4, 5].map((rating) => (
-                          <button
-                            key={rating}
-                            onClick={() => setRatingForm({ ...ratingForm, [key]: rating })}
-                            style={{
-                              flex: 1,
-                              padding: '6px 0',
-                              background: (ratingForm as any)[key] >= rating ? color : G.dark,
-                              border: `1px solid ${(ratingForm as any)[key] >= rating ? color : G.border}`,
-                              borderRadius: 4,
-                              color: (ratingForm as any)[key] >= rating ? '#0a180a' : G.muted,
-                              fontWeight: 700,
-                              fontSize: 10,
-                              cursor: 'pointer',
-                            }}
-                          >
-                            {rating}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Strengths & Areas */}
-                <textarea
-                  style={{ ...inputSt, resize: 'none', minHeight: '60px' }}
-                  placeholder="Strengths (e.g., excellent serve, great footwork)..."
-                  value={ratingForm.strengths}
-                  onChange={e => setRatingForm({ ...ratingForm, strengths: e.target.value })}
-                />
-                <textarea
-                  style={{ ...inputSt, resize: 'none', minHeight: '60px' }}
-                  placeholder="Areas for improvement (e.g., backhand consistency, mental focus)..."
-                  value={ratingForm.areasForImprovement}
-                  onChange={e => setRatingForm({ ...ratingForm, areasForImprovement: e.target.value })}
-                />
-                <textarea
-                  style={{ ...inputSt, resize: 'none', minHeight: '50px' }}
-                  placeholder="Additional notes (optional)..."
-                  value={ratingForm.notes}
-                  onChange={e => setRatingForm({ ...ratingForm, notes: e.target.value })}
-                />
-
-                <button
-                  onClick={() => submitRating(sp.id)}
-                  disabled={submittingRating}
-                  style={{
-                    background: submittingRating ? G.muted : G.lime,
-                    color: '#0a180a',
-                    border: 'none',
-                    borderRadius: 7,
-                    fontWeight: 800,
-                    fontSize: 11,
-                    cursor: submittingRating ? 'not-allowed' : 'pointer',
-                    padding: '10px 0',
-                    opacity: submittingRating ? 0.6 : 1,
-                  }}
-                >
-                  {submittingRating ? '⏳ Submitting...' : '✓ Submit Rating'}
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Notes Timeline */}
-          <div style={card}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <SectionLabel>Coaching Notes</SectionLabel>
-              <Tag>{sp.notes.length}</Tag>
-            </div>
-            {sp.notes.length === 0 ? (
-              <div style={{ color: G.muted, fontSize: 10.5, textAlign: 'center', padding: '20px 0' }}>No notes yet. Add your first coaching note!</div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
-                {sp.notes.map((note, i) => (
-                  <div key={note.id} style={{ background: G.card2, border: `1px solid ${G.border}`, borderRadius: 9, padding: 11, borderLeft: `3px solid ${noteCategoryColors[note.category] || G.lime}` }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 5 }}>
-                      <span style={{ fontSize: 11.5, fontWeight: 800 }}>{note.title}</span>
-                      <Tag color={noteCategoryColors[note.category]}>{note.category}</Tag>
-                    </div>
-                    <p style={{ fontSize: 10.5, color: G.text2, lineHeight: 1.55, margin: 0 }}>{note.content}</p>
-                    {note.createdAt && <div style={{ fontSize: 9, color: G.muted, marginTop: 6 }}>{new Date(note.createdAt).toLocaleDateString()}</div>}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    );
+  if (loading) {
+    return <LoadingState icon="👨‍💻" message="Loading players..." fullPage={false} />;
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <div style={{ fontSize: 15, fontWeight: 900, color: G.text }}>👥 My Players</div>
-          <div style={{ fontSize: 10, color: G.muted2, marginTop: 2 }}>Manage your player roster</div>
-        </div>
-        <div style={{ display: 'flex', gap: 6 }}>
-          <Tag>{playerStats.active} active</Tag>
-          <Tag color={G.muted}>{playerStats.inactive} inactive</Tag>
-        </div>
-      </div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {!selectedPlayer ? (
+        <>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 14 }}>
+            <div>
+              <div style={{ fontSize: 16, fontWeight: 900, color: G.text }}>Player Roster</div>
+              <div style={{ fontSize: 11, color: G.muted2, marginTop: 3 }}>{playerCountLabel}</div>
+            </div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <Tag color={G.lime}>{totalDirect} roster</Tag>
+              <Tag color={G.blue}>{totalOrg} org</Tag>
+            </div>
+          </div>
 
-      {/* Search + Filter */}
-      <div style={{ display: 'flex', gap: 9, alignItems: 'center' }}>
-        <div style={{ position: 'relative', flex: 1 }}>
-          <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: G.muted }}>🔍</span>
-          <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search players..." style={{ width: '100%', padding: '8px 11px 8px 28px', background: G.card2, border: `1px solid ${G.border}`, color: G.text, borderRadius: 8, fontSize: 11.5, outline: 'none', boxSizing: 'border-box' }} />
-        </div>
-        <div style={{ display: 'flex', gap: 3, background: G.card, border: `1px solid ${G.border}`, borderRadius: 8, padding: 3 }}>
-          {(['all', 'active', 'inactive'] as const).map(f => (
-            <button key={f} onClick={() => setFilterStatus(f)} style={{ padding: '5px 12px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 10, fontWeight: 700, background: filterStatus === f ? G.lime : 'transparent', color: filterStatus === f ? '#0a180a' : G.muted, textTransform: 'capitalize' }}>
-              {f}
-            </button>
-          ))}
-        </div>
-      </div>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+            <div style={{ position: 'relative', flex: '1 1 320px' }}>
+              <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: G.muted }}>🔍</span>
+              <input
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Search players by name or email"
+                style={{ width: '100%', padding: '11px 14px 11px 34px', background: G.card2, border: `1px solid ${G.border}`, color: G.text, borderRadius: 10, fontSize: 12, outline: 'none' }}
+              />
+            </div>
+            <div style={{ display: 'flex', gap: 6, background: G.card, border: `1px solid ${G.border}`, borderRadius: 10, padding: 4 }}>
+              {(['all', 'our', 'org'] as const).map(tab => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  style={{
+                    padding: '8px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700,
+                    background: activeTab === tab ? G.lime : 'transparent', color: activeTab === tab ? '#0a180a' : G.muted,
+                  }}
+                >
+                  {tab === 'all' ? 'All players' : tab === 'our' ? 'Your players' : 'Org players'}
+                </button>
+              ))}
+            </div>
+          </div>
 
-      {/* Player Grid */}
-      {filtered.length === 0 ? (
-        <div style={{ background: G.card, border: `1px solid ${G.border}`, borderRadius: 12, padding: 40, textAlign: 'center', color: G.muted }}>
-          No players found
-        </div>
+          {filtered.length === 0 ? (
+            <div style={{ background: G.card, border: `1px solid ${G.border}`, borderRadius: 12, padding: 28, color: G.muted, textAlign: 'center' }}>
+              No players match your search.
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10 }}>
+              {filtered.map(player => {
+                const initials = `${player.firstName[0] || ''}${player.lastName[0] || ''}`;
+                const isRoster = player.status === 'active';
+                return (
+                  <div
+                    key={player.userId}
+                    onClick={() => fetchPlayerDetails(player)}
+                    style={{ background: G.card, border: `1px solid ${G.border}`, borderRadius: 14, padding: 16, cursor: 'pointer', minHeight: 170, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}
+                  >
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 10 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <div style={{ width: 44, height: 44, borderRadius: '50%', background: G.mid, border: `1.5px solid ${isRoster ? G.lime : G.border2}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 800, color: G.lime }}>
+                            {player.photo ? <img src={player.photo} alt="" style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover' }} /> : initials}
+                          </div>
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ fontSize: 12.5, fontWeight: 900, color: G.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{player.firstName} {player.lastName}</div>
+                            <div style={{ fontSize: 10, color: G.muted2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{player.email}</div>
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
+                          <Tag color={isRoster ? G.lime : G.blue}>{isRoster ? 'Your player' : 'Org player'}</Tag>
+                          {player.organizationId && <Tag color={G.yellow}>Org member</Tag>}
+                        </div>
+                      </div>
+                      <p style={{ color: G.muted2, fontSize: 10.5, lineHeight: 1.6, minHeight: 42 }}>
+                        {isRoster
+                          ? 'Coached directly by you with roster tools and progress detail.'
+                          : 'Available inside your organization. Request this player to recruit them.'}
+                      </p>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginTop: 14 }}>
+                      <div style={{ fontSize: 10, color: G.muted2 }}>{player.organizationId ? 'In org directory' : 'No org'} </div>
+                      {!isRoster && (
+                        <button
+                          type="button"
+                          onClick={e => { e.stopPropagation(); handleRequestPlayer(player); }}
+                          disabled={requestingPlayerId === player.userId}
+                          style={{ background: G.lime, color: '#0a180a', border: 'none', borderRadius: 9, padding: '9px 12px', fontSize: 10, fontWeight: 700, cursor: 'pointer' }}
+                        >
+                          {requestingPlayerId === player.userId ? 'Requesting…' : 'Request'}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10 }}>
-          {filtered.map(player => {
-            const initials = `${player.user.firstName[0]}${player.user.lastName[0]}`;
-            const isActive = player.status === 'active';
-            return (
-              <div
-                key={player.id}
-                onClick={() => selectPlayer(player)}
-                style={{ background: G.card, border: `1px solid ${G.border}`, borderRadius: 11, padding: 13, cursor: 'pointer', transition: 'all .15s' }}
-                onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = G.border2; (e.currentTarget as HTMLDivElement).style.background = G.card2; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = G.border; (e.currentTarget as HTMLDivElement).style.background = G.card; }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 10 }}>
-                  <div style={{ position: 'relative' }}>
-                    <div style={{ width: 38, height: 38, borderRadius: '50%', background: G.mid, border: `1.5px solid ${isActive ? G.lime : G.border2}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, color: G.lime }}>
-                      {player.user.photo ? <img src={player.user.photo} alt="" style={{ width: 38, height: 38, borderRadius: '50%', objectFit: 'cover' }} /> : initials}
-                    </div>
-                    {isActive && <div style={{ position: 'absolute', bottom: 1, right: 1, width: 7, height: 7, background: '#4cd964', borderRadius: '50%', border: `1.5px solid ${G.card}` }} />}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: 12 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <button
+              type="button"
+              onClick={() => setSelectedPlayer(null)}
+              style={{ background: 'none', border: 'none', color: G.lime, cursor: 'pointer', fontSize: 12, fontWeight: 700, padding: 0, textAlign: 'left' }}
+            >
+              ← Back to players
+            </button>
+
+            <div ref={profileRef} style={{ background: G.card, border: `1px solid ${G.border}`, borderRadius: 14, padding: 18, display: 'flex', flexDirection: 'column', gap: 18 }}>
+              <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+                <div style={{ width: 78, height: 78, borderRadius: '50%', background: G.mid, border: `2px solid ${G.lime}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, fontWeight: 900, color: G.lime }}>
+                  {selectedPlayer?.photo ? <img src={selectedPlayer.photo} alt="" style={{ width: 78, height: 78, borderRadius: '50%', objectFit: 'cover' }} /> : `${selectedPlayer?.firstName?.[0] || ''}${selectedPlayer?.lastName?.[0] || ''}`}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 18, fontWeight: 900, color: G.text }}>{selectedPlayer?.firstName} {selectedPlayer?.lastName}</span>
+                    <Tag color={selectedIsDirect ? G.lime : G.blue}>{selectedIsDirect ? 'Your player' : 'Org player'}</Tag>
+                    {selectedPlayer?.organizationId && <Tag color={G.yellow}>Org member</Tag>}
                   </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 12, fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{player.user.firstName} {player.user.lastName}</div>
-                    <div style={{ fontSize: 9.5, color: G.muted2 }}>{player.user.email}</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 10, fontSize: 11, color: G.muted2 }}>
+                    <div>{selectedPlayer?.email}</div>
+                    <div>{selectedPlayer?.phone || 'Phone not set'}</div>
+                    <div>Joined: {selectedPlayer?.joinedAt ? new Date(selectedPlayer.joinedAt).toLocaleDateString() : 'Unknown'}</div>
+                    <div>Relationship: {selectedIsDirect ? 'Direct coaching' : 'Org candidate'}</div>
                   </div>
                 </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 9 }}>
-                  {[
-                    { label: 'Sessions', value: player.sessionsCount },
-                    { label: 'Spent', value: player.totalSpent ? `$${player.totalSpent}` : '–' },
-                  ].map((s, i) => (
-                    <div key={i} style={{ background: G.dark, borderRadius: 6, padding: '6px 8px' }}>
-                      <div style={{ fontSize: 7.5, color: G.muted, textTransform: 'uppercase', marginBottom: 2 }}>{s.label}</div>
-                      <div style={{ fontSize: 14, fontWeight: 900, color: G.lime2 }}>{s.value}</div>
-                    </div>
-                  ))}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'flex-end' }}>
+                  <button
+                    type="button"
+                    onClick={exportPlayerPDF}
+                    disabled={pdfLoading || isDownloading}
+                    style={{ background: G.blue, color: '#fff', border: 'none', borderRadius: 10, padding: '11px 14px', fontWeight: 700, cursor: 'pointer', fontSize: 11 }}
+                  >
+                    {pdfLoading || isDownloading ? 'Exporting…' : 'Export PDF'}
+                  </button>
+                  {!selectedIsDirect && (
+                    <button
+                      type="button"
+                      onClick={() => handleRequestPlayer(selectedPlayer)}
+                      disabled={requestingPlayerId === selectedPlayer.userId}
+                      style={{ background: G.lime, color: '#0a180a', border: 'none', borderRadius: 10, padding: '11px 14px', fontWeight: 700, cursor: 'pointer', fontSize: 11 }}
+                    >
+                      {requestingPlayerId === selectedPlayer.userId ? 'Requesting…' : 'Request to coach'}
+                    </button>
+                  )}
                 </div>
-
-                <div style={{ display: 'flex', gap: 5, justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Tag color={isActive ? G.lime : G.muted}>{player.status}</Tag>
-                  {player.level && <Tag color={levelColors[player.level] || G.muted}>{player.level}</Tag>}
-                  {player.notes.length > 0 && <Tag color={G.blue}>📝 {player.notes.length}</Tag>}
-                </div>
-
-                {player.lastSession && (
-                  <div style={{ fontSize: 9, color: G.muted, marginTop: 7 }}>Last session: {player.lastSession}</div>
-                )}
               </div>
-            );
-          })}
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10 }}>
+                <div style={{ background: G.card2, borderRadius: 12, padding: 14 }}>
+                  <div style={{ fontSize: 9, color: G.muted, textTransform: 'uppercase', marginBottom: 8 }}>Matches</div>
+                  <div style={{ fontSize: 22, fontWeight: 900, color: G.lime }}>{selectedPlayer?.matchesPlayed ?? 0}</div>
+                  <div style={{ fontSize: 10, color: G.muted2, marginTop: 6 }}>Total matches recorded</div>
+                </div>
+                <div style={{ background: G.card2, borderRadius: 12, padding: 14 }}>
+                  <div style={{ fontSize: 9, color: G.muted, textTransform: 'uppercase', marginBottom: 8 }}>Win rate</div>
+                  <div style={{ fontSize: 22, fontWeight: 900, color: G.lime }}>{selectedPlayer?.winRate ?? '0'}%</div>
+                  <div style={{ fontSize: 10, color: G.muted2, marginTop: 6 }}>Performance snapshot</div>
+                </div>
+                <div style={{ background: G.card2, borderRadius: 12, padding: 14 }}>
+                  <div style={{ fontSize: 9, color: G.muted, textTransform: 'uppercase', marginBottom: 8 }}>Coach</div>
+                  <div style={{ fontSize: 16, fontWeight: 900, color: G.text }}>{currentCoach ? `${currentCoach.firstName} ${currentCoach.lastName}` : 'Unassigned'}</div>
+                  <div style={{ fontSize: 10, color: G.muted2, marginTop: 6 }}>{currentCoach?.organization?.name || 'No current coach'}</div>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div style={{ background: G.card2, borderRadius: 12, padding: 14 }}>
+                  <div style={{ fontSize: 10, color: G.muted, textTransform: 'uppercase', marginBottom: 8 }}>Player bio</div>
+                  <div style={{ fontSize: 11, color: G.text2, lineHeight: 1.6 }}>{selectedPlayer?.bio || 'No bio available yet for this player.'}</div>
+                </div>
+                <div style={{ background: G.card2, borderRadius: 12, padding: 14 }}>
+                  <div style={{ fontSize: 10, color: G.muted, textTransform: 'uppercase', marginBottom: 8 }}>Membership</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 11, color: G.text2 }}>
+                    <div>Organization: {selectedPlayer?.organizationId ? 'Yes' : 'No'}</div>
+                    <div>Status: {selectedIsDirect ? 'Direct roster player' : 'Available through org'}</div>
+                    {currentCoach && currentCoach.organization && <div>Current coach organization: {currentCoach.organization.name}</div>}
+                  </div>
+                </div>
+              </div>
+
+              {loadingProgress && (
+                <div style={{ color: G.muted2, fontSize: 11, textAlign: 'center' }}>Loading player progress...</div>
+              )}
+            </div>
+
+            {selectedIsDirect && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div style={{ background: G.card, border: `1px solid ${G.border}`, borderRadius: 14, padding: 16 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                    <div style={{ fontSize: 12, fontWeight: 900, color: G.text }}>Coaching Notes</div>
+                    <Tag color={G.blue}>{notes.length}</Tag>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <input
+                      style={{ width: '100%', padding: '11px 12px', background: G.card2, border: `1px solid ${G.border}`, color: G.text, borderRadius: 10, fontSize: 12, outline: 'none' }}
+                      placeholder="Note title"
+                      value={noteForm.title}
+                      onChange={e => setNoteForm({ ...noteForm, title: e.target.value })}
+                    />
+                    <select
+                      style={{ width: '100%', padding: '11px 12px', background: G.card2, border: `1px solid ${G.border}`, color: G.text, borderRadius: 10, fontSize: 12, outline: 'none' }}
+                      value={noteForm.category}
+                      onChange={e => setNoteForm({ ...noteForm, category: e.target.value })}
+                    >
+                      <option value="general">General</option>
+                      <option value="performance">Performance</option>
+                      <option value="injury">Injury</option>
+                      <option value="progress">Progress</option>
+                    </select>
+                    <textarea
+                      rows={4}
+                      style={{ width: '100%', padding: '11px 12px', background: G.card2, border: `1px solid ${G.border}`, color: G.text, borderRadius: 10, fontSize: 12, resize: 'vertical', outline: 'none' }}
+                      placeholder="Add coaching note..."
+                      value={noteForm.content}
+                      onChange={e => setNoteForm({ ...noteForm, content: e.target.value })}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddNote}
+                      disabled={savingNote}
+                      style={{ background: G.lime, color: '#0a180a', border: 'none', borderRadius: 10, padding: '12px 14px', fontWeight: 700, cursor: 'pointer', fontSize: 12 }}
+                    >
+                      {savingNote ? 'Saving…' : 'Save note'}
+                    </button>
+                  </div>
+
+                  <div style={{ marginTop: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {notes.length === 0 ? (
+                      <div style={{ fontSize: 11, color: G.muted2 }}>No notes yet. Add your first coaching observation.</div>
+                    ) : (
+                      notes.map(note => (
+                        <div key={note.id} style={{ background: G.card2, borderRadius: 12, padding: 12, border: `1px solid ${G.border}` }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'flex-start' }}>
+                            <div>
+                              <div style={{ fontSize: 12, fontWeight: 800, color: G.text }}>{note.title}</div>
+                              <div style={{ fontSize: 10, color: G.muted2 }}>{note.category}</div>
+                            </div>
+                            {note.createdAt && <div style={{ fontSize: 9, color: G.muted2 }}>{new Date(note.createdAt).toLocaleDateString()}</div>}
+                          </div>
+                          <p style={{ fontSize: 11, color: G.text2, marginTop: 10 }}>{note.content}</p>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                <div style={{ background: G.card, border: `1px solid ${G.border}`, borderRadius: 14, padding: 16 }}>
+                  <div style={{ fontSize: 12, fontWeight: 900, color: G.text, marginBottom: 12 }}>Performance Rating</div>
+                  {ratingSuccess && (
+                    <div style={{ background: `${G.lime}22`, color: G.lime, padding: '10px 12px', borderRadius: 10, marginBottom: 12, fontSize: 11, fontWeight: 700 }}>
+                      Rating submitted successfully.
+                    </div>
+                  )}
+                  <div style={{ display: 'grid', gap: 12 }}>
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: G.muted, marginBottom: 6 }}>Overall rating</div>
+                      <input
+                        type="range"
+                        min={1}
+                        max={5}
+                        step={0.5}
+                        value={ratingForm.overallRating}
+                        onChange={e => setRatingForm({ ...ratingForm, overallRating: parseFloat(e.target.value) })}
+                        style={{ width: '100%', accentColor: G.lime }}
+                      />
+                      <div style={{ fontSize: 14, fontWeight: 900, color: G.lime, marginTop: 8 }}>{ratingForm.overallRating.toFixed(1)}</div>
+                    </div>
+                    {[
+                      { key: 'techniquRating', label: 'Technique' },
+                      { key: 'mentalRating', label: 'Mental' },
+                      { key: 'fitnessRating', label: 'Fitness' },
+                      { key: 'teamworkRating', label: 'Teamwork' },
+                    ].map((item) => (
+                      <div key={item.key}>
+                        <div style={{ fontSize: 11, color: G.muted, marginBottom: 6 }}>{item.label}</div>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          {[1, 2, 3, 4, 5].map(value => (
+                            <button
+                              key={value}
+                              type="button"
+                              onClick={() => setRatingForm({ ...ratingForm, [item.key]: value })}
+                              style={{
+                                flex: 1,
+                                padding: '8px 0',
+                                borderRadius: 8,
+                                border: 'none',
+                                fontSize: 11,
+                                fontWeight: 700,
+                                background: (ratingForm as any)[item.key] >= value ? G.lime : G.card2,
+                                color: (ratingForm as any)[item.key] >= value ? '#0a180a' : G.muted2,
+                                cursor: 'pointer',
+                              }}
+                            >
+                              {value}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                    <textarea
+                      rows={3}
+                      placeholder="Strengths"
+                      style={{ width: '100%', padding: '11px 12px', background: G.card2, border: `1px solid ${G.border}`, color: G.text, borderRadius: 10, fontSize: 12, resize: 'vertical', outline: 'none' }}
+                      value={ratingForm.strengths}
+                      onChange={e => setRatingForm({ ...ratingForm, strengths: e.target.value })}
+                    />
+                    <textarea
+                      rows={3}
+                      placeholder="Areas for improvement"
+                      style={{ width: '100%', padding: '11px 12px', background: G.card2, border: `1px solid ${G.border}`, color: G.text, borderRadius: 10, fontSize: 12, resize: 'vertical', outline: 'none' }}
+                      value={ratingForm.areasForImprovement}
+                      onChange={e => setRatingForm({ ...ratingForm, areasForImprovement: e.target.value })}
+                    />
+                    <textarea
+                      rows={2}
+                      placeholder="Additional notes (optional)"
+                      style={{ width: '100%', padding: '11px 12px', background: G.card2, border: `1px solid ${G.border}`, color: G.text, borderRadius: 10, fontSize: 12, resize: 'vertical', outline: 'none' }}
+                      value={ratingForm.notes}
+                      onChange={e => setRatingForm({ ...ratingForm, notes: e.target.value })}
+                    />
+                    <button
+                      type="button"
+                      onClick={submitRating}
+                      disabled={submittingRating}
+                      style={{ background: G.lime, color: '#0a180a', border: 'none', borderRadius: 10, padding: '12px 14px', fontWeight: 700, cursor: submittingRating ? 'not-allowed' : 'pointer', fontSize: 12 }}
+                    >
+                      {submittingRating ? 'Submitting…' : 'Submit rating'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ background: G.card, border: `1px solid ${G.border}`, borderRadius: 14, padding: 16 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <div style={{ fontSize: 12, fontWeight: 900, color: G.text }}>Player Progress</div>
+                <Tag color={G.yellow}>{playerProgress?.sessions?.length ?? 0} sessions</Tag>
+              </div>
+              {playerProgress ? (
+                <div style={{ display: 'grid', gap: 12 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                    <div style={{ background: G.card2, borderRadius: 10, padding: 12 }}>
+                      <div style={{ fontSize: 9, color: G.muted, textTransform: 'uppercase' }}>Completed</div>
+                      <div style={{ fontSize: 18, fontWeight: 900, color: G.lime }}>{playerProgress.stats.totalCompletedSessions}</div>
+                    </div>
+                    <div style={{ background: G.card2, borderRadius: 10, padding: 12 }}>
+                      <div style={{ fontSize: 9, color: G.muted, textTransform: 'uppercase' }}>Average</div>
+                      <div style={{ fontSize: 18, fontWeight: 900, color: G.lime }}>{playerProgress.stats.averageRating || '–'}</div>
+                    </div>
+                  </div>
+                  <div style={{ background: G.card2, borderRadius: 10, padding: 12 }}>
+                    <div style={{ fontSize: 10, color: G.muted, marginBottom: 8 }}>Trend</div>
+                    <div style={{ fontSize: 13, color: G.text2 }}>{playerProgress.trend.last3MonthsAverage ? `${playerProgress.trend.last3MonthsAverage}% average over last 3 months` : 'Not enough rating history'}</div>
+                    <div style={{ fontSize: 10, color: G.muted2, marginTop: 8 }}>{playerProgress.trend.totalRatingsInLast3Months ?? 0} ratings in last 3 months</div>
+                  </div>
+                  <div style={{ display: 'grid', gap: 10 }}>
+                    {playerProgress.sessions.slice(0, 3).map((session: any) => (
+                      <div key={session.id} style={{ background: G.card2, borderRadius: 10, padding: 12 }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: G.text }}>{session.title}</div>
+                        <div style={{ fontSize: 10, color: G.muted2, marginTop: 4 }}>{new Date(session.date).toLocaleDateString()}</div>
+                        <div style={{ marginTop: 8, fontSize: 11, color: G.lime }}>Coach: {session.coachName}</div>
+                        <div style={{ fontSize: 10, color: G.text2 }}>Rating: {session.rating ?? 'N/A'}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div style={{ color: G.muted2, fontSize: 11 }}>Progress details are unavailable for this player yet.</div>
+              )}
+            </div>
+
+            <div style={{ background: G.card, border: `1px solid ${G.border}`, borderRadius: 14, padding: 16 }}>
+              <div style={{ fontSize: 12, fontWeight: 900, color: G.text, marginBottom: 12 }}>Current Coach</div>
+              {currentCoach ? (
+                <div style={{ display: 'grid', gap: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ width: 42, height: 42, borderRadius: '50%', background: G.mid, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 800, color: G.lime }}>
+                      {currentCoach.photo ? <img src={currentCoach.photo} alt="" style={{ width: 42, height: 42, borderRadius: '50%', objectFit: 'cover' }} /> : `${currentCoach.firstName?.[0] || ''}${currentCoach.lastName?.[0] || ''}`}
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 12, fontWeight: 800, color: G.text }}>{currentCoach.firstName} {currentCoach.lastName}</div>
+                      <div style={{ fontSize: 10, color: G.muted2 }}>{currentCoach.email}</div>
+                    </div>
+                  </div>
+                  {currentCoach.organization && <div style={{ fontSize: 11, color: G.text2 }}>Organization: {currentCoach.organization.name}</div>}
+                  {currentCoach.bio && <div style={{ fontSize: 11, color: G.muted2 }}>{currentCoach.bio}</div>}
+                </div>
+              ) : (
+                <div style={{ color: G.muted2, fontSize: 11 }}>This player does not have an assigned coach yet.</div>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>

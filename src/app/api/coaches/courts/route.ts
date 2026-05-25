@@ -23,13 +23,6 @@ export async function GET(request: NextRequest) {
       select: { organizationId: true },
     });
 
-    if (!coach) {
-      return NextResponse.json(
-        { error: 'Coach not found' },
-        { status: 404 }
-      );
-    }
-
     // Get all organizations where the coach is a member (primary + additional memberships)
     const memberships = await prisma.membership.findMany({
       where: {
@@ -42,22 +35,15 @@ export async function GET(request: NextRequest) {
     const orgIds = memberships.map(m => m.orgId);
     
     // Also include primary organization if not already in memberships
-    if (coach.organizationId && !orgIds.includes(coach.organizationId)) {
+    if (coach?.organizationId && !orgIds.includes(coach.organizationId)) {
       orgIds.push(coach.organizationId);
     }
 
-    if (orgIds.length === 0) {
-      return NextResponse.json(
-        { error: 'Coach is not associated with any organization' },
-        { status: 400 }
-      );
-    }
-
-    // Get all courts from all organizations the coach belongs to
+    // Get all courts from all organizations the coach belongs to; if the coach has no orgs, return all courts
     const courts = await prisma.court.findMany({
-      where: {
-        organizationId: { in: orgIds },
-      },
+      where: orgIds.length > 0
+        ? { organizationId: { in: orgIds } }
+        : {},
       select: {
         id: true,
         name: true,
@@ -76,10 +62,11 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json({ courts });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error fetching coach courts:', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      { error: `Failed to fetch courts: ${error.message}` },
+      { error: `Failed to fetch courts: ${message}` },
       { status: 500 }
     );
   }

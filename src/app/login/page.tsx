@@ -671,6 +671,7 @@ export default function LoginPage() {
 
               <Link
                 href="/forgot-password"
+                onClick={() => addToast('Opening password reset page...', 'info')}
                 style={{
                   display: "block", textAlign: "right", fontSize: 12,
                   color: G.muted, textDecoration: "none", marginBottom: "1rem",

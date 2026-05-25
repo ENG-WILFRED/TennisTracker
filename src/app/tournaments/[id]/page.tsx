@@ -48,6 +48,7 @@ export default function TournamentDetailPage({ params, searchParams }: { params:
   const resolvedParams = use(params);
   const resolvedSearchParams = use(searchParams);
   const tournamentId = resolvedParams.id;
+  const source = typeof resolvedSearchParams.source === 'string' ? resolvedSearchParams.source : null;
 
   // Set initial tab from URL query param
   React.useEffect(() => {
@@ -528,6 +529,7 @@ export default function TournamentDetailPage({ params, searchParams }: { params:
       tournament={tournament}
       user={user}
       leaderboard={leaderboard}
+      source={source ?? undefined}
       activeTab={activeTab}
       setActiveTab={handleTabChange}
       comments={comments}

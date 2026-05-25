@@ -202,7 +202,7 @@ TennisTracker Development Team`,
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
       <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-slate-800 bg-slate-950 shadow-2xl">
         {/* Header */}
         <div className="sticky top-0 border-b border-slate-800 bg-slate-950/95 backdrop-blur p-6">

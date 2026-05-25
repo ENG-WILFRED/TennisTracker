@@ -25,6 +25,7 @@ const navItems: NavItem[] = [
   { label: 'My Profile', icon: '👤' },
   { label: 'Sessions', icon: '📅' },
   { label: 'Players', icon: '👥' },
+  { label: 'Tournaments', icon: '🏆' },
   { label: 'Calendar', icon: '📆' },
   { label: 'Find People', icon: '👥' },
   { label: 'Find Courts', icon: '🎾' },
