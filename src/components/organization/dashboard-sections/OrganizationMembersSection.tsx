@@ -1161,10 +1161,10 @@ const updateMemberStatus = (
                       )}
                     </div>
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                      <button type="button" disabled={processingAction?.id === member.id && processingAction.action === 'activate'} onClick={() => updateMemberStatus(member, 'activate', { role: member.role, isApplication: member.applicationType === 'membership' })} style={{ padding: '8px 12px', borderRadius: 8, border: 'none', background: G.lime, color: G.dark, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
+                      <button type="button" disabled={processingAction?.id === member.id && processingAction?.action === 'activate'} onClick={() => updateMemberStatus(member, 'activate', { role: member.role, isApplication: member.applicationType === 'membership' })} style={{ padding: '8px 12px', borderRadius: 8, border: 'none', background: G.lime, color: G.dark, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
                         {getButtonText('activate', 'Approve', member.id)}
                       </button>
-                      <button type="button" disabled={processingAction?.id === member.id && processingAction.action === 'dismiss'} onClick={() => updateMemberStatus(member, 'dismiss', { isApplication: member.applicationType === 'membership' })} style={{ padding: '8px 12px', borderRadius: 8, border: 'none', background: G.red, color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
+                      <button type="button" disabled={processingAction?.id === member.id && processingAction?.action === 'dismiss'} onClick={() => updateMemberStatus(member, 'dismiss', { isApplication: member.applicationType === 'membership' })} style={{ padding: '8px 12px', borderRadius: 8, border: 'none', background: G.red, color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
                         {getButtonText('dismiss', 'Reject', member.id)}
                       </button>
                     </div>

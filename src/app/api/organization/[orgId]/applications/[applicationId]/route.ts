@@ -37,6 +37,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ or
       updatedAt: new Date(),
     };
 
+    let clubMember: any;
+
     if (action === 'accept') {
       updateData.approvedAt = new Date();
       updateData.approvedBy = auth.userId;
