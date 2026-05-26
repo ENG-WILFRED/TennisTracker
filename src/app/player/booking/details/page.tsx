@@ -3,7 +3,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { getAvailableTimeSlots } from '@/actions/bookings';
+import { getAvailableTimeSlots, getPlayerBookings } from '@/actions/bookings';
 import { processMPesaPayment, processPayPalPayment, processStripePayment } from '@/actions/payments';
 import { formatKenyanMobileNumber } from '@/lib/phone';
 
@@ -59,6 +59,8 @@ function BookingDetailsContent() {
   const [processing, setProcessing] = useState(false);
   const [paymentError, setPaymentError] = useState<string>('');
   const [paymentSuccess, setPaymentSuccess] = useState<string>('');
+  const [upcomingBookings, setUpcomingBookings] = useState<any[]>([]);
+  const [upcomingLoading, setUpcomingLoading] = useState(false);
   const [summaryOpen, setSummaryOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -116,6 +118,30 @@ function BookingDetailsContent() {
     };
     loadSlots();
   }, [courtId, orgId, selectedDate]);
+
+  // Fetch upcoming bookings for the current player
+  useEffect(() => {
+    const loadUpcomingBookings = async () => {
+      if (!user?.id || !orgId) return;
+      setUpcomingLoading(true);
+      try {
+        const allBookings = await getPlayerBookings(user.id, orgId);
+        const now = new Date();
+        const upcoming = allBookings
+          .filter((booking) => new Date(booking.startTime) >= now && booking.status !== 'cancelled')
+          .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+        const uniqueUpcoming = Array.from(new Map(upcoming.map((booking: any) => [booking.id, booking])).values());
+        setUpcomingBookings(uniqueUpcoming);
+      } catch (error) {
+        console.error('Failed to load upcoming bookings', error);
+        setUpcomingBookings([]);
+      } finally {
+        setUpcomingLoading(false);
+      }
+    };
+
+    loadUpcomingBookings();
+  }, [user?.id, orgId]);
 
   const handlePayment = async () => {
     if (!paymentMethod || !user || !courtId || !orgId) {
@@ -183,7 +209,11 @@ function BookingDetailsContent() {
           user.id,
           courtId,
           'court_booking',
-          bookingMetadata
+          bookingMetadata,
+          window.location.href,
+          window.location.href,
+          undefined,
+          window.location.href
         );
       }
 
@@ -294,7 +324,7 @@ function BookingDetailsContent() {
         </div>
 
         {/* Main Layout: Two Columns */}
-        <div className={`grid gap-6 ${isMobile ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-3'}`}>
+        <div className={`grid gap-8 ${isMobile ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-3'}`}>
           {/* Left: Booking Form (2 columns on large screens) */}
           <div className={`${isMobile ? 'space-y-4' : 'lg:col-span-2 space-y-5'}`}>
             {/* Date Selection */}
@@ -474,7 +504,7 @@ function BookingDetailsContent() {
           <div className={`${
             isMobile 
               ? 'fixed right-0 top-0 h-full w-80 border-l overflow-y-auto z-50 transform transition-transform duration-300'
-              : 'lg:col-span-1 space-y-5'
+              : 'lg:col-span-1 space-y-6'
           }`}
           style={isMobile ? {
             backgroundColor: G.dark,
@@ -639,7 +669,7 @@ function BookingDetailsContent() {
               </Card>
 
               {/* Policies Card */}
-              <Card className="border">
+              <Card className="border mb-4">
                 <Label>Booking Policies</Label>
                 <div className="space-y-3">
                   {[
@@ -657,6 +687,45 @@ function BookingDetailsContent() {
                     </div>
                   ))}
                 </div>
+              </Card>
+
+              <Card className="border">
+                <Label>Upcoming Bookings</Label>
+                {upcomingLoading ? (
+                  <div className="text-center py-6 text-sm" style={{ color: G.muted }}>Loading upcoming bookings…</div>
+                ) : upcomingBookings.length === 0 ? (
+                  <div className="text-center py-6 space-y-2">
+                    <p className="text-sm font-bold" style={{ color: G.text }}>No upcoming bookings yet.</p>
+                    <p className="text-xs" style={{ color: G.muted }}>Any new bookings you make will appear here.</p>
+                  </div>
+                ) : (
+                  <div className="grid gap-5">
+                    {upcomingBookings.map((booking) => {
+                      const startTime = new Date(booking.startTime);
+                      const endTime = new Date(booking.endTime);
+                      return (
+                        <button
+                          key={booking.id}
+                          onClick={() => router.push(`/player/booking/${booking.id}?org=${orgId}`)}
+                          className="w-full text-left rounded-xl border border-[#2d5a35] p-4 bg-[#152515] hover:border-[#7dc142] transition-all"
+                        >
+                          <div className="flex items-center justify-between gap-3 mb-2">
+                            <div>
+                              <p className="text-sm font-bold" style={{ color: G.text }}>{booking.court?.name || `Court ${booking.courtId?.slice(0, 6)}`}</p>
+                              <p className="text-[11px]" style={{ color: G.muted }}>
+                                {startTime.toLocaleDateString(undefined, { month: 'short', day: 'numeric', weekday: 'short' })}
+                              </p>
+                            </div>
+                            <span className="text-[10px] font-semibold" style={{ color: G.lime }}>{booking.status?.toUpperCase() || 'CONFIRMED'}</span>
+                          </div>
+                          <div className="text-[11px]" style={{ color: G.muted }}>
+                            {startTime.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })} - {endTime.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </Card>
             </div>
           </div>
