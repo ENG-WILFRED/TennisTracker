@@ -351,18 +351,6 @@ async function getSharedBrowser(): Promise<any> {
 
   const puppeteer = require('puppeteer');
   const launchOptions: any = { args: ['--no-sandbox', '--disable-setuid-sandbox'] };
-  const fs = require('fs');
-  const resolveExecutablePath = (path: string | undefined) =>
-    path && fs.existsSync(path) ? path : undefined;
-  const executablePath =
-    resolveExecutablePath(process.env.PUPPETEER_EXECUTABLE_PATH) ||
-    resolveExecutablePath(
-      typeof puppeteer.executablePath === 'function' ? puppeteer.executablePath() : undefined
-    );
-  if (executablePath) {
-    launchOptions.executablePath = executablePath;
-  }
-
   sharedBrowser = await puppeteer.launch(launchOptions);
   return sharedBrowser;
 }

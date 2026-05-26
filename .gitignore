@@ -23,7 +23,9 @@
 
 # misc
 .DS_Store
-
+chrome/
+.chromium/
+.cache/
 
 # debug
 npm-debug.log*
