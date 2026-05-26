@@ -59,6 +59,10 @@ export function clearTokens(): void {
   localStorage.removeItem('playerId');
   localStorage.removeItem('currentUser');
   localStorage.removeItem('lastActivityTime');
+  localStorage.removeItem('userRole');
+  localStorage.removeItem('userOrgId');
+  localStorage.removeItem('userOrgName');
+  localStorage.removeItem('userMemberships');
 }
 
 export async function logoutFromServer(): Promise<void> {

@@ -59,6 +59,7 @@ type TournamentDetailViewProps = {
   onNavigateHome: () => void;
   modal: ModalType;
   onSuccessModal: () => Promise<void>;
+  source?: string;
   isOrganizer?: boolean;
   userRegistration?: any;
   isPaid?: boolean;
@@ -102,6 +103,7 @@ export function TournamentDetailView({
   onNavigateDashboard,
   onNavigateTournaments,
   onNavigateHome,
+  source,
   modal,
   onSuccessModal,
   successType,
@@ -595,6 +597,30 @@ export function TournamentDetailView({
           }
         }
       `}</style>
+
+      {source === 'coach' && (
+        <div style={{
+          background: 'rgba(58, 114, 41, 0.16)',
+          border: '1px solid rgba(125,193,66,0.35)',
+          borderRadius: 18,
+          padding: '16px 20px',
+          marginBottom: 20,
+          color: '#d6f2c3',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+            <span style={{ fontSize: 18 }}>🏆</span>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#f4fdd6' }}>Coach Entrance Active</div>
+              <div style={{ fontSize: 13, color: '#cedfba' }}>
+                This page was opened through your coach dashboard. Use this view to review tournament details and access coach-specific navigation.
+              </div>
+            </div>
+          </div>
+          <div style={{ fontSize: 12, color: '#a9c689' }}>
+            Access is routed through the coach experience for faster tournament review.
+          </div>
+        </div>
+      )}
 
       {/* Hero Section */}
       <div className="tournament-hero">

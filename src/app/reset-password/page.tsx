@@ -70,7 +70,9 @@ export default function ResetPasswordPage() {
       const result = await response.json();
 
       if (!response.ok) {
-        setError(result?.error || 'Unable to reset password.');
+        const errorMessage = result?.error || 'Unable to reset password.';
+        setError(errorMessage);
+        addToast(errorMessage, 'error');
       } else {
         const successMessage = result?.message || 'Password reset successfully. Redirecting to login…';
         addToast(successMessage, 'success', 2500);
@@ -80,7 +82,9 @@ export default function ResetPasswordPage() {
         }, 1500);
       }
     } catch (err) {
-      setError('Unable to reset password. Please try again.');
+      const fallbackError = 'Unable to reset password. Please try again.';
+      setError(fallbackError);
+      addToast(fallbackError, 'error');
     } finally {
       setLoading(false);
     }

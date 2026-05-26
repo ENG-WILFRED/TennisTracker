@@ -8,6 +8,9 @@ import { MembershipSwitcher } from '@/components/MembershipSwitcher';
 import { authenticatedFetch } from '@/lib/authenticatedFetch';
 import { downloadReportPdf } from '@/lib/reportPdf';
 import { useToast } from '@/components/ui/ToastContext';
+import toast from 'react-hot-toast';
+import { clearTokens, getStoredTokens } from '@/lib/tokenManager';
+import { clearAllDashboardCache } from '@/lib/dashboardCache';
 import { DashboardErrorPage } from '@/components/DashboardErrorPage';
 
 type Task = {
@@ -59,7 +62,7 @@ const G = {
 };
 
 export const AdminDashboard: React.FC = () => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -163,11 +166,19 @@ export const AdminDashboard: React.FC = () => {
   const roleLabel = dashboardData?.manager?.role || 'Platform Admin';
 
   const handleLogout = async () => {
+    const logoutToast = toast.loading('Logging out...', { duration: Infinity });
     try {
-      await fetch('/api/auth/logout', { method: 'POST' });
-      router.push('/');
+      await logout();
+      clearAllDashboardCache();
+      toast.dismiss(logoutToast);
+      toast.success('Logged out successfully! 👋', { duration: 2000 });
     } catch (err) {
       console.error('Logout error:', err);
+      clearAllDashboardCache();
+      toast.dismiss(logoutToast);
+      toast.error('Error during logout, but session cleared', { duration: 2000 });
+    } finally {
+      router.push('/login');
     }
   };
 
@@ -609,6 +620,12 @@ export const AdminDashboard: React.FC = () => {
   const handleRecruitStaff = async () => {
     if (!selectedSpectator || !recruitRole) {
       addToast('Please select a spectator and role.', 'warning');
+      return;
+    }
+
+    const selectedUserId = selectedSpectator.userId ?? selectedSpectator.id;
+    if (selectedUserId && user?.id && selectedUserId === user.id) {
+      addToast('You cannot recruit yourself as staff.', 'error');
       return;
     }
 

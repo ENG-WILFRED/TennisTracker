@@ -13,10 +13,11 @@ const PlayerManagement = dynamic(() => import('./PlayerManagement').then(mod => 
   ssr: false,
   loading: () => <div className="p-8 text-sm text-[#c2dbb0]">Loading players...</div>,
 });
-const AnalyticsSection = dynamic(() => import('@/components/dashboards/coach/AnalyticsSection').then(mod => mod.default), {
+const CoachTournamentsSection = dynamic(() => import('./CoachTournamentsSection').then(mod => mod.default), {
   ssr: false,
-  loading: () => <div className="p-8 text-sm text-[#c2dbb0]">Loading analytics...</div>,
+  loading: () => <div className="p-8 text-sm text-[#c2dbb0]">Loading tournaments...</div>,
 });
+import AnalyticsSection from '@/components/dashboards/coach/AnalyticsSection';
 const CalendarView = dynamic(() => import('./CalendarView').then(mod => mod.default), {
   ssr: false,
   loading: () => <div className="p-8 text-sm text-[#c2dbb0]">Loading calendar...</div>,
@@ -266,7 +267,7 @@ export default function CoachDashboardContent({
 
           <div style={card}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 11 }}>
-              <div style={{ fontSize: 12, fontWeight: 800 }}>📌 Today's Activities</div>
+              <div style={{ fontSize: 12, fontWeight: 800 }}>📌 Today&apos;s Activities</div>
               <span style={{ fontSize: 8.5, fontWeight: 700, borderRadius: 4, padding: '2px 7px', background: `${G.lime}22`, border: `1px solid ${G.lime}44`, color: G.lime, display: 'inline-block' }}>
                 {activities.length}
               </span>
@@ -346,6 +347,8 @@ export default function CoachDashboardContent({
         <SessionManagement coachId={coachId} />
       ) : !loading && !loadError && activeNav === 'Players' ? (
         <PlayerManagement coachId={coachId} />
+      ) : !loading && !loadError && activeNav === 'Tournaments' ? (
+        <CoachTournamentsSection />
       ) : !loading && !loadError && activeNav === 'Calendar' ? (
         <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
           <div style={{ flex: 1, overflowY: 'auto', padding: '14px 13px' }}>

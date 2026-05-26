@@ -10,6 +10,22 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'coachId required' }, { status: 400 });
     }
 
+    const coach = await prisma.staff.findUnique({
+      where: { userId: coachId },
+    });
+
+    if (!coach) {
+      return NextResponse.json({
+        coachId,
+        balance: 0,
+        currency: 'USD',
+        totalEarned: 0,
+        totalWithdrawn: 0,
+        pendingBalance: 0,
+        transactions: [],
+      });
+    }
+
     const wallet = await prisma.coachWallet.findUnique({
       where: { coachId },
       include: {
