@@ -1,3 +1,6 @@
+// ═══════════════════════════════════════════════════════════════════════════════
+// ENABLED SEEDS - These will run during seeding
+// ═══════════════════════════════════════════════════════════════════════════════
 import { seedOrganizations } from './seeds/organizations.js';
 import { seedUsers } from './seeds/users.js';
 import { seedCourts } from './seeds/courts.js';
@@ -61,7 +64,10 @@ async function main() {
     console.log('═══════════════════════════════════════════════════════════════');
     console.log('🌱 TENNIS TRACKER DATABASE SEEDING');
     console.log('═══════════════════════════════════════════════════════════════');
-    console.log('📋 With Checkpoint System - Only new/failed seeds will be applied\n');
+    console.log('📋 With Checkpoint System - Only new/failed seeds will be applied');
+    console.log('   Disabled seeds (large data): tournaments, matches, payments, stats,');
+    console.log('   community, bookings, tournament-players, staff data, etc.');
+    console.log('   👉 See imports at top of file to enable/disable seeds\n');
 
     await initializeSeedCheckpoints(prisma);
 
@@ -83,18 +89,6 @@ async function main() {
     console.log('───────────────────────────────────────────────────────────────');
     const courtsResult = await executeSeed('courts', () => seedCourts(organizations));
     const courts = courtsResult.result || [];
-
-    // 3B. Create comprehensive Kenya tennis network
-    console.log('\n📍 STEP 3B: Kenya Tennis Network');
-    console.log('───────────────────────────────────────────────────────────────');
-    const kenyaResult = await executeSeed('kenya-tennis', () => seedKenyaPlayersAndCourts());
-    const kenyaData = kenyaResult.result || {
-      players: [],
-      courts: [],
-      bookings: 0,
-      comments: 0,
-      complaints: 0,
-    };
 
     // 4. Create membership tiers and add members to organizations
     console.log('\n📍 STEP 4: Memberships');
@@ -188,54 +182,20 @@ async function main() {
     await executeSeed('tournament-players', () => seedTournamentPlayers());
 
     console.log('\n═══════════════════════════════════════════════════════════════');
-    console.log('✨ SEEDING SESSION COMPLETED!\n');
+    console.log('✨ MINIMAL SEEDING SESSION COMPLETED!\n');
     console.log('📊 SUMMARY:');
     console.log(`  • Organizations: ${organizations.length}`);
     console.log(`  • Users: ${users.length}`);
     console.log(`  • Courts: ${courts.length}`);
-    console.log(`  • Kenya Players: ${Array.isArray(kenyaData.players) ? kenyaData.players.length : 0}`);
-    console.log(`  • Kenya Courts: ${Array.isArray(kenyaData.courts) ? kenyaData.courts.length : 0}`);
     console.log(`  • Membership Tiers: ${tiers.length}`);
     console.log(`  • Club Members: ${members.length}`);
-    console.log(`  • Court Bookings (Enhanced): ${enhancedBookings.length}`);
-    console.log(`  • Payment Records: ${payments.length}`);
-    console.log(`  • Matches: ${matches.length}`);
-    console.log(`  • Community Posts: ${posts.length}`);
-    console.log(`  • Community Comments: ${comments.length}`);
-    console.log(`  • Community Reactions: ${reactions.length}`);
-    console.log(`  • User Follows: ${follows.length}`);
-    console.log(`  • Tournament Comments: ${tournamentComments}`);
     console.log('═══════════════════════════════════════════════════════════════\n');
 
     // Print detailed seed status report
     printSeedStatusReport();
 
-    console.log('🎭 STAFF DASHBOARD TEST ACCOUNTS (password: tennis123):');
-    console.log('───────────────────────────────────────────────────────────────');
-    console.log('  💰 Finance Manager:         alice.finance@example.com');
-    console.log('  📋 Finance Officer:        bob.officer@example.com');
-    console.log('  👔 HR Manager:             carol.hr@example.com');
-    console.log('  📞 Reception:              emma.reception@example.com');
-    console.log('  🔐 Security Officer:       frank.security@example.com');
-    console.log('  🔧 Maintenance Manager:    henry.maintenance@example.com');
-    console.log('  📦 Inventory Manager:      jack.inventory@example.com');
-    console.log('  🎧 Support Manager:        karen.support@example.com');
-    console.log('  ⚡ Operations Manager:      nathan.operations@example.com');
+    console.log('✨ Minimal seed complete.');
     console.log('═══════════════════════════════════════════════════════════════\n');
-
-    console.log('🔐 LEGACY TEST ACCOUNT CREDENTIALS (password: tennis123):');
-    console.log('───────────────────────────────────────────────────────────────');
-    console.log('  🎾 Player (Independent):    marcus.johnson@example.com');
-    console.log('  🎾 Player (Organization):   sophia.chen@example.com');
-    console.log('  👨‍🏫 Coach:                    robert.coach@example.com');
-    console.log('  ⚙️  Admin:                    admin@centraltennis.com');
-    console.log('  💰 Finance Officer:         finance@centraltennis.com');
-    console.log('  🏆 Referee:                 john.referee@example.com');
-    console.log('  👁️  Spectator:              alice.spectator@example.com');
-    console.log('═══════════════════════════════════════════════════════════════\n');
-
-    console.log('💡 INFO: To re-run only failed seeds, simply run `npm run seed` again.');
-    console.log('   The system will skip already-completed seeds and only process failed ones.\n');
   } catch (error) {
     console.error('\n❌ Seeding session failed:', error);
     printSeedStatusReport();

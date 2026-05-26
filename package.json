@@ -39,10 +39,13 @@
     "dev:next": "NODE_OPTIONS=--max-old-space-size=4096 next dev",
     "websocket": "tsx src/websocket-server.ts",
     "websocket:dev": "tsx --watch src/websocket-server.ts",
+    "postinstall": "npx @puppeteer/browsers install chrome@131.0.6778.204 --path \"$HOME/.cache/puppeteer\" || true",
+    "prebuild": "npx @puppeteer/browsers install chrome@131.0.6778.204 --path \"$HOME/.cache/puppeteer\" || true",
     "build": "NODE_OPTIONS=--max-old-space-size=4096 prisma generate && NODE_OPTIONS=--max-old-space-size=4096 next build",
     "start": "NODE_OPTIONS=--max-old-space-size=2048 next start",
     "lint": "eslint",
     "migrate": "tsx scripts/prisma-deploy-or-push.ts",
+    "normalize-court-statuses": "tsx scripts/normalize-court-statuses.ts",
     "seed": "prisma db seed",
     "migrate:reset": "prisma migrate reset"
   },

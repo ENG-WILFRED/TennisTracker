@@ -1,4 +1,5 @@
 import { Kafka, type Producer, logLevel } from 'kafkajs';
+import { broadcastToDevelopers } from '@/lib/socket';
 import * as dotenv from 'dotenv';
 
 dotenv.config();
@@ -88,7 +89,7 @@ export async function initProducer(): Promise<Producer | null> {
 }
 
 export async function publishNotification(payload: NotificationPayload): Promise<boolean> {
-  const maxAttempts = 5;
+  const maxAttempts = 3;
   const baseDelay = 500;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
@@ -117,6 +118,18 @@ export async function publishNotification(payload: NotificationPayload): Promise
 
       if (attempt === maxAttempts) {
         console.error('[KAFKA] Producer not available after retries, notification discarded:', payload.id);
+        try {
+          broadcastToDevelopers('notification_failure', {
+            id: payload.id,
+            template: payload.template,
+            channel: payload.channel,
+            to: payload.to,
+            error: errMsg,
+            timestamp: Date.now(),
+          });
+        } catch (broadcastError) {
+          console.warn('[KAFKA] Failed to notify developers of notification failure:', broadcastError);
+        }
         return false;
       }
 

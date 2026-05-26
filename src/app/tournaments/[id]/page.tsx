@@ -366,6 +366,8 @@ export default function TournamentDetailPage({ params, searchParams }: { params:
             body: JSON.stringify({
               ...payloadBase,
               currency: 'USD',
+              successRedirectUrl: window.location.href,
+              failureRedirectUrl: window.location.href,
               metadata: {
                 amenityId: selectedAmenity.id,
                 paymentMethod: 'stripe',

@@ -1,11 +1,20 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { Card, Button, colors } from '@/lib/vico-design-fallback';
 
 const G = {
-  dark: '#0f1f0f', sidebar: '#152515', card: '#1a3020', cardBorder: '#2d5a35',
-  mid: '#2d5a27', bright: '#3d7a32', lime: '#7dc142', accent: '#a8d84e',
-  text: '#e8f5e0', muted: '#7aaa6a', yellow: '#f0c040',
+  dark: colors.inverse || colors.background,
+  sidebar: colors.surface,
+  card: colors.surfaceSecondary,
+  cardBorder: colors.border,
+  mid: colors.surfaceTertiary,
+  bright: colors.primaryHover || colors.primary,
+  lime: colors.primary,
+  accent: colors.accent,
+  text: colors.textPrimary,
+  muted: colors.textMuted,
+  yellow: colors.warning,
 };
 
 const BarChart: React.FC<{ data: number[]; color?: string }> = ({ data, color = G.lime }) => {
@@ -39,7 +48,7 @@ export function StatsView({ isEmbedded = false, playerData }: StatsViewProps) {
   const [timeframe, setTimeframe] = useState<'week' | 'month' | 'season'>('season');
 
   return (
-    <div style={{ width: '100%', background: isEmbedded ? 'linear-gradient(to bottom right, #0f2710, #0f1f0f, #0d1f0d)' : undefined, padding: isEmbedded ? 20 : 0, borderRadius: isEmbedded ? 8 : 0 }}>
+    <div style={{ width: '100%', background: isEmbedded ? G.dark : undefined, padding: isEmbedded ? 20 : 0, borderRadius: isEmbedded ? 8 : 0 }}>
       {/* Header */}
       <div style={{ marginBottom: 24 }}>
         <h2 style={{ fontSize: 20, fontWeight: 700, color: G.text, marginBottom: 6 }}>
@@ -59,7 +68,7 @@ export function StatsView({ isEmbedded = false, playerData }: StatsViewProps) {
             style={{
               padding: '8px 16px',
               background: timeframe === tf ? G.lime : G.mid,
-              color: timeframe === tf ? '#0f1f0f' : G.text,
+              color: timeframe === tf ? G.dark : G.text,
               border: 'none',
               borderRadius: 6,
               fontSize: 12,

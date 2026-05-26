@@ -1,4 +1,4 @@
-import { MembershipCardData } from '@/utils/generateMembershipCardPDF';
+import { MembershipCardData } from '@document-kit';
 
 export interface CardTemplate {
   id: string;

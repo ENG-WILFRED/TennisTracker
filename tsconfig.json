@@ -19,7 +19,11 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@document-kit/*": ["./packages/document-kit/src/*"],
+      "@document-kit": ["./packages/document-kit/src/index.ts"],
+      "@vico/design-system/*": ["./packages/design-system/src/*"],
+      "@vico/design-system": ["./packages/design-system/src/index.ts"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],

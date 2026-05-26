@@ -36,7 +36,7 @@ export default function OrganizationCourtsSection({ orgId }: CourtsProps) {
   const [formData, setFormData] = useState({
     name: '',
     courtNumber: '',
-    surface: 'Clay',
+    surface: 'clay',
     indoorOutdoor: 'Outdoor',
     lights: false,
     status: 'Active',
@@ -87,7 +87,7 @@ export default function OrganizationCourtsSection({ orgId }: CourtsProps) {
         ? `/api/organization/${orgId}/courts/${editingId}`
         : `/api/organization/${orgId}/courts`;
 
-      const res = await fetch(url, {
+      const res = await authenticatedFetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -136,7 +136,7 @@ export default function OrganizationCourtsSection({ orgId }: CourtsProps) {
   async function handleDelete(courtId: string) {
     if (!orgId || !confirm('Are you sure?')) return;
     try {
-      const res = await fetch(`/api/organization/${orgId}/courts/${courtId}`, {
+      const res = await authenticatedFetch(`/api/organization/${orgId}/courts/${courtId}`, {
         method: 'DELETE',
       });
       if (!res.ok) throw new Error('Failed to delete court');
@@ -292,20 +292,24 @@ export default function OrganizationCourtsSection({ orgId }: CourtsProps) {
                 </select>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                <input
-                  type="datetime-local"
-                  placeholder="Maintenance end"
-                  value={formData.maintenedUntil}
-                  onChange={(e) => setFormData({...formData, maintenedUntil: e.target.value})}
-                  style={{ background: G.dark, border: `1px solid ${G.cardBorder}`, color: G.text, borderRadius: 6, padding: '10px 12px', fontSize: 13 }}
-                />
-                <input
-                  type="datetime-local"
-                  placeholder="Next maintenance"
-                  value={formData.nextMaintenanceDate}
-                  onChange={(e) => setFormData({...formData, nextMaintenanceDate: e.target.value})}
-                  style={{ background: G.dark, border: `1px solid ${G.cardBorder}`, color: G.text, borderRadius: 6, padding: '10px 12px', fontSize: 13 }}
-                />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <label style={{ fontSize: 11, color: G.muted, fontWeight: 600 }}>Maintenance end</label>
+                  <input
+                    type="datetime-local"
+                    value={formData.maintenedUntil}
+                    onChange={(e) => setFormData({...formData, maintenedUntil: e.target.value})}
+                    style={{ background: G.dark, border: `1px solid ${G.cardBorder}`, color: G.text, borderRadius: 6, padding: '10px 12px', fontSize: 13 }}
+                  />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <label style={{ fontSize: 11, color: G.muted, fontWeight: 600 }}>Next maintenance</label>
+                  <input
+                    type="datetime-local"
+                    value={formData.nextMaintenanceDate}
+                    onChange={(e) => setFormData({...formData, nextMaintenanceDate: e.target.value})}
+                    style={{ background: G.dark, border: `1px solid ${G.cardBorder}`, color: G.text, borderRadius: 6, padding: '10px 12px', fontSize: 13 }}
+                  />
+                </div>
               </div>
               <div style={{ display: 'flex', gap: 10 }}>
                 <button 

@@ -4,6 +4,31 @@ const REDIS_URL = process.env.REDIS_URL;
 let redisClient: Redis | null = null;
 
 const localCache = new Map<string, { value: unknown; expiry: number }>();
+const LOCAL_CACHE_CLEANUP_INTERVAL_MS = 60_000;
+const MAX_LOCAL_CACHE_ENTRIES = 2_000;
+
+function cleanupLocalCache() {
+  const now = Date.now();
+  for (const [key, entry] of localCache) {
+    if (entry.expiry <= now) {
+      localCache.delete(key);
+    }
+  }
+
+  if (localCache.size <= MAX_LOCAL_CACHE_ENTRIES) return;
+
+  const keysToRemove: string[] = [];
+  for (const key of localCache.keys()) {
+    keysToRemove.push(key);
+    if (localCache.size - keysToRemove.length <= MAX_LOCAL_CACHE_ENTRIES) break;
+  }
+
+  for (const key of keysToRemove) {
+    localCache.delete(key);
+  }
+}
+
+setInterval(cleanupLocalCache, LOCAL_CACHE_CLEANUP_INTERVAL_MS).unref();
 
 function getRedisClient(): Redis | null {
   if (!REDIS_URL) return null;
@@ -24,6 +49,7 @@ function getRedisClient(): Redis | null {
 export async function cacheGet<T>(key: string): Promise<T | null> {
   const client = getRedisClient();
   if (!client) {
+    cleanupLocalCache();
     const existing = localCache.get(key);
     if (!existing || existing.expiry < Date.now()) {
       localCache.delete(key);
@@ -47,6 +73,7 @@ export async function cacheSet<T>(key: string, value: T, ttlSeconds: number): Pr
   const client = getRedisClient();
   if (!client) {
     localCache.set(key, { value, expiry: Date.now() + ttlSeconds * 1000 });
+    cleanupLocalCache();
     return;
   }
 

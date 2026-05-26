@@ -6,6 +6,24 @@ import { ToastProvider, ToastContainer } from "@/components/ui/ToastContext";
 import { Metadata } from "next";
 import { Toaster } from "react-hot-toast";
 
+// Temporary local toast options (replace with design-system implementation later)
+const toastOptions: any = {
+  // base styling for all toasts
+  style: {
+    background: '#0f172a',
+    color: '#ffffff',
+    borderRadius: 8,
+    padding: '8px 12px',
+    fontSize: '14px',
+  },
+  // per-type overrides
+  success: {
+    duration: 3000,
+  },
+  error: {
+    duration: 6000,
+  },
+};
 export const metadata: Metadata = {
   title: "Vico Sports | Tennis Club Management",
   description:
@@ -145,7 +163,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <RoleProvider>
             <Providers>
               {children}
-              <Toaster position="top-right" />
+              <Toaster toastOptions={toastOptions} position="top-right" />
               <ToastContainer />
             </Providers>
           </RoleProvider>

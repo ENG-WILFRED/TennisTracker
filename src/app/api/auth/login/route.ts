@@ -36,15 +36,20 @@ async function getUserAvailableRoles(userId: string): Promise<{ role: UserRole; 
     ownedOrganizations
   ] = await Promise.all([
     prisma.membership.findMany({
-      where: { userId, status: 'accepted' },
+      where: { userId, status: 'accepted', organization: { status: 'approved' } },
       include: { organization: true }
     }),
     prisma.clubMember.findMany({
-      where: { playerId: userId, paymentStatus: 'active', role: { not: 'inactive' } },
+      where: {
+        playerId: userId,
+        paymentStatus: 'active',
+        role: { not: 'inactive' },
+        organization: { status: 'approved' }
+      },
       include: { organization: true }
     }),
     prisma.staff.findMany({
-      where: { userId },
+      where: { userId, organization: { status: 'approved' } },
       include: { organization: true }
     }),
     prisma.guardian.findMany({
@@ -52,7 +57,7 @@ async function getUserAvailableRoles(userId: string): Promise<{ role: UserRole; 
       include: { guardian: true }
     }),
     prisma.organization.findMany({
-      where: { createdBy: userId },
+      where: { createdBy: userId, status: 'approved' },
       select: { id: true, name: true }
     })
   ]);

@@ -6,16 +6,9 @@ import { useAuth } from '@/context/AuthContext';
 import { getAvailableCourts, getPlayerBookings, getAllAvailableOrganizations } from '@/actions/bookings';
 import { BookingItem } from './BookingItem';
 import { CourtDetailModal } from './CourtDetailModal';
+import { Label } from '@/components/ui/label';
+import { Card, Button, colors } from '@/lib/vico-design-fallback';
 
-const Card: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = '' }) => (
-  <div className={`bg-[#1a3020] border border-[#2d5a35] rounded-xl p-4 ${className}`}>
-    {children}
-  </div>
-);
-
-const Label: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div className="text-[10px] font-bold uppercase tracking-wider text-[#a8d84e] mb-2">{children}</div>
-);
 
 interface BookingViewProps {
   organizationId?: string;
@@ -167,8 +160,8 @@ export function BookingView({ organizationId, onClose, isEmbedded, canBook }: Bo
     <div className="w-full space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-black text-[#7dc142] tracking-tight">🎾 Court Booking</h1>
-        <p className="text-sm text-[#7aaa6a] mt-1">Reserve a court for your next session</p>
+        <h1 className="text-2xl font-black tracking-tight" style={{ color: colors.primary }}>🎾 Court Booking</h1>
+        <p className="text-sm mt-1" style={{ color: colors.textMuted }}>Reserve a court for your next session</p>
       </div>
 
       {/* Stats */}
@@ -182,8 +175,8 @@ export function BookingView({ organizationId, onClose, isEmbedded, canBook }: Bo
           <Card key={s.label} className="flex items-center gap-3 py-3">
             <span className="text-xl">{s.icon}</span>
             <div>
-              <div className="text-[9px] text-[#7aaa6a] font-medium">{s.label}</div>
-              <div className="text-lg font-black text-[#a8d84e]">{s.value}</div>
+              <div className="text-[9px] font-medium" style={{ color: colors.textMuted }}>{s.label}</div>
+              <div className="text-lg font-black" style={{ color: colors.accent }}>{s.value}</div>
             </div>
           </Card>
         ))}

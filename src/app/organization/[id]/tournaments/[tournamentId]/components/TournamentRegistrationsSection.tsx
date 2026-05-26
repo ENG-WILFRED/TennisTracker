@@ -27,6 +27,22 @@ function getNameInitial(reg: any): string {
   return (name || 'U')[0].toUpperCase();
 }
 
+// Helper function to format dates safely
+function formatDate(value: any): string {
+  if (!value) return 'Unknown date';
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Unknown date';
+  return date.toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
+function isPaidRegistration(reg: any): boolean {
+  return reg?.status === 'registered';
+}
+
 // Helper function to extract player user ID
 function getPlayerUserId(reg: any): string | null {
   return reg.member?.player?.user?.id || reg.member?.player?.userId || null;
@@ -495,7 +511,7 @@ export function TournamentRegistrationsSection({
                         {getPlayerName(reg)}
                       </div>
                       <div style={{ fontSize: 11, color: '#4a6a3a', marginTop: 2 }}>
-                        Approved {new Date(reg.updatedAt).toLocaleDateString()}
+                        {isPaidRegistration(reg) ? 'Paid' : 'Approved'} {formatDate(reg.updatedAt || reg.createdAt)}
                       </div>
                     </div>
                   </div>
@@ -520,29 +536,51 @@ export function TournamentRegistrationsSection({
                     >
                       👤 Profile
                     </button>
-                    <button
-                      onClick={() => {
-                        setSelectedPlayerForReminder(reg);
-                        setShowPaymentReminder(true);
-                      }}
-                      style={{
-                        width: isMobile ? '100%' : undefined,
-                        padding: isMobile ? '10px 12px' : '6px 12px',
-                        background: 'rgba(240,192,64,0.15)',
-                        color: '#f0c040',
-                        border: '1px solid rgba(240,192,64,0.3)',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        fontSize: 12,
-                        fontWeight: 600,
-                        fontFamily: 'DM Sans, sans-serif',
-                        transition: 'background .2s',
-                        whiteSpace: 'nowrap',
-                      }}
-                      title="Send payment reminder"
-                    >
-                      💬 Payment Reminder
-                    </button>
+                    {isPaidRegistration(reg) ? (
+                      <div
+                        style={{
+                          width: isMobile ? '100%' : undefined,
+                          padding: isMobile ? '10px 12px' : '6px 12px',
+                          background: 'rgba(125,193,66,0.15)',
+                          color: '#7dc142',
+                          border: '1px solid rgba(125,193,66,0.3)',
+                          borderRadius: '6px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: 12,
+                          fontWeight: 600,
+                          fontFamily: 'DM Sans, sans-serif',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        ✅ Paid
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          setSelectedPlayerForReminder(reg);
+                          setShowPaymentReminder(true);
+                        }}
+                        style={{
+                          width: isMobile ? '100%' : undefined,
+                          padding: isMobile ? '10px 12px' : '6px 12px',
+                          background: 'rgba(240,192,64,0.15)',
+                          color: '#f0c040',
+                          border: '1px solid rgba(240,192,64,0.3)',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          fontSize: 12,
+                          fontWeight: 600,
+                          fontFamily: 'DM Sans, sans-serif',
+                          transition: 'background .2s',
+                          whiteSpace: 'nowrap',
+                        }}
+                        title="Send payment reminder"
+                      >
+                        💬 Payment Reminder
+                      </button>
+                    )}
                     <button
                       onClick={() => {
                         setSelectedPlayerForContact(reg);

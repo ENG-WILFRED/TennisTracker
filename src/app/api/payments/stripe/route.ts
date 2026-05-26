@@ -3,7 +3,7 @@ import { processStripePayment } from '@/actions/payments';
 export async function POST(request: Request) {
   try {
     const payload = await request.json();
-    const { amount, currency, userId, eventId, bookingType, metadata } = payload;
+    const { amount, currency, userId, eventId, bookingType, metadata, successRedirectUrl, failureRedirectUrl } = payload;
 
     // Log incoming payload for debugging
     console.log('Stripe route received:', {
@@ -31,7 +31,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const result = await processStripePayment(amount, currency, userId, eventId, bookingType, metadata);
+    const result = await processStripePayment(amount, currency, userId, eventId, bookingType, metadata, successRedirectUrl, failureRedirectUrl);
     return new Response(JSON.stringify(result), {
       status: result.success ? 200 : 400,
       headers: { 'Content-Type': 'application/json' },

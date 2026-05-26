@@ -1,17 +1,28 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, memo } from 'react';
+import { Card, Button, colors } from '@/lib/vico-design-fallback';
 
 const G = {
-  dark: '#0f1f0f', sidebar: '#152515', card: '#1a3020', cardBorder: '#2d5a35',
-  mid: '#2d5a27', bright: '#3d7a32', lime: '#7dc142', accent: '#a8d84e',
-  text: '#e8f5e0', muted: '#7aaa6a', yellow: '#f0c040', red: '#e05050', blue: '#4ab0d0',
+  dark: colors.inverse || colors.background,
+  sidebar: colors.surface,
+  card: colors.surfaceSecondary,
+  cardBorder: colors.border,
+  mid: colors.surfaceTertiary,
+  bright: colors.primaryHover || colors.primary,
+  lime: colors.primary,
+  accent: colors.accent,
+  text: colors.textPrimary,
+  muted: colors.textMuted,
+  yellow: colors.warning,
+  red: colors.danger,
+  blue: colors.info,
 };
 
 // Style constants to avoid recreating on each render
 const createContainerStyle = (isEmbedded: boolean, hasPaddingTop?: boolean) => ({
   width: '100%',
-  background: isEmbedded ? 'linear-gradient(to bottom right, #0f2710, #0f1f0f, #0d1f0d)' : undefined,
+  background: isEmbedded ? G.dark : undefined,
   paddingTop: hasPaddingTop ? 40 : (isEmbedded ? 20 : 0),
   paddingRight: isEmbedded ? 20 : 0,
   paddingBottom: isEmbedded ? 20 : 0,
@@ -249,7 +260,7 @@ export function ProgressView({ isEmbedded = false, playerId }: ProgressViewProps
   };
 
   return (
-    <div style={{ width: '100%', background: isEmbedded ? 'linear-gradient(to bottom right, #0f2710, #0f1f0f, #0d1f0d)' : undefined, padding: isEmbedded ? 20 : 0, borderRadius: isEmbedded ? 8 : 0 }}>
+    <div style={{ width: '100%', background: isEmbedded ? G.dark : undefined, padding: isEmbedded ? 20 : 0, borderRadius: isEmbedded ? 8 : 0 }}>
       {/* Header */}
       <div style={{ marginBottom: 24 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
@@ -261,7 +272,7 @@ export function ProgressView({ isEmbedded = false, playerId }: ProgressViewProps
             disabled={generatingReport}
             style={{
               background: G.lime,
-              color: '#0f1f0f',
+              color: G.dark,
               border: 'none',
               borderRadius: 6,
               padding: '8px 16px',
@@ -325,7 +336,7 @@ export function ProgressView({ isEmbedded = false, playerId }: ProgressViewProps
                   height: 32,
                   borderRadius: 4,
                   background: result === 'WIN' ? G.lime : G.red,
-                  color: '#0f1f0f',
+                  color: G.dark,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -440,7 +451,7 @@ export function ProgressView({ isEmbedded = false, playerId }: ProgressViewProps
                       padding: '4px 8px',
                       borderRadius: 4,
                       background: match.result === 'WIN' ? G.lime : G.red,
-                      color: '#0f1f0f',
+                      color: G.dark,
                     }}
                   >
                     {match.result}
@@ -464,7 +475,7 @@ export function ProgressView({ isEmbedded = false, playerId }: ProgressViewProps
               disabled={reminderState === 'sending'}
               style={{
                 background: reminderState === 'sent' ? G.blue : G.lime,
-                color: '#0f1f0f',
+                color: G.dark,
                 border: 'none',
                 borderRadius: 6,
                 padding: '8px 12px',
@@ -543,7 +554,7 @@ export function ProgressView({ isEmbedded = false, playerId }: ProgressViewProps
               disabled={reminderState === 'sending'}
               style={{
                 background: reminderState === 'sent' ? G.blue : G.lime,
-                color: '#0f1f0f',
+                color: G.dark,
                 border: 'none',
                 borderRadius: 6,
                 padding: '8px 12px',

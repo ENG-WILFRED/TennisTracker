@@ -11,6 +11,7 @@ import { useToast } from '@/components/ui/ToastContext';
 import toast from 'react-hot-toast';
 import { clearTokens, getStoredTokens } from '@/lib/tokenManager';
 import { clearAllDashboardCache } from '@/lib/dashboardCache';
+import { DashboardErrorPage } from '@/components/DashboardErrorPage';
 
 type Task = {
   id: string;
@@ -772,9 +773,11 @@ export const AdminDashboard: React.FC = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-red-50 text-red-700">
-        <div>Error loading dashboard: {error}</div>
-      </div>
+      <DashboardErrorPage
+        error={error}
+        title="Admin Dashboard Error"
+        icon="⚙️"
+      />
     );
   }
 

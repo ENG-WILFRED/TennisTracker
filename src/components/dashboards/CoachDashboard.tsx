@@ -6,6 +6,7 @@ import { authenticatedFetch } from '@/lib/authenticatedFetch';
 import Link from 'next/link';
 import { useRouter, useSearchParams, useParams } from 'next/navigation';
 import { LoadingState } from '@/components/LoadingState';
+import { DashboardErrorPage } from '@/components/DashboardErrorPage';
 import SessionManagement from './coach/SessionManagement';
 import toast from 'react-hot-toast';
 import PlayerManagement from './coach/PlayerManagement';
@@ -321,23 +322,11 @@ export const CoachDashboard: React.FC = () => {
   // Show error if loading failed
   if (loadError) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 to-red-100">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-red-600 mb-2">Error Loading Dashboard</h2>
-          <p className="text-red-700 mb-4">{loadError}</p>
-          <button
-            onClick={() => {
-              setLoadError(null);
-              setLoading(true);
-              setDashboardData(null);
-              window.location.reload();
-            }}
-            className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700"
-          >
-            Retry
-          </button>
-        </div>
-      </div>
+      <DashboardErrorPage
+        error={loadError}
+        title="Coach Dashboard Error"
+        icon="🏆"
+      />
     );
   }
 

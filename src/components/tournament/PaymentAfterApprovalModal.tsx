@@ -89,7 +89,12 @@ export function PaymentAfterApprovalModal({
           body: JSON.stringify({
             ...payload,
             currency: 'USD',
-            metadata: { source: 'tournament_entry', registrationId: registration.id },
+            metadata: { 
+              source: 'tournament_entry', 
+              registrationId: registration.id,
+              eventId: tournament.id,
+              tournamentName: tournament.name,
+            },
           }),
         });
 
@@ -124,8 +129,15 @@ export function PaymentAfterApprovalModal({
           body: JSON.stringify({
             ...payload,
             currency: 'USD',
+            successRedirectUrl: window.location.href,
+            failureRedirectUrl: window.location.href,
             origin: window.location.origin,
-            metadata: { source: 'tournament_entry', registrationId: registration.id },
+            metadata: { 
+              source: 'tournament_entry', 
+              registrationId: registration.id,
+              eventId: tournament.id,
+              tournamentName: tournament.name,
+            },
           }),
         });
 

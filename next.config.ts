@@ -7,8 +7,6 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   skipTrailingSlashRedirect: true,
-  // Memory optimization
-  swcMinify: true,
   onDemandEntries: {
     maxInactiveAge: 60 * 1000, // 60 seconds
     pagesBufferLength: 5,
