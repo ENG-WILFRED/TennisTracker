@@ -56,7 +56,11 @@ async function fetchWithRetry(url: string, options: RequestInit = {}, onRetry?: 
 
 // Get base URL for callbacks (backend-to-backend)
 const getCallbackBaseUrl = () => {
-  // Use NEXT_PUBLIC_TEST_BASE_URL for development/testing
+  // Prefer NEXTAUTH_URL when available for callback routes.
+  if (process.env.NEXTAUTH_URL) {
+    return process.env.NEXTAUTH_URL;
+  }
+  // Use NEXT_PUBLIC_TEST_BASE_URL for development/testing if no NEXTAUTH_URL is configured.
   if (process.env.NEXT_PUBLIC_TEST_BASE_URL) {
     return process.env.NEXT_PUBLIC_TEST_BASE_URL;
   }
@@ -70,9 +74,17 @@ const getCallbackBaseUrl = () => {
 
 // Get base URL for redirect URLs (frontend)
 const getRedirectBaseUrl = () => {
-  // Use TEST_BASE_URL for development/testing
+  // Prefer NEXTAUTH_URL when available.
+  if (process.env.NEXTAUTH_URL) {
+    return process.env.NEXTAUTH_URL;
+  }
+  // Use TEST_BASE_URL for development/testing if no NEXTAUTH_URL is configured.
   if (process.env.TEST_BASE_URL) {
     return process.env.TEST_BASE_URL;
+  }
+  // Fallback to NEXT_PUBLIC_APP_URL if provided.
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    return process.env.NEXT_PUBLIC_APP_URL;
   }
   // Fallback to NEXT_PUBLIC_SITE_URL for production
   if (process.env.NEXT_PUBLIC_SITE_URL) {
@@ -323,8 +335,6 @@ export async function processStripePayment(
 
     const callbackBaseUrl = getCallbackBaseUrl();
     const redirectBaseUrl = getRedirectBaseUrl();
-    // Use custom callback URL if provided, otherwise generate default internal gateway callback endpoint
-    const callbackUrl = customCallbackUrl || `${callbackBaseUrl}/api/payments/callback/stripe`;
 
     const record = await prisma.paymentRecord.create({
       data: {
@@ -335,7 +345,7 @@ export async function processStripePayment(
         currency: currency.toLowerCase(),
         provider: 'stripe',
         providerStatus: 'pending',
-        callbackUrl,
+        callbackUrl: '',
         cancelUrl: null,
         metadata: JSON.stringify({
           eventId,
@@ -344,6 +354,12 @@ export async function processStripePayment(
           ...metadata,
         }),
       },
+    });
+
+    const callbackUrl = customCallbackUrl || `${callbackBaseUrl}/api/payments/callback/stripe?bookingType=${encodeURIComponent(bookingType)}&transactionId=${encodeURIComponent(record.id)}`;
+    await prisma.paymentRecord.update({
+      where: { id: record.id },
+      data: { callbackUrl },
     });
 
     // Update metadata with transactionId after record creation
