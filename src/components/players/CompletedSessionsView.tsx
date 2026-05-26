@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Calendar, Dumbbell, TrendingUp, Star, Trophy } from 'lucide-react';
+import { colors } from '@vico/design-system';
 
 interface CompletedSession {
   id: string;
@@ -25,19 +26,19 @@ interface CompletedSessionsViewProps {
 }
 
 const G = {
-  page: '#081107',
-  card: '#0f1f0f',
-  cardSoft: '#152515',
-  cardBorder: '#243e24',
-  panel: '#162616',
-  text: '#e8f5e0',
-  muted: '#7aaa6a',
-  accent: '#79bf3e',
-  accentSoft: '#79bf3e22',
-  accentStrong: '#3a7230',
-  warning: '#f0c040',
-  danger: '#d94f4f',
-  success: '#7dc142',
+  page: colors.background,
+  card: colors.surface,
+  cardSoft: colors.surfaceSecondary,
+  cardBorder: colors.border,
+  panel: colors.surfaceTertiary,
+  text: colors.textPrimary,
+  muted: colors.textMuted,
+  accent: colors.primary,
+  accentSoft: `${colors.primary}22`,
+  accentStrong: colors.primaryHover || colors.primary,
+  warning: colors.warning,
+  danger: colors.danger,
+  success: colors.success,
 };
 
 export const CompletedSessionsView: React.FC<CompletedSessionsViewProps> = ({
@@ -106,10 +107,10 @@ export const CompletedSessionsView: React.FC<CompletedSessionsViewProps> = ({
 
   if (loading) {
     return (
-      <div className="p-6 bg-[#081107]">
+      <div style={{ padding: 24, background: G.page }}>
         <div className="animate-pulse space-y-4">
-          <div className="h-8 w-32 bg-[#243e24] rounded-lg" />
-          <div className="h-40 bg-[#243e24] rounded-lg" />
+          <div className="h-8 w-32 rounded-lg" style={{ background: G.cardBorder }} />
+          <div className="h-40 rounded-lg" style={{ background: G.cardBorder }} />
         </div>
       </div>
     );
@@ -131,7 +132,7 @@ export const CompletedSessionsView: React.FC<CompletedSessionsViewProps> = ({
               <Trophy className="h-6 w-6" style={{ color: G.accent }} />
               Completed Sessions
             </h2>
-            <p className="text-sm text-[#a8d84e] mt-1">
+            <p className="text-sm mt-1" style={{ color: G.accent }}>
               Track your training progress with coach feedback
             </p>
           </div>

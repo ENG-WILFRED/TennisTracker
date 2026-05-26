@@ -6,6 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { getTournamentDetails, getTournamentLeaderboard, applyForTournament, submitTournamentInquiry, getTournamentComments, addTournamentComment } from '@/actions/tournaments';
 import { createCommunityPost } from '@/actions/community';
 import { authenticatedFetch } from '@/lib/authenticatedFetch';
+import { fetchWithCache, clearCacheEntry } from '@/lib/dashboardCache';
 import React from 'react';
 
 import { TournamentDetailView } from '@/app/tournaments/[id]/components';
@@ -66,17 +67,22 @@ export default function TournamentDetailPage({ params, searchParams }: { params:
     router.push(`/dashboard/player/${playerId}/tournaments/${tournamentId}?tab=${tab}`);
   };
 
-  const fetchTournamentData = async () => {
+  const fetchTournamentData = async (forceReload = false) => {
     if (!tournamentId) {
       setLoading(false);
       return;
     }
 
+    const tournamentCacheKey = `player_tournament_detail_${tournamentId}`;
+    const leaderboardCacheKey = `player_tournament_leaderboard_${tournamentId}`;
+
+    if (forceReload) {
+      clearCacheEntry(tournamentCacheKey);
+      clearCacheEntry(leaderboardCacheKey);
+    }
+
     try {
-      const [tournamentData, leaderboardData] = await Promise.all([
-        getTournamentDetails(tournamentId),
-        getTournamentLeaderboard(tournamentId)
-      ]);
+      const tournamentData = await fetchWithCache(tournamentCacheKey, () => getTournamentDetails(tournamentId));
 
       if (tournamentData) {
         setTournament(tournamentData);
@@ -108,8 +114,11 @@ export default function TournamentDetailPage({ params, searchParams }: { params:
         }
       }
 
-      if (leaderboardData) {
-        setLeaderboard(leaderboardData);
+      if (activeTab === 'leaderboard') {
+        const leaderboardData = await fetchWithCache(leaderboardCacheKey, () => getTournamentLeaderboard(tournamentId));
+        if (leaderboardData) {
+          setLeaderboard(leaderboardData);
+        }
       }
     } catch (error) {
       console.error('Error fetching tournament data:', error);
@@ -151,6 +160,17 @@ export default function TournamentDetailPage({ params, searchParams }: { params:
   }, [tournamentId, user?.id]);
 
   useEffect(() => {
+    if (activeTab === 'leaderboard' && tournamentId) {
+      const leaderboardCacheKey = `player_tournament_leaderboard_${tournamentId}`;
+      const loadLeaderboard = async () => {
+        const leaderboardData = await fetchWithCache(leaderboardCacheKey, () => getTournamentLeaderboard(tournamentId));
+        if (leaderboardData) {
+          setLeaderboard(leaderboardData);
+        }
+      };
+      loadLeaderboard();
+    }
+
     if (activeTab === 'comments' && tournamentId) {
       fetchComments();
     }
@@ -366,6 +386,8 @@ export default function TournamentDetailPage({ params, searchParams }: { params:
             body: JSON.stringify({
               ...payloadBase,
               currency: 'USD',
+              successRedirectUrl: window.location.href,
+              failureRedirectUrl: window.location.href,
               metadata: {
                 amenityId: selectedAmenity.id,
                 paymentMethod: 'stripe',
@@ -425,7 +447,7 @@ export default function TournamentDetailPage({ params, searchParams }: { params:
         setModal('success');
         setSelectedAmenity(null); // Clear selected amenity
         // Refresh tournament data to update booking counts
-        await fetchTournamentData();
+        await fetchTournamentData(true);
       } else {
         alert(result.error || 'Booking failed');
       }
@@ -456,7 +478,7 @@ export default function TournamentDetailPage({ params, searchParams }: { params:
       }
 
       // Refresh tournament data
-      await fetchTournamentData();
+      await fetchTournamentData(true);
     } catch (error) {
       console.error('Error approving registration:', error);
       alert('Failed to approve application');
@@ -467,7 +489,7 @@ export default function TournamentDetailPage({ params, searchParams }: { params:
     // The rejection reason is handled in the TournamentDetailView component
     // when the RejectionReasonModal is shown. This handler would be called
     // if we need additional logic after rejection.
-    await fetchTournamentData();
+    await fetchTournamentData(true);
   };
 
   const handleApplyForTournament = async (applicationData: any) => {
@@ -478,7 +500,7 @@ export default function TournamentDetailPage({ params, searchParams }: { params:
         setSuccessType('registration');
         setModal('success');
         await fetchUserRegistrationStatus();
-        await fetchTournamentData();
+        await fetchTournamentData(true);
       } else {
         alert(result.message || 'Failed to apply for tournament');
       }
@@ -540,7 +562,7 @@ export default function TournamentDetailPage({ params, searchParams }: { params:
       }
 
       // Refresh tournament data
-      await fetchTournamentData();
+      await fetchTournamentData(true);
     } catch (error) {
       console.error('Error updating tournament status:', error);
       alert('Failed to update tournament status');

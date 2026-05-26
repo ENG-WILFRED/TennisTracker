@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { TrendingUp, BarChart3, Award, Target } from 'lucide-react';
+import { colors } from '@vico/design-system';
 
 interface PlayerProgressData {
   player: {
@@ -33,16 +34,16 @@ interface PlayerProgressProps {
 }
 
 const G = {
-  page: '#081107',
-  card: '#0f1f0f',
-  cardSoft: '#152515',
-  cardBorder: '#243e24',
-  text: '#e8f5e0',
-  muted: '#7aaa6a',
-  accent: '#79bf3e',
-  accentSoft: '#79bf3e22',
-  warning: '#f0c040',
-  success: '#7dc142',
+  page: colors.background,
+  card: colors.surface,
+  cardSoft: colors.surfaceSecondary,
+  cardBorder: colors.border,
+  text: colors.textPrimary,
+  muted: colors.textMuted,
+  accent: colors.primary,
+  accentSoft: `${colors.primary}22`,
+  warning: colors.warning,
+  success: colors.success,
 };
 
 const StatCard = ({
@@ -188,10 +189,10 @@ export const PlayerProgress: React.FC<PlayerProgressProps> = ({
     return (
       <div style={{ padding: isEmbedded ? '0' : '20px' }}>
         <div className="animate-pulse space-y-4">
-          <div className="h-8 w-32 bg-[#243e24] rounded-lg" />
+          <div className="h-8 w-32 rounded-lg" style={{ background: G.cardBorder }} />
           <div className="grid grid-cols-2 gap-3">
-            <div className="h-24 bg-[#243e24] rounded-lg" />
-            <div className="h-24 bg-[#243e24] rounded-lg" />
+            <div className="h-24 rounded-lg" style={{ background: G.cardBorder }} />
+            <div className="h-24 rounded-lg" style={{ background: G.cardBorder }} />
           </div>
         </div>
       </div>
@@ -229,7 +230,7 @@ export const PlayerProgress: React.FC<PlayerProgressProps> = ({
           <TrendingUp className="h-6 w-6" style={{ color: G.accent }} />
           Training Progress
         </h2>
-        <p className="text-sm text-[#a8d84e]">
+        <p className="text-sm" style={{ color: G.accent }}>
           Track improvements based on coach ratings
         </p>
       </div>

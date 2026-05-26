@@ -12,6 +12,7 @@ import { RefereeDashboard } from '@/components/dashboards/referee/RefereeDashboa
 import { OrganizationDashboard } from '@/components/dashboards/OrganizationDashboard';
 import { SpectatorDashboard } from '@/components/dashboards/spectator';
 import { DeveloperDashboard } from '@/components/dashboards/DeveloperDashboard';
+import { colors } from '@vico/design-system';
 import { MemberDashboard } from '@/components/dashboards/MemberDashboard';
 import { UserRole } from '@/config/roles';
 
@@ -88,7 +89,7 @@ export default function DashboardRoleIdPage() {
   // If profile view is requested, it will be handled by the dashboard component
   // via the useSearchParams() hook checking for ?profile=true
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <div className="min-h-screen bg-vico-surface" style={{ background: colors.surface }}>
       {/* Role-Specific Dashboard */}
       {activeRole === 'player' && <PlayerDashboard />}
       {activeRole === 'coach' && <CoachDashboard />}

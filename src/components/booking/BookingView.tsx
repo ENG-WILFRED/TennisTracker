@@ -22,17 +22,41 @@ import {
 } from '@/actions/payments';
 import { BookingConfirmation } from './BookingConfirmation';
 import { CourtDetailModal } from './CourtDetailModal';
+import { colors } from '@vico/design-system';
+
+const hexToRgb = (hex: string) => {
+  const c = hex.replace('#', '');
+  const full = c.length === 3 ? c.split('').map(ch => ch + ch).join('') : c;
+  const num = parseInt(full, 16);
+  const r = (num >> 16) & 255;
+  const g = (num >> 8) & 255;
+  const b = num & 255;
+  return `${r},${g},${b}`;
+};
+
+const G = {
+  page: colors.background,
+  surface: colors.surface,
+  card: colors.surfaceSecondary,
+  border: colors.border,
+  primary: colors.primary,
+  primaryHover: colors.primaryHover || colors.primary,
+  text: colors.textPrimary,
+  muted: colors.textMuted,
+  warning: colors.warning,
+  danger: colors.danger,
+};
 
 // ─── Shared primitives ────────────────────────────────────────────────────────
 
-const Card: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = '' }) => (
-  <div className={`bg-[#1a3020] border border-[#2d5a35] rounded-xl p-4 ${className}`}>
+const Card: React.FC<{ children: React.ReactNode; className?: string; style?: React.CSSProperties }> = ({ children, className = '', style }) => (
+  <div style={{ background: G.card, border: `1px solid ${G.border}`, borderRadius: 12, padding: 16, ...(style || {}) }} className={className}>
     {children}
   </div>
 );
 
 const Label: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = '' }) => (
-  <div className={`text-[10px] font-bold uppercase tracking-wider text-[#a8d84e] mb-2 ${className}`}>{children}</div>
+  <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.06em', color: G.primary, marginBottom: 8 }} className={className}>{children}</div>
 );
 
 // ─── Static mock data for new sections ────────────────────────────────────────
@@ -54,13 +78,13 @@ const RECENT_PLAYERS = [
 
 const PopularityBar: React.FC<{ hour: number; value: number; max: number; selected?: boolean }> = ({ hour, value, max, selected }) => {
   const pct = Math.round((value / max) * 100);
-  const color = pct >= 80 ? 'bg-red-500/70' : pct >= 50 ? 'bg-[#f0c040]/70' : 'bg-[#7dc142]/70';
+  const fillColor = pct >= 80 ? `rgba(${hexToRgb(G.danger)},0.7)` : pct >= 50 ? `rgba(${hexToRgb(G.warning)},0.7)` : `rgba(${hexToRgb(G.primary)},0.7)`;
   return (
     <div className="flex flex-col items-center gap-1">
-      <div className="w-4 bg-[#152515] rounded-t overflow-hidden" style={{ height: 36 }}>
-        <div className={`w-full rounded-t transition-all ${color} ${selected ? 'ring-1 ring-white' : ''}`} style={{ height: `${pct}%`, marginTop: `${100 - pct}%` }} />
+      <div style={{ width: 16, background: G.surface, borderTopLeftRadius: 6, borderTopRightRadius: 6, overflow: 'hidden', height: 36 }}>
+        <div style={{ width: '100%', borderTopLeftRadius: 6, borderTopRightRadius: 6, transition: 'height 0.2s', background: fillColor, height: `${pct}%`, marginTop: `${100 - pct}%` }} />
       </div>
-      <span className="text-[8px] text-[#7aaa6a]">{hour}</span>
+      <span style={{ fontSize: 8, color: G.muted }}>{hour}</span>
     </div>
   );
 };
@@ -70,24 +94,20 @@ const PopularityBar: React.FC<{ hour: number; value: number; max: number; select
 const CourtCard: React.FC<{ court: any; selected: boolean; onClick: () => void }> = ({ court, selected, onClick }) => (
   <button
     onClick={onClick}
-    className={`w-full text-left p-3 rounded-xl border-2 transition-all ${
-      selected
-        ? 'border-[#7dc142] bg-[#2d5a27]'
-        : 'border-[#2d5a35] bg-[#152515] hover:border-[#7dc142]/50 hover:bg-[#2d5a27]/30'
-    }`}
+    style={{ width: '100%', textAlign: 'left', padding: 12, borderRadius: 12, borderWidth: 2, borderStyle: 'solid', transition: 'all .12s', background: selected ? G.card : G.surface, borderColor: selected ? G.primary : G.border }}
   >
-    <div className="flex items-start justify-between mb-2">
+    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 8 }}>
       <div>
-        <div className="text-sm font-bold text-[#e8f5e0]">{court.name}</div>
-        <div className="text-[10px] text-[#7aaa6a] mt-0.5">{court.surface || 'Hard Court'}</div>
+        <div style={{ fontSize: 14, fontWeight: 800, color: G.text }}>{court.name}</div>
+        <div style={{ fontSize: 10, color: G.muted, marginTop: 4 }}>{court.surface || 'Hard Court'}</div>
       </div>
-      <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${selected ? 'bg-[#7dc142] text-[#0f1f0f]' : 'bg-[#2d5a35] text-[#7aaa6a]'}`}>
+      <span style={{ fontSize: 12, fontWeight: 800, padding: '4px 8px', borderRadius: 999, background: selected ? G.primary : G.card, color: selected ? G.page : G.muted }}>
         {selected ? '✓ Selected' : 'Available'}
       </span>
     </div>
-    <div className="flex flex-wrap gap-1 mt-2">
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
       {(COURT_FEATURES[court.id] || COURT_FEATURES.default).map(f => (
-        <span key={f} className="text-[9px] bg-[#0f1f0f] text-[#7aaa6a] px-1.5 py-0.5 rounded">{f}</span>
+        <span key={f} style={{ fontSize: 9, background: G.page, color: G.muted, padding: '3px 6px', borderRadius: 6 }}>{f}</span>
       ))}
     </div>
   </button>
@@ -99,31 +119,27 @@ const SlotButton: React.FC<{ slot: any; selected: boolean; onClick: () => void }
   if (!slot.available) {
     // Slot is booked and confirmed/no-show (disabled)
     return (
-      <div 
-        className="flex flex-col items-center py-2 px-1 rounded-lg bg-[#3a2d2d] border border-[#5a2d2d] opacity-60 cursor-not-allowed relative group"
+      <div
         title={slot.pendingCount > 0 ? `${slot.pendingCount} pending booking(s) - will notify if available` : 'Fully booked'}
+        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '8px 4px', borderRadius: 10, background: G.card, border: `1px solid ${G.border}`, opacity: 0.6, position: 'relative' }}
       >
-        <span className="text-xs font-bold text-[#7aaa6a]">{slot.time}</span>
-        <span className="text-[8px] text-red-500 mt-0.5">Taken</span>
-        
+        <span style={{ fontSize: 12, fontWeight: 800, color: G.muted }}>{slot.time}</span>
+        <span style={{ fontSize: 10, color: G.danger, marginTop: 4 }}>Taken</span>
+
         {/* Pending count badge */}
         {slot.pendingCount > 0 && (
-          <span 
-            className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-[9px] font-bold flex items-center justify-center"
-            style={{ backgroundColor: '#f0c040', color: '#000' }}
+          <span
+            style={{ position: 'absolute', top: -4, right: -4, width: 20, height: 20, borderRadius: 999, fontSize: 10, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', background: G.warning, color: G.page }}
           >
             {slot.pendingCount}
           </span>
         )}
-        
+
         {/* Hover tooltip for pending slots */}
         {slot.pendingCount > 0 && (
-          <div 
-            className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 rounded text-[10px] whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 w-max"
-            style={{ backgroundColor: '#f0c040', color: '#000' }}
-          >
-            <div className="font-bold">{slot.pendingCount} pending</div>
-            <div className="text-[9px]">We'll notify you if available</div>
+          <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', bottom: '100%', marginBottom: 8, padding: '6px 8px', borderRadius: 8, fontSize: 12, background: G.warning, color: G.page, zIndex: 10 }}>
+            <div style={{ fontWeight: 800 }}>{slot.pendingCount} pending</div>
+            <div style={{ fontSize: 11 }}>We'll notify you if available</div>
           </div>
         )}
       </div>
@@ -132,25 +148,18 @@ const SlotButton: React.FC<{ slot: any; selected: boolean; onClick: () => void }
   return (
     <button
       onClick={onClick}
-      className={`flex flex-col items-center py-2 px-1 rounded-lg border-2 transition-all relative ${
-        selected
-          ? 'bg-[#7dc142] border-[#7dc142] text-[#0f1f0f]'
-          : 'bg-[#152515] border-[#2d5a35] text-[#e8f5e0] hover:border-[#7dc142]/60 hover:bg-[#2d5a27]/40'
-      }`}
+      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '8px 4px', borderRadius: 10, border: `2px solid ${selected ? G.primary : G.border}`, transition: 'all .12s', position: 'relative', background: selected ? G.primary : G.surface, color: selected ? G.page : G.text }}
     >
-      <span className="text-xs font-bold">{slot.time}</span>
-      <span className={`text-[8px] mt-0.5 font-semibold ${selected ? 'text-[#0f1f0f]' : slot.isPeak ? 'text-[#f0c040]' : 'text-[#7aaa6a]'}`}>
-        ${slot.price}
-      </span>
+      <span style={{ fontSize: 12, fontWeight: 800 }}>{slot.time}</span>
+      <span style={{ fontSize: 10, marginTop: 4, fontWeight: 700, color: selected ? G.page : (slot.isPeak ? G.warning : G.muted) }}>{`$${slot.price}`}</span>
       {slot.isPeak && !selected && (
-        <span className="text-[7px] text-[#f0c040]">Peak</span>
+        <span style={{ fontSize: 9, color: G.warning }}>Peak</span>
       )}
-      
+
       {/* Pending count badge for available slots */}
       {slot.pendingCount > 0 && (
-        <span 
-          className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-[9px] font-bold flex items-center justify-center"
-          style={{ backgroundColor: '#f0c040', color: '#000' }}
+        <span
+          style={{ position: 'absolute', top: -6, right: -6, width: 20, height: 20, borderRadius: 999, fontSize: 10, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', background: G.warning, color: G.page }}
         >
           {slot.pendingCount}
         </span>
@@ -168,49 +177,49 @@ const BookingItem: React.FC<{ booking: any; canBook: boolean; onCancel: (id: str
   const isActive = booking.status === 'confirmed' && !isPast;
   const durationHrs = Math.round((end.getTime() - start.getTime()) / 3600000);
 
-  const statusColors: Record<string, string> = {
-    confirmed: 'bg-[#7dc142] text-[#0f1f0f]',
-    cancelled: 'bg-red-900/60 text-red-400',
-    completed: 'bg-[#2d5a35] text-[#7aaa6a]',
+  const statusColors: Record<string, { bg: string; text: string }> = {
+    confirmed: { bg: G.primary, text: G.page },
+    cancelled: { bg: `rgba(${hexToRgb(G.danger)},0.6)`, text: G.danger },
+    completed: { bg: G.card, text: G.muted },
   };
 
   return (
-    <div className={`p-4 rounded-xl border transition-all ${booking.status === 'cancelled' ? 'border-red-900/40 opacity-60' : 'border-[#2d5a35] hover:border-[#7dc142]/40'} bg-[#152515]`}>
-      <div className="flex items-start justify-between mb-3">
+    <div style={{ padding: 16, borderRadius: 12, border: booking.status === 'cancelled' ? `1px solid rgba(${hexToRgb(G.danger)},0.25)` : `1px solid ${G.border}`, opacity: booking.status === 'cancelled' ? 0.6 : 1, background: G.surface, transition: 'all .12s' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
         <div>
-          <div className="text-sm font-bold text-[#e8f5e0]">🎾 {booking.court.name}</div>
-          <div className="text-xs text-[#7aaa6a] mt-0.5">
+          <div style={{ fontSize: 14, fontWeight: 800, color: G.text }}>🎾 {booking.court.name}</div>
+          <div style={{ fontSize: 12, color: G.muted, marginTop: 4 }}>
             {start.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
           </div>
         </div>
-        <span className={`text-[9px] font-black px-2 py-1 rounded-full ${statusColors[booking.status] || 'bg-[#2d5a35] text-[#7aaa6a]'}`}>
+        <span style={{ fontSize: 12, fontWeight: 900, padding: '4px 8px', borderRadius: 999, background: (statusColors[booking.status] || { bg: G.card }).bg, color: (statusColors[booking.status] || { text: G.muted }).text }}>
           {booking.status.toUpperCase()}
         </span>
       </div>
 
-      <div className="grid grid-cols-3 gap-2 mb-3">
-        <div className="bg-[#0f1f0f] rounded-lg px-2 py-1.5 text-center">
-          <div className="text-[9px] text-[#7aaa6a]">Start</div>
-          <div className="text-xs font-bold text-[#e8f5e0]">{start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginBottom: 12 }}>
+        <div style={{ background: G.page, borderRadius: 10, padding: '8px 10px', textAlign: 'center' }}>
+          <div style={{ fontSize: 10, color: G.muted }}>Start</div>
+          <div style={{ fontSize: 14, fontWeight: 800, color: G.text }}>{start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
         </div>
-        <div className="bg-[#0f1f0f] rounded-lg px-2 py-1.5 text-center">
-          <div className="text-[9px] text-[#7aaa6a]">End</div>
-          <div className="text-xs font-bold text-[#e8f5e0]">{end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+        <div style={{ background: G.page, borderRadius: 10, padding: '8px 10px', textAlign: 'center' }}>
+          <div style={{ fontSize: 10, color: G.muted }}>End</div>
+          <div style={{ fontSize: 14, fontWeight: 800, color: G.text }}>{end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
         </div>
-        <div className="bg-[#0f1f0f] rounded-lg px-2 py-1.5 text-center">
-          <div className="text-[9px] text-[#7aaa6a]">Duration</div>
-          <div className="text-xs font-bold text-[#a8d84e]">{durationHrs}h</div>
+        <div style={{ background: G.page, borderRadius: 10, padding: '8px 10px', textAlign: 'center' }}>
+          <div style={{ fontSize: 10, color: G.muted }}>Duration</div>
+          <div style={{ fontSize: 14, fontWeight: 800, color: G.primary }}>{durationHrs}h</div>
         </div>
       </div>
 
       {isActive && canBook && (
-        <div className="flex gap-2">
-          <button className="flex-1 py-1.5 text-[10px] font-bold bg-[#2d5a27] hover:bg-[#3d7a32] text-[#7dc142] rounded-lg transition-colors">
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button style={{ flex: 1, padding: '8px 10px', fontSize: 12, fontWeight: 800, background: G.card, borderRadius: 10, color: G.primary, border: `1px solid ${G.primary}`, transition: 'background .12s' }}>
             📅 Reschedule
           </button>
           <button
             onClick={() => onCancel(booking.id)}
-            className="flex-1 py-1.5 text-[10px] font-bold bg-red-900/20 hover:bg-red-900/40 text-red-400 border border-red-700/40 rounded-lg transition-colors"
+            style={{ flex: 1, padding: '8px 10px', fontSize: 12, fontWeight: 800, background: `rgba(${hexToRgb(G.danger)},0.12)`, color: G.danger, border: `1px solid rgba(${hexToRgb(G.danger)},0.4)`, borderRadius: 10, transition: 'background .12s' }}
           >
             ✕ Cancel
           </button>
@@ -525,9 +534,9 @@ export function BookingView({ onClose, isEmbedded = false, canBook = true, organ
   if (!hasClubMembership) {
     return (
       <Card className="text-center py-12">
-        <div className="text-4xl mb-4">🏢</div>
-        <div className="text-base font-bold text-[#e8f5e0] mb-2">No Club Membership</div>
-        <div className="text-sm text-[#7aaa6a] max-w-sm mx-auto">
+        <div style={{ fontSize: 36, marginBottom: 16 }}>🏢</div>
+        <div style={{ fontSize: 16, fontWeight: 800, color: G.text, marginBottom: 8 }}>No Club Membership</div>
+        <div style={{ fontSize: 14, color: G.muted, maxWidth: 360, margin: '0 auto' }}>
           You need to be a member of a club to book courts. Contact your organisation administrator to join.
         </div>
       </Card>
@@ -538,20 +547,20 @@ export function BookingView({ onClose, isEmbedded = false, canBook = true, organ
   if (courts.length === 0) {
     return (
       <Card className="text-center py-12">
-        <div className="text-4xl mb-4">🎾</div>
-        <div className="text-base font-bold text-[#e8f5e0] mb-2">No Courts Available</div>
-        <div className="text-sm text-[#7aaa6a]">There are no courts available for booking at your club right now.</div>
+        <div style={{ fontSize: 36, marginBottom: 16 }}>🎾</div>
+        <div style={{ fontSize: 16, fontWeight: 800, color: G.text, marginBottom: 8 }}>No Courts Available</div>
+        <div style={{ fontSize: 14, color: G.muted }}>There are no courts available for booking at your club right now.</div>
       </Card>
     );
   }
 
   return (
-    <div className={`w-full ${isEmbedded ? 'bg-gradient-to-br from-[#0f2710] via-[#0f1f0f] to-[#0d1f0d] p-5 rounded-xl' : ''}`}>
+    <div style={{ width: '100%', ...(isEmbedded ? { background: `linear-gradient(135deg, ${G.page} 0%, ${G.surface} 50%, ${G.card} 100%)`, padding: 20, borderRadius: 12 } : {}) }}>
 
       {/* ── Header ──────────────────────────────────────────────────────────── */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-black text-[#7dc142] tracking-tight">🎾 Court Booking</h1>
-        <p className="text-sm text-[#7aaa6a] mt-1">Reserve a court for your next session</p>
+      <div style={{ marginBottom: 24 }}>
+        <h1 style={{ fontSize: 20, fontWeight: 900, color: G.primary, letterSpacing: '-0.02em' }}>🎾 Court Booking</h1>
+        <p style={{ fontSize: 14, color: G.muted, marginTop: 6 }}>Reserve a court for your next session</p>
       </div>
 
       {/* ── Stats strip ─────────────────────────────────────────────────────── */}
@@ -563,17 +572,17 @@ export function BookingView({ onClose, isEmbedded = false, canBook = true, organ
           { icon: '💰', label: 'Avg. Price', value: '$45/hr' },
         ].map(s => (
           <Card key={s.label} className="flex items-center gap-3 py-3">
-            <span className="text-xl">{s.icon}</span>
+            <span style={{ fontSize: 20 }}>{s.icon}</span>
             <div>
-              <div className="text-[9px] text-[#7aaa6a] font-medium">{s.label}</div>
-              <div className="text-lg font-black text-[#a8d84e] leading-tight">{s.value}</div>
+              <div style={{ fontSize: 10, color: G.muted, fontWeight: 700 }}>{s.label}</div>
+              <div style={{ fontSize: 18, fontWeight: 900, color: G.primary }}>{s.value}</div>
             </div>
           </Card>
         ))}
       </div>
 
       {/* ── Tabs ────────────────────────────────────────────────────────────── */}
-      <div className="flex gap-1 mb-6 bg-[#152515] p-1 rounded-xl">
+      <div style={{ display: 'flex', gap: 6, marginBottom: 24, background: G.surface, padding: 4, borderRadius: 12 }}>
         {[
           { id: 'booking', label: '+ New Booking', disabled: !canBook },
           { id: 'myBookings', label: `📋 My Bookings (${existingBookings.filter(b => new Date(b.startTime) >= new Date() && b.status !== 'cancelled').length})` },
@@ -583,11 +592,7 @@ export function BookingView({ onClose, isEmbedded = false, canBook = true, organ
             key={tab.id}
             onClick={() => !tab.disabled && setActiveTab(tab.id as any)}
             disabled={tab.disabled}
-            className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${
-              activeTab === tab.id
-                ? 'bg-[#2d5a27] text-[#7dc142] border border-[#7dc142]/40'
-                : 'text-[#7aaa6a] hover:text-[#e8f5e0] disabled:opacity-40 disabled:cursor-not-allowed'
-            }`}
+            style={activeTab === tab.id ? { flex: 1, padding: '10px 8px', borderRadius: 10, fontSize: 12, fontWeight: 800, background: G.card, color: G.primary, border: `1px solid ${G.primary}` } : { flex: 1, padding: '10px 8px', borderRadius: 10, fontSize: 12, fontWeight: 800, color: G.muted }}
           >
             {tab.label}
           </button>
@@ -598,23 +603,13 @@ export function BookingView({ onClose, isEmbedded = false, canBook = true, organ
           NEW BOOKING TAB
       ══════════════════════════════════════════════════════════════════════ */}
       {activeTab === 'booking' && canBook && (
-        <div className="scrollable-booking flex flex-col gap-4 max-h-[calc(100vh-280px)] overflow-y-auto pr-2" style={{ scrollbarWidth: 'thin', scrollbarColor: '#7dc142 #152515' }}>
+        <div className="scrollable-booking flex flex-col gap-4 max-h-[calc(100vh-280px)] overflow-y-auto pr-2" style={{ scrollbarWidth: 'thin', scrollbarColor: `${G.primary} ${G.surface}` }}>
           <style>{`
-            .scrollable-booking::-webkit-scrollbar {
-              width: 6px;
-            }
-            .scrollable-booking::-webkit-scrollbar-track {
-              background: #152515;
-              border-radius: 10px;
-            }
-            .scrollable-booking::-webkit-scrollbar-thumb {
-              background: #7dc142;
-              border-radius: 10px;
-            }
-            .scrollable-booking::-webkit-scrollbar-thumb:hover {
-              background: #a8d84e;
-            }
-          `}</style>
+              .scrollable-booking::-webkit-scrollbar { width: 6px; }
+              .scrollable-booking::-webkit-scrollbar-track { background: ${G.surface}; border-radius: 10px; }
+              .scrollable-booking::-webkit-scrollbar-thumb { background: ${G.primary}; border-radius: 10px; }
+              .scrollable-booking::-webkit-scrollbar-thumb:hover { background: ${G.warning || G.primary}; }
+            `}</style>
 
           {/* ── FORM SECTIONS (Top to Bottom) in Specified Order ──────────────────── */}
           <div className="space-y-4">
@@ -626,7 +621,7 @@ export function BookingView({ onClose, isEmbedded = false, canBook = true, organ
                 <select
                   value={selectedOrgId}
                   onChange={(e) => setSelectedOrgId(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-[#2d5a35] bg-[#152515] text-[#e8f5e0] text-sm focus:outline-none focus:border-[#7dc142]"
+                  style={{ width: '100%', padding: '8px', borderRadius: 10, border: `1px solid ${G.border}`, background: G.surface, color: G.text, fontSize: 14, outline: 'none' }}
                 >
                   {organizations.map((org) => (
                     <option key={org.id} value={org.id}>
@@ -645,11 +640,7 @@ export function BookingView({ onClose, isEmbedded = false, canBook = true, organ
                   <button
                     key={t}
                     onClick={() => setMatchType(t)}
-                    className={`flex-1 py-2.5 rounded-lg border text-xs font-bold capitalize transition-all ${
-                      matchType === t
-                        ? 'bg-[#7dc142] border-[#7dc142] text-[#0f1f0f]'
-                        : 'bg-[#152515] border-[#2d5a35] text-[#7aaa6a] hover:border-[#7dc142]/60'
-                    }`}
+                    style={matchType === t ? { flex: 1, padding: '10px', borderRadius: 10, border: `1px solid ${G.primary}`, background: G.primary, color: G.page, fontSize: 12, fontWeight: 800, textTransform: 'capitalize' } : { flex: 1, padding: '10px', borderRadius: 10, border: `1px solid ${G.border}`, background: G.surface, color: G.muted, fontSize: 12, fontWeight: 700, textTransform: 'capitalize' }}
                   >
                     {t === 'singles' ? '🎾' : t === 'doubles' ? '👥' : '🏋️'} {t.charAt(0).toUpperCase() + t.slice(1)}
                   </button>
@@ -676,16 +667,16 @@ export function BookingView({ onClose, isEmbedded = false, canBook = true, organ
             {selectedCourtData && (
               <Card>
                 <Label>Court Detail</Label>
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-xl bg-[#2d5a27] flex items-center justify-center text-xl">🎾</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                  <div style={{ width: 40, height: 40, borderRadius: 10, background: G.primaryHover || G.primary, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>🎾</div>
                   <div>
-                    <div className="text-sm font-bold text-[#e8f5e0]">{selectedCourtData.name}</div>
-                    <div className="text-[10px] text-[#7aaa6a]">{selectedCourtData.surface || 'Hard Court'}</div>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: G.text }}>{selectedCourtData.name}</div>
+                    <div style={{ fontSize: 10, color: G.muted }}>{selectedCourtData.surface || 'Hard Court'}</div>
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-1">
                   {(COURT_FEATURES[selectedCourtData.id] || COURT_FEATURES.default).map(f => (
-                    <span key={f} className="text-[9px] bg-[#0f1f0f] text-[#7aaa6a] px-2 py-1 rounded-lg">{f}</span>
+                    <span key={f} style={{ fontSize: 11, background: G.page, color: G.muted, padding: '6px 8px', borderRadius: 8 }}>{f}</span>
                   ))}
                 </div>
               </Card>
@@ -696,16 +687,16 @@ export function BookingView({ onClose, isEmbedded = false, canBook = true, organ
               <Label>Recent Played</Label>
               <div className="space-y-2">
                 {RECENT_PLAYERS.map(p => (
-                  <div key={p.name} className="flex items-center gap-2 px-2 py-1.5 bg-[#152515] rounded-lg">
-                    <span className="text-lg">{p.avatar}</span>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-xs font-semibold text-[#e8f5e0] truncate">{p.name}</div>
-                      <div className="text-[9px] text-[#7aaa6a]">{p.level}</div>
+                  <div key={p.name} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px', background: G.surface, borderRadius: 10 }}>
+                    <span style={{ fontSize: 18 }}>{p.avatar}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: G.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
+                      <div style={{ fontSize: 10, color: G.muted }}>{p.level}</div>
                     </div>
-                    <div className="text-[9px] font-bold text-[#f0c040]">⭐ {p.rating}</div>
+                    <div style={{ fontSize: 11, fontWeight: 900, color: G.warning }}>⭐ {p.rating}</div>
                   </div>
                 ))}
-                <button className="w-full py-1.5 text-[10px] font-bold text-[#7dc142] hover:text-[#a8d84e] transition-colors">
+                <button style={{ width: '100%', padding: '8px', fontSize: 12, fontWeight: 800, color: G.primary, background: 'transparent', border: 'none' }}>
                   Find a partner →
                 </button>
               </div>
@@ -719,7 +710,7 @@ export function BookingView({ onClose, isEmbedded = false, canBook = true, organ
                 value={selectedDate}
                 min={new Date().toISOString().split('T')[0]}
                 onChange={e => setSelectedDate(e.target.value)}
-                className="w-full bg-[#2d5a27] border border-[#2d5a35] text-[#e8f5e0] rounded-lg px-3 py-2 text-sm outline-none focus:border-[#7dc142] transition-colors"
+                style={{ width: '100%', background: G.primaryHover || G.primary, border: `1px solid ${G.border}`, color: G.text, borderRadius: 10, padding: '8px', fontSize: 14, outline: 'none' }}
               />
             </Card>
 
@@ -737,18 +728,18 @@ export function BookingView({ onClose, isEmbedded = false, canBook = true, organ
                   />
                 ))}
               </div>
-              <div className="flex gap-3 mt-2 text-[9px] text-[#7aaa6a]">
-                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-[#7dc142]/70 inline-block" /> Low</span>
-                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-[#f0c040]/70 inline-block" /> Medium</span>
-                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-red-500/70 inline-block" /> High</span>
-              </div>
+                    <div style={{ display: 'flex', gap: 12, marginTop: 8, fontSize: 12, color: G.muted }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><span style={{ width: 10, height: 10, borderRadius: 4, background: `rgba(${hexToRgb(G.primary)},0.7)`, display: 'inline-block' }} /> Low</span>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><span style={{ width: 10, height: 10, borderRadius: 4, background: `rgba(${hexToRgb(G.warning)},0.7)`, display: 'inline-block' }} /> Medium</span>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><span style={{ width: 10, height: 10, borderRadius: 4, background: `rgba(${hexToRgb(G.danger)},0.7)`, display: 'inline-block' }} /> High</span>
+                    </div>
             </Card>
 
             {/* 8. Time Slot */}
             <Card>
               <Label>Time Slot</Label>
               {timeSlots.length === 0 ? (
-                <div className="text-center py-6 text-[#7aaa6a] text-sm">No slots loaded — select a court and date above</div>
+                <div style={{ textAlign: 'center', padding: '18px 0', color: G.muted, fontSize: 14 }}>No slots loaded — select a court and date above</div>
               ) : (
                 <div className="grid grid-cols-8 gap-1.5">
                   {timeSlots.map(slot => (
@@ -771,7 +762,8 @@ export function BookingView({ onClose, isEmbedded = false, canBook = true, organ
                 onChange={e => setNotes(e.target.value)}
                 rows={4}
                 placeholder="e.g. Bringing my own equipment, practising serve…"
-                className="w-full bg-[#2d5a27] border border-[#2d5a35] text-[#e8f5e0] rounded-lg px-3 py-2 text-xs outline-none focus:border-[#7dc142] resize-none placeholder-[#7aaa6a] transition-colors"
+                style={{ width: '100%', background: G.primaryHover || G.primary, border: `1px solid ${G.border}`, color: G.text, borderRadius: 10, padding: '8px', fontSize: 12, outline: 'none', resize: 'none' }}
+                placeholder={notes || 'e.g. Bringing my own equipment, practising serve…'}
               />
             </Card>
           </div>
@@ -780,7 +772,7 @@ export function BookingView({ onClose, isEmbedded = false, canBook = true, organ
           <div className="grid grid-cols-2 gap-4">
             
             {/* Left: Booking Summary + Payment */}
-            <Card className={`transition-all ${selectedSlot ? 'border-[#7dc142]' : ''}`}>
+            <Card className="transition-all" style={selectedSlot ? { border: `1px solid ${G.primary}` } : {}}>
               <Label>Booking Summary</Label>
               <div className="space-y-2 mb-4">
                 {[
@@ -791,30 +783,26 @@ export function BookingView({ onClose, isEmbedded = false, canBook = true, organ
                   { label: 'Time', value: selectedSlot || '—' },
                   { label: 'Duration', value: `${duration}h` },
                 ].map(r => (
-                  <div key={r.label} className="flex justify-between text-xs py-1 border-b border-[#2d5a35]/50 last:border-0">
-                    <span className="text-[#7aaa6a]">{r.label}</span>
-                    <span className="font-semibold text-[#e8f5e0]">{r.value}</span>
+                  <div key={r.label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, padding: '6px 0', borderBottom: `1px solid rgba(${hexToRgb(G.border)},0.5)` }}>
+                    <span style={{ color: G.muted }}>{r.label}</span>
+                    <span style={{ fontWeight: 800, color: G.text }}>{r.value}</span>
                   </div>
                 ))}
-                <div className="flex justify-between items-center pt-2 border-t border-[#2d5a35]">
-                  <span className="text-xs font-bold text-[#7aaa6a]">Total</span>
-                  <span className="text-lg font-black text-[#7dc142]">${totalPrice || '—'}</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12, borderTop: `1px solid ${G.border}` }}>
+                  <span style={{ fontSize: 12, fontWeight: 800, color: G.muted }}>Total</span>
+                  <span style={{ fontSize: 18, fontWeight: 900, color: G.primary }}>${totalPrice || '—'}</span>
                 </div>
               </div>
 
               {/* Payment method selector */}
-              <div className="space-y-2 mb-4 pb-4 border-b border-[#2d5a35]">
+              <div style={{ marginBottom: 16, paddingBottom: 16, borderBottom: `1px solid ${G.border}` }}>
                 <Label className="text-xs font-bold">Payment Method</Label>
-                <div className="grid grid-cols-3 gap-2">
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8 }}>
                   {['mpesa', 'stripe', 'paypal'].map(method => (
                     <button
                       key={method}
                       onClick={() => setPaymentMethod(method as 'mpesa' | 'stripe' | 'paypal')}
-                      className={`py-2 rounded-lg border text-xs font-bold transition-all ${
-                        paymentMethod === method
-                          ? 'bg-[#7dc142] border-[#7dc142] text-[#0f1f0f]'
-                          : 'bg-[#152515] border-[#2d5a35] text-[#7aaa6a] hover:border-[#7dc142]/60'
-                      }`}
+                      style={paymentMethod === method ? { padding: '10px', borderRadius: 10, border: `1px solid ${G.primary}`, background: G.primary, color: G.page, fontWeight: 800 } : { padding: '10px', borderRadius: 10, border: `1px solid ${G.border}`, background: G.surface, color: G.muted, fontWeight: 700 }}
                     >
                       {method === 'mpesa' && 'M-Pesa'}
                       {method === 'stripe' && 'Stripe'}
@@ -826,7 +814,7 @@ export function BookingView({ onClose, isEmbedded = false, canBook = true, organ
 
               {/* Mobile number input for M-Pesa */}
               {paymentMethod === 'mpesa' && (
-                <div className="space-y-2 mb-4 pb-4 border-b border-[#2d5a35]">
+                <div style={{ marginBottom: 16, paddingBottom: 16, borderBottom: `1px solid ${G.border}` }}>
                   <Label className="text-xs font-bold">M-Pesa Number</Label>
                   <input
                     type="tel"
@@ -834,9 +822,9 @@ export function BookingView({ onClose, isEmbedded = false, canBook = true, organ
                     onChange={e => setMobileNumber(e.target.value.replace(/\D/g, ''))}
                     placeholder="254712345678 or 0789898989"
                     maxLength={12}
-                    className="w-full bg-[#2d5a27] border border-[#2d5a35] text-[#e8f5e0] rounded-lg px-3 py-2 text-sm outline-none focus:border-[#7dc142] placeholder-[#7aaa6a] transition-colors"
+                    style={{ width: '100%', background: G.primaryHover || G.primary, border: `1px solid ${G.border}`, color: G.text, borderRadius: 10, padding: '8px', fontSize: 14, outline: 'none' }}
                   />
-                  <p className="text-[10px] text-[#7aaa6a]">
+                  <p style={{ fontSize: 11, color: G.muted }}>
                     Format: 254712345678, +254712345678, or 0789898989
                   </p>
                 </div>
@@ -849,13 +837,13 @@ export function BookingView({ onClose, isEmbedded = false, canBook = true, organ
                   booking ||
                   (paymentMethod === 'mpesa' && !formatKenyanMobileNumber(mobileNumber).normalized)
                 }
-                className="w-full py-3 bg-[#7dc142] hover:bg-[#a8d84e] disabled:bg-[#2d5a27] disabled:text-[#7aaa6a] text-[#0f1f0f] font-black text-sm rounded-xl transition-all disabled:cursor-not-allowed"
+                style={{ width: '100%', padding: '12px', background: G.primary, color: G.page, fontWeight: 900, borderRadius: 14, fontSize: 14, border: 'none' }}
               >
                 {booking ? '⏳ Processing…' : selectedSlot ? `✓ Confirm & Pay via ${paymentMethod === 'mpesa' ? 'M-Pesa' : paymentMethod === 'stripe' ? 'Stripe' : 'PayPal'}` : 'Select a time slot'}
               </button>
 
               {selectedSlot && (
-                <p className="text-[9px] text-[#7aaa6a] text-center mt-2">
+                <p style={{ fontSize: 11, color: G.muted, textAlign: 'center', marginTop: 8 }}>
                   Free cancellation up to 2h before session
                 </p>
               )}
@@ -864,7 +852,7 @@ export function BookingView({ onClose, isEmbedded = false, canBook = true, organ
             {/* Right: Booking Policies */}
             <Card>
               <Label>Booking Policies</Label>
-              <div className="space-y-2 text-[10px] text-[#7aaa6a]">
+              <div style={{ display: 'grid', gap: 8, fontSize: 12, color: G.muted }}>
                 {[
                   { icon: '✅', text: 'Free cancellation up to 2h before' },
                   { icon: '⚡', text: 'Instant confirmation on booking' },
@@ -888,23 +876,13 @@ export function BookingView({ onClose, isEmbedded = false, canBook = true, organ
           MY BOOKINGS TAB
       ══════════════════════════════════════════════════════════════════════ */}
       {activeTab === 'myBookings' && (
-        <div className="scrollable-mybookings space-y-4 max-h-[calc(100vh-280px)] overflow-y-auto pr-2" style={{ scrollbarWidth: 'thin', scrollbarColor: '#7dc142 #152515' }}>
+        <div className="scrollable-mybookings space-y-4 max-h-[calc(100vh-280px)] overflow-y-auto pr-2" style={{ scrollbarWidth: 'thin', scrollbarColor: `${G.primary} ${G.surface}` }}>
           <style>{`
-            .scrollable-mybookings::-webkit-scrollbar {
-              width: 6px;
-            }
-            .scrollable-mybookings::-webkit-scrollbar-track {
-              background: #152515;
-              border-radius: 10px;
-            }
-            .scrollable-mybookings::-webkit-scrollbar-thumb {
-              background: #7dc142;
-              border-radius: 10px;
-            }
-            .scrollable-mybookings::-webkit-scrollbar-thumb:hover {
-              background: #a8d84e;
-            }
-          `}</style>
+              .scrollable-mybookings::-webkit-scrollbar { width: 6px; }
+              .scrollable-mybookings::-webkit-scrollbar-track { background: ${G.surface}; border-radius: 10px; }
+              .scrollable-mybookings::-webkit-scrollbar-thumb { background: ${G.primary}; border-radius: 10px; }
+              .scrollable-mybookings::-webkit-scrollbar-thumb:hover { background: ${G.warning || G.primary}; }
+            `}</style>
           {/* Filter pills */}
           <div className="flex gap-2">
             {(['all', 'upcoming', 'past'] as const).map(f => (
@@ -913,8 +891,8 @@ export function BookingView({ onClose, isEmbedded = false, canBook = true, organ
                 onClick={() => setBookingFilter(f)}
                 className={`px-4 py-1.5 rounded-full text-xs font-bold border transition-all capitalize ${
                   bookingFilter === f
-                    ? 'bg-[#7dc142] border-[#7dc142] text-[#0f1f0f]'
-                    : 'bg-[#152515] border-[#2d5a35] text-[#7aaa6a] hover:border-[#7dc142]/60'
+                    ? undefined
+                    : undefined
                 }`}
               >
                 {f} {f === 'upcoming' ? `(${existingBookings.filter(b => new Date(b.startTime) >= new Date() && b.status !== 'cancelled').length})` : ''}
@@ -925,9 +903,9 @@ export function BookingView({ onClose, isEmbedded = false, canBook = true, organ
           {filteredBookings.length === 0 ? (
             <Card className="text-center py-12">
               <div className="text-4xl mb-3">📅</div>
-              <div className="text-sm font-bold text-[#e8f5e0] mb-1">No bookings found</div>
-              <div className="text-xs text-[#7aaa6a] mb-4">Book your first court session to get started</div>
-              <button onClick={() => setActiveTab('booking')} className="bg-[#7dc142] text-[#0f1f0f] text-xs font-bold px-5 py-2 rounded-lg hover:bg-[#a8d84e] transition-colors">
+              <div style={{ fontSize: 14, fontWeight: 800, color: G.text, marginBottom: 8 }}>No bookings found</div>
+              <div style={{ fontSize: 12, color: G.muted, marginBottom: 16 }}>Book your first court session to get started</div>
+              <button onClick={() => setActiveTab('booking')} style={{ background: G.primary, color: G.page, fontSize: 12, fontWeight: 800, padding: '8px 14px', borderRadius: 10, border: 'none' }}>
                 + New Booking
               </button>
             </Card>
@@ -945,22 +923,14 @@ export function BookingView({ onClose, isEmbedded = false, canBook = true, organ
           HISTORY TAB
       ══════════════════════════════════════════════════════════════════════ */}
       {activeTab === 'history' && (
-        <div className="scrollable-history space-y-4 max-h-[calc(100vh-280px)] overflow-y-auto pr-2" style={{ scrollbarWidth: 'thin', scrollbarColor: '#7dc142 #152515' }}>
+        <div className="scrollable-history space-y-4 max-h-[calc(100vh-280px)] overflow-y-auto pr-2" style={{ scrollbarWidth: 'thin', scrollbarColor: `${G.primary} ${G.surface}` }}>
           <style>{`
             .scrollable-history::-webkit-scrollbar {
               width: 6px;
             }
-            .scrollable-history::-webkit-scrollbar-track {
-              background: #152515;
-              border-radius: 10px;
-            }
-            .scrollable-history::-webkit-scrollbar-thumb {
-              background: #7dc142;
-              border-radius: 10px;
-            }
-            .scrollable-history::-webkit-scrollbar-thumb:hover {
-              background: #a8d84e;
-            }
+.scrollable-history::-webkit-scrollbar-track { background: ${G.surface}; border-radius: 10px; }
+            .scrollable-history::-webkit-scrollbar-thumb { background: ${G.primary}; border-radius: 10px; }
+            .scrollable-history::-webkit-scrollbar-thumb:hover { background: ${G.warning || G.primary}; }
           `}</style>
           {/* Summary stats */}
           <div className="grid grid-cols-4 gap-3">
@@ -971,9 +941,9 @@ export function BookingView({ onClose, isEmbedded = false, canBook = true, organ
               { label: 'Total Spent', value: `$${existingBookings.length * 45}`, icon: '💰' },
             ].map(s => (
               <Card key={s.label} className="text-center py-3">
-                <div className="text-2xl mb-1">{s.icon}</div>
-                <div className="text-base font-black text-[#a8d84e]">{s.value}</div>
-                <div className="text-[9px] text-[#7aaa6a]">{s.label}</div>
+                <div style={{ fontSize: 20, marginBottom: 6 }}>{s.icon}</div>
+                <div style={{ fontSize: 16, fontWeight: 900, color: G.warning }}>{s.value}</div>
+                  <div style={{ fontSize: 11, color: G.muted }}>{s.label}</div>
               </Card>
             ))}
           </div>
@@ -982,7 +952,7 @@ export function BookingView({ onClose, isEmbedded = false, canBook = true, organ
           {existingBookings.filter(b => new Date(b.startTime) < new Date()).length === 0 ? (
             <Card className="text-center py-10">
               <div className="text-3xl mb-3">🕑</div>
-              <div className="text-sm text-[#7aaa6a]">No past sessions yet — get out on court!</div>
+              <div style={{ fontSize: 14, color: G.muted }}>No past sessions yet — get out on court!</div>
             </Card>
           ) : (
             <div className="grid grid-cols-2 gap-3">
@@ -998,11 +968,7 @@ export function BookingView({ onClose, isEmbedded = false, canBook = true, organ
 
       {/* ── Toast ───────────────────────────────────────────────────────────── */}
       {toast && (
-        <div className={`fixed bottom-6 right-6 z-50 px-5 py-3 rounded-xl font-bold text-sm shadow-xl border ${
-          toast.type === 'success'
-            ? 'bg-[#7dc142] text-[#0f1f0f] border-[#a8d84e] shadow-[#7dc142]/20'
-            : 'bg-red-900/90 text-red-200 border-red-700'
-        }`}>
+        <div style={ toast.type === 'success' ? { position: 'fixed', right: 24, bottom: 24, zIndex: 50, padding: '12px 20px', borderRadius: 16, fontWeight: 800, fontSize: 14, boxShadow: `0 8px 24px rgba(${hexToRgb(G.primary)},0.12)`, border: `1px solid ${G.warning}`, background: G.primary, color: G.page } : { position: 'fixed', right: 24, bottom: 24, zIndex: 50, padding: '12px 20px', borderRadius: 16, fontWeight: 800, fontSize: 14, boxShadow: `0 8px 24px rgba(0,0,0,0.2)`, border: `1px solid ${G.danger}`, background: `rgba(${hexToRgb(G.danger)},0.9)`, color: '#fff' } }>
           {toast.message}
         </div>
       )}

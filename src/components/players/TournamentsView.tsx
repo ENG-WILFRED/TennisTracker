@@ -3,11 +3,20 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { LoadingState } from '@/components/LoadingState';
+import { Card, Button, colors } from '@vico/design-system';
 
 const G = {
-  dark: '#0f1f0f', sidebar: '#152515', card: '#1a3020', cardBorder: '#2d5a35',
-  mid: '#2d5a27', bright: '#3d7a32', lime: '#7dc142', accent: '#a8d84e',
-  text: '#e8f5e0', muted: '#7aaa6a', yellow: '#f0c040',
+  dark: colors.inverse || colors.background,
+  sidebar: colors.surface,
+  card: colors.surfaceSecondary,
+  cardBorder: colors.border,
+  mid: colors.info || colors.primary,
+  bright: colors.primaryHover || colors.primary,
+  lime: colors.primary,
+  accent: colors.primary,
+  text: colors.textPrimary,
+  muted: colors.textMuted,
+  yellow: colors.warning,
 };
 
 interface TournamentsViewProps {
@@ -83,7 +92,7 @@ export function TournamentsView({ isEmbedded = false, playerId }: TournamentsVie
 
         .player-tournament-card:hover {
           border-color: ${G.lime};
-          background: #1d4020;
+          background: ${G.bright};
         }
 
         .player-tournament-header {
@@ -113,7 +122,7 @@ export function TournamentsView({ isEmbedded = false, playerId }: TournamentsVie
           width: 100%;
           padding: 10px 16px;
           background: linear-gradient(135deg, ${G.lime}, ${G.bright});
-          color: #0f1f0f;
+          color: ${colors.background};
           border: none;
           border-radius: 6px;
           font-size: 12px;
@@ -134,7 +143,7 @@ export function TournamentsView({ isEmbedded = false, playerId }: TournamentsVie
           }
         }
       `}</style>
-      <div className="player-tournaments-root" style={{ background: isEmbedded ? 'linear-gradient(to bottom right, #0f2710, #0f1f0f, #0d1f0d)' : undefined, padding: isEmbedded ? 20 : 0, borderRadius: isEmbedded ? 8 : 0 }}>
+      <div className="player-tournaments-root" style={{ background: isEmbedded ? `linear-gradient(to bottom right, ${colors.surface}, ${colors.background})` : undefined, padding: isEmbedded ? 20 : 0, borderRadius: isEmbedded ? 8 : 0 }}>
       {/* Header */}
       <div style={{ marginBottom: 24 }}>
         <h2 style={{ fontSize: 20, fontWeight: 700, color: G.text, marginBottom: 6 }}>
@@ -195,7 +204,7 @@ export function TournamentsView({ isEmbedded = false, playerId }: TournamentsVie
                         <div style={{ fontSize: 15, fontWeight: 700, color: G.text, marginBottom: 4 }}>
                           {tournament.name}
                         </div>
-                        <div style={{ fontSize: 12, color: G.accent, marginBottom: 6, fontWeight: 600 }}>
+                        <div style={{ fontSize: 12, color: G.lime, marginBottom: 6, fontWeight: 600 }}>
                           🏢 {tournament.organization?.name || 'Unknown Organization'}
                         </div>
                         <div className="player-tournament-meta">
@@ -222,25 +231,25 @@ export function TournamentsView({ isEmbedded = false, playerId }: TournamentsVie
                     <div className="player-tournament-stats">
                       <div style={{ background: G.dark, borderRadius: 6, padding: '8px 10px' }}>
                         <div style={{ fontSize: 10, color: G.muted, marginBottom: 2 }}>Participants</div>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: G.accent }}>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: G.lime }}>
                           {tournament.participantsCount || 0}
                         </div>
                       </div>
                       <div style={{ background: G.dark, borderRadius: 6, padding: '8px 10px' }}>
                         <div style={{ fontSize: 10, color: G.muted, marginBottom: 2 }}>Format</div>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: G.accent }}>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: G.lime }}>
                           {tournament.format || 'Singles'}
                         </div>
                       </div>
                       <div style={{ background: G.dark, borderRadius: 6, padding: '8px 10px' }}>
                         <div style={{ fontSize: 10, color: G.muted, marginBottom: 2 }}>Prize Pool</div>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: G.accent }}>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: G.lime }}>
                           ${tournament.prizePool || 0}
                         </div>
                       </div>
                       <div style={{ background: G.dark, borderRadius: 6, padding: '8px 10px' }}>
                         <div style={{ fontSize: 10, color: G.muted, marginBottom: 2 }}>Spots Available</div>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: G.accent }}>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: G.lime }}>
                           {tournament.maxParticipants - (tournament.participantsCount || 0) || 0}
                         </div>
                       </div>
@@ -256,7 +265,7 @@ export function TournamentsView({ isEmbedded = false, playerId }: TournamentsVie
                     {/* Facilities Preview */}
                     {(tournament.eatingAreas || tournament.sleepingAreas || tournament.amenities?.length > 0) && (
                       <div style={{ fontSize: 11, color: G.muted, marginBottom: 12, padding: '8px 12px', background: G.dark, borderRadius: 6 }}>
-                        <div style={{ fontWeight: 600, color: G.accent, marginBottom: 4 }}>🏨 Facilities Available</div>
+                        <div style={{ fontWeight: 600, color: G.lime, marginBottom: 4 }}>🏨 Facilities Available</div>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                           {tournament.eatingAreas && <span style={{ background: 'rgba(99,153,34,.2)', color: G.lime, padding: '2px 6px', borderRadius: 4, fontSize: 10 }}>🍽️ Dining</span>}
                           {tournament.sleepingAreas && <span style={{ background: 'rgba(99,153,34,.2)', color: G.lime, padding: '2px 6px', borderRadius: 4, fontSize: 10 }}>🛏️ Accommodation</span>}

@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { LoadingState } from '@/components/LoadingState';
 import { getUserProfile, updateProfile } from '@/actions/auth';
-import { Card, Button, Input, colors } from '@vico/design-system';
+import { ProfileCard, Button, Input, colors, spacing } from '@vico/design-system';
 
 const G = {
   dark: colors.inverse || colors.background,
@@ -162,7 +162,7 @@ export function ProfileView({ onClose, isEmbedded = false, canEdit = false }: Pr
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%', background: isEmbedded ? G.dark : undefined, padding: isEmbedded ? 20 : 0, borderRadius: isEmbedded ? 8 : 0 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%' }}>
       {/* Toast Notification */}
       {toast && (
         <div style={{
@@ -219,260 +219,219 @@ export function ProfileView({ onClose, isEmbedded = false, canEdit = false }: Pr
         </div>
       )}
 
-      {/* Profile Card */}
-      <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 16, display: 'flex', gap: 16, alignItems: 'flex-start' }}>
-        {/* Avatar */}
-        <div style={{ position: 'relative', flexShrink: 0 }}>
-          {isEditing ? (
-            <label style={{ cursor: 'pointer', display: 'block' }}>
+      {/* Unified Profile Card */}
+      <ProfileCard
+        photoUrl={photoPreview}
+        firstName={formData.firstName}
+        lastName={formData.lastName}
+        email={formData.email}
+        memberSince={profileData?.createdAt ? new Date(profileData.createdAt).toLocaleDateString() : undefined}
+      >
+        {isEditing ? (
+          <>
+            {/* EDIT MODE FORM FIELDS */}
+            {/* First Name */}
+            <div>
+              <label style={{ fontSize: 11, color: G.muted, display: 'block', marginBottom: 6, fontWeight: 700 }}>First Name *</label>
+              <input
+                type="text"
+                name="firstName"
+                value={formData.firstName}
+                onChange={handleInputChange}
+                style={{
+                  width: '100%', padding: '8px 10px', background: G.mid, border: `1px solid ${G.cardBorder}`,
+                  color: G.text, borderRadius: 6, fontSize: 12, outline: 'none',
+                  boxSizing: 'border-box',
+                }}
+              />
+            </div>
+
+            {/* Last Name */}
+            <div>
+              <label style={{ fontSize: 11, color: G.muted, display: 'block', marginBottom: 6, fontWeight: 700 }}>Last Name *</label>
+              <input
+                type="text"
+                name="lastName"
+                value={formData.lastName}
+                onChange={handleInputChange}
+                style={{
+                  width: '100%', padding: '8px 10px', background: G.mid, border: `1px solid ${G.cardBorder}`,
+                  color: G.text, borderRadius: 6, fontSize: 12, outline: 'none',
+                  boxSizing: 'border-box',
+                }}
+              />
+            </div>
+
+            {/* Email */}
+            <div>
+              <label style={{ fontSize: 11, color: G.muted, display: 'block', marginBottom: 6, fontWeight: 700 }}>Email *</label>
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleInputChange}
+                style={{
+                  width: '100%', padding: '8px 10px', background: G.mid, border: `1px solid ${G.cardBorder}`,
+                  color: G.text, borderRadius: 6, fontSize: 12, outline: 'none',
+                  boxSizing: 'border-box',
+                }}
+              />
+            </div>
+
+            {/* Phone */}
+            <div>
+              <label style={{ fontSize: 11, color: G.muted, display: 'block', marginBottom: 6, fontWeight: 700 }}>Phone</label>
+              <input
+                type="tel"
+                name="phone"
+                value={formData.phone}
+                onChange={handleInputChange}
+                style={{
+                  width: '100%', padding: '8px 10px', background: G.mid, border: `1px solid ${G.cardBorder}`,
+                  color: G.text, borderRadius: 6, fontSize: 12, outline: 'none',
+                  boxSizing: 'border-box',
+                }}
+              />
+            </div>
+
+            {/* Gender */}
+            <div>
+              <label style={{ fontSize: 11, color: G.muted, display: 'block', marginBottom: 6, fontWeight: 700 }}>Gender</label>
+              <select
+                name="gender"
+                value={formData.gender}
+                onChange={handleInputChange}
+                style={{
+                  width: '100%', padding: '8px 10px', background: G.mid, border: `1px solid ${G.cardBorder}`,
+                  color: G.text, borderRadius: 6, fontSize: 12, outline: 'none',
+                  boxSizing: 'border-box',
+                }}
+              >
+                <option value="">Select...</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+
+            {/* Date of Birth */}
+            <div>
+              <label style={{ fontSize: 11, color: G.muted, display: 'block', marginBottom: 6, fontWeight: 700 }}>Date of Birth</label>
+              <input
+                type="date"
+                name="dateOfBirth"
+                value={formData.dateOfBirth}
+                onChange={handleInputChange}
+                style={{
+                  width: '100%', padding: '8px 10px', background: G.mid, border: `1px solid ${G.cardBorder}`,
+                  color: G.text, borderRadius: 6, fontSize: 12, outline: 'none',
+                  boxSizing: 'border-box',
+                }}
+              />
+            </div>
+
+            {/* Nationality */}
+            <div>
+              <label style={{ fontSize: 11, color: G.muted, display: 'block', marginBottom: 6, fontWeight: 700 }}>Nationality</label>
+              <input
+                type="text"
+                name="nationality"
+                value={formData.nationality}
+                onChange={handleInputChange}
+                style={{
+                  width: '100%', padding: '8px 10px', background: G.mid, border: `1px solid ${G.cardBorder}`,
+                  color: G.text, borderRadius: 6, fontSize: 12, outline: 'none',
+                  boxSizing: 'border-box',
+                }}
+              />
+            </div>
+
+            {/* Bio */}
+            <div style={{ gridColumn: '1 / -1' }}>
+              <label style={{ fontSize: 11, color: G.muted, display: 'block', marginBottom: 6, fontWeight: 700 }}>Bio</label>
+              <textarea
+                name="bio"
+                value={formData.bio}
+                onChange={handleInputChange}
+                rows={3}
+                style={{
+                  width: '100%', padding: '8px 10px', background: G.mid, border: `1px solid ${G.cardBorder}`,
+                  color: G.text, borderRadius: 6, fontSize: 12, outline: 'none',
+                  boxSizing: 'border-box', fontFamily: 'inherit',
+                }}
+              />
+            </div>
+
+            {/* Photo Upload (only in edit mode) */}
+            <div style={{ gridColumn: '1 / -1', borderTop: `1px solid ${G.cardBorder}`, paddingTop: spacing.lg, marginTop: spacing.lg }}>
+              <label style={{ fontSize: 11, color: G.muted, display: 'block', marginBottom: 6, fontWeight: 700, cursor: 'pointer' }}>
+                📷 Update Photo
+              </label>
               <input
                 type="file"
                 accept="image/*"
                 onChange={handlePhotoChange}
-                style={{ display: 'none' }}
+                style={{
+                  width: '100%', padding: '8px 10px', background: G.mid, border: `1px solid ${G.cardBorder}`,
+                  color: G.text, borderRadius: 6, fontSize: 12, outline: 'none',
+                  boxSizing: 'border-box',
+                }}
               />
-              {photoPreview ? (
-                <img
-                  src={photoPreview}
-                  alt="Preview"
-                  style={{
-                    width: 90, height: 90, borderRadius: '50%', objectFit: 'cover',
-                    border: `2px solid ${G.lime}`, cursor: 'pointer',
-                  }}
-                />
-              ) : (
-                <div style={{
-                  width: 90, height: 90, borderRadius: '50%', background: `linear-gradient(135deg, ${G.bright}, ${G.mid})`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 40,
-                  border: `2px solid ${G.lime}`, cursor: 'pointer',
-                }}>
-                  {formData.firstName?.[0]}
-                </div>
-              )}
-            </label>
-          ) : (
-            <>
-              {photoPreview ? (
-                <img
-                  src={photoPreview}
-                  alt="Profile"
-                  style={{ width: 90, height: 90, borderRadius: '50%', objectFit: 'cover', border: `2px solid ${G.lime}` }}
-                />
-              ) : (
-                <div style={{
-                  width: 90, height: 90, borderRadius: '50%', background: `linear-gradient(135deg, ${G.bright}, ${G.mid})`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 40,
-                  border: `2px solid ${G.lime}`,
-                }}>
-                  {formData.firstName?.[0]}
-                </div>
-              )}
-            </>
-          )}
-        </div>
+            </div>
+          </>
+        ) : (
+          <>
+            {/* VIEW MODE - READONLY FIELDS */}
+            {/* First Name */}
+            <div>
+              <div style={{ fontSize: 11, color: G.muted, fontWeight: 700, marginBottom: 4 }}>First Name</div>
+              <div style={{ fontSize: 12, color: G.text }}>{formData.firstName}</div>
+            </div>
 
-        {/* Profile Info */}
-        <div style={{ flex: 1 }}>
-          <h1 style={{ fontSize: 24, fontWeight: 900, marginBottom: 4 }}>
-            {formData.firstName} {formData.lastName}
-          </h1>
-          <p style={{ color: G.muted, fontSize: 12, marginBottom: 10 }}>{formData.email}</p>
-          {profileData?.createdAt && (
-            <p style={{ color: G.muted, fontSize: 11 }}>
-              Member since {new Date(profileData.createdAt).toLocaleDateString()}
-            </p>
-          )}
-        </div>
-      </div>
+            {/* Last Name */}
+            <div>
+              <div style={{ fontSize: 11, color: G.muted, fontWeight: 700, marginBottom: 4 }}>Last Name</div>
+              <div style={{ fontSize: 12, color: G.text }}>{formData.lastName}</div>
+            </div>
 
-      {/* Profile Form */}
-      {canEdit && isEditing ? (
-        /* EDIT MODE */
-        <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 16, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-          {/* First Name */}
-          <div>
-            <label style={{ fontSize: 11, color: G.muted, display: 'block', marginBottom: 6, fontWeight: 700 }}>First Name *</label>
-            <input
-              type="text"
-              name="firstName"
-              value={formData.firstName}
-              onChange={handleInputChange}
-              style={{
-                width: '100%', padding: '8px 10px', background: G.mid, border: `1px solid ${G.cardBorder}`,
-                color: G.text, borderRadius: 6, fontSize: 12, outline: 'none',
-                boxSizing: 'border-box',
-              }}
-            />
-          </div>
+            {/* Email */}
+            <div>
+              <div style={{ fontSize: 11, color: G.muted, fontWeight: 700, marginBottom: 4 }}>Email</div>
+              <div style={{ fontSize: 12, color: G.text }}>{formData.email}</div>
+            </div>
 
-          {/* Last Name */}
-          <div>
-            <label style={{ fontSize: 11, color: G.muted, display: 'block', marginBottom: 6, fontWeight: 700 }}>Last Name *</label>
-            <input
-              type="text"
-              name="lastName"
-              value={formData.lastName}
-              onChange={handleInputChange}
-              style={{
-                width: '100%', padding: '8px 10px', background: G.mid, border: `1px solid ${G.cardBorder}`,
-                color: G.text, borderRadius: 6, fontSize: 12, outline: 'none',
-                boxSizing: 'border-box',
-              }}
-            />
-          </div>
+            {/* Phone */}
+            <div>
+              <div style={{ fontSize: 11, color: G.muted, fontWeight: 700, marginBottom: 4 }}>Phone</div>
+              <div style={{ fontSize: 12, color: G.text }}>{formData.phone || '-'}</div>
+            </div>
 
-          {/* Email */}
-          <div>
-            <label style={{ fontSize: 11, color: G.muted, display: 'block', marginBottom: 6, fontWeight: 700 }}>Email *</label>
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleInputChange}
-              style={{
-                width: '100%', padding: '8px 10px', background: G.mid, border: `1px solid ${G.cardBorder}`,
-                color: G.text, borderRadius: 6, fontSize: 12, outline: 'none',
-                boxSizing: 'border-box',
-              }}
-            />
-          </div>
+            {/* Gender */}
+            <div>
+              <div style={{ fontSize: 11, color: G.muted, fontWeight: 700, marginBottom: 4 }}>Gender</div>
+              <div style={{ fontSize: 12, color: G.text }}>{formData.gender || '-'}</div>
+            </div>
 
-          {/* Phone */}
-          <div>
-            <label style={{ fontSize: 11, color: G.muted, display: 'block', marginBottom: 6, fontWeight: 700 }}>Phone</label>
-            <input
-              type="tel"
-              name="phone"
-              value={formData.phone}
-              onChange={handleInputChange}
-              style={{
-                width: '100%', padding: '8px 10px', background: G.mid, border: `1px solid ${G.cardBorder}`,
-                color: G.text, borderRadius: 6, fontSize: 12, outline: 'none',
-                boxSizing: 'border-box',
-              }}
-            />
-          </div>
+            {/* Date of Birth */}
+            <div>
+              <div style={{ fontSize: 11, color: G.muted, fontWeight: 700, marginBottom: 4 }}>Date of Birth</div>
+              <div style={{ fontSize: 12, color: G.text }}>{formData.dateOfBirth || '-'}</div>
+            </div>
 
-          {/* Gender */}
-          <div>
-            <label style={{ fontSize: 11, color: G.muted, display: 'block', marginBottom: 6, fontWeight: 700 }}>Gender</label>
-            <select
-              name="gender"
-              value={formData.gender}
-              onChange={handleInputChange}
-              style={{
-                width: '100%', padding: '8px 10px', background: G.mid, border: `1px solid ${G.cardBorder}`,
-                color: G.text, borderRadius: 6, fontSize: 12, outline: 'none',
-                boxSizing: 'border-box',
-              }}
-            >
-              <option value="">Select...</option>
-              <option value="Male">Male</option>
-              <option value="Female">Female</option>
-              <option value="Other">Other</option>
-            </select>
-          </div>
+            {/* Nationality */}
+            <div>
+              <div style={{ fontSize: 11, color: G.muted, fontWeight: 700, marginBottom: 4 }}>Nationality</div>
+              <div style={{ fontSize: 12, color: G.text }}>{formData.nationality || '-'}</div>
+            </div>
 
-          {/* Date of Birth */}
-          <div>
-            <label style={{ fontSize: 11, color: G.muted, display: 'block', marginBottom: 6, fontWeight: 700 }}>Date of Birth</label>
-            <input
-              type="date"
-              name="dateOfBirth"
-              value={formData.dateOfBirth}
-              onChange={handleInputChange}
-              style={{
-                width: '100%', padding: '8px 10px', background: G.mid, border: `1px solid ${G.cardBorder}`,
-                color: G.text, borderRadius: 6, fontSize: 12, outline: 'none',
-                boxSizing: 'border-box',
-              }}
-            />
-          </div>
-
-          {/* Nationality */}
-          <div>
-            <label style={{ fontSize: 11, color: G.muted, display: 'block', marginBottom: 6, fontWeight: 700 }}>Nationality</label>
-            <input
-              type="text"
-              name="nationality"
-              value={formData.nationality}
-              onChange={handleInputChange}
-              style={{
-                width: '100%', padding: '8px 10px', background: G.mid, border: `1px solid ${G.cardBorder}`,
-                color: G.text, borderRadius: 6, fontSize: 12, outline: 'none',
-                boxSizing: 'border-box',
-              }}
-            />
-          </div>
-
-          {/* Bio */}
-          <div style={{ gridColumn: '1 / -1' }}>
-            <label style={{ fontSize: 11, color: G.muted, display: 'block', marginBottom: 6, fontWeight: 700 }}>Bio</label>
-            <textarea
-              name="bio"
-              value={formData.bio}
-              onChange={handleInputChange}
-              rows={3}
-              style={{
-                width: '100%', padding: '8px 10px', background: G.mid, border: `1px solid ${G.cardBorder}`,
-                color: G.text, borderRadius: 6, fontSize: 12, outline: 'none',
-                boxSizing: 'border-box', fontFamily: 'inherit',
-              }}
-            />
-          </div>
-        </div>
-      ) : (
-        /* VIEW MODE */
-        <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 16, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-          {/* First Name */}
-          <div>
-            <div style={{ fontSize: 11, color: G.muted, fontWeight: 700, marginBottom: 4 }}>First Name</div>
-            <div style={{ fontSize: 12, color: G.text }}>{formData.firstName}</div>
-          </div>
-
-          {/* Last Name */}
-          <div>
-            <div style={{ fontSize: 11, color: G.muted, fontWeight: 700, marginBottom: 4 }}>Last Name</div>
-            <div style={{ fontSize: 12, color: G.text }}>{formData.lastName}</div>
-          </div>
-
-          {/* Email */}
-          <div>
-            <div style={{ fontSize: 11, color: G.muted, fontWeight: 700, marginBottom: 4 }}>Email</div>
-            <div style={{ fontSize: 12, color: G.text }}>{formData.email}</div>
-          </div>
-
-          {/* Phone */}
-          <div>
-            <div style={{ fontSize: 11, color: G.muted, fontWeight: 700, marginBottom: 4 }}>Phone</div>
-            <div style={{ fontSize: 12, color: G.text }}>{formData.phone || '-'}</div>
-          </div>
-
-          {/* Gender */}
-          <div>
-            <div style={{ fontSize: 11, color: G.muted, fontWeight: 700, marginBottom: 4 }}>Gender</div>
-            <div style={{ fontSize: 12, color: G.text }}>{formData.gender || '-'}</div>
-          </div>
-
-          {/* Date of Birth */}
-          <div>
-            <div style={{ fontSize: 11, color: G.muted, fontWeight: 700, marginBottom: 4 }}>Date of Birth</div>
-            <div style={{ fontSize: 12, color: G.text }}>{formData.dateOfBirth || '-'}</div>
-          </div>
-
-          {/* Nationality */}
-          <div>
-            <div style={{ fontSize: 11, color: G.muted, fontWeight: 700, marginBottom: 4 }}>Nationality</div>
-            <div style={{ fontSize: 12, color: G.text }}>{formData.nationality || '-'}</div>
-          </div>
-
-          {/* Bio */}
-          <div style={{ gridColumn: '1 / -1' }}>
-            <div style={{ fontSize: 11, color: G.muted, fontWeight: 700, marginBottom: 4 }}>Bio</div>
-            <div style={{ fontSize: 12, color: G.text, whiteSpace: 'pre-wrap' }}>{formData.bio || '-'}</div>
-          </div>
-        </div>
-      )}
+            {/* Bio */}
+            <div style={{ gridColumn: '1 / -1' }}>
+              <div style={{ fontSize: 11, color: G.muted, fontWeight: 700, marginBottom: 4 }}>Bio</div>
+              <div style={{ fontSize: 12, color: G.text, whiteSpace: 'pre-wrap' }}>{formData.bio || '-'}</div>
+            </div>
+          </>
+        )}
+      </ProfileCard>
     </div>
   );
 }

@@ -1,0 +1,77 @@
+:root {
+  --vico-color-primary: #7dc142;
+  --vico-color-primary-hover: #a8d84e;
+  --vico-color-background: #0f1f0f;
+  --vico-color-surface: #1a3020;
+  --vico-color-surface-secondary: #152515;
+  --vico-color-surface-tertiary: #2d5a27;
+  --vico-color-border: #2d5a35;
+  --vico-color-text-primary: #e8f5e0;
+  --vico-color-text-muted: #7aaa6a;
+  --vico-color-accent: #a8d84e;
+  --vico-color-success: #7dc142;
+  --vico-color-warning: #f0c040;
+  --vico-color-danger: #dc2626;
+  --vico-color-info: #3d7a32;
+  --vico-color-dark: #0f1f0f;
+  --vico-color-bright: #3d7a32;
+
+  --vico-font-family-display: 'Clash Display', sans-serif;
+  --vico-font-family-body: 'Epilogue', sans-serif;
+
+  --vico-spacing-4: 4px;
+  --vico-spacing-8: 8px;
+  --vico-spacing-12: 12px;
+  --vico-spacing-16: 16px;
+  --vico-spacing-24: 24px;
+  --vico-spacing-32: 32px;
+  --vico-spacing-40: 40px;
+  --vico-spacing-48: 48px;
+  --vico-spacing-64: 64px;
+
+  --vico-radius-sm: 6px;
+  --vico-radius-md: 10px;
+  --vico-radius-lg: 14px;
+  --vico-radius-xl: 18px;
+  --vico-radius-2xl: 24px;
+
+  --vico-shadow-card: 0 18px 40px rgba(0, 0, 0, 0.16);
+  --vico-shadow-modal: 0 24px 80px rgba(0, 0, 0, 0.24);
+  --vico-shadow-dropdown: 0 14px 28px rgba(0, 0, 0, 0.18);
+  /* Layout tokens */
+  --vico-sidebar-width: 16rem; /* 256px */
+  /* Typography size tokens (match org dashboard exact measurements) */
+  --vico-font-size-xxl: 24px;
+  --vico-font-size-xl: 20px;
+  --vico-font-size-lg: 14px;
+  --vico-font-size-md: 12px;
+  --vico-font-size-sm: 11px;
+  --vico-font-size-xs: 10px;
+  --vico-font-size-xxs: 9px;
+  --vico-font-size-xxxs: 8px;
+   /* Border tokens */
+   --vico-border-width: 1px;
+   --vico-border-width-thick: 2.5px;
+   --vico-border-width-accent: 3px;
+   /* Spacing/Padding tokens */
+   --vico-spacing-card-padding: 11px;
+   --vico-spacing-card-padding-lg: 12px;
+   --vico-spacing-sidebar-padding: 14px;
+   --vico-spacing-nav-item-padding: 9px 13px;
+   --vico-spacing-sidebar-section-padding: 0 10px 14px;
+   /* Border radius tokens */
+   --vico-radius-card: 9px;
+   --vico-radius-profile: 10px;
+   --vico-radius-button: 6px;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--vico-color-background);
+  color: var(--vico-color-text-primary);
+}

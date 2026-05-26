@@ -33,7 +33,7 @@ export function DeveloperBugTriage({
           { label: 'In Progress', value: bugs.filter(b => b.status === 'in_progress').length, color: 'text-amber-400' },
           { label: 'Resolved', value: bugs.filter(b => b.status === 'resolved').length, color: 'text-emerald-400' },
         ].map(s => (
-          <div key={s.label} className="rounded-2xl border border-slate-800/70 bg-slate-900/60 p-4 text-center">
+          <div key={s.label} className="rounded-2xl border border-slate-800/50 bg-slate-900/60 p-4 text-center">
             <p className={`text-xl sm:text-2xl font-bold ${s.color}`}>{s.value}</p>
             <p className="text-[10px] tracking-widest uppercase text-slate-500 mt-1">{s.label}</p>
           </div>
@@ -43,7 +43,7 @@ export function DeveloperBugTriage({
       <div className="grid gap-3 lg:grid-cols-[1.9fr_1fr]">
         <div className="space-y-3">
           {bugs.length === 0 && (
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-8 text-center text-slate-500 text-sm">
+            <div className="rounded-2xl border border-slate-800/60 bg-slate-900/50 p-8 text-center text-slate-500 text-sm">
               No bugs tracked yet.
             </div>
           )}
@@ -94,7 +94,7 @@ export function DeveloperBugTriage({
         </div>
 
         <div className="space-y-3">
-          <div className="rounded-2xl border border-slate-800/70 bg-slate-900/60 p-5">
+          <div className="rounded-2xl border border-slate-800/50 bg-slate-900/60 p-5">
             <div className="flex items-center justify-between gap-3 mb-4">
               <div>
                 <p className="text-[10px] tracking-widest uppercase text-slate-500">Selected Bug</p>
@@ -111,19 +111,19 @@ export function DeveloperBugTriage({
             </div>
             {selectedBug ? (
               <div className="space-y-3 text-sm text-slate-300">
-                <div className="rounded-2xl bg-slate-900/70 border border-slate-800/70 p-4">
+                <div className="rounded-2xl bg-slate-900/70 border border-slate-800/50 p-4">
                   <p className="text-xs text-slate-500 uppercase tracking-widest mb-2">Reporter</p>
                   <p className="font-semibold">{selectedBug.reporter}</p>
                   <p className="text-[11px] text-slate-500">{selectedBug.reporterEmail || 'No email available'}</p>
                 </div>
-                <div className="rounded-2xl bg-slate-900/70 border border-slate-800/70 p-4">
+                <div className="rounded-2xl bg-slate-900/70 border border-slate-800/50 p-4">
                   <p className="text-xs text-slate-500 uppercase tracking-widest mb-2">Bug details</p>
                   <p>{selectedBug.description}</p>
                   <p className="text-[11px] text-slate-500 mt-2">Module: {selectedBug.module}</p>
                   {selectedBug.pageUrl && <p className="text-[11px] text-slate-500">Page: {selectedBug.pageUrl}</p>}
                   {selectedBug.userAgent && <p className="text-[11px] text-slate-500">User agent: {selectedBug.userAgent}</p>}
                 </div>
-                <div className="rounded-2xl bg-slate-900/70 border border-slate-800/70 p-4 space-y-2">
+                <div className="rounded-2xl bg-slate-900/70 border border-slate-800/50 p-4 space-y-2">
                   <p className="text-xs text-slate-500 uppercase tracking-widest">Custom response</p>
                   <textarea
                     value={bugReplyText}
@@ -140,7 +140,7 @@ export function DeveloperBugTriage({
                 </div>
               </div>
             ) : (
-              <div className="rounded-2xl border border-slate-800/70 bg-slate-900/50 p-8 text-center text-slate-500 text-sm">
+              <div className="rounded-2xl border border-slate-800/50 bg-slate-900/50 p-8 text-center text-slate-500 text-sm">
                 Select a bug to review details and send a custom response to the reporter.
               </div>
             )}

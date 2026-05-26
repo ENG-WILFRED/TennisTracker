@@ -19,14 +19,8 @@ import { FindNearbyPeople } from '@/components/FindNearbyPeople';
 import { FindNearbyCourts } from '@/components/FindNearbyCourts';
 import { PlayerSearchChallenge } from '@/components/PlayerSearchChallenge';
 import { chatUrlForUser, sendChallengeRequest } from '@/lib/nearby';
-import { MembershipSwitcher } from '@/components/MembershipSwitcher';
 import toast from 'react-hot-toast';
-
-const G = {
-  dark: '#0f1f0f', sidebar: '#152515', card: '#1a3020', cardBorder: '#2d5a35',
-  mid: '#2d5a27', bright: '#3d7a32', lime: '#7dc142', accent: '#a8d84e',
-  text: '#e8f5e0', muted: '#7aaa6a', yellow: '#f0c040',
-};
+import { Button, Card, DashboardMain, DashboardPanel, DashboardShell, DashboardSidebar, colors, radii, shadows, spacing, toastOptions, typography } from '@vico/design-system';
 
 export const PlayerDashboard: React.FC = () => {
   const { user, logout } = useAuth();
@@ -47,6 +41,7 @@ export const PlayerDashboard: React.FC = () => {
   const showFindCourts = section === 'find-courts';
   const [activeNav, setActiveNav] = useState('Home');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isMobileView, setIsMobileView] = useState(false);
   const [feedPost, setFeedPost] = useState('');
   const [playerData, setPlayerData] = useState<any>(null);
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
@@ -81,6 +76,14 @@ export const PlayerDashboard: React.FC = () => {
       setActiveNav('Home');
     }
   }, [showProfile, showBooking, showCommunity, showTournaments, showSessions, showStats, showProgress, showFindPlayers, showFindCourts, showMessages, showSettings]);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(max-width: 1024px)');
+    const handleResize = () => setIsMobileView(mediaQuery.matches);
+    handleResize();
+    mediaQuery.addEventListener('change', handleResize);
+    return () => mediaQuery.removeEventListener('change', handleResize);
+  }, []);
 
   useEffect(() => {
     if (user?.id) {
@@ -155,8 +158,10 @@ export const PlayerDashboard: React.FC = () => {
         },
         body: JSON.stringify({ refreshToken: storedTokens?.refreshToken }),
       });
+      toast.success('Logged out successfully. 👋', toastOptions);
     } catch (error) {
       console.error('Logout error:', error);
+      toast.error('Logout failed. Please try again.', toastOptions);
     } finally {
       logout();
       router.push('/login');
@@ -165,26 +170,26 @@ export const PlayerDashboard: React.FC = () => {
 
   const handleChallenge = async (personId: string, personName: string, isFormal: boolean = false) => {
     if (!user?.id) {
-      alert('Please sign in to challenge a player.');
+      toast.error('Please sign in to challenge a player.', toastOptions);
       return;
     }
 
     try {
       const result = await sendChallengeRequest(user.id, personId, isFormal);
-      alert(result?.message || `Challenge sent to ${personName}${isFormal ? ' as a formal challenge' : ''}.`);
+      toast.success(result?.message || `Challenge sent to ${personName}${isFormal ? ' as a formal challenge' : ''}.`, toastOptions);
     } catch (error) {
       console.error('Challenge error:', error);
-      alert(error instanceof Error ? error.message : 'Failed to send challenge.');
+      toast.error(error instanceof Error ? error.message : 'Failed to send challenge.', toastOptions);
     }
   };
 
   const handleCourtBooking = (courtId: string, courtName: string) => {
     if (!user?.id) {
-      alert('Please sign in to book a court.');
+      toast.error('Please sign in to book a court.', toastOptions);
       return;
     }
     if (!organizationId) {
-      alert('Please connect a club first before booking a court.');
+      toast.error('Please connect a club first before booking a court.', toastOptions);
       return;
     }
 
@@ -198,192 +203,271 @@ export const PlayerDashboard: React.FC = () => {
 
   const upcomingMatches = playerData?.upcomingMatches || [];
 
+  const overlayStyle: React.CSSProperties = {
+    position: 'fixed',
+    inset: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.35)',
+    zIndex: 30,
+  };
+
+  const sidebarStyle = {
+    position: isMobileView ? 'fixed' : 'sticky',
+    top: 0,
+    left: 0,
+    width: isMobileView ? '100%' : 320,
+    transform: isMobileView ? (sidebarOpen ? 'translateX(0)' : 'translateX(-108%)') : 'translateX(0)',
+    transition: 'transform 0.28s ease',
+    zIndex: 40,
+    height: '100vh',
+    overflowY: 'auto',
+  } as React.CSSProperties;
+
   return (
-    <div className="text-court-text flex flex-col lg:flex-row" style={{ height: '100vh', background: G.sidebar, color: G.text, overflow: 'hidden' }}>
+    <DashboardShell>
+      {isMobileView && sidebarOpen && <div style={overlayStyle} onClick={() => setSidebarOpen(false)} />}
 
-      {/* ── Mobile top bar ── */}
-      <div className="lg:hidden flex items-center justify-between px-4 py-3 border-b border-[#2d5a35] flex-shrink-0" style={{ background: G.sidebar }}>
-        <button
-          type="button"
-          onClick={() => setSidebarOpen(true)}
-          className="inline-flex items-center justify-center w-10 h-10 rounded-xl border border-[#2d5a35] text-[#7aaa6a] hover:bg-[#1e3a20] transition"
-          aria-label="Open navigation"
+      <DashboardSidebar style={sidebarStyle}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            borderBottom: `1px solid ${colors.border}`,
+            padding: '15px 14px 10px',
+          }}
         >
-          ☰
-        </button>
-        <div className="text-sm font-semibold">Player Dashboard</div>
-        <div className="text-xs text-[#7aaa6a] truncate">{user?.firstName ?? 'Player'}</div>
-      </div>
+          <span style={{ fontSize: 20 }}>🎾</span>
+          <div style={{ color: colors.primary, fontWeight: 900, fontSize: 14 }}>
+            Vico Tennis
+          </div>
+          {isMobileView && (
+            <Button
+              variant="secondary"
+              size="sm"
+              style={{ marginLeft: 'auto', padding: `${spacing.xs} ${spacing.sm}`, borderRadius: radii.lg }}
+              onClick={() => setSidebarOpen(false)}
+            >
+              Close
+            </Button>
+          )}
+        </div>
 
-      {sidebarOpen && (
-        <div className="fixed inset-0 z-30 bg-black/40 lg:hidden" onClick={() => setSidebarOpen(false)} />
-      )}
+        <nav style={{ paddingTop: 8, flexShrink: 0 }}>
+          {navItems.map((item) => {
+            const isActive = activeNav === item.label;
+            const targetPath = item.href?.startsWith('/')
+              ? item.href
+              : `/dashboard/${params?.role || 'player'}/${params?.userId || user?.id}${item.href || ''}`;
 
-      <aside className={`fixed inset-y-0 left-0 z-40 w-72 max-w-[80vw] transform border-r lg:relative lg:translate-x-0 transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:w-72 lg:translate-x-0`} style={{ background: G.sidebar, borderColor: G.cardBorder, display: 'flex', flexDirection: 'column', flexShrink: 0, height: '100vh', overflow: 'hidden' }}>
-        <div className="flex items-center justify-between gap-3 px-4 py-4 lg:hidden">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">🎾</span>
-            <div>
-              <div className="text-court-lime font-black text-sm">Vico Tennis</div>
-              <div className="text-[11px] text-[#7aaa6a]">Player Dashboard</div>
+            return (
+              <button
+                key={item.label}
+                onClick={() => {
+                  if (activeNav !== item.label) {
+                    toast.success(`Navigating to ${item.label}`, toastOptions);
+                  }
+                  setActiveNav(item.label);
+                  setSidebarOpen(false);
+                  if (item.label === 'Home' && params?.role && params?.userId) {
+                    router.push(`/dashboard/${params.role}/${params.userId}`);
+                  } else {
+                    router.push(targetPath);
+                  }
+                }}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '9px 13px',
+                  backgroundColor: isActive ? colors.surfaceTertiary : 'transparent',
+                  border: 'none', cursor: 'pointer', fontSize: 11, textAlign: 'left',
+                  color: isActive ? colors.textPrimary : colors.textMuted,
+                  borderLeft: isActive ? `3px solid ${colors.primary}` : '3px solid transparent',
+                  fontWeight: isActive ? 600 : 400,
+                }}
+              >
+                <span>{item.icon}</span>
+                <span>{item.label}</span>
+              </button>
+            );
+          })}
+        </nav>
+
+        <div style={{ flex: 1, minHeight: 24 }} />
+
+        <div className="hidden lg:block" style={{ padding: '0 10px 14px', flexShrink: 0 }}>
+          <div style={{ background: colors.surface, border: `1px solid ${colors.border}`, borderRadius: 9, padding: 11 }}>
+            <div style={{ fontWeight: 800, fontSize: 11, marginBottom: 8 }}>📊 Quick Stats</div>
+            {[
+              { label: 'Upcoming', value: upcomingMatches.length || '0' },
+              { label: 'Challenges', value: playerData?.pendingChallenges || '0' },
+              { label: 'Sessions', value: playerData?.sessionCount || '0' },
+            ].map((metric, i) => (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: i < 2 ? `1px solid ${colors.border}33` : 'none' }}>
+                <span style={{ fontSize: 9, color: colors.textMuted }}>{metric.label}</span>
+                <span style={{ fontWeight: 800, color: colors.accent, fontSize: 9 }}>{metric.value}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ padding: '0 10px 14px', flexShrink: 0 }}>
+          <div style={{ background: colors.surfaceTertiary, borderRadius: 10, padding: 12, textAlign: 'center' }}>
+            {user?.photo ? (
+              <img
+                src={user.photo}
+                alt={user.firstName}
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: '50%',
+                  border: `2.5px solid ${colors.primary}`,
+                  objectFit: 'cover',
+                  marginBottom: 6,
+                  marginLeft: 'auto',
+                  marginRight: 'auto',
+                  display: 'block',
+                }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: '50%',
+                  background: colors.bright,
+                  margin: '0 auto 6px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 24,
+                }}
+              >
+                🎾
+              </div>
+            )}
+            <div style={{ fontWeight: 800, fontSize: 12 }}>
+              {user?.firstName ?? 'Player'} {user?.lastName ?? ''}
+            </div>
+            <div style={{ color: colors.textMuted, fontSize: 9, marginTop: 2 }}>Player</div>
+            <div className="hidden sm:block" style={{ color: colors.textMuted, fontSize: 8, marginTop: 1, wordBreak: 'break-word' }}>📧 {user?.email || 'No email'}</div>
+            <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+              <button
+                onClick={() => {
+                  setActiveNav('My Profile');
+                  setSidebarOpen(false);
+                  if (params?.role && params?.userId) {
+                    router.push(`/dashboard/${params.role}/${params.userId}?profile=true`);
+                  } else {
+                    router.push('?profile=true');
+                  }
+                }}
+                style={{
+                  flex: 1,
+                  background: colors.dark,
+                  color: colors.primary,
+                  border: `1px solid ${colors.primary}`,
+                  borderRadius: 6,
+                  padding: '4px 0',
+                  fontSize: 9,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                Profile
+              </button>
+              <button
+                onClick={handleLogout}
+                style={{
+                  flex: 1,
+                  background: '#ff6b6b',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: 6,
+                  padding: '4px 0',
+                  fontSize: 9,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                Logout
+              </button>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={() => setSidebarOpen(false)}
-            className="inline-flex items-center justify-center w-9 h-9 rounded-xl border border-[#2d5a35] text-[#7aaa6a] hover:bg-[#1e3a20] transition"
-            aria-label="Close navigation"
-          >
-            ✕
-          </button>
         </div>
-        <div className="hidden lg:flex items-center justify-between gap-3 px-4 py-4">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">🎾</span>
-            <div>
-              <div className="text-court-lime font-black text-sm">Vico Tennis</div>
-              <div className="text-[11px] text-[#7aaa6a]">Player Dashboard</div>
-            </div>
-          </div>
-          <div className="text-xs text-[#7aaa6a] truncate">{user?.firstName ?? 'Player'}</div>
-        </div>
+      </DashboardSidebar>
 
-        <div className="flex-1 px-4 pb-4 overflow-y-auto">
-          <div className="flex flex-col gap-2">
-            {navItems.map(item => {
-              const isActive = activeNav === item.label;
-              const buttonClasses = `w-full flex items-center gap-2 px-3 py-2 text-[11px] text-left rounded-xl transition-all ${isActive ? 'bg-[#2d5a27] border-l-4 border-[#7dc142] text-white' : 'bg-[#152515] text-[#7aaa6a] hover:border-l-4 hover:border-[#7dc142] hover:text-white'}`;
-              const targetPath = item.href?.startsWith('/')
-                ? item.href
-                : `/dashboard/${params?.role || 'player'}/${params?.userId || user?.id}${item.href || ''}`;
-
-              return (
-                <button
-                  key={item.label}
-                  type="button"
-                  onClick={() => {
-                    if (activeNav !== item.label) {
-                      toast.success(`Navigating to ${item.label}`, {
-                        duration: 2,
-                        position: 'top-right',
-                      });
-                    }
-                    setActiveNav(item.label);
-                    setSidebarOpen(false);
-                    if (item.label === 'Home' && params?.role && params?.id) {
-                      router.push(`/dashboard/${params.role}/${params.userId}`);
-                    } else {
-                      router.push(targetPath);
-                    }
-                  }}
-                  className={buttonClasses}
-                >
-                  <span>{item.icon}</span>
-                  <span className="truncate">{item.label}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="px-4 pb-4">
-          <button
-            onClick={() => {
-              setActiveNav('Court Booking');
-              setSidebarOpen(false);
-              if (params?.role && params?.id) {
-                router.push(`/dashboard/${params.role}/${params.userId}?booking=true`);
-              }
-            }}
-            className="w-full rounded-xl py-3 font-bold text-[12px] bg-gradient-to-r from-[#7dc142] to-[#a8d84e] text-[#0f1f0f] hover:opacity-90 transition-opacity"
-          >
-            🎾 Book a Court
-          </button>
-          <div className="mt-4">
-            <ProfileSnapshot user={user} playerData={playerData} showViewProfileButton={false} />
-          </div>
-          <MembershipSwitcher style={{ marginTop: 8 }} />
-          <div className="grid grid-cols-2 gap-2 mt-4">
-            <button
-              type="button"
-              onClick={() => {
-                setActiveNav('My Profile');
-                setSidebarOpen(false);
-                if (params?.role && params?.id) {
-                  router.push(`/dashboard/${params.role}/${params.userId}?profile=true`);
-                } else {
-                  router.push('?profile=true');
-                }
-              }}
-              className="rounded-xl py-3 text-[12px] font-bold bg-[#2d5a27] text-[#7dc142] hover:bg-[#3d7a32] transition-colors"
-            >
-              View Profile
-            </button>
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="rounded-xl py-3 text-[12px] font-bold bg-red-600 text-white hover:bg-red-700 transition-colors"
-            >
-              Logout
-            </button>
-          </div>
-        </div>
-      </aside>
-
-      {/* ── MAIN CONTENT ── */}
-      <main className="flex-1 px-3 py-4 sm:px-5 sm:py-5 overflow-y-auto" style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
-        <div className="space-y-4">
-          {showProfile ? (
+      <DashboardMain style={{ padding: isMobileView ? spacing['2xl'] : spacing.xl }}>
+        {showProfile ? (
+          <DashboardPanel style={{ marginBottom: spacing['2xl'] }}>
             <ProfileView isEmbedded={true} canEdit={true} />
-          ) : showBooking ? (
+          </DashboardPanel>
+        ) : showBooking ? (
+          <DashboardPanel style={{ marginBottom: spacing['2xl'] }}>
             <BookingView isEmbedded={true} canBook={true} organizationId={organizationId} />
-          ) : showMessages ? (
+          </DashboardPanel>
+        ) : showMessages ? (
+          <DashboardPanel style={{ marginBottom: spacing['2xl'] }}>
             <MessagingPanel userId={user?.id || ''} userType="player" />
-          ) : showCommunity ? (
+          </DashboardPanel>
+        ) : showCommunity ? (
+          <DashboardPanel style={{ marginBottom: spacing['2xl'] }}>
             <CommunityView isEmbedded={true} />
-          ) : showTournaments ? (
+          </DashboardPanel>
+        ) : showTournaments ? (
+          <DashboardPanel style={{ marginBottom: spacing['2xl'] }}>
             <TournamentsView isEmbedded={true} playerId={user?.id || ''} />
-          ) : showSessions ? (
+          </DashboardPanel>
+        ) : showSessions ? (
+          <DashboardPanel style={{ marginBottom: spacing['2xl'] }}>
             <SessionsView isEmbedded={true} playerId={user?.id} />
-          ) : showStats ? (
+          </DashboardPanel>
+        ) : showStats ? (
+          <DashboardPanel style={{ marginBottom: spacing['2xl'] }}>
             <StatsView isEmbedded={true} playerData={playerData} />
-          ) : showProgress ? (
+          </DashboardPanel>
+        ) : showProgress ? (
+          <DashboardPanel style={{ marginBottom: spacing['2xl'] }}>
             <ProgressView isEmbedded={true} playerId={user?.id} />
-          ) : showFindPlayers ? (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between gap-4 rounded-3xl border border-[#2d5a35] bg-[#152515] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
-                <div>
-                  <div className="text-sm uppercase tracking-[0.32em] text-[#7dc142]">Player Tools</div>
-                  <h1 className="mt-2 text-3xl font-black text-white">Find Players and Send Challenges</h1>
-                  <p className="mt-2 max-w-2xl text-sm text-[#c2dbb0]">Search by email, username, or nearby players, then choose a formal or informal challenge option.</p>
-                </div>
+          </DashboardPanel>
+        ) : showFindPlayers ? (
+          <DashboardPanel style={{ padding: spacing['2xl'], marginBottom: 0 }}>
+            <div style={{ fontSize: typography.fontSize.label, textTransform: 'uppercase', letterSpacing: '0.32em', color: colors.primary, fontWeight: typography.fontWeight.extraBold, marginBottom: spacing.lg }}>Player Tools</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.lg, marginTop: spacing.md }}>
+              <div>
+                <h1 style={{ margin: `${spacing.xs} 0`, fontSize: typography.fontSize.h2, fontWeight: typography.fontWeight.extraBold, color: colors.textPrimary }}>
+                  Find Players and Send Challenges
+                </h1>
+                <p style={{ fontSize: typography.fontSize.body, color: colors.textMuted, maxWidth: 560 }}>
+                  Search by email, username, or nearby players, then choose a formal or informal challenge option.
+                </p>
               </div>
               <PlayerSearchChallenge organizationId={organizationId} />
-              <FindNearbyPeople
-                onMessageClick={(personId, personName) => router.push(chatUrlForUser(personId, personName))}
-                onChallengeClick={handleChallenge}
-              />
+              <FindNearbyPeople onMessageClick={(personId, personName) => router.push(chatUrlForUser(personId, personName))} onChallengeClick={handleChallenge} />
             </div>
-          ) : showFindCourts ? (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between gap-4 rounded-3xl border border-[#2d5a35] bg-[#152515] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
-                <div>
-                  <div className="text-sm uppercase tracking-[0.32em] text-[#7dc142]">Coach Tools</div>
-                  <h1 className="mt-2 text-3xl font-black text-white">Find Courts Near You</h1>
-                  <p className="mt-2 max-w-2xl text-sm text-[#c2dbb0]">Search nearby courts and book from the dashboard body, while keeping the sidebar visible.</p>
-                </div>
+          </DashboardPanel>
+        ) : showFindCourts ? (
+          <DashboardPanel style={{ padding: spacing['2xl'], marginBottom: 0 }}>
+            <div style={{ fontSize: typography.fontSize.label, textTransform: 'uppercase', letterSpacing: '0.32em', color: colors.primary, fontWeight: typography.fontWeight.extraBold, marginBottom: spacing.lg }}>Coach Tools</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.lg, marginTop: spacing.md }}>
+              <div>
+                <h1 style={{ margin: `${spacing.xs} 0`, fontSize: typography.fontSize.h2, fontWeight: typography.fontWeight.extraBold, color: colors.textPrimary }}>
+                  Find Courts Near You
+                </h1>
+                <p style={{ fontSize: typography.fontSize.body, color: colors.textMuted, maxWidth: 560 }}>
+                  Search nearby courts and book from the dashboard body, while keeping the sidebar visible.
+                </p>
               </div>
               <FindNearbyCourts onBookClick={handleCourtBooking} />
             </div>
-          ) : showSettings ? (
+          </DashboardPanel>
+        ) : showSettings ? (
+          <DashboardPanel style={{ marginBottom: spacing['2xl'] }}>
             <SettingsView isEmbedded={true} />
-          ) : (
-            <div className="space-y-4">
-              <DashboardHome playerData={playerData} upcomingMatches={upcomingMatches} leaderboard={leaderboard} activityFeed={activityFeed} />
-            </div>
-          )}
-        </div>
-      </main>
-    </div>
+          </DashboardPanel>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['2xl'] }}>
+            <DashboardHome playerData={playerData} upcomingMatches={upcomingMatches} leaderboard={leaderboard} activityFeed={activityFeed} />
+          </div>
+        )}
+      </DashboardMain>
+    </DashboardShell>
   );
 };
