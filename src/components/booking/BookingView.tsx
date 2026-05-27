@@ -761,9 +761,8 @@ export function BookingView({ onClose, isEmbedded = false, canBook = true, organ
                 value={notes}
                 onChange={e => setNotes(e.target.value)}
                 rows={4}
-                placeholder="e.g. Bringing my own equipment, practising serve…"
-                style={{ width: '100%', background: G.primaryHover || G.primary, border: `1px solid ${G.border}`, color: G.text, borderRadius: 10, padding: '8px', fontSize: 12, outline: 'none', resize: 'none' }}
                 placeholder={notes || 'e.g. Bringing my own equipment, practising serve…'}
+                style={{ width: '100%', background: G.primaryHover || G.primary, border: `1px solid ${G.border}`, color: G.text, borderRadius: 10, padding: '8px', fontSize: 12, outline: 'none', resize: 'none' }}
               />
             </Card>
           </div>

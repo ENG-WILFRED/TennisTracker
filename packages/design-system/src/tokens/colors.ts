@@ -12,6 +12,9 @@ export const colors = {
   surfaceTertiary: '#2d5a27',
   court: '#0b190e',
   chalk: '#f5f7e9',
+  white: '#ffffff',
+  blue: '#3b82f6',
+  blueDark: '#1d4ed8',
   border: '#2d5a35',
   textPrimary: '#d8e8b6',
   textMuted: '#7aaa6a',
@@ -23,6 +26,6 @@ export const colors = {
   info: '#3d7a32',
   dark: '#0f1f0f',
   bright: '#3d7a32',
-  inverse: '#0f1720',
+  inverse: '#0f2011',
   focus: 'rgba(125, 193, 66, 0.2)',
 };

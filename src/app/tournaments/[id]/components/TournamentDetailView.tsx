@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { authenticatedFetch } from '@/lib/authenticatedFetch';
 import { TournamentApplicationForm } from '@/components/tournament/TournamentApplicationForm';
 import { CancelApplicationModal } from '@/components/tournament/CancelApplicationModal';
 import { PlayerProfileModal } from './PlayerProfileModal';

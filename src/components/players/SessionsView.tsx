@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { LoadingState } from '@/components/LoadingState';
-import { Card, Button, colors, spacing, typography, radii } from '@vico/design-system';
+import { Card, Button, colors, spacing, typography, radii, toastOptions } from '@vico/design-system';
 
 interface Session {
   id: string;
@@ -425,7 +425,7 @@ export const SessionsView: React.FC<SessionsViewProps> = ({ isEmbedded = false, 
           </button>
           <button
             type="button"
-            onClick={() => toast('Filters coming soon', { duration: 1500 })}
+            onClick={() => toast('Filters coming soon', { ...toastOptions, duration: 1500 })}
             style={{
               minHeight: 44,
               padding: `${spacing.sm} ${spacing.md}`,
@@ -477,7 +477,7 @@ export const SessionsView: React.FC<SessionsViewProps> = ({ isEmbedded = false, 
                 <TaskCard
                   task={item as Task}
                   onClick={() => {
-                    toast('Navigating to task details…', { duration: 2000 });
+                    toast('Navigating to task details…', { ...toastOptions, duration: 2000 });
                     router.push(`/dashboard/${role}/${playerId}/task/${item.id}?sessions=true`);
                   }}
                 />

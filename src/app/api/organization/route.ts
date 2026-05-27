@@ -1,6 +1,5 @@
 import prisma from '@/lib/prisma';
 import { verifyApiAuth } from '@/lib/authMiddleware';
-import { Prisma } from '@prisma/client';
 
 export async function GET(request: Request) {
   try {
@@ -160,7 +159,7 @@ export async function POST(request: Request) {
       (error as any).name === 'PrismaClientKnownRequestError';
 
     if (isPrismaKnownRequestError && (error as any).code === 'P2002') {
-      const errorObj = error as Prisma.PrismaClientKnownRequestError;
+      const errorObj = error as any;
       const target = Array.isArray(errorObj.meta?.target)
         ? errorObj.meta.target.join(', ')
         : errorObj.meta?.target;

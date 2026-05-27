@@ -1,8 +1,6 @@
 import React from 'react';
-import { Player } from '../../types/player';
-
 interface PlayerCardProps {
-  player: Player;
+  player: any;
 }
 
 const G = {

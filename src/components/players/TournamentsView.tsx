@@ -36,7 +36,13 @@ export function TournamentsView({ isEmbedded = false, playerId }: TournamentsVie
       try {
         const response = await fetch('/api/tournaments');
         const data = await response.json();
-        setTournaments(data);
+        // Normalize API response to an array of tournaments
+        const normalized: any[] = Array.isArray(data)
+          ? data
+          : (data && typeof data === 'object'
+            ? (Array.isArray(data.tournaments) ? data.tournaments : Array.isArray(data.items) ? data.items : [])
+            : []);
+        setTournaments(normalized);
       } catch (error) {
         console.error('Failed to fetch tournaments:', error);
       } finally {
@@ -192,10 +198,19 @@ export function TournamentsView({ isEmbedded = false, playerId }: TournamentsVie
       <div className="player-tournaments-list">
         <div className="player-tournaments-grid">
           {(() => {
-            // Filter tournaments based on selected filter
-            const filteredTournaments = filter === 'all' 
-              ? tournaments 
-              : tournaments.filter(tournament => tournament.status === filter);
+            // Ensure we have an array of tournaments (API may return an object)
+            const allTournaments: any[] = Array.isArray(tournaments)
+              ? tournaments
+              : (tournaments && typeof tournaments === 'object'
+                ? (Array.isArray((tournaments as any).tournaments) ? (tournaments as any).tournaments
+                  : Array.isArray((tournaments as any).items) ? (tournaments as any).items
+                  : [])
+                : []);
+
+            // Filter tournaments based on selected filter with a safe fallback
+            const filteredTournaments = filter === 'all'
+              ? allTournaments
+              : allTournaments.filter(tournament => tournament && tournament.status === filter);
 
             return filteredTournaments.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '40px 20px', color: G.muted }}>

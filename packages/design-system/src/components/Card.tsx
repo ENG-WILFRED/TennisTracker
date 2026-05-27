@@ -7,17 +7,23 @@ import { typography } from '../tokens/typography';
 
 export interface CardProps extends HTMLAttributes<HTMLDivElement> {
   children: ReactNode;
-  variant?: 'default' | 'elevated' | 'glow' | 'featured';
+  variant?: 'default' | 'elevated' | 'glow' | 'featured' | 'bordered';
 }
 
 export const Card = ({ children, variant = 'default', style, ...rest }: CardProps) => {
   const base = {
-    background: variant === 'featured'
-      ? `linear-gradient(180deg, ${colors.surface} 0%, ${colors.surfaceAccent} 100%)`
-      : colors.surface,
-    border: `1px solid ${variant === 'featured' ? colors.highlight : colors.border}`,
-    borderRadius: radii['2xl'],
-    padding: spacing['2xl'],
+    background:
+      variant === 'featured'
+        ? `linear-gradient(180deg, ${colors.surface} 0%, ${colors.surfaceAccent} 100%)`
+        : colors.surfaceAccent,
+    border:
+      variant === 'bordered'
+        ? `1px solid ${colors.border}`
+        : variant === 'featured'
+        ? `1px solid ${colors.highlight}`
+        : 'none',
+    borderRadius: radii.xl,
+    padding: spacing.lg,
     boxShadow:
       variant === 'elevated'
         ? shadows.card

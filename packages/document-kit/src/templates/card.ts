@@ -8,8 +8,12 @@ import type {
 import { DEFAULT_BRANDING } from '../branding';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 
-const compiledTailwind = fs.readFileSync(path.join(__dirname, 'tailwind-compiled.css'), 'utf8');
+const compiledTailwind = fs.readFileSync(
+  path.join(path.dirname(fileURLToPath(import.meta.url)), 'tailwind-compiled.css'),
+  'utf8'
+);
 
 const buildCardMarkup = (data: PDFCardTemplateData): string => {
   const fieldsHtml = data.fields

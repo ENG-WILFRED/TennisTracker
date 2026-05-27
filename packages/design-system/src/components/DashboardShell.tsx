@@ -3,6 +3,7 @@ import { colors } from '../tokens/colors';
 import { radii } from '../tokens/radius';
 import { shadows } from '../tokens/shadows';
 import { spacing } from '../tokens/spacing';
+import { sizing } from '../tokens/sizing';
 import { typography } from '../tokens/typography';
 
 interface DashboardShellProps extends HTMLAttributes<HTMLDivElement> {
@@ -30,14 +31,14 @@ export const DashboardSidebar = ({ children, style, ...rest }: DashboardShellPro
   <aside
     style={{
       minHeight: '100vh',
-      width: 320,
+      width: sizing.sidebar,
       display: 'flex',
       flexDirection: 'column',
       backgroundColor: colors.surfaceSecondary,
       borderRight: `1px solid ${colors.border}`,
       boxShadow: shadows.card,
-      padding: spacing['2xl'],
-      gap: spacing['2xl'],
+      padding: spacing.sidebar,
+      gap: spacing.sidebarGap,
       backgroundImage: `linear-gradient(180deg, rgba(125,193,66,0.08), transparent 60%)`,
       ...style,
     }}

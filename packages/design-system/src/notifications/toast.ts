@@ -6,7 +6,7 @@ import { spacing } from '../tokens/spacing';
 import { typography } from '../tokens/typography';
 
 export const toastStyle = {
-  background: colors.surface,
+  background: colors.white,
   color: colors.textPrimary,
   border: `1px solid ${colors.border}`,
   boxShadow: shadows.card,
@@ -22,32 +22,32 @@ export const toastOptions: DefaultToastOptions = {
   style: toastStyle,
   success: {
     iconTheme: {
-      primary: colors.primary,
-      secondary: colors.surface,
+      primary: colors.success,
+      secondary: colors.white,
     },
     style: {
-      borderColor: colors.primary,
-      color: colors.textPrimary,
+      borderColor: colors.success,
+      color: colors.brandDark,
     },
   },
   error: {
     iconTheme: {
       primary: colors.danger,
-      secondary: colors.surface,
+      secondary: colors.white,
     },
     style: {
       borderColor: colors.danger,
-      color: colors.textPrimary,
+      color: colors.brandDark,
     },
   },
   loading: {
     iconTheme: {
-      primary: colors.primaryHover,
-      secondary: colors.surface,
+      primary: colors.blue,
+      secondary: colors.white,
     },
     style: {
-      borderColor: colors.primaryHover,
-      color: colors.textPrimary,
+      borderColor: colors.blue,
+      color: colors.brandDark,
     },
   },
 };

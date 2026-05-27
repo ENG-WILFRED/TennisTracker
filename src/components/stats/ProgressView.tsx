@@ -61,12 +61,7 @@ interface Analytics {
     coachRatingsCount?: number;
     averageCoachRating?: number;
   };
-  monthly: Array<{
-    month: string;
-    matches: number;
-    wins: number;
-    losses: number;
-  }>;
+  monthly: Array<{ month: string; matches: number; wins: number; losses: number }>;
   performance: {
     serviceAccuracy: number;
     firstServeWinRate: number;
@@ -74,17 +69,8 @@ interface Analytics {
     aces: number;
     doubleFaults: number;
   };
-  recentMatches: Array<{
-    date: string;
-    opponent: string;
-    result: 'WIN' | 'LOSS';
-    score: string;
-  }>;
-  goals: Array<{
-    name: string;
-    progress: number;
-    target: string;
-  }>;
+  recentMatches: Array<{ date: string; opponent: string; result: 'WIN' | 'LOSS'; score: string }>;
+  goals: Array<{ name: string; progress: number; target: string }>;
   coachRatings?: Array<{
     id: string;
     coachName: string;
@@ -185,6 +171,17 @@ export function ProgressView({ isEmbedded = false, playerId }: ProgressViewProps
     }
   };
 
+  const timeframeOptions = useMemo(() => {
+    const tfs = (['all', '3months', '6months', 'year'] as const);
+    const labels: Record<typeof tfs[number], string> = {
+      all: 'All Time',
+      '3months': 'Last 3 Months',
+      '6months': 'Last 6 Months',
+      year: 'Last Year',
+    } as any;
+    return tfs.map((tf) => ({ key: tf, label: labels[tf] }));
+  }, []);
+
   if (loading) {
     return (
       <div style={createContainerStyle(isEmbedded, true)}>
@@ -264,39 +261,31 @@ export function ProgressView({ isEmbedded = false, playerId }: ProgressViewProps
 
       {/* Timeframe Selector */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
-        {useMemo(() => (['all', '3months', '6months', 'year'] as const).map((tf) => {
-          const labels: Record<typeof tf, string> = {
-            'all': 'All Time',
-            '3months': 'Last 3 Months',
-            '6months': 'Last 6 Months',
-            'year': 'Last Year',
-          };
-          return (
-            <button
-              key={tf}
-              onClick={() => setTimeframe(tf)}
-              style={{
-                padding: '8px 12px',
-                background: timeframe === tf ? G.lime : G.mid,
-                color: timeframe === tf ? G.dark : G.text,
-                border: 'none',
-                borderRadius: 6,
-                fontSize: 11,
-                fontWeight: 700,
-                cursor: 'pointer',
-              }}
-            >
-              {labels[tf]}
-            </button>
-          );
-        }), [timeframe])}
+        {timeframeOptions.map((opt) => (
+          <button
+            key={opt.key}
+            onClick={() => setTimeframe(opt.key as any)}
+            style={{
+              padding: '8px 12px',
+              background: timeframe === opt.key ? G.lime : G.mid,
+              color: timeframe === opt.key ? G.dark : G.text,
+              border: 'none',
+              borderRadius: 6,
+              fontSize: 11,
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
+          >
+            {opt.label}
+          </button>
+        ))}
       </div>
 
       {/* Main Stats Grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 24 }}>
         <StatCard title="Matches" value={stats.totalMatches} />
         <StatCard title="Win Rate" value={`${stats.winRate.toFixed(1)}%`} color={G.lime} />
-        <StatCard title={`Rank (${stats.coachRatingsCount || 0} ratings)`} value={`#${stats.currentRank}`} color={G.blue} subtitle={stats.averageCoachRating ? `Avg: ${stats.averageCoachRating}⭐` : undefined} />
+        <StatCard title={`Rank (${stats.coachRatingsCount || 0} ratings)`} value={`#${stats.currentRank}`} color={G.lime} subtitle={stats.averageCoachRating ? `Avg: ${stats.averageCoachRating}⭐` : undefined} />
         <StatCard title="Streak" value={stats.streak} color={G.yellow} />
       </div>
 
@@ -361,8 +350,8 @@ export function ProgressView({ isEmbedded = false, playerId }: ProgressViewProps
           </div>
           <div>
             <div style={{ fontSize: 12, color: G.muted, marginBottom: 6 }}>1st Serve Win Rate</div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: G.blue, marginBottom: 4 }}>{performance.firstServeWinRate.toFixed(0)}%</div>
-            <ProgressBar value={performance.firstServeWinRate} color={G.blue} />
+            <div style={{ fontSize: 16, fontWeight: 700, color: G.lime, marginBottom: 4 }}>{performance.firstServeWinRate.toFixed(0)}%</div>
+            <ProgressBar value={performance.firstServeWinRate} color={G.lime} />
           </div>
           <div>
             <div style={{ fontSize: 12, color: G.muted, marginBottom: 6 }}>Break Point Conversion</div>
@@ -471,7 +460,7 @@ export function ProgressView({ isEmbedded = false, playerId }: ProgressViewProps
               onClick={remindCoach}
               disabled={reminderState === 'sending'}
               style={{
-                background: reminderState === 'sent' ? G.blue : G.lime,
+                background: reminderState === 'sent' ? G.lime : G.mid,
                 color: G.dark,
                 border: 'none',
                 borderRadius: 6,
@@ -532,7 +521,7 @@ export function ProgressView({ isEmbedded = false, playerId }: ProgressViewProps
                 )}
                 {rating.notes && (
                   <div>
-                    <div style={{ fontSize: 9, fontWeight: 700, color: G.blue, marginBottom: 3 }}>Notes:</div>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: G.lime, marginBottom: 3 }}>Notes:</div>
                     <div style={{ fontSize: 10, color: G.muted, lineHeight: 1.4, fontStyle: 'italic' }}>{rating.notes}</div>
                   </div>
                 )}
@@ -550,7 +539,7 @@ export function ProgressView({ isEmbedded = false, playerId }: ProgressViewProps
               onClick={remindCoach}
               disabled={reminderState === 'sending'}
               style={{
-                background: reminderState === 'sent' ? G.blue : G.lime,
+                background: reminderState === 'sent' ? G.lime : G.mid,
                 color: G.dark,
                 border: 'none',
                 borderRadius: 6,

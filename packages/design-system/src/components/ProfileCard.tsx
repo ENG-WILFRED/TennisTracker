@@ -20,7 +20,7 @@ export const ProfileCard = ({ photoUrl, firstName, lastName, email, memberSince,
   return (
     <div
       style={{
-        background: colors.surface,
+        background: colors.surfaceSecondary,
         border: `1px solid ${colors.border}`,
         borderRadius: radii['2xl'],
         padding: spacing['2xl'],

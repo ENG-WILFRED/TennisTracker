@@ -20,7 +20,7 @@ import { FindNearbyCourts } from '@/components/FindNearbyCourts';
 import { PlayerSearchChallenge } from '@/components/PlayerSearchChallenge';
 import { chatUrlForUser, sendChallengeRequest } from '@/lib/nearby';
 import toast from 'react-hot-toast';
-import { Button, Card, DashboardMain, DashboardPanel, DashboardShell, DashboardSidebar, colors, radii, shadows, spacing, toastOptions, typography } from '@vico/design-system';
+import { Button, Card, DashboardMain, DashboardPanel, DashboardShell, DashboardSidebar, colors, radii, shadows, spacing, sizing, toastOptions, typography } from '@vico/design-system';
 
 export const PlayerDashboard: React.FC = () => {
   const { user, logout } = useAuth();
@@ -214,12 +214,13 @@ export const PlayerDashboard: React.FC = () => {
     position: isMobileView ? 'fixed' : 'sticky',
     top: 0,
     left: 0,
-    width: isMobileView ? '100%' : 320,
+    width: isMobileView ? '100%' : sizing.sidebar,
     transform: isMobileView ? (sidebarOpen ? 'translateX(0)' : 'translateX(-108%)') : 'translateX(0)',
     transition: 'transform 0.28s ease',
     zIndex: 40,
     height: '100vh',
     overflowY: 'auto',
+    
   } as React.CSSProperties;
 
   return (
@@ -394,37 +395,37 @@ export const PlayerDashboard: React.FC = () => {
         </div>
       </DashboardSidebar>
 
-      <DashboardMain style={{ padding: isMobileView ? spacing['2xl'] : spacing.xl }}>
+      <DashboardMain style={{ padding: isMobileView ? spacing['2xl'] : spacing.md }}>
         {showProfile ? (
-          <DashboardPanel style={{ marginBottom: spacing['2xl'] }}>
+          <DashboardPanel style={{ marginBottom: spacing.lg }}>
             <ProfileView isEmbedded={true} canEdit={true} />
           </DashboardPanel>
         ) : showBooking ? (
-          <DashboardPanel style={{ marginBottom: spacing['2xl'] }}>
+          <DashboardPanel style={{ marginBottom: spacing.lg }}>
             <BookingView isEmbedded={true} canBook={true} organizationId={organizationId} />
           </DashboardPanel>
         ) : showMessages ? (
-          <DashboardPanel style={{ marginBottom: spacing['2xl'] }}>
+          <DashboardPanel style={{ marginBottom: spacing.lg }}>
             <MessagingPanel userId={user?.id || ''} userType="player" />
           </DashboardPanel>
         ) : showCommunity ? (
-          <DashboardPanel style={{ marginBottom: spacing['2xl'] }}>
+          <DashboardPanel style={{ marginBottom: spacing.lg }}>
             <CommunityView isEmbedded={true} />
           </DashboardPanel>
         ) : showTournaments ? (
-          <DashboardPanel style={{ marginBottom: spacing['2xl'] }}>
+          <DashboardPanel style={{ marginBottom: spacing.lg }}>
             <TournamentsView isEmbedded={true} playerId={user?.id || ''} />
           </DashboardPanel>
         ) : showSessions ? (
-          <DashboardPanel style={{ marginBottom: spacing['2xl'] }}>
+          <DashboardPanel style={{ marginBottom: spacing.lg }}>
             <SessionsView isEmbedded={true} playerId={user?.id} />
           </DashboardPanel>
         ) : showStats ? (
-          <DashboardPanel style={{ marginBottom: spacing['2xl'] }}>
+          <DashboardPanel style={{ marginBottom: spacing.lg }}>
             <StatsView isEmbedded={true} playerData={playerData} />
           </DashboardPanel>
         ) : showProgress ? (
-          <DashboardPanel style={{ marginBottom: spacing['2xl'] }}>
+          <DashboardPanel style={{ marginBottom: spacing.lg }}>
             <ProgressView isEmbedded={true} playerId={user?.id} />
           </DashboardPanel>
         ) : showFindPlayers ? (

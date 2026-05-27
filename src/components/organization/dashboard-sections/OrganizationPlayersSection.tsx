@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import Button from '../../ui/Button';
+import { Button } from '../../ui/button';
 import toast from 'react-hot-toast';
 
 const G = {

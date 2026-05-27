@@ -16,6 +16,7 @@ export const typography = {
     h3: '22px',
     h4: '18px',
     body: '16px',
+    sm: '14px',
     label: '12px',
     caption: '11px',
   },
