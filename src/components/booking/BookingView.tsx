@@ -50,7 +50,17 @@ const G = {
 // ─── Shared primitives ────────────────────────────────────────────────────────
 
 const Card: React.FC<{ children: React.ReactNode; className?: string; style?: React.CSSProperties }> = ({ children, className = '', style }) => (
-  <div style={{ background: G.card, border: `1px solid ${G.border}`, borderRadius: 12, padding: 16, ...(style || {}) }} className={className}>
+  <div
+    style={{
+      background: G.surface,
+      border: `1px solid rgba(${hexToRgb(G.primary)},0.32)`,
+      borderRadius: 12,
+      padding: 16,
+      boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.02)',
+      ...(style || {}),
+    }}
+    className={className}
+  >
     {children}
   </div>
 );
@@ -139,7 +149,7 @@ const SlotButton: React.FC<{ slot: any; selected: boolean; onClick: () => void }
         {slot.pendingCount > 0 && (
           <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', bottom: '100%', marginBottom: 8, padding: '6px 8px', borderRadius: 8, fontSize: 12, background: G.warning, color: G.page, zIndex: 10 }}>
             <div style={{ fontWeight: 800 }}>{slot.pendingCount} pending</div>
-            <div style={{ fontSize: 11 }}>We'll notify you if available</div>
+            <div style={{ fontSize: 11 }}>We&apos;ll notify you if available</div>
           </div>
         )}
       </div>
@@ -183,48 +193,53 @@ const BookingItem: React.FC<{ booking: any; canBook: boolean; onCancel: (id: str
     completed: { bg: G.card, text: G.muted },
   };
 
+  const dotColor = booking.status === 'confirmed' ? G.primary : booking.status === 'completed' ? G.muted : booking.status === 'cancelled' ? G.danger : G.primary;
+
   return (
-    <div style={{ padding: 16, borderRadius: 12, border: booking.status === 'cancelled' ? `1px solid rgba(${hexToRgb(G.danger)},0.25)` : `1px solid ${G.border}`, opacity: booking.status === 'cancelled' ? 0.6 : 1, background: G.surface, transition: 'all .12s' }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
-        <div>
-          <div style={{ fontSize: 14, fontWeight: 800, color: G.text }}>🎾 {booking.court.name}</div>
-          <div style={{ fontSize: 12, color: G.muted, marginTop: 4 }}>
-            {start.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+    <div
+      style={{
+        display: 'flex',
+        background: G.surface,
+        border: `1px solid rgba(${hexToRgb(G.primary)},0.32)`,
+        borderRadius: 12,
+        padding: 16,
+        paddingLeft: 12,
+        borderLeft: `4px solid ${dotColor}`,
+        opacity: booking.status === 'cancelled' ? 0.7 : 1,
+        transition: 'all .12s',
+      }}
+    >
+      <div style={{ flex: 1 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+          <div>
+            <div style={{ fontSize: 15, fontWeight: 800, color: G.text }}>🎾 {booking.court.name}</div>
+            <div style={{ fontSize: 12, color: G.muted, marginTop: 6 }}>{start.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</div>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: 12, fontWeight: 900, color: dotColor }}>{booking.status.toUpperCase()}</div>
+            <div style={{ fontSize: 12, color: G.muted, marginTop: 6 }}>{`${start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} — ${end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}</div>
           </div>
         </div>
-        <span style={{ fontSize: 12, fontWeight: 900, padding: '4px 8px', borderRadius: 999, background: (statusColors[booking.status] || { bg: G.card }).bg, color: (statusColors[booking.status] || { text: G.muted }).text }}>
-          {booking.status.toUpperCase()}
-        </span>
-      </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginBottom: 12 }}>
-        <div style={{ background: G.page, borderRadius: 10, padding: '8px 10px', textAlign: 'center' }}>
-          <div style={{ fontSize: 10, color: G.muted }}>Start</div>
-          <div style={{ fontSize: 14, fontWeight: 800, color: G.text }}>{start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 8, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 12, color: G.muted, padding: '6px 8px', borderRadius: 8, background: G.surface }}>{booking.matchType || 'Single'}</span>
+          {booking.price && <span style={{ fontSize: 12, fontWeight: 800, color: G.primary }}>{`$${booking.price}`}</span>}
+          <span style={{ fontSize: 12, color: G.muted }}>{booking.playerCount ? `${booking.playerCount} players` : ''}</span>
         </div>
-        <div style={{ background: G.page, borderRadius: 10, padding: '8px 10px', textAlign: 'center' }}>
-          <div style={{ fontSize: 10, color: G.muted }}>End</div>
-          <div style={{ fontSize: 14, fontWeight: 800, color: G.text }}>{end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-        </div>
-        <div style={{ background: G.page, borderRadius: 10, padding: '8px 10px', textAlign: 'center' }}>
-          <div style={{ fontSize: 10, color: G.muted }}>Duration</div>
-          <div style={{ fontSize: 14, fontWeight: 800, color: G.primary }}>{durationHrs}h</div>
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
+          <div style={{ fontSize: 12, color: G.muted }}>Tap to view details</div>
+          <div style={{ color: G.primary, fontWeight: 800 }}>→</div>
         </div>
       </div>
 
-      {isActive && canBook && (
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button style={{ flex: 1, padding: '8px 10px', fontSize: 12, fontWeight: 800, background: G.card, borderRadius: 10, color: G.primary, border: `1px solid ${G.primary}`, transition: 'background .12s' }}>
-            📅 Reschedule
-          </button>
-          <button
-            onClick={() => onCancel(booking.id)}
-            style={{ flex: 1, padding: '8px 10px', fontSize: 12, fontWeight: 800, background: `rgba(${hexToRgb(G.danger)},0.12)`, color: G.danger, border: `1px solid rgba(${hexToRgb(G.danger)},0.4)`, borderRadius: 10, transition: 'background .12s' }}
-          >
-            ✕ Cancel
-          </button>
+      {/* Actions */}
+      {isActive && canBook ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginLeft: 12, minWidth: 110 }}>
+          <button style={{ padding: '8px 10px', fontSize: 12, fontWeight: 800, background: G.primary, color: G.page, borderRadius: 10, border: `1px solid ${G.primary}` }}>Reschedule</button>
+          <button onClick={() => onCancel(booking.id)} style={{ padding: '8px 10px', fontSize: 12, fontWeight: 800, background: `rgba(${hexToRgb(G.danger)},0.12)`, color: G.danger, border: `1px solid rgba(${hexToRgb(G.danger)},0.4)`, borderRadius: 10 }}>Cancel</button>
         </div>
-      )}
+      ) : null}
     </div>
   );
 };
@@ -555,7 +570,15 @@ export function BookingView({ onClose, isEmbedded = false, canBook = true, organ
   }
 
   return (
-    <div style={{ width: '100%', ...(isEmbedded ? { background: `linear-gradient(135deg, ${G.page} 0%, ${G.surface} 50%, ${G.card} 100%)`, padding: 20, borderRadius: 12 } : {}) }}>
+    <div
+      style={{
+        width: '100%',
+        background: isEmbedded ? `linear-gradient(135deg, ${G.page} 0%, ${G.surface} 50%, ${G.card} 100%)` : G.page,
+        padding: 20,
+        borderRadius: 12,
+        border: `1px solid ${G.border}`,
+      }}
+    >
 
       {/* ── Header ──────────────────────────────────────────────────────────── */}
       <div style={{ marginBottom: 24 }}>
@@ -571,11 +594,25 @@ export function BookingView({ onClose, isEmbedded = false, canBook = true, organ
           { icon: '⏰', label: 'Next Slot', value: '09:00' },
           { icon: '💰', label: 'Avg. Price', value: '$45/hr' },
         ].map(s => (
-          <Card key={s.label} className="flex items-center gap-3 py-3">
-            <span style={{ fontSize: 20 }}>{s.icon}</span>
-            <div>
-              <div style={{ fontSize: 10, color: G.muted, fontWeight: 700 }}>{s.label}</div>
-              <div style={{ fontSize: 18, fontWeight: 900, color: G.primary }}>{s.value}</div>
+          <Card
+            key={s.label}
+            className="py-4 px-4"
+            style={{
+              background: G.card,
+              border: `1px solid ${G.primary}22`,
+              borderRadius: 16,
+              minHeight: 96,
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start' }}>
+              <div>
+                <div style={{ fontSize: 10, color: G.muted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{s.label}</div>
+                <div style={{ fontSize: 28, fontWeight: 900, color: G.primary, marginTop: 8 }}>{s.value}</div>
+              </div>
+              <span style={{ fontSize: 16, lineHeight: 1.2 }}>{s.icon}</span>
             </div>
           </Card>
         ))}
@@ -618,17 +655,33 @@ export function BookingView({ onClose, isEmbedded = false, canBook = true, organ
             {organizations.length > 1 && (
               <Card>
                 <Label>Select Organization</Label>
-                <select
-                  value={selectedOrgId}
-                  onChange={(e) => setSelectedOrgId(e.target.value)}
-                  style={{ width: '100%', padding: '8px', borderRadius: 10, border: `1px solid ${G.border}`, background: G.surface, color: G.text, fontSize: 14, outline: 'none' }}
-                >
-                  {organizations.map((org) => (
-                    <option key={org.id} value={org.id}>
-                      {org.name}
-                    </option>
-                  ))}
-                </select>
+                <div style={{ position: 'relative' }}>
+                  <select
+                    value={selectedOrgId}
+                    onChange={(e) => setSelectedOrgId(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '12px 44px 12px 12px',
+                      borderRadius: 12,
+                      border: `1px solid rgba(${hexToRgb(G.primary)},0.16)`,
+                      background: `linear-gradient(180deg, ${G.card}, ${G.surface})`,
+                      color: G.text,
+                      fontSize: 14,
+                      outline: 'none',
+                      appearance: 'none',
+                      WebkitAppearance: 'none',
+                      MozAppearance: 'none',
+                      boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.02)'
+                    }}
+                  >
+                    {organizations.map((org) => (
+                      <option key={org.id} value={org.id} style={{ background: G.surface, color: G.text }}>
+                        {org.name}
+                      </option>
+                    ))}
+                  </select>
+                  <span style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', color: G.muted, pointerEvents: 'none', fontSize: 14 }}>▾</span>
+                </div>
               </Card>
             )}
 
@@ -883,16 +936,19 @@ export function BookingView({ onClose, isEmbedded = false, canBook = true, organ
               .scrollable-mybookings::-webkit-scrollbar-thumb:hover { background: ${G.warning || G.primary}; }
             `}</style>
           {/* Filter pills */}
-          <div className="flex gap-2">
+          <style jsx>{`
+            .filter-pills { display:flex; gap:8px; padding:10px; background: ${G.surface}; border: 1px solid ${G.border}; border-radius: 14px; }
+            .filter-pills button { border: 1px solid transparent; border-radius: 999px; background: ${G.page}; color: ${G.muted}; font-size: 12px; font-weight: 800; padding: 8px 14px; cursor: pointer; transition: background .12s ease, color .12s ease, border-color .12s ease; text-transform: capitalize; }
+            .filter-pills button:hover { background: ${G.card}; }
+            .filter-pills button.active { background: ${G.primary}; color: ${G.page}; border-color: ${G.primary}; }
+          `}</style>
+          <div className="filter-pills">
             {(['all', 'upcoming', 'past'] as const).map(f => (
               <button
                 key={f}
                 onClick={() => setBookingFilter(f)}
-                className={`px-4 py-1.5 rounded-full text-xs font-bold border transition-all capitalize ${
-                  bookingFilter === f
-                    ? undefined
-                    : undefined
-                }`}
+                className={bookingFilter === f ? 'active' : ''}
+                type="button"
               >
                 {f} {f === 'upcoming' ? `(${existingBookings.filter(b => new Date(b.startTime) >= new Date() && b.status !== 'cancelled').length})` : ''}
               </button>
@@ -939,7 +995,7 @@ export function BookingView({ onClose, isEmbedded = false, canBook = true, organ
               { label: 'Favourite Court', value: courts[0]?.name || 'N/A', icon: '⭐' },
               { label: 'Total Spent', value: `$${existingBookings.length * 45}`, icon: '💰' },
             ].map(s => (
-              <Card key={s.label} className="text-center py-3">
+              <Card key={s.label} className="text-center py-3" style={{ boxShadow: '0 18px 40px rgba(0,0,0,0.16)' }}>
                 <div style={{ fontSize: 20, marginBottom: 6 }}>{s.icon}</div>
                 <div style={{ fontSize: 16, fontWeight: 900, color: G.warning }}>{s.value}</div>
                   <div style={{ fontSize: 11, color: G.muted }}>{s.label}</div>

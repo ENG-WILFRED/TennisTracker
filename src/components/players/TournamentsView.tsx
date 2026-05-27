@@ -8,8 +8,10 @@ import { Card, Button, colors } from '@vico/design-system';
 const G = {
   dark: colors.inverse || colors.background,
   sidebar: colors.surface,
+  surface: colors.surface,
   card: colors.surfaceSecondary,
   cardBorder: colors.border,
+  cardHover: colors.surface,
   mid: colors.info || colors.primary,
   bright: colors.primaryHover || colors.primary,
   lime: colors.primary,
@@ -71,9 +73,33 @@ export function TournamentsView({ isEmbedded = false, playerId }: TournamentsVie
         .player-tournaments-filter {
           display: flex;
           flex-wrap: wrap;
-          gap: 12px;
+          gap: 8px;
           margin-bottom: 24px;
-          border-bottom: 1px solid ${G.cardBorder};
+          padding: 10px;
+          border: 1px solid ${G.cardBorder};
+          border-radius: 14px;
+          background: ${G.card};
+        }
+
+        .player-tournaments-filter button {
+          border: 1px solid transparent;
+          border-radius: 999px;
+          background: ${G.surface};
+          color: ${G.muted};
+          font-size: 13px;
+          font-weight: 700;
+          padding: 10px 16px;
+          cursor: pointer;
+          transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+        }
+
+        .player-tournaments-filter button:hover {
+          background: ${G.cardHover};
+        }
+
+        .player-tournaments-filter button.active {
+          background: ${G.lime};
+          color: ${colors.background};
         }
 
         .player-tournaments-list {
@@ -176,18 +202,9 @@ export function TournamentsView({ isEmbedded = false, playerId }: TournamentsVie
         {(['all', 'upcoming', 'ongoing', 'completed'] as const).map((tab) => (
           <button
             key={tab}
+            type="button"
+            className={filter === tab ? 'active' : ''}
             onClick={() => setFilter(tab)}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: filter === tab ? G.lime : G.muted,
-              fontSize: 13,
-              fontWeight: 700,
-              paddingBottom: 12,
-              borderBottom: filter === tab ? `2px solid ${G.lime}` : 'none',
-              cursor: 'pointer',
-              textTransform: 'capitalize',
-            }}
           >
             {tab === 'all' ? 'All Tournaments' : tab.charAt(0).toUpperCase() + tab.slice(1)}
           </button>

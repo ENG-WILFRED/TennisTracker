@@ -173,7 +173,7 @@ export function BookingView({ organizationId, onClose, isEmbedded, canBook }: Bo
           { icon: '⏰', label: 'Upcoming', value: upcomingCount },
           { icon: '💰', label: 'Avg. Price', value: '$45/hr' },
         ].map(s => (
-          <Card key={s.label} className="flex items-center gap-3 py-3">
+          <Card key={s.label} variant="elevated" className="flex items-center gap-3" style={{ padding: 12 }}>
             <span className="text-xl">{s.icon}</span>
             <div>
               <div className="text-[9px] font-medium" style={{ color: colors.textMuted }}>{s.label}</div>
