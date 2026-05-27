@@ -198,7 +198,7 @@ export function CoachTaskDashboard({ coachId }: CoachDashboardProps) {
                 <div
                   key={task.id}
                   onClick={() => handleTaskSelect(task.id)}
-                  className="cursor-pointer hover:opacity-80 transition-opacity"
+                  className="cursor-pointer hover:opacity-95 transition-opacity"
                 >
                   <TaskCard
                     task={task}

@@ -86,14 +86,11 @@ export function TournamentsView({ isEmbedded = false, playerId }: TournamentsVie
           background: ${G.card};
           border: 1px solid ${G.cardBorder};
           border-radius: 8px;
-          cursor: pointer;
-          transition: all 0.2s;
+          cursor: default;
+          transition: none;
         }
 
-        .player-tournament-card:hover {
-          border-color: ${G.lime};
-          background: ${G.bright};
-        }
+        /* removed hover styles to avoid attention-grabbing hover effects */
 
         .player-tournament-header {
           display: flex;
@@ -128,8 +125,22 @@ export function TournamentsView({ isEmbedded = false, playerId }: TournamentsVie
           font-size: 12px;
           font-weight: 700;
           cursor: pointer;
-          transition: opacity 0.2s ease;
+          transition: opacity 0.12s ease;
         }
+
+        .player-tournament-action .spinner {
+          width: 14px;
+          height: 14px;
+          border: 2px solid rgba(255,255,255,0.2);
+          border-top-color: rgba(255,255,255,0.95);
+          border-radius: 50%;
+          display: inline-block;
+          vertical-align: middle;
+          margin-right: 8px;
+          animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
 
         .player-tournament-action:disabled {
           opacity: 0.65;
@@ -284,7 +295,14 @@ export function TournamentsView({ isEmbedded = false, playerId }: TournamentsVie
                         router.push(`/dashboard/player/${playerId}/tournaments/${tournament.id}`);
                       }}
                     >
-                      {activeTournamentId === tournament.id ? 'Loading…' : 'View Details & Register →'}
+                      {activeTournamentId === tournament.id ? (
+                        <>
+                          <span className="spinner" aria-hidden />
+                          <span>Loading…</span>
+                        </>
+                      ) : (
+                        'View Details & Register →'
+                      )}
                     </button>
                   </div>
                 );

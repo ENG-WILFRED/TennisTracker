@@ -545,7 +545,7 @@ function BookingDetailsContent() {
           <div className="flex items-center gap-3 mb-4">
             <button
               onClick={() => router.push('/app/courts')}
-              className="text-lg transition-colors hover:opacity-80"
+              className="text-lg transition-colors hover:opacity-95"
               style={{ color: G.lime }}
             >
               ← Back to Courts

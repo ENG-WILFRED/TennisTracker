@@ -271,7 +271,7 @@ export default function BookingDetailPage() {
         <div className="mb-4 sm:mb-6">
           <button
             onClick={() => router.back()}
-            className="inline-flex items-center gap-1 sm:gap-2 font-semibold mb-3 sm:mb-4 transition-colors hover:opacity-80 active:scale-95 min-h-[44px] px-2"
+            className="inline-flex items-center gap-1 sm:gap-2 font-semibold mb-3 sm:mb-4 transition-colors hover:opacity-95 active:scale-95 min-h-[44px] px-2"
             style={{ color: G.lime }}
           >
             <span className="text-xl sm:text-2xl">←</span>
@@ -359,7 +359,7 @@ export default function BookingDetailPage() {
                 <button 
                   onClick={handleReschedule}
                   disabled={!isConfirmed || rescheduling}
-                  className="py-2 sm:py-3 px-2 rounded-lg font-bold text-[10px] sm:text-sm transition-all active:scale-95 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1 sm:gap-2 min-h-[44px]" 
+                  className="py-2 sm:py-3 px-2 rounded-lg font-bold text-[10px] sm:text-sm transition-all active:scale-95 hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1 sm:gap-2 min-h-[44px]" 
                   style={{ background: isConfirmed && !rescheduling ? G.bright : G.mid, color: G.text }}
                   title={isConfirmed ? 'Reschedule this booking' : `Cannot reschedule a ${booking.status} booking (only confirmed can be rescheduled)`}
                 >
@@ -374,7 +374,7 @@ export default function BookingDetailPage() {
                 <button
                   onClick={handleCancel}
                   disabled={!isPending || cancelling}
-                  className="py-2 sm:py-3 px-2 rounded-lg font-bold text-[10px] sm:text-sm transition-all active:scale-95 border hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1 sm:gap-2 min-h-[44px]"
+                  className="py-2 sm:py-3 px-2 rounded-lg font-bold text-[10px] sm:text-sm transition-all active:scale-95 border hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1 sm:gap-2 min-h-[44px]"
                   style={{ background: isPending && !cancelling ? '#7a3a3a' : '#5a2d2d', color: isPending && !cancelling ? '#ff6b6b' : '#996666', borderColor: '#a55050' }}
                   title={isPending ? 'Cancel this pending booking' : `Cannot cancel a ${booking.status} booking (only pending can be cancelled)`}
                 >
@@ -423,7 +423,7 @@ export default function BookingDetailPage() {
                 </div>
                 <button 
                   onClick={handleContactOrg}
-                  className="w-full sm:w-auto px-3 sm:px-4 py-2 rounded-lg font-semibold text-[10px] sm:text-sm transition-colors active:scale-95 hover:opacity-90 min-h-[44px] sm:min-h-auto flex items-center justify-center gap-1 sm:gap-2" 
+                  className="w-full sm:w-auto px-3 sm:px-4 py-2 rounded-lg font-semibold text-[10px] sm:text-sm transition-colors active:scale-95 hover:opacity-95 min-h-[44px] sm:min-h-auto flex items-center justify-center gap-1 sm:gap-2" 
                   style={{ background: G.lime, color: G.dark }}
                 >
                   💬 <span className="hidden sm:inline">Message</span>
@@ -468,7 +468,7 @@ export default function BookingDetailPage() {
                 <button
                   onClick={confirmCancel}
                   disabled={cancelling}
-                  className="py-2 sm:py-2.5 md:py-3 px-2 sm:px-3 rounded-lg font-semibold text-[10px] sm:text-xs md:text-sm transition-all active:scale-95 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1 sm:gap-2 border min-h-[44px]"
+                  className="py-2 sm:py-2.5 md:py-3 px-2 sm:px-3 rounded-lg font-semibold text-[10px] sm:text-xs md:text-sm transition-all active:scale-95 hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1 sm:gap-2 border min-h-[44px]"
                   style={{ background: '#7a3a3a', color: cancelling ? '#996666' : '#ff6b6b', borderColor: '#a55050' }}
                 >
                   {cancelling ? (
@@ -577,7 +577,7 @@ export default function BookingDetailPage() {
                     <button
                       onClick={submitReschedule}
                       disabled={rescheduling || !newDate || !newHour}
-                      className="py-2 sm:py-2.5 md:py-3 px-2 sm:px-3 rounded-lg font-semibold text-[10px] sm:text-xs md:text-sm transition-all active:scale-95 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1 sm:gap-2 min-h-[44px]"
+                      className="py-2 sm:py-2.5 md:py-3 px-2 sm:px-3 rounded-lg font-semibold text-[10px] sm:text-xs md:text-sm transition-all active:scale-95 hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1 sm:gap-2 min-h-[44px]"
                       style={{ background: G.lime, color: G.dark }}
                       title={
                         rescheduling ? 'Rescheduling in progress...' :

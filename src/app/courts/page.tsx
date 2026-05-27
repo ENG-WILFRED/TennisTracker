@@ -559,14 +559,14 @@ export default function CourtsPage() {
                 <button
                   onClick={handleBookNow}
                   disabled={!selectedSlot}
-                  className={`w-full px-3 py-3 mb-3 ${!selectedSlot ? 'bg-court-mid text-court-muted cursor-not-allowed' : 'bg-court-lime text-court-dark hover:opacity-90'} border-none rounded font-bold text-sm transition-all`}
+                  className={`w-full px-3 py-3 mb-3 ${!selectedSlot ? 'bg-court-mid text-court-muted cursor-not-allowed' : 'bg-court-lime text-court-dark hover:opacity-95'} border-none rounded font-bold text-sm transition-all`}
                 >
                   {selectedSlot ? 'Proceed to Payment' : 'Select a slot to continue'}
                 </button>
 
                 <button
                   onClick={() => resetBooking()}
-                  className="w-full px-3 py-3 bg-court-lime border-none rounded text-court-dark font-bold text-sm cursor-pointer transition-all hover:opacity-90"
+                  className="w-full px-3 py-3 bg-court-lime border-none rounded text-court-dark font-bold text-sm cursor-pointer transition-all hover:opacity-95"
                 >
                   Close
                 </button>
@@ -663,7 +663,7 @@ export default function CourtsPage() {
                 <button
                   onClick={handlePaymentConfirm}
                   disabled={actionLoading || !selectedSlot}
-                  className={`w-full px-3 py-3 bg-court-lime border-none rounded font-bold text-sm cursor-pointer transition-all text-court-dark ${actionLoading || !selectedSlot ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-90'}`}
+                  className={`w-full px-3 py-3 bg-court-lime border-none rounded font-bold text-sm cursor-pointer transition-all text-court-dark ${actionLoading || !selectedSlot ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-95'}`}
                 >
                   {actionLoading ? 'Processing payment…' : `Confirm Payment $${(totalPrice / 2).toFixed(2)}`}
                 </button>
@@ -754,7 +754,7 @@ export default function CourtsPage() {
                   </button>
                   <button
                     onClick={() => resetBooking()}
-                    className="w-full px-3 py-3 bg-court-lime border-none rounded text-court-dark font-bold text-sm cursor-pointer transition-all hover:opacity-90"
+                    className="w-full px-3 py-3 bg-court-lime border-none rounded text-court-dark font-bold text-sm cursor-pointer transition-all hover:opacity-95"
                   >
                     Done
                   </button>

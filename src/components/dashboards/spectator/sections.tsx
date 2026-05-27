@@ -237,7 +237,7 @@ export function PlayersSection({
               <button
                 key={player.id}
                 onClick={() => setSelectedPlayer(player)}
-                className="flex items-center justify-between rounded-xl px-4 py-3 text-left transition-all hover:opacity-90"
+                className="flex items-center justify-between rounded-xl px-4 py-3 text-left transition-all hover:opacity-95"
                 style={{
                   background: selectedPlayer?.id === player.id ? '#2d5a27' : '#1b2f1b',
                   border: `1px solid ${selectedPlayer?.id === player.id ? '#7dc142' : '#243e24'}`,
@@ -425,7 +425,7 @@ export function OrgsSection({
               <button
                 key={candidate.id}
                 onClick={() => setSelectedOrg(candidate)}
-                className="flex items-start justify-between rounded-xl px-4 py-3 text-left transition-all hover:opacity-90 gap-3"
+                className="flex items-start justify-between rounded-xl px-4 py-3 text-left transition-all hover:opacity-95 gap-3"
                 style={{
                   background: selectedOrg?.id === candidate.id ? '#2d5a27' : '#1b2f1b',
                   border: `1px solid ${selectedOrg?.id === candidate.id ? '#7dc142' : '#243e24'}`,
@@ -749,7 +749,7 @@ export function MatchesSection({
           {matches.map((match) => (
             <div
               key={match.id}
-              className="rounded-xl p-4 transition-all hover:opacity-90"
+              className="rounded-xl p-4 transition-all hover:opacity-95"
               style={{ background: '#1b2f1b', border: `1px solid #243e24` }}
             >
               <div className="flex items-center justify-between gap-4">
