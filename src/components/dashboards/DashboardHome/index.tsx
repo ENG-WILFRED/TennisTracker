@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { Button, Card, Input, SessionsView } from '@vico/design-system';
+import { Button, Card, Input, SessionsView, colors } from '@vico/design-system';
 
 // Organization color scheme - simplified to 3 colors: dark, lime, muted
 const G = {
@@ -182,9 +182,12 @@ const Achievements: React.FC<{ badges?: any[] }> = ({ badges }) => (
 );
 
 const StatBox: React.FC<{ label: string; value: string | number; accent?: boolean }> = ({ label, value, accent }) => (
-  <div className="rounded-xl px-3 py-3 flex flex-col gap-0.5" style={{ background: accent ? G.lime : G.darkBg, border: !accent ? `1px solid ${G.border}` : 'none' }}>
-    <span className="text-[9px] uppercase tracking-widest font-bold" style={{ color: accent ? G.darkBg : G.muted }}>{label}</span>
-    <span className="text-[var(--vico-font-size-xxl)] font-black" style={{ color: accent ? G.darkBg : '#fff' }}>{value}</span>
+  <div
+    className="rounded-xl px-3 py-3 flex flex-col gap-0.5"
+    style={{ background: accent ? colors.primary : colors.surfaceAccent, border: !accent ? `1px solid ${colors.border}` : 'none' }}
+  >
+    <span className="text-[9px] uppercase tracking-widest font-bold" style={{ color: accent ? colors.background : colors.textMuted }}>{label}</span>
+    <span className="text-[var(--vico-font-size-xxl)] font-black" style={{ color: accent ? colors.background : colors.textPrimary }}>{value}</span>
   </div>
 );
 
@@ -418,17 +421,17 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
               { l: 'Ranking', v: playerData?.rank != null ? `#${playerData.rank}` : '—' },
               { l: 'Points', v: playerData?.player?.points ?? '—' },
             ].map((s) => (
-              <div key={s.l} className="rounded-xl px-3 py-2.5" style={{ background: G.darkBg, border: `1px solid ${G.border}` }}>
-                <div className="text-[9px] uppercase tracking-widest font-bold" style={{ color: G.muted }}>{s.l}</div>
-                <div className="text-lg font-black mt-0.5" style={{ color: G.lime }}>{s.v}</div>
+              <div key={s.l} className="rounded-xl px-3 py-2.5" style={{ background: colors.surfaceAccent, border: `1px solid ${colors.border}` }}>
+                <div className="text-[9px] uppercase tracking-widest font-bold" style={{ color: colors.textMuted }}>{s.l}</div>
+                <div className="text-lg font-black mt-0.5" style={{ color: colors.primary }}>{s.v}</div>
               </div>
             ))}
           </div>
         </div>
 
-        <div className="xl:col-span-7 flex flex-col rounded-xl p-4" style={{ background: G.dark, border: `1px solid ${G.outerBorder}` }}>
+        <div className="xl:col-span-7 flex flex-col rounded-xl p-4" style={{ background: colors.surface, border: `1px solid ${colors.cardBorder}` }}>
           <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
-            <span className="text-[10px] font-black tracking-[0.15em] uppercase flex-1" style={{ color: G.lime }}>💬 Activity Feed</span>
+            <span className="text-[10px] font-black tracking-[0.15em] uppercase flex-1" style={{ color: colors.primary }}>💬 Activity Feed</span>
             <div className="flex gap-2 w-full sm:w-auto flex-col sm:flex-row">
               <div className="flex-1 min-w-0">
                 <Input
@@ -451,32 +454,32 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
 
           {activityPresent ? (
             <div className="flex flex-col gap-2 overflow-y-auto max-h-52 flex-1">
-              {activityFeed.map((item, i) => (
-                <div key={i} className="flex gap-3 px-3 py-3 rounded-xl transition-colors" style={{ background: G.darkBg, border: `1px solid ${G.border}` }}>
+                {activityFeed.map((item, i) => (
+                  <div key={i} className="flex gap-3 px-3 py-3 rounded-xl transition-colors" style={{ background: colors.surfaceAccent, border: `1px solid ${colors.border}` }}>
                   <span className="text-2xl flex-shrink-0 mt-0.5">{item.avatar}</span>
                   <div className="flex-1 min-w-0">
                     <div>
-                      <span className="font-bold text-xs" style={{ color: G.lime }}>{item.user} </span>
-                      <span className="text-xs" style={{ color: G.muted }}>{item.action}</span>
+                        <span className="font-bold text-xs" style={{ color: colors.primary }}>{item.user} </span>
+                        <span className="text-xs" style={{ color: colors.textMuted }}>{item.action}</span>
                     </div>
-                    <div className="text-[9px] mt-1" style={{ color: G.muted }}>{item.time}</div>
+                      <div className="text-[9px] mt-1" style={{ color: colors.textMuted }}>{item.time}</div>
                   </div>
                   <div className="flex gap-1 flex-shrink-0 self-start mt-0.5">
-                    <Button variant="ghost" size="sm" className="rounded-lg w-7 h-7 p-0" style={{ color: G.muted, border: `1px solid ${G.borderLight}` }}>
+                      <Button variant="ghost" size="sm" className="rounded-lg w-7 h-7 p-0" style={{ color: colors.textMuted, border: `1px solid ${colors.cardBorder}` }}>
                       👍
                     </Button>
-                    <Button variant="ghost" size="sm" className="rounded-lg w-7 h-7 p-0" style={{ color: G.muted, border: `1px solid ${G.borderLight}` }}>
+                      <Button variant="ghost" size="sm" className="rounded-lg w-7 h-7 p-0" style={{ color: colors.textMuted, border: `1px solid ${colors.cardBorder}` }}>
                       💬
                     </Button>
                   </div>
                 </div>
-              ))}
+                ))}
             </div>
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center py-8 text-center gap-2 rounded-xl border border-dashed" style={{ background: G.darkBg, borderColor: G.borderLight }}>
-              <div className="text-2xl">💬</div>
-              <div className="text-xs max-w-xs" style={{ color: G.muted }}>Activity feed will display real updates once backend support is available.</div>
-            </div>
+              <div className="flex-1 flex flex-col items-center justify-center py-8 text-center gap-2 rounded-xl border border-dashed" style={{ background: colors.surfaceAccent, borderColor: colors.cardBorder }}>
+                <div className="text-2xl">💬</div>
+                <div className="text-xs max-w-xs" style={{ color: colors.textMuted }}>Activity feed will display real updates once backend support is available.</div>
+              </div>
           )}
 
           <div className="flex flex-col sm:flex-row gap-2 pt-3 mt-3" style={{ borderTop: `1px solid ${G.border}` }}>
@@ -485,7 +488,7 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
               { icon: '🔗', label: 'Quick Links' },
               { icon: '💡', label: 'Tennis Tips' },
             ].map((b) => (
-              <Button key={b.label} variant="ghost" size="sm" className="flex-1 justify-center" style={{ color: G.lime, border: `1px solid ${G.border}` }}>
+              <Button key={b.label} variant="ghost" size="sm" className="flex-1 justify-center" style={{ color: colors.primary, border: `1px solid ${colors.border}` }}>
                 {b.icon} {b.label}
               </Button>
             ))}
@@ -570,6 +573,7 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
           />
         </div>
       )}
+    </div>
     </div>
   );
 };

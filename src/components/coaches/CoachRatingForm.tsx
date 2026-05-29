@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import toast from 'react-hot-toast';
+import { toast } from '@vico/design-system';
+import { toastOptions } from '@vico/design-system';
 import { X, Send, Star } from 'lucide-react';
 
 interface CoachRatingFormProps {

@@ -9,7 +9,8 @@ import { getCachedData, setCachedData, clearCacheEntry } from '@/lib/dashboardCa
 import { LoadingState } from '@/components/LoadingState';
 import { processMPesaPayment, processPayPalPayment, processStripePayment } from '@/actions/payments';
 import { downloadUnifiedPDF } from '@/actions/downloads/downloadPDF';
-import toast from 'react-hot-toast';
+import { toast } from '@vico/design-system';
+import { toastOptions } from '@vico/design-system';
 import { MembershipSwitcher } from '@/components/MembershipSwitcher';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────

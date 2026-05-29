@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import toast from 'react-hot-toast';
+import { toast } from '@vico/design-system';
+import { toastOptions } from '@vico/design-system';
 import { useAuth } from '@/context/AuthContext';
 
 const G = {

@@ -279,7 +279,7 @@ export function BookingView({ organizationId, onClose, isEmbedded, canBook }: Bo
                 style={{
                   background: colors.cardDarkBg,
                   border: `1px solid ${colors.cardBorder}`,
-                  outline: 'none',
+                  outlineColor: colors.cardBorder,
                 }}
               >
                 {organizations.map(org => (

@@ -2,7 +2,8 @@
 
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
-import toast from 'react-hot-toast';
+import { toast } from '@vico/design-system';
+import { toastOptions } from '@vico/design-system';
 import { AlertCircle, ArrowLeft, Clock, MessageCircle, CheckCircle2, X } from 'lucide-react';
 import CoachTaskDetailsPanel from '@/components/tasks/CoachTaskDetailsPanel';
 

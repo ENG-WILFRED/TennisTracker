@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '../../ui/button';
-import toast from 'react-hot-toast';
+import { toast } from '@vico/design-system';
+import { toastOptions } from '@vico/design-system';
 
 const G = {
   dark: '#0f1f0f',

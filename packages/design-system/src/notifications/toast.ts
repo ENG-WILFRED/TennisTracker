@@ -7,7 +7,7 @@ import { typography } from '../tokens/typography';
 
 export const toastStyle = {
   background: colors.white,
-  color: colors.textPrimary,
+  color: colors.ToastColor,
   border: `1px solid ${colors.border}`,
   boxShadow: shadows.card,
   borderRadius: radii.xl,
@@ -22,7 +22,7 @@ export const toastOptions: DefaultToastOptions = {
   style: toastStyle,
   success: {
     iconTheme: {
-      primary: colors.success,
+      primary: colors.ToastColor,
       secondary: colors.white,
     },
     style: {

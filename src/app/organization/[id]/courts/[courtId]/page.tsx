@@ -4,7 +4,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { LoadingState } from '@/components/LoadingState';
 import { authenticatedFetch } from '@/lib/authenticatedFetch';
-import toast from 'react-hot-toast';
+import { toast } from '@vico/design-system';
+import { toastOptions } from '@vico/design-system';
 
 // Declare google maps type
 declare global {

@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import toast from 'react-hot-toast';
+import { toast } from '@vico/design-system';
+import { toastOptions } from '@vico/design-system';
 import { Calendar, Star, Plus, CheckCircle } from 'lucide-react';
 import { CoachRatingForm } from '@/components/coaches/CoachRatingForm';
 

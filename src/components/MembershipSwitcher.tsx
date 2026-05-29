@@ -5,7 +5,7 @@ import { useRole } from '@/context/RoleContext';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { SwitchConfirmModal } from './SwitchConfirmModal';
-import { Card, Button, colors } from '@/lib/vico-design-fallback';
+import { Card, Button, colors } from '@vico/design-system';
 
 interface MembershipSwitcherProps {
   style?: React.CSSProperties;

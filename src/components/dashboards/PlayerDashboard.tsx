@@ -19,7 +19,7 @@ import { FindNearbyPeople } from '@/components/FindNearbyPeople';
 import { FindNearbyCourts } from '@/components/FindNearbyCourts';
 import { PlayerSearchChallenge } from '@/components/PlayerSearchChallenge';
 import { chatUrlForUser, sendChallengeRequest } from '@/lib/nearby';
-import toast from 'react-hot-toast';
+import { toast } from '@vico/design-system';
 import { Button, Card, DashboardMain, DashboardPanel, DashboardShell, DashboardSidebar, colors, radii, shadows, spacing, sizing, toastOptions, typography } from '@vico/design-system';
 
 export const PlayerDashboard: React.FC = () => {

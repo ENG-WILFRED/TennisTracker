@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Card, Button, colors } from '@/lib/vico-design-fallback';
+import { Card, Button, colors } from '@vico/design-system';
 
 const G = {
   dark: colors.inverse || colors.background,
