@@ -441,7 +441,6 @@ export function ProfileView({ onClose, isEmbedded = false, canEdit = false }: Pr
             </div>
           )}
         </div>
-      </div>
 
             {/* Email */}
             <div>

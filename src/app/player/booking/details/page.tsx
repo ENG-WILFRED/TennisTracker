@@ -4,7 +4,7 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { getAvailableTimeSlots, getPlayerBookings } from '@/actions/bookings';
-import { processMPesaPayment, processPayPalPayment, processStripePayment } from '@/actions/payments';
+import { getPaymentStatus, processMPesaPayment, processPayPalPayment, processStripePayment } from '@/actions/payments';
 import { formatKenyanMobileNumber } from '@/lib/phone';
 import { authenticatedFetch } from '@/lib/authenticatedFetch';
 import { downloadUnifiedPDF } from '@/actions/downloads/downloadPDF';

@@ -438,7 +438,7 @@ export async function POST(
 
     // Try to import puppeteer for server-side PDF generation
     try {
-      const pdfBuffer = await renderPdfFromHtml(htmlContent, { format: 'A4' });
+      const pdfBuffer = await renderPdfFromHtml(htmlContent);
 
       return new NextResponse(Buffer.from(pdfBuffer), {
         headers: {
