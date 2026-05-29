@@ -7,4 +7,5 @@ export * from './tokens/sizing';
 export * from './themes/vico-theme';
 export * from './styles/tailwind-preset';
 export * from './notifications/toast';
+export * from './notifications/ui';
 export * from './components';

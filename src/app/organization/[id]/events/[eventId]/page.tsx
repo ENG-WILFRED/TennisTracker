@@ -5,7 +5,8 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { authenticatedFetch } from '@/lib/authenticatedFetch';
 import { useAuth } from '@/context/AuthContext';
-import toast from 'react-hot-toast';
+import { toast } from '@vico/design-system';
+import { toastOptions } from '@vico/design-system';
 import { LoadingState } from '@/components/LoadingState';
 
 const G = {

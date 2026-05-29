@@ -65,8 +65,13 @@ const Card: React.FC<{ children: React.ReactNode; className?: string; style?: Re
   </div>
 );
 
-const Label: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = '' }) => (
-  <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.06em', color: G.primary, marginBottom: 8 }} className={className}>{children}</div>
+const Label: React.FC<{ children: React.ReactNode; className?: string; style?: React.CSSProperties }> = ({ children, className = '', style }) => (
+  <div
+    style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.06em', color: G.primary, marginBottom: 8, ...(style || {}) }}
+    className={className}
+  >
+    {children}
+  </div>
 );
 
 // ─── Static mock data for new sections ────────────────────────────────────────

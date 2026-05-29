@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import toast from 'react-hot-toast';
+import { toast } from '@vico/design-system';
+import { toastOptions } from '@vico/design-system';
 import { StaffDepartment } from '@/types/staff-dashboard';
 import { DEPARTMENT_LIST, STAFF_DEPARTMENTS } from '@/config/staff-departments';
 

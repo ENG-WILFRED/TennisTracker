@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import toast from 'react-hot-toast';
+import { toast } from '@vico/design-system';
 import { LoadingState } from '@/components/LoadingState';
 import { Card, Button, colors, spacing, typography, radii, toastOptions } from '@vico/design-system';
 

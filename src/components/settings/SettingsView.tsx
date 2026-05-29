@@ -3,7 +3,7 @@
 import React, { useState, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { getAccessToken } from '@/lib/tokenManager';
-import { Card, Button, Input, colors } from '@/lib/vico-design-fallback';
+import { Card, Button, Input, colors } from '@vico/design-system';
 
 interface ToggleSetting {
   id: string;

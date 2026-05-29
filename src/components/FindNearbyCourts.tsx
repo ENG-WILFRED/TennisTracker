@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { MapPin, Home, AlertCircle, TrendingUp, Search, ChevronDown, Zap, Target, SlidersHorizontal } from 'lucide-react';
-import { Card, Button, colors } from '@/lib/vico-design-fallback';
+import { Card, Button, colors } from '@vico/design-system';
 
 interface NearbyCourt {
   id: string;

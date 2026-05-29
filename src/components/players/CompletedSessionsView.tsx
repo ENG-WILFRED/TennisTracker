@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import toast from 'react-hot-toast';
+import { toast } from '@vico/design-system';
 import { Calendar, Dumbbell, TrendingUp, Star, Trophy } from 'lucide-react';
-import { colors } from '@vico/design-system';
+import { colors, toastOptions } from '@vico/design-system';
 
 interface CompletedSession {
   id: string;

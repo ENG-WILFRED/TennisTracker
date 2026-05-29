@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import toast from 'react-hot-toast';
+import { toast } from '@vico/design-system';
+import { toastOptions } from '@vico/design-system';
 import { getAccessToken, refreshAccessToken } from '@/lib/tokenManager';
 import { authenticatedFetch } from '@/lib/authenticatedFetch';
 import { clearAllDashboardCache } from '@/lib/dashboardCache';

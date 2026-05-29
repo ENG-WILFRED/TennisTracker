@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import Link from 'next/link';
-import toast from 'react-hot-toast';
+import { toast } from '@vico/design-system';
 import { LoadingState } from '@/components/LoadingState';
 import { DashboardErrorPage } from '@/components/DashboardErrorPage';
 import { chatUrlForUser, sendChallengeRequest } from '@/lib/nearby';

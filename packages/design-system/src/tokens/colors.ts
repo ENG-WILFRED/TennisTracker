@@ -1,3 +1,5 @@
+import { ToastIcon } from "react-hot-toast";
+
 export const colors = {
   // Exact org dashboard brand palette
   primary: '#7dc142',
@@ -10,13 +12,14 @@ export const colors = {
   surfaceAccent: '#213b22',
   surfaceSecondary: '#152515',
   surfaceTertiary: '#2d5a27',
-  court: '#0b190e',
+  court: '#0b4317',
   chalk: '#f5f7e9',
   white: '#ffffff',
   blue: '#3b82f6',
   blueDark: '#1d4ed8',
   border: '#2d5a35',
   textPrimary: '#d8e8b6',
+  ToastColor: '#0bb733',
   textMuted: '#7aaa6a',
   highlight: '#c2e09b',
   accent: '#a8d84e',

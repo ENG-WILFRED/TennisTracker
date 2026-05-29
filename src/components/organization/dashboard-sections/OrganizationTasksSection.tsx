@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import toast from 'react-hot-toast';
+import { toast } from '@vico/design-system';
+import { toastOptions } from '@vico/design-system';
 import { authenticatedFetch } from '@/lib/authenticatedFetch';
 import { AssignCard } from '@/components/tasks/AssignCard';
 
