@@ -28,4 +28,11 @@ export const colors = {
   bright: '#3d7a32',
   inverse: '#0f2011',
   focus: 'rgba(125, 193, 66, 0.2)',
+  
+  // Card panel design tokens
+  cardDarkBg: '#102914',
+  cardBorder: '#7cb84a',
+  cardLabel: '#d4f2aa',
+  cardAccent: '#7dc142',
+  cardShadow: 'rgba(124, 184, 74, 0.08)',
 };

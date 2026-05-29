@@ -219,27 +219,27 @@ export default function CourtsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-court-dark text-court-text p-5">
+    <div className="min-h-screen bg-vico-dark text-vico-textPrimary p-5">
       {/* Header */}
       <div className="mb-10">
-        <h1 className="text-4xl font-bold mb-2 text-court-lime">
+        <h1 className="text-4xl font-bold mb-2 text-vico-primary">
           🎾 Discover Tennis Courts
         </h1>
-        <p className="text-base text-court-muted">
+        <p className="text-base text-vico-textMuted">
           Find and book courts across all our partner facilities
         </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6">
         {/* Sidebar - Filters */}
-        <aside className="bg-court-card rounded-xl p-5 border border-court-card-border h-fit lg:sticky lg:top-5">
-          <h2 className="text-base font-bold mb-5 text-court-accent uppercase">
+        <aside className="bg-vico-surfaceSecondary rounded-xl p-6 border border-vico-primary shadow-card h-fit lg:sticky lg:top-5">
+          <h2 className="text-base font-bold mb-5 text-vico-textPrimary uppercase">
             🔍 FILTERS
           </h2>
 
           {/* Court Surface Filter */}
           <div className="mb-6">
-            <label className="block text-xs font-bold text-court-accent mb-2 uppercase tracking-wide">
+            <label className="block text-xs font-bold text-vico-accent mb-2 uppercase tracking-wide">
               Court Surface
             </label>
             {['Clay', 'Hard', 'Grass'].map((surface) => (
@@ -248,8 +248,8 @@ export default function CourtsPage() {
                 onClick={() => handleFilterChange('surface', surface)}
                 className={`flex items-center gap-2 w-full px-3 py-2 mb-1.5 rounded transition-all ${
                   filters.surface === surface
-                    ? `bg-court-mid border border-court-lime text-court-text`
-                    : 'bg-transparent border border-court-card-border text-court-text hover:border-court-lime'
+                    ? `bg-vico-surfaceTertiary border border-vico-primary text-vico-textPrimary`
+                    : 'bg-transparent border border-vico-border text-vico-textPrimary hover:border-vico-primary'
                 }`}
               >
                 <span>{getSurfaceIcon(surface)}</span>
@@ -260,7 +260,7 @@ export default function CourtsPage() {
 
           {/* Indoor/Outdoor Filter */}
           <div className="mb-6">
-            <label className="block text-xs font-bold text-court-accent mb-2 uppercase tracking-wide">
+            <label className="block text-xs font-bold text-vico-accent mb-2 uppercase tracking-wide">
               Location Type
             </label>
             {[
@@ -272,8 +272,8 @@ export default function CourtsPage() {
                 onClick={() => handleFilterChange('indoorOutdoor', value)}
                 className={`flex items-center gap-2 w-full px-3 py-2 mb-1.5 rounded transition-all ${
                   filters.indoorOutdoor === value
-                    ? `bg-court-mid border border-court-lime text-court-text`
-                    : 'bg-transparent border border-court-card-border text-court-text hover:border-court-lime'
+                    ? `bg-vico-surfaceTertiary border border-vico-primary text-vico-textPrimary`
+                    : 'bg-transparent border border-vico-border text-vico-textPrimary hover:border-vico-primary'
                 }`}
               >
                 {label}
@@ -283,7 +283,7 @@ export default function CourtsPage() {
 
           {/* City Filter */}
           <div className="mb-6">
-            <label className="block text-xs font-bold text-court-accent mb-2 uppercase tracking-wide">
+            <label className="block text-xs font-bold text-vico-accent mb-2 uppercase tracking-wide">
               City
             </label>
             {cities.map((city) => (
@@ -292,8 +292,8 @@ export default function CourtsPage() {
                 onClick={() => handleFilterChange('city', city)}
                 className={`block w-full px-3 py-2 mb-1.5 rounded text-left text-sm transition-all ${
                   filters.city === city
-                    ? `bg-court-mid border border-court-lime text-court-text`
-                    : 'bg-transparent border border-court-card-border text-court-text hover:border-court-lime'
+                    ? `bg-vico-surfaceTertiary border border-vico-primary text-vico-textPrimary`
+                    : 'bg-transparent border border-vico-border text-vico-textPrimary hover:border-vico-primary'
                 }`}
               >
                 📍 {city}
@@ -303,15 +303,15 @@ export default function CourtsPage() {
 
           {/* Lights Filter */}
           <div className="mb-6">
-            <label className="block text-xs font-bold text-court-accent mb-2 uppercase tracking-wide">
+            <label className="block text-xs font-bold text-vico-accent mb-2 uppercase tracking-wide">
               Lighting
             </label>
             <button
               onClick={() => handleFilterChange('hasLights', 'true')}
               className={`flex items-center gap-2 w-full px-3 py-2 rounded transition-all ${
                 filters.hasLights === 'true'
-                  ? `bg-court-mid border border-court-lime text-court-text`
-                  : 'bg-transparent border border-court-card-border text-court-text hover:border-court-lime'
+                  ? `bg-vico-surfaceTertiary border border-vico-primary text-vico-textPrimary`
+                  : 'bg-transparent border border-vico-border text-vico-textPrimary hover:border-vico-primary'
               }`}
             >
               💡 Has Lights
@@ -322,7 +322,7 @@ export default function CourtsPage() {
           {(filters.surface || filters.indoorOutdoor || filters.city || filters.hasLights) && (
             <button
               onClick={() => setFilters({ surface: '', indoorOutdoor: '', city: '', hasLights: '' })}
-              className="w-full px-3 py-2 bg-court-mid border border-court-card-border rounded text-court-lime font-bold text-sm transition-all hover:border-court-lime"
+              className="w-full px-3 py-2 bg-vico-surfaceTertiary border border-vico-border rounded text-vico-primary font-bold text-sm transition-all hover:border-vico-primary"
             >
               ✕ Clear Filters
             </button>
@@ -330,30 +330,30 @@ export default function CourtsPage() {
         </aside>
 
         {/* Main Content - Courts Grid */}
-        <main>
+        <main className="mt-10">
           {loading ? (
             <div className="text-center py-16">
               <div className="text-5xl mb-4">⏳</div>
-              <p className="text-court-muted">Loading courts...</p>
+              <p className="text-vico-textMuted">Loading courts...</p>
             </div>
           ) : error ? (
             <div className="text-center py-16">
               <div className="text-5xl mb-4">❌</div>
-              <p className="text-court-red">{error}</p>
+              <p className="text-vico-danger">{error}</p>
             </div>
           ) : courts.length === 0 ? (
             <div className="text-center py-16">
               <div className="text-5xl mb-4">🏜️</div>
-              <p className="text-base font-bold text-court-text mb-2">
+              <p className="text-base font-bold text-vico-textPrimary mb-2">
                 No courts found
               </p>
-              <p className="text-court-muted">Try adjusting your filters</p>
+              <p className="text-vico-textMuted">Try adjusting your filters</p>
             </div>
           ) : (
             <div>
               <div className="mb-5">
-                <p className="text-sm text-court-muted">
-                  Found <strong className="text-court-lime">{courts.length}</strong> courts
+                <p className="text-sm text-vico-textMuted">
+                  Found <strong className="text-vico-primary">{courts.length}</strong> courts
                 </p>
               </div>
 
@@ -365,51 +365,56 @@ export default function CourtsPage() {
                       setSelectedCourt(court);
                       setShowDetails(true);
                     }}
-                    className="bg-court-card border border-court-card-border rounded-lg p-4 cursor-pointer transition-all hover:shadow-lg hover:border-court-lime hover:-translate-y-1"
+                    className="group bg-vico-surfaceTertiary border-2 border-vico-primary ring-1 ring-vico-primary/25 rounded-[32px] p-6 cursor-pointer transition-all duration-300 hover:shadow-modal hover:border-vico-primary hover:-translate-y-1"
                   >
+                    <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-vico-surface/70 px-3 py-1 text-xs font-semibold text-vico-textPrimary">
+                      <span className="h-2.5 w-2.5 rounded-full bg-vico-primary" />
+                      Court details
+                    </div>
+
                     {/* Court Name */}
-                    <h3 className="text-base font-bold text-court-lime mb-2">
+                    <h3 className="text-lg font-bold text-vico-primary mb-2 tracking-tight">
                       {getSurfaceIcon(court.surface)} {court.name}
                     </h3>
 
                     {/* Organization */}
-                    <div className="mb-3">
-                      <div className="text-sm font-semibold text-court-text mb-1">
+                    <div className="mb-4">
+                      <div className="text-sm font-semibold text-vico-textPrimary mb-1">
                         {court.organization.name}
                       </div>
-                      <div className="text-xs text-court-muted">
+                      <div className="text-xs text-vico-textMuted">
                         📍 {court.organization.city}, {court.organization.country}
                       </div>
                     </div>
 
                     {/* Court Details */}
-                    <div className="grid grid-cols-2 gap-3 mb-3">
-                      <div className="bg-court-mid rounded p-2.5">
-                        <div className="text-xs text-court-muted mb-1 uppercase">
+                    <div className="grid grid-cols-2 gap-3 mb-4">
+                      <div className="bg-vico-surface rounded-3xl p-3 border border-vico-primary shadow-dropdown">
+                        <div className="text-[11px] text-vico-textMuted mb-2 uppercase tracking-[0.20em]">
                           Type
                         </div>
-                        <div className="text-sm text-court-text font-semibold">
+                        <div className="text-sm text-vico-textPrimary font-semibold">
                           {court.indoorOutdoor === 'indoor' ? '🏠' : '☀️'} {court.indoorOutdoor}
                         </div>
                       </div>
-                      <div className="bg-court-mid rounded p-2.5">
-                        <div className="text-xs text-court-muted mb-1 uppercase">
+                      <div className="bg-vico-surface rounded-3xl p-3 border border-vico-primary shadow-dropdown">
+                        <div className="text-[11px] text-vico-textMuted mb-2 uppercase tracking-[0.20em]">
                           Lights
                         </div>
-                        <div className={`text-sm font-semibold ${court.lights ? 'text-court-yellow' : 'text-court-muted'}`}>
+                        <div className={`text-sm font-semibold ${court.lights ? 'text-vico-warning' : 'text-vico-textMuted'}`}>
                           {court.lights ? '💡 Yes' : '❌ No'}
                         </div>
                       </div>
                     </div>
 
                     {/* Rating */}
-                    <div className="text-xs text-court-muted mb-3">
+                    <div className="text-xs text-vico-textMuted mb-4">
                       ⭐ {court.organization.rating} reviews
                     </div>
 
                     {/* Upcoming Bookings */}
-                    <div className="bg-court-bright rounded p-2.5 text-center">
-                      <div className="text-xs font-bold text-court-text">
+                    <div className="bg-vico-surface rounded-3xl p-4 text-center border border-vico-primary shadow-dropdown">
+                      <div className="text-xs font-semibold text-vico-textPrimary">
                         {getUpcomingBookings(court)} upcoming bookings
                       </div>
                     </div>
@@ -423,18 +428,18 @@ export default function CourtsPage() {
 
       {/* Player Booking History */}
       {authUser && (
-        <section className="mt-10 p-5 bg-court-card rounded-xl border border-court-card-border">
-          <h2 className="text-xl font-bold text-court-lime mb-3">📜 My Court Booking History</h2>
+        <section className="mt-10 p-6 bg-vico-surfaceSecondary rounded-2xl border border-vico-primary shadow-card">
+          <h2 className="text-xl font-bold text-vico-textPrimary mb-3">📜 My Court Booking History</h2>
           {playerBookings.length === 0 ? (
-            <p className="text-sm text-court-muted">No bookings yet. Book a slot to create history.</p>
+            <p className="text-sm text-vico-textMuted">No bookings yet. Book a slot to create history.</p>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {playerBookings.slice(0, 6).map((booking) => (
-                <div key={booking.id} className="bg-court-mid p-3 rounded-lg border border-court-card-border">
-                  <p className="text-sm font-semibold text-court-lime">{booking.court?.name || 'Court Booking'}</p>
-                  <p className="text-xs text-court-muted">{new Date(booking.startTime).toLocaleDateString()} {new Date(booking.startTime).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} - {new Date(booking.endTime).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</p>
-                  <p className="text-xs text-court-lime font-bold">${booking.price}</p>
-                  <p className="text-xs uppercase tracking-wide text-court-muted mt-1">{booking.status}</p>
+                <div key={booking.id} className="bg-vico-surfaceSecondary p-4 rounded-2xl border border-vico-primary shadow-card">
+                  <p className="text-sm font-semibold text-vico-textPrimary">{booking.court?.name || 'Court Booking'}</p>
+                  <p className="text-xs text-vico-textMuted">{new Date(booking.startTime).toLocaleDateString()} {new Date(booking.startTime).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} - {new Date(booking.endTime).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</p>
+                  <p className="text-xs text-vico-primary font-bold">${booking.price}</p>
+                  <p className="text-xs uppercase tracking-wide text-vico-textMuted mt-1">{booking.status}</p>
                 </div>
               ))}
             </div>
@@ -450,44 +455,44 @@ export default function CourtsPage() {
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-court-card border border-court-card-border rounded-2xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto"
+            className="bg-vico-surfaceSecondary border border-vico-primary rounded-2xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto shadow-modal"
           >
             {/* STAGE 1: Booking Details */}
             {checkoutStage === 'booking' && (
               <>
                 <div className="flex justify-between items-start mb-5">
                   <div>
-                    <h2 className="text-xl font-bold text-court-lime mb-1">
+                    <h2 className="text-xl font-bold text-vico-primary mb-1">
                       {getSurfaceIcon(selectedCourt.surface)} {selectedCourt.name}
                     </h2>
-                    <p className="text-sm text-court-muted">
+                    <p className="text-sm text-vico-textMuted">
                       {selectedCourt.organization.name}
                     </p>
                   </div>
                   <button
                     onClick={() => resetBooking()}
-                    className="bg-transparent border-none text-court-muted text-2xl cursor-pointer hover:text-court-lime transition-colors"
+                    className="bg-transparent border-none text-vico-textMuted text-2xl cursor-pointer hover:text-vico-primary transition-colors"
                   >
                     ✕
                   </button>
                 </div>
 
                 {/* Organization Details */}
-                <div className="bg-court-mid rounded-lg p-4 mb-5">
-                  <div className="text-base font-semibold text-court-text mb-2">
+                <div className="bg-vico-surfaceSecondary rounded-2xl p-5 mb-5 border border-vico-primary shadow-card">
+                  <div className="text-base font-semibold text-vico-textPrimary mb-2">
                     {selectedCourt.organization.name}
                   </div>
-                  <p className="text-xs text-court-muted mb-2">
+                  <p className="text-xs text-vico-textMuted mb-2">
                     📍 {selectedCourt.organization.city}, {selectedCourt.organization.country}
                   </p>
-                  <div className="text-sm text-court-yellow font-semibold">
+                  <div className="text-sm text-vico-warning font-semibold">
                     ⭐ {selectedCourt.organization.rating} rating
                   </div>
                 </div>
 
                 {/* Date Selector */}
                 <div className="mb-4">
-                  <label className="block text-xs font-bold text-court-accent mb-2 uppercase">
+                  <label className="block text-xs font-bold text-vico-accent mb-2 uppercase">
                     Select Date
                   </label>
                   <input
@@ -495,41 +500,41 @@ export default function CourtsPage() {
                     value={selectedDate}
                     min={new Date().toISOString().split('T')[0]}
                     onChange={(e) => setSelectedDate(e.target.value)}
-                    className="w-full p-3 rounded-lg border border-court-card-border bg-court-mid text-court-text"
+                    className="w-full p-3 rounded-lg border border-vico-primary bg-vico-surface text-vico-textPrimary"
                   />
                 </div>
 
                 {/* Court Specs */}
                 <div className="grid grid-cols-2 gap-3 mb-5">
-                  <div className="bg-court-mid rounded p-3">
-                    <div className="text-xs text-court-muted mb-1 uppercase">Surface</div>
-                    <div className="text-sm text-court-text font-semibold">{selectedCourt.surface}</div>
+                  <div className="bg-vico-surface rounded-2xl p-3 border border-vico-primary">
+                    <div className="text-xs text-vico-textMuted mb-1 uppercase">Surface</div>
+                    <div className="text-sm text-vico-textPrimary font-semibold">{selectedCourt.surface}</div>
                   </div>
-                  <div className="bg-court-mid rounded p-3">
-                    <div className="text-xs text-court-muted mb-1 uppercase">Type</div>
-                    <div className="text-sm text-court-text font-semibold">
+                  <div className="bg-vico-surface rounded-2xl p-3 border border-vico-primary">
+                    <div className="text-xs text-vico-textMuted mb-1 uppercase">Type</div>
+                    <div className="text-sm text-vico-textPrimary font-semibold">
                       {selectedCourt.indoorOutdoor === 'indoor' ? '🏠 Indoor' : '☀️ Outdoor'}
                     </div>
                   </div>
-                  <div className="bg-court-mid rounded p-3">
-                    <div className="text-xs text-court-muted mb-1 uppercase">Lights</div>
-                    <div className={`text-sm font-semibold ${selectedCourt.lights ? 'text-court-yellow' : 'text-court-muted'}`}>
+                  <div className="bg-vico-surface rounded-2xl p-3 border border-vico-primary">
+                    <div className="text-xs text-vico-textMuted mb-1 uppercase">Lights</div>
+                    <div className={`text-sm font-semibold ${selectedCourt.lights ? 'text-vico-warning' : 'text-vico-textMuted'}`}>
                       {selectedCourt.lights ? '💡 Yes' : '❌ No'}
                     </div>
                   </div>
-                  <div className="bg-court-mid rounded p-3">
-                    <div className="text-xs text-court-muted mb-1 uppercase">Status</div>
-                    <div className="text-sm text-court-lime font-semibold">✓ Available</div>
+                  <div className="bg-vico-surface rounded-2xl p-3 border border-vico-primary">
+                    <div className="text-xs text-vico-textMuted mb-1 uppercase">Status</div>
+                    <div className="text-sm text-vico-primary font-semibold">✓ Available</div>
                   </div>
                 </div>
 
                 {/* Available Time Slots */}
                 <div className="mb-5">
-                  <h3 className="text-sm font-bold text-court-accent mb-3 uppercase">
+                  <h3 className="text-sm font-bold text-vico-accent mb-3 uppercase">
                     📅 AVAILABLE TIME SLOTS
                   </h3>
                   {availableSlots.length === 0 ? (
-                    <p className="text-xs text-court-muted">No slots available yet for {selectedDate || 'selected date'}.</p>
+                    <p className="text-xs text-vico-textMuted">No slots available yet for {selectedDate || 'selected date'}.</p>
                   ) : (
                     <div className="space-y-2 max-h-48 overflow-y-auto">
                       {availableSlots.map((slot) => (
@@ -541,14 +546,14 @@ export default function CourtsPage() {
                             setTotalPrice(slot.price);
                             setSelectedSlot(slot);
                           }}
-                          className={`w-full rounded p-3 text-left border transition-all ${slot.available ? 'bg-court-mid border-court-card-border hover:border-court-lime' : 'bg-transparent border-court-card-border opacity-60 cursor-not-allowed'} ${selectedSlot?.time === slot.time ? 'border-court-lime bg-court-bright' : ''}`}
+                          className={`w-full rounded-2xl p-3 text-left border transition-all ${slot.available ? 'bg-vico-surface border-vico-primary hover:border-vico-primaryHover' : 'bg-transparent border-vico-primary opacity-60 cursor-not-allowed'} ${selectedSlot?.time === slot.time ? 'border-vico-primaryHover bg-vico-surfaceSecondary' : ''}`}
                         >
-                          <div className="text-court-text font-semibold mb-1">
+                          <div className="text-vico-textPrimary font-semibold mb-1">
                             {slot.time} - {String(Number(slot.time.slice(0, 2)) + 1).padStart(2, '0')}:00
                           </div>
                           <div className="flex justify-between text-xs">
-                            <span className="text-court-muted">{slot.isPeak ? '🔥 Peak Hours' : '⏰ Standard'}</span>
-                            <span className="text-court-lime font-semibold">${slot.price}</span>
+                            <span className="text-vico-textMuted">{slot.isPeak ? '🔥 Peak Hours' : '⏰ Standard'}</span>
+                            <span className="text-vico-primary font-semibold">${slot.price}</span>
                           </div>
                         </button>
                       ))}
@@ -559,14 +564,14 @@ export default function CourtsPage() {
                 <button
                   onClick={handleBookNow}
                   disabled={!selectedSlot}
-                  className={`w-full px-3 py-3 mb-3 ${!selectedSlot ? 'bg-court-mid text-court-muted cursor-not-allowed' : 'bg-court-lime text-court-dark hover:opacity-95'} border-none rounded font-bold text-sm transition-all`}
+                  className={`w-full px-3 py-3 mb-3 ${!selectedSlot ? 'bg-vico-surface text-vico-textMuted cursor-not-allowed' : 'bg-vico-primary text-vico-dark hover:opacity-95'} border-none rounded font-bold text-sm transition-all`}
                 >
                   {selectedSlot ? 'Proceed to Payment' : 'Select a slot to continue'}
                 </button>
 
                 <button
                   onClick={() => resetBooking()}
-                  className="w-full px-3 py-3 bg-court-lime border-none rounded text-court-dark font-bold text-sm cursor-pointer transition-all hover:opacity-95"
+                  className="w-full px-3 py-3 bg-vico-primary border-none rounded text-vico-dark font-bold text-sm cursor-pointer transition-all hover:opacity-95"
                 >
                   Close
                 </button>
@@ -579,53 +584,53 @@ export default function CourtsPage() {
                 <div className="mb-5">
                   <button
                     onClick={() => setCheckoutStage('booking')}
-                    className="text-court-lime text-sm mb-3 hover:underline"
+                    className="text-vico-primary text-sm mb-3 hover:underline"
                   >
                     ← Back
                   </button>
-                  <h2 className="text-2xl font-bold text-court-lime mb-2">
+                  <h2 className="text-2xl font-bold text-vico-primary mb-2">
                     💳 Payment
                   </h2>
-                  <p className="text-sm text-court-muted">
+                  <p className="text-sm text-vico-textMuted">
                     Book: {selectedCourt.name}
                   </p>
                 </div>
 
                 {/* Booking Summary */}
-                <div className="bg-court-mid rounded-lg p-4 mb-5">
+                <div className="bg-vico-surfaceSecondary rounded-2xl p-4 mb-5 border border-vico-primary shadow-card">
                   <div className="mb-3">
-                    <p className="text-xs text-court-muted mb-1">Date</p>
-                    <p className="text-base font-semibold text-court-text">📅 {selectedDate}</p>
+                    <p className="text-xs text-vico-textMuted mb-1">Date</p>
+                    <p className="text-base font-semibold text-vico-textPrimary">📅 {selectedDate}</p>
                   </div>
                   <div className="mb-3">
-                    <p className="text-xs text-court-muted mb-1">Time</p>
-                    <p className="text-base font-semibold text-court-text">⏰ {selectedTime}</p>
+                    <p className="text-xs text-vico-textMuted mb-1">Time</p>
+                    <p className="text-base font-semibold text-vico-textPrimary">⏰ {selectedTime}</p>
                   </div>
                 </div>
 
                 {/* Price Breakdown */}
-                <div className="bg-court-dark rounded-lg p-4 mb-5 border border-court-card-border">
-                  <div className="flex justify-between mb-3 pb-3 border-b border-court-card-border">
-                    <span className="text-court-muted">Total Price</span>
-                    <span className="text-court-lime font-bold text-lg">${totalPrice.toFixed(2)}</span>
+                <div className="bg-vico-dark rounded-2xl p-4 mb-5 border border-vico-primary">
+                  <div className="flex justify-between mb-3 pb-3 border-b border-vico-primary">
+                    <span className="text-vico-textMuted">Total Price</span>
+                    <span className="text-vico-primary font-bold text-lg">${totalPrice.toFixed(2)}</span>
                   </div>
                   
                   <div className="mb-3">
-                    <p className="text-xs text-court-accent font-bold mb-2 uppercase">Payment Plan</p>
+                    <p className="text-xs text-vico-accent font-bold mb-2 uppercase">Payment Plan</p>
                     <div className="space-y-2">
-                      <div className="flex justify-between items-center bg-court-mid p-3 rounded">
+                      <div className="flex justify-between items-center bg-vico-surface border border-vico-primary p-3 rounded-2xl">
                         <div>
-                          <p className="text-sm text-court-text font-semibold">Pay Now</p>
-                          <p className="text-xs text-court-muted">50% of total</p>
+                          <p className="text-sm text-vico-textPrimary font-semibold">Pay Now</p>
+                          <p className="text-xs text-vico-textMuted">50% of total</p>
                         </div>
-                        <p className="text-court-lime font-bold">${(totalPrice / 2).toFixed(2)}</p>
+                        <p className="text-vico-primary font-bold">${(totalPrice / 2).toFixed(2)}</p>
                       </div>
-                      <div className="flex justify-between items-center bg-court-mid p-3 rounded">
+                      <div className="flex justify-between items-center bg-vico-surface border border-vico-primary p-3 rounded-2xl">
                         <div>
-                          <p className="text-sm text-court-text font-semibold">Pay Later</p>
-                          <p className="text-xs text-court-muted">Due on visit</p>
+                          <p className="text-sm text-vico-textPrimary font-semibold">Pay Later</p>
+                          <p className="text-xs text-vico-textMuted">Due on visit</p>
                         </div>
-                        <p className="text-court-yellow font-bold">${(totalPrice / 2).toFixed(2)}</p>
+                        <p className="text-vico-warning font-bold">${(totalPrice / 2).toFixed(2)}</p>
                       </div>
                     </div>
                   </div>
@@ -633,29 +638,29 @@ export default function CourtsPage() {
 
                 {/* Payment Method */}
                 <div className="mb-5">
-                  <p className="text-xs text-court-accent font-bold mb-3 uppercase">Payment Method</p>
+                  <p className="text-xs text-vico-accent font-bold mb-3 uppercase">Payment Method</p>
                   <div className="space-y-2">
                     <button
                       onClick={() => setPaymentMethod('card')}
                       className={`w-full p-3 rounded border transition-all text-left ${
                         paymentMethod === 'card'
-                          ? 'bg-court-mid border-court-lime'
-                          : 'bg-transparent border-court-card-border hover:border-court-lime'
+                          ? 'bg-vico-surface border-vico-primary'
+                          : 'bg-transparent border-vico-primary hover:border-vico-primaryHover'
                       }`}
                     >
-                      <p className="text-sm font-semibold text-court-text">💳 Credit/Debit Card</p>
-                      <p className="text-xs text-court-muted">Visa, Mastercard, Amex</p>
+                      <p className="text-sm font-semibold text-vico-textPrimary">💳 Credit/Debit Card</p>
+                      <p className="text-xs text-vico-textMuted">Visa, Mastercard, Amex</p>
                     </button>
                     <button
                       onClick={() => setPaymentMethod('mpesa')}
                       className={`w-full p-3 rounded border transition-all text-left ${
                         paymentMethod === 'mpesa'
-                          ? 'bg-court-mid border-court-lime'
-                          : 'bg-transparent border-court-card-border hover:border-court-lime'
+                          ? 'bg-vico-surface border-vico-primary'
+                          : 'bg-transparent border-vico-primary hover:border-vico-primaryHover'
                       }`}
                     >
-                      <p className="text-sm font-semibold text-court-text">📱 M-Pesa</p>
-                      <p className="text-xs text-court-muted">Mobile Money</p>
+                      <p className="text-sm font-semibold text-vico-textPrimary">📱 M-Pesa</p>
+                      <p className="text-xs text-vico-textMuted">Mobile Money</p>
                     </button>
                   </div>
                 </div>
@@ -663,7 +668,7 @@ export default function CourtsPage() {
                 <button
                   onClick={handlePaymentConfirm}
                   disabled={actionLoading || !selectedSlot}
-                  className={`w-full px-3 py-3 bg-court-lime border-none rounded font-bold text-sm cursor-pointer transition-all text-court-dark ${actionLoading || !selectedSlot ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-95'}`}
+                  className={`w-full px-3 py-3 bg-vico-primary border-none rounded font-bold text-sm cursor-pointer transition-all text-vico-dark ${actionLoading || !selectedSlot ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-95'}`}
                 >
                   {actionLoading ? 'Processing payment…' : `Confirm Payment $${(totalPrice / 2).toFixed(2)}`}
                 </button>
@@ -673,60 +678,60 @@ export default function CourtsPage() {
             {/* STAGE 3: Receipt & Entrance Card */}
             {checkoutStage === 'receipt' && (
               <>
-                <div className="text-center mb-6">
+                <div className="text-center mb-6 bg-vico-surfaceSecondary border border-vico-primary rounded-2xl p-6">
                   <div className="text-5xl mb-3">✅</div>
-                  <h2 className="text-2xl font-bold text-court-lime mb-1">
+                  <h2 className="text-2xl font-bold text-vico-primary mb-1">
                     Booking Confirmed!
                   </h2>
-                  <p className="text-sm text-court-muted">
+                  <p className="text-sm text-vico-textMuted">
                     Your court is reserved
                   </p>
                 </div>
 
                 {/* Receipt */}
-                <div className="bg-court-mid rounded-lg p-4 mb-5 border-2 border-dashed border-court-card-border">
-                  <div className="text-center mb-4 pb-4 border-b border-court-card-border">
-                    <p className="text-xs text-court-muted uppercase mb-1">Receipt</p>
-                    <p className="text-sm font-bold text-court-text">#{bookingId.slice(0, 8).toUpperCase()}</p>
+                <div className="bg-vico-surfaceSecondary rounded-2xl p-4 mb-5 border border-vico-primary">
+                  <div className="text-center mb-4 pb-4 border-b border-vico-primary">
+                    <p className="text-xs text-vico-textMuted uppercase mb-1">Receipt</p>
+                    <p className="text-sm font-bold text-vico-textPrimary">#{bookingId.slice(0, 8).toUpperCase()}</p>
                   </div>
 
-                  <div className="space-y-3 mb-4 pb-4 border-b border-court-card-border">
+                  <div className="space-y-3 mb-4 pb-4 border-b border-vico-primary">
                     <div className="flex justify-between text-sm">
-                      <span className="text-court-muted">Court</span>
-                      <span className="text-court-text font-semibold">{selectedCourt.name}</span>
+                      <span className="text-vico-textMuted">Court</span>
+                      <span className="text-vico-textPrimary font-semibold">{selectedCourt.name}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-court-muted">Date</span>
-                      <span className="text-court-text font-semibold">{selectedDate}</span>
+                      <span className="text-vico-textMuted">Date</span>
+                      <span className="text-vico-textPrimary font-semibold">{selectedDate}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-court-muted">Time</span>
-                      <span className="text-court-text font-semibold">{selectedTime}</span>
+                      <span className="text-vico-textMuted">Time</span>
+                      <span className="text-vico-textPrimary font-semibold">{selectedTime}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-court-muted">Organization</span>
-                      <span className="text-court-text font-semibold text-right max-w-[150px]">{selectedCourt.organization.name}</span>
+                      <span className="text-vico-textMuted">Organization</span>
+                      <span className="text-vico-textPrimary font-semibold text-right max-w-[150px]">{selectedCourt.organization.name}</span>
                     </div>
                   </div>
 
                   <div className="space-y-2">
                     <div className="flex justify-between text-base font-bold">
-                      <span className="text-court-muted">Total</span>
-                      <span className="text-court-lime">${totalPrice.toFixed(2)}</span>
+                      <span className="text-vico-textMuted">Total</span>
+                      <span className="text-vico-primary">${totalPrice.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-court-yellow">Paid Now</span>
-                      <span className="text-court-yellow font-semibold">${(totalPrice / 2).toFixed(2)}</span>
+                      <span className="text-vico-warning">Paid Now</span>
+                      <span className="text-vico-warning font-semibold">${(totalPrice / 2).toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-court-accent">Balance Due</span>
-                      <span className="text-court-accent font-semibold">${(totalPrice / 2).toFixed(2)}</span>
+                      <span className="text-vico-accent">Balance Due</span>
+                      <span className="text-vico-accent font-semibold">${(totalPrice / 2).toFixed(2)}</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Entrance Card */}
-                <div className="bg-gradient-to-br from-court-lime to-court-accent rounded-lg p-4 mb-5 text-court-dark">
+                <div className="bg-gradient-to-br from-vico-primary to-vico-accent rounded-lg p-4 mb-5 text-vico-dark">
                   <div className="text-center mb-3">
                     <p className="text-xs font-bold opacity-75 uppercase">Entrance Card</p>
                     <p className="text-xl font-black">🎾</p>
@@ -748,13 +753,13 @@ export default function CourtsPage() {
                 <div className="space-y-2">
                   <button
                     onClick={() => window.print()}
-                    className="w-full px-3 py-3 bg-court-mid border border-court-lime rounded font-bold text-sm cursor-pointer transition-all hover:bg-court-bright text-court-lime"
+                    className="w-full px-3 py-3 bg-vico-surface border border-vico-primary rounded font-bold text-sm cursor-pointer transition-all hover:bg-vico-surfaceSecondary text-vico-textPrimary"
                   >
                     🖨️ Print Receipt
                   </button>
                   <button
                     onClick={() => resetBooking()}
-                    className="w-full px-3 py-3 bg-court-lime border-none rounded text-court-dark font-bold text-sm cursor-pointer transition-all hover:opacity-95"
+                    className="w-full px-3 py-3 bg-vico-primary border-none rounded text-vico-dark font-bold text-sm cursor-pointer transition-all hover:opacity-95"
                   >
                     Done
                   </button>

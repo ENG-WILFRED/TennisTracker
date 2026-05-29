@@ -598,13 +598,14 @@ export function BookingView({ onClose, isEmbedded = false, canBook = true, organ
             key={s.label}
             className="py-4 px-4"
             style={{
-              background: G.card,
-              border: `1px solid ${G.primary}22`,
+              background: colors.cardDarkBg,
+              border: `1px solid ${colors.cardBorder}`,
               borderRadius: 16,
               minHeight: 96,
               display: 'flex',
               flexDirection: 'column',
               justifyContent: 'space-between',
+              boxShadow: `0 12px 34px ${colors.cardShadow}`,
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start' }}>
@@ -653,19 +654,19 @@ export function BookingView({ onClose, isEmbedded = false, canBook = true, organ
 
             {/* 1. Select Organization */}
             {organizations.length > 1 && (
-              <Card>
-                <Label>Select Organization</Label>
+              <Card style={{ background: colors.cardDarkBg, border: `1px solid ${colors.cardBorder}`, boxShadow: `0 0 0 1px ${colors.cardBorder}40, 0 18px 36px rgba(0,0,0,0.08)`, padding: 20, minHeight: 130 }}>
+                <Label style={{ color: colors.cardLabel }}>Select Organization</Label>
                 <div style={{ position: 'relative' }}>
                   <select
                     value={selectedOrgId}
                     onChange={(e) => setSelectedOrgId(e.target.value)}
                     style={{
                       width: '100%',
-                      padding: '12px 44px 12px 12px',
-                      borderRadius: 12,
-                      border: `1px solid rgba(${hexToRgb(G.primary)},0.16)`,
-                      background: `linear-gradient(180deg, ${G.card}, ${G.surface})`,
-                      color: G.text,
+                      padding: '14px 44px 14px 14px',
+                      borderRadius: 14,
+                      border: `1px solid ${colors.cardBorder}`,
+                      background: colors.cardDarkBg,
+                      color: '#e8f5e0',
                       fontSize: 14,
                       outline: 'none',
                       appearance: 'none',
