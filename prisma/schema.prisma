@@ -22,6 +22,7 @@ model User {
   dateOfBirth        DateTime?
   nationality        String?
   bio                String?
+  profileComplete    Boolean             @default(true)
   latitude           Float?
   longitude          Float?
   city               String?
@@ -180,13 +181,21 @@ model Player {
 model InventoryItem {
   id             String        @id @default(uuid())
   name           String
+  description    String?
   count          Int           @default(0)
+  unit           String?
   condition      String?
+  location       String?
+  lastCheckedAt  DateTime?
+  expiryDate     DateTime?
   clubId         String?
   updatedAt      DateTime      @updatedAt
   organizationId String?
   club           Player?       @relation(fields: [clubId], references: [userId])
   organization   Organization? @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId])
+  @@index([updatedAt])
 }
 
 model Referee {
@@ -877,6 +886,7 @@ model CourtComplaint {
   @@index([authorId])
   @@index([status])
   @@index([createdAt])
+  @@index([courtId, status])
 }
 
 model MembershipTier {

@@ -80,6 +80,9 @@ export default function LoginPage() {
   const [pendingUser, setPendingUser] = useState<any>(null);
   const [pendingLoginData, setPendingLoginData] = useState<any>(null);
   const [tokens, setTokens] = useState<{ accessToken: string; refreshToken: string } | null>(null);
+  const [developerOtpRequired, setDeveloperOtpRequired] = useState(false);
+  const [developerOtpCode, setDeveloperOtpCode] = useState('');
+  const [developerOtpSessionId, setDeveloperOtpSessionId] = useState<string | null>(null);
 
   useEffect(() => {
     if (searchParams.get('accepted')) {
@@ -92,7 +95,7 @@ export default function LoginPage() {
         sessionStorage.removeItem('pendingTokens');
         const user = { ...data.user, acceptedTerms: true };
         const memberships = user?.memberships?.filter((m: any) => m.status === 'accepted') || user?.availableRoles || [];
-        const shouldShowRoleSelection = memberships.length > 1 || (memberships.length === 1 && memberships[0].role !== 'spectator');
+        const shouldShowRoleSelection = memberships.length > 1 || (memberships.length === 1 && memberships[0].role !== 'spectator' && memberships[0].role !== 'developer');
 
         if (shouldShowRoleSelection) {
           setAvailableMemberships(memberships);
@@ -115,6 +118,28 @@ export default function LoginPage() {
       }
     }
   }, [searchParams]);
+
+  useEffect(() => {
+    const developerOtpRequired = searchParams.get('developerOtpRequired');
+    const otpSessionId = searchParams.get('otpSessionId');
+    const email = searchParams.get('email');
+    const firstName = searchParams.get('firstName');
+    const lastName = searchParams.get('lastName');
+    const photo = searchParams.get('photo');
+
+    if (developerOtpRequired === 'true' && otpSessionId && email) {
+      setDeveloperOtpRequired(true);
+      setDeveloperOtpSessionId(otpSessionId);
+      setPendingUser({
+        email,
+        firstName: firstName || '',
+        lastName: lastName || '',
+        photo: photo || null,
+      });
+
+      router.replace('/login');
+    }
+  }, [searchParams, router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -140,8 +165,16 @@ export default function LoginPage() {
         return;
       }
 
+      if (data.requiresDeveloperOtp) {
+        setDeveloperOtpRequired(true);
+        setDeveloperOtpSessionId(data.otpSessionId || null);
+        setPendingUser(data.user);
+        setLoading(false);
+        return;
+      }
+
       const memberships = data.user?.memberships?.filter((m: any) => m.status === 'accepted') || data.availableRoles || [];
-      const shouldShowRoleSelection = memberships.length > 1 || (memberships.length === 1 && memberships[0].role !== 'spectator');
+      const shouldShowRoleSelection = memberships.length > 1 || (memberships.length === 1 && memberships[0].role !== 'spectator' && memberships[0].role !== 'developer');
 
       if (shouldShowRoleSelection) {
         setAvailableMemberships(memberships);
@@ -237,6 +270,34 @@ export default function LoginPage() {
     }
   };
 
+  const handleDeveloperOtpSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!developerOtpSessionId || !developerOtpCode.trim()) {
+      addToast('Enter the one-time code sent to your email.', 'error');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const response = await fetch('/api/auth/developer-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ otpSessionId: developerOtpSessionId, otp: developerOtpCode.trim() }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.error || 'OTP verification failed');
+      }
+
+      await completeLogin(data, 'developer', '', 'Developer Console');
+    } catch (error: any) {
+      addToast(error.message || 'OTP verification failed.', 'error');
+      setLoading(false);
+    }
+  };
+
   const handleRoleSelect = async (membership: any) => {
     setLoading(true);
     try {
@@ -254,8 +315,59 @@ export default function LoginPage() {
   };
 
   const handleGoogleClicked = () => {
-    addToast('Google login is coming soon. Please sign in with username or email.', 'error');
+    // Redirect to Google OAuth sign-in
+    window.location.href = '/auth/google-signin';
   };
+
+  if (developerOtpRequired && pendingUser) {
+    return (
+      <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center py-8 px-4">
+        <div className="w-full max-w-md rounded-3xl border border-slate-900 bg-black p-8 shadow-2xl shadow-black/80">
+          <div className="mb-6 text-center">
+            <h1 className="text-3xl font-semibold">Developer login verification</h1>
+            <p className="mt-2 text-sm text-slate-400">
+              A secure six-character authentication code was sent to <strong className="text-slate-200">{pendingUser.email}</strong>. Enter it below to continue to the Developer Dashboard.
+            </p>
+          </div>
+
+          <form onSubmit={handleDeveloperOtpSubmit} className="space-y-4">
+            <label className="block text-sm font-medium text-slate-300">
+              Authentication code
+            </label>
+            <input
+              value={developerOtpCode}
+              onChange={(event) => setDeveloperOtpCode(event.target.value.toUpperCase())}
+              placeholder="ABC123"
+              className="w-full rounded-2xl border border-slate-800 bg-[#000000] px-4 py-3 text-white outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/20"
+              maxLength={6}
+            />
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full rounded-2xl bg-cyan-500 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400 disabled:opacity-60"
+            >
+              {loading ? 'Verifying…' : 'Verify and continue'}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setDeveloperOtpRequired(false);
+                setDeveloperOtpCode('');
+                setDeveloperOtpSessionId(null);
+                setPendingUser(null);
+                setLoading(false);
+              }}
+              className="w-full rounded-2xl border border-slate-800 bg-transparent px-4 py-3 text-sm font-semibold text-slate-300 transition hover:border-cyan-400 hover:text-cyan-200"
+            >
+              Cancel and sign in again
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   if (showRoleSelection && availableMemberships.length > 0 && pendingUser) {
     return (
@@ -559,6 +671,7 @@ export default function LoginPage() {
 
               <Link
                 href="/forgot-password"
+                onClick={() => addToast('Opening password reset page...', 'info')}
                 style={{
                   display: "block", textAlign: "right", fontSize: 12,
                   color: G.muted, textDecoration: "none", marginBottom: "1rem",
@@ -592,7 +705,7 @@ export default function LoginPage() {
 
             <div style={{ display: "flex", gap: 8, marginBottom: "1.2rem" }}>
               <button type="button" className="btn-oauth" onClick={handleGoogleClicked}>
-                <GoogleIcon /> Google (coming soon)
+                <GoogleIcon /> Google
               </button>
             </div>
 

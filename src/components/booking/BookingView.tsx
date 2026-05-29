@@ -489,6 +489,8 @@ export function BookingView({ onClose, isEmbedded = false, canBook = true, organ
             notes: notes,
           },
           window.location.href,
+          window.location.href,
+          undefined,
           window.location.href
         );
 

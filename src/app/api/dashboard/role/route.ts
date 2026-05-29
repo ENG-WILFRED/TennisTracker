@@ -1,9 +1,15 @@
 import { NextResponse } from 'next/server';
 import { cacheResponse } from '@/lib/apiCache';
+import { verifyApiAuth } from '@/lib/authMiddleware';
 import { getCoachDashboard, getRefereeDashboard, getAdminDashboard, getStaffDashboard, getOrganizationDashboard } from '@/actions/dashboards';
 
 export async function GET(req: Request) {
   try {
+    const auth = await verifyApiAuth(req);
+    if (!auth) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const url = new URL(req.url);
     const role = url.searchParams.get('role');
     const userId = url.searchParams.get('userId');
@@ -13,6 +19,11 @@ export async function GET(req: Request) {
 
     if (!userId) {
       return NextResponse.json({ error: 'userId is required' }, { status: 400 });
+    }
+
+    // Verify the userId matches the authenticated user
+    if (auth.userId !== userId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     if (!role || !['coach', 'referee', 'admin', 'staff', 'organization', 'org'].includes(role)) {

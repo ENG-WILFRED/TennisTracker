@@ -41,6 +41,7 @@ export function ProfileView({ onClose, isEmbedded = false, canEdit = false }: Pr
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [assignedCoaches, setAssignedCoaches] = useState<any[]>([]);
 
   // Load profile data
   useEffect(() => {
@@ -70,6 +71,24 @@ export function ProfileView({ onClose, isEmbedded = false, canEdit = false }: Pr
     };
 
     loadProfile();
+  }, [userIdFromURL]);
+
+  useEffect(() => {
+    const loadCoaches = async () => {
+      if (!userIdFromURL) return;
+      try {
+        const res = await fetch(`/api/players/coaches?playerId=${userIdFromURL}`);
+        if (res.ok) {
+          const data = await res.json();
+          setAssignedCoaches(Array.isArray(data) ? data : []);
+        } else {
+          setAssignedCoaches([]);
+        }
+      } catch (err) {
+        console.error('Failed to fetch assigned coaches', err);
+      }
+    };
+    loadCoaches();
   }, [userIdFromURL]);
 
   const showToast = (type: 'success' | 'error', message: string) => {
@@ -388,11 +407,41 @@ export function ProfileView({ onClose, isEmbedded = false, canEdit = false }: Pr
               <div style={{ fontSize: 12, color: G.text }}>{formData.firstName}</div>
             </div>
 
-            {/* Last Name */}
-            <div>
-              <div style={{ fontSize: 11, color: G.muted, fontWeight: 700, marginBottom: 4 }}>Last Name</div>
-              <div style={{ fontSize: 12, color: G.text }}>{formData.lastName}</div>
+        {/* Profile Info */}
+        <div style={{ flex: 1 }}>
+          <h1 style={{ fontSize: 24, fontWeight: 900, marginBottom: 4 }}>
+            {formData.firstName} {formData.lastName}
+          </h1>
+          <p style={{ color: G.muted, fontSize: 12, marginBottom: 10 }}>{formData.email}</p>
+          {profileData?.createdAt && (
+            <p style={{ color: G.muted, fontSize: 11 }}>
+              Member since {new Date(profileData.createdAt).toLocaleDateString()}
+            </p>
+          )}
+          {/* Assigned coaches (if any) */}
+          {assignedCoaches.length > 0 && (
+            <div style={{ marginTop: 10 }}>
+              <div style={{ fontSize: 11, color: G.muted, fontWeight: 800, marginBottom: 6 }}>Assigned Coach{assignedCoaches.length > 1 ? 'es' : ''}</div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {assignedCoaches.map((rel: any) => {
+                  const coach = rel?.coach;
+                  const firstName = coach?.firstName ?? coach?.user?.firstName ?? 'Coach';
+                  const lastName = coach?.lastName ?? coach?.user?.lastName ?? '';
+                  const email = coach?.email ?? coach?.user?.email ?? 'No email';
+
+                  return (
+                    <div key={rel.id} style={{ background: '#0d160e', border: `1px solid ${G.cardBorder}`, padding: '8px 10px', borderRadius: 8 }}>
+                      <div style={{ fontSize: 12, fontWeight: 800, color: G.text }}>{firstName} {lastName}</div>
+                      <div style={{ fontSize: 11, color: G.muted }}>{email}</div>
+                      <div style={{ fontSize: 11, color: G.muted, marginTop: 6 }}>Status: {rel.status}</div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
+          )}
+        </div>
+      </div>
 
             {/* Email */}
             <div>

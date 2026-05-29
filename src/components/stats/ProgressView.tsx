@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, memo } from 'react';
-import { Card, Button, colors } from '@vico/design-system';
+import { Card, Button, colors } from '@/lib/vico-design-fallback';
 
 const G = {
   dark: colors.inverse || colors.background,
@@ -142,6 +142,34 @@ export function ProgressView({ isEmbedded = false, playerId }: ProgressViewProps
       controller.abort();
     };
   }, [playerId, timeframe]);
+
+  // Precompute timeframe selector buttons as a hook so hooks order stays stable
+  const timeframeButtons = useMemo(() => (['all', '3months', '6months', 'year'] as const).map((tf) => {
+    const labels: Record<typeof tf, string> = {
+      'all': 'All Time',
+      '3months': 'Last 3 Months',
+      '6months': 'Last 6 Months',
+      'year': 'Last Year',
+    };
+    return (
+      <button
+        key={tf}
+        onClick={() => setTimeframe(tf)}
+        style={{
+          padding: '8px 12px',
+          background: timeframe === tf ? G.lime : G.mid,
+          color: timeframe === tf ? '#0f1f0f' : G.text,
+          border: 'none',
+          borderRadius: 6,
+          fontSize: 11,
+          fontWeight: 700,
+          cursor: 'pointer',
+        }}
+      >
+        {labels[tf]}
+      </button>
+    );
+  }), [timeframe]);
 
   const generateReport = async () => {
     if (!playerId || !analytics) return;

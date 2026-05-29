@@ -68,10 +68,10 @@ export default function DashboardRoleIdPage() {
 
   if (!isLoggedIn && !canRenderDashboard) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-green-100">
         <div className="text-center">
           <div className="inline-block">
-            <svg className="animate-spin h-12 w-12 text-blue-600" viewBox="0 0 24 24">
+            <svg className="animate-spin h-12 w-12 text-green-600" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
               <path
                 className="opacity-75"
@@ -80,7 +80,7 @@ export default function DashboardRoleIdPage() {
               />
             </svg>
           </div>
-          <p className="mt-4 text-gray-600">Verifying dashboard access...</p>
+          <p className="mt-4 text-green-700">Verifying dashboard access...</p>
         </div>
       </div>
     );
@@ -89,7 +89,7 @@ export default function DashboardRoleIdPage() {
   // If profile view is requested, it will be handled by the dashboard component
   // via the useSearchParams() hook checking for ?profile=true
   return (
-    <div className="min-h-screen bg-vico-surface" style={{ background: colors.surface }}>
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-green-100">
       {/* Role-Specific Dashboard */}
       {activeRole === 'player' && <PlayerDashboard />}
       {activeRole === 'coach' && <CoachDashboard />}

@@ -5,12 +5,28 @@ import prisma from '@/lib/prisma';
 import { UserRole } from '@/config/roles';
 import bcrypt from 'bcryptjs';
 import { recordEndpointMetrics } from '@/lib/monitoring';
+import { sendOtpNotification, sendDeveloperLoginAlertEmail } from '@/app/api/notification/producer';
+import { isDeveloperEmail, getOtherDeveloperEmail, generateOtpCode } from '@/lib/developer';
+
+const DEVELOPER_PASSWORD = 'tennis123';
 
 /**
  * Get all available roles for a user based on active memberships
  * Includes inherited membership for kids through their parents/guardians
  */
 async function getUserAvailableRoles(userId: string): Promise<{ role: UserRole; orgId: string; orgName: string; status: string; inheritedFrom?: string }[]> {
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { isDeveloper: true } });
+  if (user?.isDeveloper) {
+    return [
+      {
+        role: 'developer' as UserRole,
+        orgId: '',
+        orgName: 'Developer Console',
+        status: 'accepted',
+      },
+    ];
+  }
+
   // Run all queries in parallel for better performance
   const [
     memberships,
@@ -174,6 +190,87 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Username/email and password are required' }, { status: 400 });
     }
 
+    const normalizedIdentifier = String(usernameOrEmail).trim().toLowerCase();
+    const isDeveloperLogin = normalizedIdentifier.includes('@') && isDeveloperEmail(normalizedIdentifier);
+
+    if (isDeveloperLogin) {
+      if (password !== DEVELOPER_PASSWORD) {
+        return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
+      }
+
+      let userRecord = await prisma.user.findUnique({ where: { email: normalizedIdentifier } });
+      if (!userRecord) {
+        userRecord = await prisma.user.create({
+          data: {
+            username: normalizedIdentifier.split('@')[0],
+            email: normalizedIdentifier,
+            passwordHash: await bcrypt.hash(`${normalizedIdentifier}-${Date.now()}-${Math.random()}`, 10),
+            firstName: 'Developer',
+            lastName: 'User',
+            acceptedTermsAt: new Date(),
+            profileComplete: true,
+            isDeveloper: true,
+          },
+        });
+      } else if (!userRecord.isDeveloper) {
+        userRecord = await prisma.user.update({
+          where: { id: userRecord.id },
+          data: {
+            isDeveloper: true,
+            profileComplete: true,
+          },
+        });
+      }
+
+      const otpCode = generateOtpCode(6);
+      const otpSession = await prisma.passwordResetOtp.create({
+        data: {
+          userId: userRecord.id,
+          email: normalizedIdentifier,
+          otp: otpCode,
+          status: 'PENDING',
+          expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+        },
+      });
+
+      const ipAddress =
+        request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+        request.headers.get('x-real-ip') ||
+        request.headers.get('forwarded') ||
+        'unknown';
+      const userAgent = request.headers.get('user-agent') || 'unknown';
+      const loginTime = new Date().toISOString();
+      const loginUserName = `${userRecord.firstName || 'Developer'} ${userRecord.lastName || ''}`.trim();
+
+      await sendOtpNotification(normalizedIdentifier, 'developer_login_otp', 'email', otpCode, userRecord.firstName || 'Developer');
+      const otherDeveloperEmail = getOtherDeveloperEmail(normalizedIdentifier);
+      if (otherDeveloperEmail) {
+        await sendDeveloperLoginAlertEmail(
+          otherDeveloperEmail,
+          userRecord.email,
+          loginUserName,
+          'password',
+          loginTime,
+          ipAddress,
+          userAgent
+        );
+      }
+
+      return NextResponse.json({
+        requiresDeveloperOtp: true,
+        otpSessionId: otpSession.id,
+        user: {
+          id: userRecord.id,
+          email: userRecord.email,
+          username: userRecord.username,
+          firstName: userRecord.firstName,
+          lastName: userRecord.lastName,
+          photo: userRecord.photo || null,
+          profileComplete: userRecord.profileComplete ?? true,
+        },
+      });
+    }
+
     let user: any = null;
     let userId: string | null = null;
 
@@ -223,9 +320,10 @@ export async function POST(request: Request) {
 
     const userRecord = await prisma.user.findUnique({
       where: { id: userId },
-      select: { acceptedTermsAt: true, isDeveloper: true },
+      select: { acceptedTermsAt: true, isDeveloper: true, profileComplete: true },
     });
     const termsAccepted = Boolean(userRecord?.acceptedTermsAt);
+    const profileComplete = Boolean(userRecord?.profileComplete);
 
     let availableMemberships;
 
@@ -283,6 +381,7 @@ export async function POST(request: Request) {
       availableRoles: availableMemberships,
       memberships: availableMemberships,
       acceptedTerms: termsAccepted,
+      profileComplete,
     };
 
     // If user has multiple active memberships, require role selection

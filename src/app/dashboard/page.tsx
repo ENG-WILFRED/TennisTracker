@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useRole } from '@/context/RoleContext';
 import { useAuth } from '@/context/AuthContext';
@@ -17,7 +18,7 @@ import { colors } from '@vico/design-system';
 
 export default function DashboardPage() {
   const { currentRole, isRoleLoaded } = useRole();
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, user } = useAuth();
   const router = useRouter();
 
   // Redirect to login if not authenticated
@@ -36,6 +37,17 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-vico-surface" style={{ background: colors.surface }}>
       <div className="max-w-full mx-auto px-0">
+    <div className={`min-h-screen py-8 ${currentRole === 'coach' ? 'bg-[#0f1e0f]' : 'bg-gradient-to-br from-green-50 to-green-100'}`}>
+      <div className={`${currentRole === 'spectator' ? 'w-full mx-auto px-0' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'}`}>
+        {user?.profileComplete === false && (
+          <div className="mb-6 rounded-2xl border border-amber-300/80 bg-amber-50 p-4 text-amber-900 shadow-sm">
+            <p className="font-semibold">Complete your profile</p>
+            <p className="mt-1 text-sm text-amber-800">
+              Your profile is still marked incomplete. Please update your details in <Link href="/profile" className="underline">Profile Settings</Link>.
+            </p>
+          </div>
+        )}
+
         {/* Role and Role-Specific Dashboard */}
         {currentRole === 'player' && <PlayerDashboard />}
         {currentRole === 'coach' && <CoachDashboard />}

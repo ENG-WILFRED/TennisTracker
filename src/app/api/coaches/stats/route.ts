@@ -10,6 +10,32 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'coachId required' }, { status: 400 });
     }
 
+    const coach = await prisma.staff.findUnique({
+      where: { userId: coachId },
+    });
+
+    if (!coach) {
+      return NextResponse.json({
+        coachId,
+        totalSessions: 0,
+        completedSessions: 0,
+        totalPlayers: 0,
+        activePlayers: 0,
+        totalRevenue: 0,
+        avgRating: 0,
+        reviewCount: 0,
+        completionRate: 0,
+        monthlyRevenue: [],
+        sessionsByType: [],
+        topPlayers: [],
+        recentReviews: [],
+        weeklyStats: [],
+        retentionRate: 0,
+        avgSessionDuration: 0,
+        newPlayersThisMonth: 0,
+      });
+    }
+
     const stats = await prisma.coachStats.findUnique({
       where: { coachId },
     });

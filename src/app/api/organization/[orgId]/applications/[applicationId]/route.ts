@@ -37,6 +37,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ or
       updatedAt: new Date(),
     };
 
+    let clubMember: any;
+
     if (action === 'accept') {
       updateData.approvedAt = new Date();
       updateData.approvedBy = auth.userId;
@@ -62,10 +64,16 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ or
           playerId,
           role: roleToAssign,
         },
+        include: {
+          player: {
+            include: { user: true },
+          },
+        },
       });
 
+      let clubMember: any = existingClubMember;
       if (!existingClubMember) {
-        await prisma.clubMember.create({
+        clubMember = await prisma.clubMember.create({
           data: {
             organizationId: orgId,
             playerId,
@@ -73,13 +81,23 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ or
             paymentStatus: 'active',
             joinDate: new Date(),
           },
+          include: {
+            player: {
+              include: { user: true },
+            },
+          },
         });
       } else {
-        await prisma.clubMember.update({
+        clubMember = await prisma.clubMember.update({
           where: { id: existingClubMember.id },
           data: {
             paymentStatus: 'active',
             joinDate: existingClubMember.joinDate || new Date(),
+          },
+          include: {
+            player: {
+              include: { user: true },
+            },
           },
         });
       }
@@ -90,7 +108,14 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ or
       data: updateData,
     });
 
-    return new Response(JSON.stringify({ success: true, application: updatedApplication }), {
+    return new Response(JSON.stringify({
+      success: true,
+      application: {
+        ...updatedApplication,
+        user: application.user,
+      },
+      member: clubMember,
+    }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });

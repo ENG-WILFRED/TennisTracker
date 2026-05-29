@@ -12,8 +12,11 @@ export async function POST(req: NextRequest) {
     }
 
     const payload = await req.json();
-    console.log('Internal payment callback payload:', JSON.stringify(payload, null, 2));
-    const provider = String(payload?.provider || '').toLowerCase();
+    const url = new URL(req.url);
+    const queryData = Object.fromEntries(url.searchParams.entries());
+    const data = { ...payload, ...queryData };
+    console.log('Internal payment callback payload:', JSON.stringify(data, null, 2));
+    const provider = String(data?.provider || '').toLowerCase();
 
     if (!payload || !payload.paymentId || !payload.status || !provider) {
       return NextResponse.json(

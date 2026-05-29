@@ -209,6 +209,30 @@ export async function sendOtpNotification(
   return idempotencyKey;
 }
 
+export async function sendDeveloperLoginAlertEmail(
+  email: string,
+  loginUserEmail: string,
+  loginUserName?: string,
+  loginMethod?: string,
+  loginTime?: string,
+  ipAddress?: string,
+  userAgent?: string
+) {
+  return notify({
+    to: email,
+    channel: 'email',
+    template: 'developer_login_alert',
+    data: {
+      loginUserEmail,
+      loginUserName,
+      loginMethod,
+      loginTime,
+      ipAddress,
+      userAgent,
+    },
+  });
+}
+
 export async function sendWelcomeEmail(email: string, name?: string) {
   return notify({
     to: email,

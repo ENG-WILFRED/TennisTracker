@@ -22,14 +22,6 @@ export async function GET(req: NextRequest) {
       select: { organizationId: true },
     });
 
-    if (!coach) {
-      return NextResponse.json(
-        { error: 'Coach not found' },
-        { status: 404 }
-      );
-    }
-
-    // Get all organizations where coach is a member
     const memberships = await prisma.membership.findMany({
       where: {
         userId: coachId,
@@ -39,7 +31,7 @@ export async function GET(req: NextRequest) {
     });
 
     const orgIds = memberships.map(m => m.orgId);
-    if (coach.organizationId && !orgIds.includes(coach.organizationId)) {
+    if (coach?.organizationId && !orgIds.includes(coach.organizationId)) {
       orgIds.push(coach.organizationId);
     }
 
@@ -55,7 +47,7 @@ export async function GET(req: NextRequest) {
 
     const directPlayerIds = directPlayerRelationships.map(r => r.playerId);
 
-    // 2. Players in same organizations as coach
+    // 2. Players in same organizations as coach, or all players if the coach has no orgs
     let organizationPlayerIds: string[] = [];
     if (orgIds.length > 0) {
       const orgPlayers = await prisma.player.findMany({
@@ -67,14 +59,14 @@ export async function GET(req: NextRequest) {
       organizationPlayerIds = orgPlayers.map(p => p.userId);
     }
 
-    // Combine and deduplicate player IDs
-    const allPlayerIds = Array.from(new Set([...directPlayerIds, ...organizationPlayerIds]));
+    // Combine and deduplicate player IDs. If the coach has no org association, fall back to all platform players.
+    const allPlayerIds = orgIds.length > 0
+      ? Array.from(new Set([...directPlayerIds, ...organizationPlayerIds]))
+      : undefined;
 
     // Fetch detailed player information
     const players = await prisma.player.findMany({
-      where: {
-        userId: { in: allPlayerIds },
-      },
+      where: allPlayerIds ? { userId: { in: allPlayerIds } } : {},
       select: {
         userId: true,
         user: {
@@ -106,7 +98,7 @@ export async function GET(req: NextRequest) {
         email: player.user.email,
         phone: player.user.phone,
         organizationId: player.organizationId,
-        relationshipType: isDirect ? 'direct' : 'organization', // 'direct' if coached by this coach, 'organization' if in same org
+        relationshipType: isDirect ? 'direct' : 'organization',
       };
     });
 

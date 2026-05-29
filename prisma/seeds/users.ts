@@ -18,6 +18,7 @@ interface UserData {
   role: 'player' | 'coach' | 'admin' | 'staff' | 'referee' | 'spectator' | 'developer';
   organizationId?: string;
   isDeveloper?: boolean;
+  profileComplete?: boolean;
   playerStats?: {
     matchesPlayed: number;
     matchesWon: number;
@@ -214,6 +215,23 @@ export async function seedUsers(organizations: any[]) {
       bio: 'Platform developer and support engineer.',
       photo: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=500&q=80',
       acceptedTermsAt: new Date(),
+      profileComplete: true,
+      role: 'developer',
+      isDeveloper: true,
+    },
+    {
+      username: 'wilfred_dev',
+      email: 'kimaniwilfred95@gmail.com',
+      firstName: 'Kimani',
+      lastName: 'Wilfred',
+      phone: '+1-555-0002',
+      gender: 'Male',
+      dateOfBirth: new Date('1985-10-01'),
+      nationality: 'Kenya',
+      bio: 'Developer account for secure platform access.',
+      photo: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=500&q=80',
+      acceptedTermsAt: new Date(),
+      profileComplete: true,
       role: 'developer',
       isDeveloper: true,
     },
@@ -429,12 +447,17 @@ export async function seedUsers(organizations: any[]) {
         });
       } else {
         // User doesn't exist, create new user
-        user = await prisma.user.create({
+        const passwordHash =
+        userData.role === 'developer'
+          ? await bcrypt.hash(`${userData.email}-${Date.now()}-${Math.random()}`, 10)
+          : hashedPassword;
+
+      user = await prisma.user.create({
           data: {
             username: userData.username,
             email: userData.email,
             phone: userData.phone,
-            passwordHash: hashedPassword,
+            passwordHash,
             firstName: userData.firstName,
             lastName: userData.lastName,
             gender: userData.gender,

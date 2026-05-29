@@ -205,6 +205,10 @@ function normalizeMembershipApplication(application: any): Member {
   };
 }
 
+function normalizeAcceptedClubMember(clubMember: any): Member {
+  return normalizeClubMember(clubMember);
+}
+
 function MemberCard({ member, onClick }: { member: Member; onClick: () => void }) {
   const renderRoleDetail = () => {
     if (member.role === 'player') return (
@@ -315,6 +319,7 @@ export default function OrganizationMembersSection({
   const [isMessageModalOpen, setIsMessageModalOpen] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [loadingAction, setLoadingAction] = useState<string | null>(null); // Track which specific action is loading
+  const [processingAction, setProcessingAction] = useState<{ id: string; action: 'activate' | 'dismiss' } | null>(null);
   const [notify, setNotify] = useState<string | null>(null);
 
   // Mutations for API calls
@@ -327,14 +332,27 @@ export default function OrganizationMembersSection({
       if (!res.ok) throw new Error('Failed to accept application');
       return res.json();
     },
-    onMutate: async () => {
+    onMutate: async (applicationId: string) => {
       setLoadingAction('activate');
+      setProcessingAction({ id: applicationId, action: 'activate' });
+      const applications = queryClient.getQueryData<any[]>(['orgApplications', organizationId]) || [];
+      const application = applications.find(app => app.id === applicationId);
+      return { application };
     },
-    onSuccess: (_data, applicationId: string) => {
+    onSuccess: (data: any, applicationId: string, context: any) => {
       clearAllDashboardCache();
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('organizationMembershipUpdated', { detail: { orgId: organizationId } }));
       }
+
+      const acceptedClubMember = data?.member ? normalizeAcceptedClubMember(data.member) : null;
+      if (acceptedClubMember) {
+        queryClient.setQueryData(['orgMembers', organizationId], (old: any) => {
+          if (!Array.isArray(old)) return [acceptedClubMember];
+          return [...old, acceptedClubMember];
+        });
+      }
+
       queryClient.setQueryData(['orgApplications', organizationId], (old: any) => {
         if (!Array.isArray(old)) return old;
         return old.filter((app: any) => app.id !== applicationId);
@@ -343,6 +361,11 @@ export default function OrganizationMembersSection({
       queryClient.invalidateQueries({ queryKey: ['orgApplications', organizationId] });
       setNotify('✅ Application accepted successfully');
       toast.success('Application approved successfully');
+    },
+    onSettled: (_data, error, applicationId: string) => {
+      if (processingAction?.id === applicationId) {
+        setProcessingAction(null);
+      }
     },
     onError: (error: any) => {
       setNotify(`❌ Failed to accept application: ${error.message}`);
@@ -359,8 +382,9 @@ export default function OrganizationMembersSection({
       if (!res.ok) throw new Error('Failed to reject application');
       return res.json();
     },
-    onMutate: async () => {
+    onMutate: async (applicationId: string) => {
       setLoadingAction('dismiss');
+      setProcessingAction({ id: applicationId, action: 'dismiss' });
     },
     onSuccess: (_data, applicationId: string) => {
       clearAllDashboardCache();
@@ -374,6 +398,11 @@ export default function OrganizationMembersSection({
       queryClient.invalidateQueries({ queryKey: ['orgApplications', organizationId] });
       setNotify('✅ Application rejected successfully');
       toast.success('Application rejected successfully');
+    },
+    onSettled: (_data, error, applicationId: string) => {
+      if (processingAction?.id === applicationId) {
+        setProcessingAction(null);
+      }
     },
     onError: (error: any) => {
       setNotify(`❌ Failed to reject application: ${error.message}`);
@@ -427,7 +456,18 @@ export default function OrganizationMembersSection({
   }, [acceptApplicationMutation.isPending, rejectApplicationMutation.isPending, updateMemberMutation.isPending, deleteMemberMutation.isPending]);
 
   // Helper function to get button text based on loading state
-  const getButtonText = (action: string, defaultText: string) => {
+  const getButtonText = (action: string, defaultText: string, targetId?: string) => {
+    if (targetId) {
+      if (processingAction?.id === targetId && processingAction.action === action) {
+        switch (action) {
+          case 'activate': return 'Approving...';
+          case 'dismiss': return 'Rejecting...';
+          default: return `${defaultText}...`;
+        }
+      }
+      return defaultText;
+    }
+
     if (loadingAction === action) {
       switch (action) {
         case 'activate': return 'Activating...';
@@ -776,14 +816,14 @@ const updateMemberStatus = (
             <div style={{ fontSize: 11, color: G.muted, marginTop: 2 }}>Manage players, coaches & referees</div>
           </div>
           <div className="members-header-actions" style={{ gap: 8 }}>
-            <button onClick={() => setShowInviteModal(true)} style={{
+            <button type="button" onClick={() => setShowInviteModal(true)} style={{
               padding: '8px 16px', borderRadius: 8, fontSize: 11, fontWeight: 700,
               background: G.lime, color: G.dark, border: 'none', cursor: 'pointer',
               letterSpacing: '0.02em',
             }}>
               + Invite Member
             </button>
-            <button style={{
+            <button type="button" style={{
               padding: '8px 12px', borderRadius: 8, fontSize: 11, fontWeight: 600,
               background: 'transparent', color: G.textSoft,
               border: `1px solid ${G.cardBorder}`, cursor: 'pointer',
@@ -815,7 +855,7 @@ const updateMemberStatus = (
           const count = role === 'all' ? memberData.length : memberData.filter((m: Member) => m.role === role).length;
           const isActive = roleFilter === role;
           return (
-            <button key={role} onClick={() => setRoleFilter(role)} style={{
+            <button type="button" key={role} onClick={() => setRoleFilter(role)} style={{
               display: 'inline-flex', alignItems: 'center', gap: 5,
               padding: '6px 14px', borderRadius: 20, fontSize: 11, fontWeight: 700,
               cursor: 'pointer',
@@ -835,7 +875,7 @@ const updateMemberStatus = (
         {/* View toggle */}
         <div style={{ display: 'flex', gap: 4, padding: 3, background: G.card, borderRadius: 8, border: `1px solid ${G.cardBorder}` }}>
           {(['list', 'grid'] as const).map(v => (
-            <button key={v} onClick={() => setView(v)} style={{
+            <button type="button" key={v} onClick={() => setView(v)} style={{
               padding: '4px 10px', borderRadius: 6, fontSize: 10, fontWeight: 600,
               border: 'none', cursor: 'pointer',
               background: view === v ? G.mid : 'transparent',
@@ -872,7 +912,7 @@ const updateMemberStatus = (
             onChange={e => setSearchTerm(e.target.value)}
             style={inputStyle}
           />
-          {searchTerm && <button onClick={() => setSearchTerm('')} style={{ background: 'none', border: 'none', color: G.muted, cursor: 'pointer', fontSize: 14 }}>✕</button>}
+          {searchTerm && <button type="button" onClick={() => setSearchTerm('')} style={{ background: 'none', border: 'none', color: G.muted, cursor: 'pointer', fontSize: 14 }}>✕</button>}
         </div>
 
         <select value={tierFilter} onChange={e => setTierFilter(e.target.value)} style={{ padding: '7px 10px', background: G.dark, border: `1px solid ${G.cardBorder}`, borderRadius: 7, color: G.text, fontSize: 11, fontFamily: "'Raleway', sans-serif" }}>
@@ -913,7 +953,7 @@ const updateMemberStatus = (
         /* Member Detail View */
         <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 20 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-            <button onClick={() => setSelectedMember(null)} style={{
+            <button type="button" onClick={() => setSelectedMember(null)} style={{
               display: 'flex', alignItems: 'center', gap: 8,
               padding: '8px 16px', borderRadius: 8, fontSize: 12, fontWeight: 600,
               background: 'transparent', color: G.textSoft,
@@ -958,28 +998,28 @@ const updateMemberStatus = (
               <div style={{ background: G.dark, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 16 }}>
                 <div style={{ fontSize: 14, fontWeight: 700, color: G.text, marginBottom: 12 }}>Actions</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <button onClick={() => sendMessageToMember(selectedMember as Member)} disabled={actionLoading} style={{
+                <button type="button" onClick={() => sendMessageToMember(selectedMember as Member)} disabled={actionLoading} style={{
                   width: '100%', padding: '10px 14px', borderRadius: 6, border: 'none', background: G.lime, color: G.dark, fontWeight: 700, fontSize: 12, cursor: actionLoading ? 'not-allowed' : 'pointer', opacity: actionLoading ? 0.7 : 1
                 }}>
                   {getButtonText('message', '✉ Message')}
                 </button>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                   {selectedMember.status !== 'active' || selectedMember.role === 'inactive' ? (
-                    <button disabled={actionLoading} onClick={() => updateMemberStatus(selectedMember as Member, 'activate', { role: selectedMember?.role })} style={{ padding: '8px 12px', borderRadius: 6, border: `1px solid ${G.lime}`, background: G.mid, color: G.lime, fontWeight: 600, fontSize: 11, cursor: actionLoading ? 'not-allowed' : 'pointer', opacity: actionLoading ? 0.7 : 1 }}>
+                    <button type="button" disabled={actionLoading} onClick={() => updateMemberStatus(selectedMember as Member, 'activate', { role: selectedMember?.role })} style={{ padding: '8px 12px', borderRadius: 6, border: `1px solid ${G.lime}`, background: G.mid, color: G.lime, fontWeight: 600, fontSize: 11, cursor: actionLoading ? 'not-allowed' : 'pointer', opacity: actionLoading ? 0.7 : 1 }}>
                       ▶ Activate
                     </button>
                   ) : (
-                    <button disabled={actionLoading} onClick={() => updateMemberStatus(selectedMember as Member, 'deactivate')} style={{ padding: '8px 12px', borderRadius: 6, border: `1px solid ${G.yellow}`, background: '#232f2a', color: G.yellow, fontWeight: 600, fontSize: 11, cursor: actionLoading ? 'not-allowed' : 'pointer', opacity: actionLoading ? 0.7 : 1 }}>
+                    <button type="button" disabled={actionLoading} onClick={() => updateMemberStatus(selectedMember as Member, 'deactivate')} style={{ padding: '8px 12px', borderRadius: 6, border: `1px solid ${G.yellow}`, background: '#232f2a', color: G.yellow, fontWeight: 600, fontSize: 11, cursor: actionLoading ? 'not-allowed' : 'pointer', opacity: actionLoading ? 0.7 : 1 }}>
                       ⏸ Deactivate
                     </button>
                   )}
-                  <button disabled={actionLoading} onClick={() => updateMemberStatus(selectedMember as Member, 'suspend', { until: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), reason: 'Temporarily suspended by admin' })} style={{ padding: '8px 12px', borderRadius: 6, border: `1px solid ${G.orange}`, background: '#2b1f12', color: G.orange, fontWeight: 600, fontSize: 11, cursor: actionLoading ? 'not-allowed' : 'pointer', opacity: actionLoading ? 0.7 : 1 }}>
+                  <button type="button" disabled={actionLoading} onClick={() => updateMemberStatus(selectedMember as Member, 'suspend', { until: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), reason: 'Temporarily suspended by admin' })} style={{ padding: '8px 12px', borderRadius: 6, border: `1px solid ${G.orange}`, background: '#2b1f12', color: G.orange, fontWeight: 600, fontSize: 11, cursor: actionLoading ? 'not-allowed' : 'pointer', opacity: actionLoading ? 0.7 : 1 }}>
                     🛑 Suspend
                   </button>
-                  <button disabled={actionLoading} onClick={() => updateMemberStatus(selectedMember as Member, 'dismiss')} style={{ padding: '8px 12px', borderRadius: 6, border: `1px solid ${G.red}`, background: '#2d1212', color: G.red, fontWeight: 600, fontSize: 11, cursor: actionLoading ? 'not-allowed' : 'pointer', opacity: actionLoading ? 0.7 : 1 }}>
+                  <button type="button" disabled={actionLoading} onClick={() => updateMemberStatus(selectedMember as Member, 'dismiss')} style={{ padding: '8px 12px', borderRadius: 6, border: `1px solid ${G.red}`, background: '#2d1212', color: G.red, fontWeight: 600, fontSize: 11, cursor: actionLoading ? 'not-allowed' : 'pointer', opacity: actionLoading ? 0.7 : 1 }}>
                     🚫 Dismiss
                   </button>
-                  <button disabled={actionLoading} onClick={() => updateMemberStatus(selectedMember as Member, 'delete')} style={{ padding: '8px 12px', borderRadius: 6, border: `1px solid ${G.red}`, background: '#220d0f', color: G.red, fontWeight: 600, fontSize: 11, cursor: actionLoading ? 'not-allowed' : 'pointer', opacity: actionLoading ? 0.7 : 1 }}>
+                  <button type="button" disabled={actionLoading} onClick={() => updateMemberStatus(selectedMember as Member, 'delete')} style={{ padding: '8px 12px', borderRadius: 6, border: `1px solid ${G.red}`, background: '#220d0f', color: G.red, fontWeight: 600, fontSize: 11, cursor: actionLoading ? 'not-allowed' : 'pointer', opacity: actionLoading ? 0.7 : 1 }}>
                     ❌ Delete
                   </button>
                 </div>
@@ -1003,7 +1043,7 @@ const updateMemberStatus = (
         <div style={{ padding: 40, textAlign: 'center', color: G.muted, background: G.card, borderRadius: 10, border: `1px dashed ${G.cardBorder}` }}>
           <div style={{ fontSize: 32, marginBottom: 8 }}>👥</div>
           <div style={{ fontSize: 13 }}>No members match your filters</div>
-          <button onClick={() => { setSearchTerm(''); setRoleFilter('all'); setTierFilter('all'); setStatusFilter('all'); }} style={{ marginTop: 12, padding: '6px 16px', background: G.mid, border: 'none', borderRadius: 6, color: G.lime, fontSize: 11, cursor: 'pointer' }}>Clear filters</button>
+          <button type="button" onClick={() => { setSearchTerm(''); setRoleFilter('all'); setTierFilter('all'); setStatusFilter('all'); }} style={{ marginTop: 12, padding: '6px 16px', background: G.mid, border: 'none', borderRadius: 6, color: G.lime, fontSize: 11, cursor: 'pointer' }}>Clear filters</button>
         </div>
       ) : view === 'list' ? (
         /* Members List View */
@@ -1121,11 +1161,11 @@ const updateMemberStatus = (
                       )}
                     </div>
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                      <button disabled={actionLoading && loadingAction === 'activate'} onClick={() => updateMemberStatus(member, 'activate', { role: member.role, isApplication: member.applicationType === 'membership' })} style={{ padding: '8px 12px', borderRadius: 8, border: 'none', background: G.lime, color: G.dark, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
-                        {getButtonText('activate', 'Approve')}
+                      <button type="button" disabled={processingAction?.id === member.id && processingAction?.action === 'activate'} onClick={() => updateMemberStatus(member, 'activate', { role: member.role, isApplication: member.applicationType === 'membership' })} style={{ padding: '8px 12px', borderRadius: 8, border: 'none', background: G.lime, color: G.dark, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
+                        {getButtonText('activate', 'Approve', member.id)}
                       </button>
-                      <button disabled={actionLoading && loadingAction === 'dismiss'} onClick={() => updateMemberStatus(member, 'dismiss', { isApplication: member.applicationType === 'membership' })} style={{ padding: '8px 12px', borderRadius: 8, border: 'none', background: G.red, color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
-                        {getButtonText('dismiss', 'Reject')}
+                      <button type="button" disabled={processingAction?.id === member.id && processingAction?.action === 'dismiss'} onClick={() => updateMemberStatus(member, 'dismiss', { isApplication: member.applicationType === 'membership' })} style={{ padding: '8px 12px', borderRadius: 8, border: 'none', background: G.red, color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
+                        {getButtonText('dismiss', 'Reject', member.id)}
                       </button>
                     </div>
                   </div>
@@ -1171,7 +1211,7 @@ const updateMemberStatus = (
                   {(['player', 'coach', 'referee'] as const).map(role => {
                     const cfg = ROLE_CONFIG[role];
                     return (
-                      <button 
+                      <button type="button" 
                         key={role} 
                         onClick={() => setInviteForm(prev => ({ ...prev, role }))}
                         style={{
@@ -1201,10 +1241,10 @@ const updateMemberStatus = (
                 </select>
               </div>
               <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
-                <button onClick={() => setShowInviteModal(false)} style={{ flex: 1, padding: '10px', borderRadius: 8, border: `1px solid ${G.cardBorder}`, background: 'transparent', color: G.muted, cursor: 'pointer', fontSize: 12, fontFamily: "'Raleway', sans-serif" }}>
+                <button type="button" onClick={() => setShowInviteModal(false)} style={{ flex: 1, padding: '10px', borderRadius: 8, border: `1px solid ${G.cardBorder}`, background: 'transparent', color: G.muted, cursor: 'pointer', fontSize: 12, fontFamily: "'Raleway', sans-serif" }}>
                   Cancel
                 </button>
-                <button 
+                <button type="button" 
                   onClick={inviteMember} 
                   disabled={actionLoading}
                   style={{ 

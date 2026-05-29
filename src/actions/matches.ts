@@ -112,7 +112,7 @@ export async function getPlayerDashboard(playerId: string) {
     icon: pb.badge.icon,
   }));
 
-  // Get coaches (staff with Coach in their role)
+  // Get coaches (staff with Coach in their role) and include stats + organization
   const coachesRaw = await prisma.staff.findMany({
     where: {
       role: {
@@ -120,7 +120,9 @@ export async function getPlayerDashboard(playerId: string) {
       },
     },
     include: {
-      user: { select: { firstName: true,email: true, lastName: true } }
+      user: { select: { firstName: true, email: true, lastName: true, photo: true, bio: true } },
+      stats: { select: { avgRating: true, ratingCount: true, totalSessions: true } },
+      organization: { select: { id: true, name: true, slug: true, logo: true } },
     },
     orderBy: { user: { firstName: 'asc' } },
   });
@@ -133,6 +135,10 @@ export async function getPlayerDashboard(playerId: string) {
     role: c.role,
     contact: c.contact,
     email: c.user.email,
+    photo: c.user.photo,
+    bio: c.user.bio,
+    stats: c.stats || null,
+    organization: c.organization || null,
   }));
 
   // Get attendance records for the player

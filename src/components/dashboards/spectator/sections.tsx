@@ -146,7 +146,7 @@ export function HomeSection({
             {registeredOrgs.length > 0 ? (
               <div className="space-y-3">
                 {registeredOrgs.map((membership) => (
-                  <div key={membership.orgId} className="rounded-2xl p-3" style={{ background: '#132917', border: `1px solid #243e24` }}>
+                  <div key={`${membership.orgId}-${membership.role}`} className="rounded-2xl p-3" style={{ background: '#132917', border: `1px solid #243e24` }}>
                     <div className="flex items-center justify-between gap-2">
                       <div>
                         <p className="text-sm font-semibold" style={{ color: '#e8f5e0' }}>{membership.orgName}</p>
@@ -841,8 +841,11 @@ export function MembershipSection({
   onViewOrg?: (orgId: string) => void;
 }) {
   const membershipTiers = (selectedOrgDetails?.membershipTiers ?? MEMBERSHIP_TIERS).map(normalizeMembershipTier);
-  const activeMemberships = applications.filter((app) => app.status === 'approved');
-  const pendingApplications = applications.filter((app) => app.status === 'pending');
+  const uniqueApplications = Array.from(
+    new Map(applications.map((app) => [app.id, app])).values()
+  );
+  const activeMemberships = uniqueApplications.filter((app) => app.status === 'approved');
+  const pendingApplications = uniqueApplications.filter((app) => app.status === 'pending');
   const selectedOrgMembership = selectedOrg ? activeMemberships.find((app) => app.organizationId === selectedOrg.id) : undefined;
   const selectedOrgPending = selectedOrg ? pendingApplications.find((app) => app.organizationId === selectedOrg.id) : undefined;
 

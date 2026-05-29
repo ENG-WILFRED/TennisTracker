@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { LoadingState } from '@/components/LoadingState';
 
 const G = {
   dark: '#0a180a',
@@ -246,16 +245,36 @@ export default function AnalyticsSection({ coachId, initialStats, initialWallet 
   const card = { background: G.card, border: `1px solid ${G.border}`, borderRadius: 12, padding: 14 } as const;
   const card2 = { background: G.card2, border: `1px solid ${G.border}`, borderRadius: 10, padding: 12 } as const;
 
-  if (loading) return <LoadingState icon="📊" message="Loading analytics..." fullPage={false} />;
-
-  if (!stats) return <div style={card}><div style={{ color: G.muted }}>No data available</div></div>;
+  const noAnalyticsData = stats === null;
+  const placeholderStats: CoachStats = {
+    totalSessions: 0,
+    completedSessions: 0,
+    cancelledSessions: 0,
+    totalPlayers: 0,
+    activePlayers: 0,
+    totalRevenue: 0,
+    avgRating: 0,
+    reviewCount: 0,
+    completionRate: 0,
+    monthlyRevenue: [],
+    sessionsByType: [],
+    topPlayers: [],
+    recentReviews: [],
+    weeklyStats: [],
+    retentionRate: 0,
+    avgSessionDuration: 0,
+    newPlayersThisMonth: 0,
+  };
+  const displayStats = stats || placeholderStats;
+  const displayWallet = wallet || { totalEarned: 0, balance: 0, transactions: [] };
+  const walletLoaded = wallet !== null;
 
   const chartData = activeChart === 'revenue'
-    ? (stats.monthlyRevenue || []).map(d => ({ label: d.month, value: d.revenue }))
-    : (stats.weeklyStats || []).map(d => ({ label: d.day, value: d.sessions }));
+    ? (displayStats.monthlyRevenue || []).map(d => ({ label: d.month, value: d.revenue }))
+    : (displayStats.weeklyStats || []).map(d => ({ label: d.day, value: d.sessions }));
 
   const txCategoryIcon: Record<string, string> = { session: '🎾', payout: '💸', bonus: '🎁', refund: '↩️', default: '💳' };
-  const filteredTx = wallet?.transactions ? wallet.transactions.filter((t: any) => txFilter === 'all' || t.type === txFilter) : [];
+  const filteredTx = (displayWallet.transactions || []).filter((t: any) => txFilter === 'all' || t.type === txFilter);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
@@ -264,10 +283,12 @@ export default function AnalyticsSection({ coachId, initialStats, initialWallet 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <div style={{ fontSize: 15, fontWeight: 900, color: G.text }}>📊 Analytics & Performance</div>
-          <div style={{ fontSize: 10, color: G.muted2, marginTop: 2 }}>Your coaching insights at a glance</div>
-        </div>
-        <div style={{ display: 'flex', gap: 5 }}>
-          <Tag>Last 30 days</Tag>
+      <div style={{ fontSize: 10, color: G.muted2, marginTop: 2 }}>
+        {loading ? 'Loading analytics in the background while the dashboard remains visible.' : 'Your coaching insights at a glance'}
+      </div>
+    </div>
+    <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', alignItems: 'center' }}>
+      {loading ? <Tag blue>Loading</Tag> : null}
           <Tag yellow>↑ 12% growth</Tag>
         </div>
       </div>
@@ -275,10 +296,10 @@ export default function AnalyticsSection({ coachId, initialStats, initialWallet 
       {/* KPI Row */}
       <div className="analytics-kpi-grid" style={{ display: 'grid', gap: 9 }}>
         {[
-          { icon: '🎾', label: 'Total Sessions', value: stats.totalSessions, sub: `${stats.completedSessions} completed`, color: G.lime2 },
-          { icon: '💰', label: 'Total Revenue', value: `$${(stats.totalRevenue ?? 0).toLocaleString()}`, sub: `$${((stats.totalRevenue ?? 0) / Math.max(stats.completedSessions, 1)).toFixed(0)} avg/session`, color: G.lime2 },
-          { icon: '👥', label: 'Active Players', value: stats.activePlayers, sub: `${stats.newPlayersThisMonth} new this month`, color: G.lime2 },
-          { icon: '⭐', label: 'Avg Rating', value: `${(stats.avgRating ?? 0).toFixed(1)}★`, sub: `${stats.reviewCount} reviews`, color: G.yellow },
+          { icon: '🎾', label: 'Total Sessions', value: noAnalyticsData ? '--' : displayStats.totalSessions, sub: noAnalyticsData ? 'No data yet' : `${displayStats.completedSessions} completed`, color: G.lime2 },
+          { icon: '💰', label: 'Total Revenue', value: noAnalyticsData ? '--' : `$${(displayStats.totalRevenue ?? 0).toLocaleString()}`, sub: noAnalyticsData ? 'No data yet' : `$${((displayStats.totalRevenue ?? 0) / Math.max(displayStats.completedSessions, 1)).toFixed(0)} avg/session`, color: G.lime2 },
+          { icon: '👥', label: 'Active Players', value: noAnalyticsData ? '--' : displayStats.activePlayers, sub: noAnalyticsData ? 'No data yet' : `${displayStats.newPlayersThisMonth} new this month`, color: G.lime2 },
+          { icon: '⭐', label: 'Avg Rating', value: noAnalyticsData ? '--' : `${(displayStats.avgRating ?? 0).toFixed(1)}★`, sub: noAnalyticsData ? 'No data yet' : `${displayStats.reviewCount} reviews`, color: G.yellow },
         ].map((kpi, i) => (
           <div key={i} style={card}>
             <div style={{ fontSize: 18, marginBottom: 5 }}>{kpi.icon}</div>
@@ -416,25 +437,29 @@ export default function AnalyticsSection({ coachId, initialStats, initialWallet 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <div style={{ fontSize: 12, color: G.muted, marginBottom: 4 }}>💸 Total Earned (All Time)</div>
-            <div style={{ fontSize: 32, fontWeight: 900, color: G.lime2, lineHeight: 1 }}>${(wallet?.totalEarned || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+            <div style={{ fontSize: 32, fontWeight: 900, color: G.lime2, lineHeight: 1 }}>
+              {walletLoaded ? `$${displayWallet.totalEarned.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '--'}
+            </div>
             <div style={{ fontSize: 9.5, color: G.muted2, marginTop: 6 }}>
-              Available to withdraw: <span style={{ color: G.lime, fontWeight: 800 }}>${(wallet?.balance || 0).toFixed(2)}</span>
+              Available to withdraw: <span style={{ color: G.lime, fontWeight: 800 }}>
+                {walletLoaded ? `$${displayWallet.balance.toFixed(2)}` : '--'}
+              </span>
             </div>
           </div>
           <div style={{ display: 'flex', gap: 6 }}>
             <button
               onClick={() => setShowPayoutModal(true)}
-              disabled={!wallet || wallet.balance <= 0 || payoutLoading}
+              disabled={!walletLoaded || displayWallet.balance <= 0 || payoutLoading}
               style={{
-                background: wallet && wallet.balance > 0 ? G.lime : G.border,
-                color: wallet && wallet.balance > 0 ? '#0a180a' : G.muted,
+                background: walletLoaded && displayWallet.balance > 0 ? G.lime : G.border,
+                color: walletLoaded && displayWallet.balance > 0 ? '#0a180a' : G.muted,
                 border: 'none',
                 borderRadius: 8,
                 padding: '10px 16px',
                 fontWeight: 800,
                 fontSize: 11,
-                cursor: wallet && wallet.balance > 0 ? 'pointer' : 'not-allowed',
-                opacity: wallet && wallet.balance > 0 ? 1 : 0.5,
+                cursor: walletLoaded && displayWallet.balance > 0 ? 'pointer' : 'not-allowed',
+                opacity: walletLoaded && displayWallet.balance > 0 ? 1 : 0.5,
                 transition: 'all 0.2s',
               }}
             >
@@ -484,15 +509,15 @@ export default function AnalyticsSection({ coachId, initialStats, initialWallet 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 11 }}>
             <SectionLabel>Recent Reviews</SectionLabel>
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <span style={{ fontSize: 14, fontWeight: 900, color: G.yellow }}>{(stats.avgRating ?? 0).toFixed(1)}</span>
-              <StarRating rating={stats.avgRating ?? 0} />
+              <span style={{ fontSize: 14, fontWeight: 900, color: G.yellow }}>{(displayStats.avgRating ?? 0).toFixed(1)}</span>
+              <StarRating rating={displayStats.avgRating ?? 0} />
             </div>
           </div>
-          {(stats.recentReviews || []).length === 0 ? (
+          {(displayStats.recentReviews || []).length === 0 ? (
             <div style={{ color: G.muted, fontSize: 11, textAlign: 'center', padding: '14px 0' }}>No recent reviews available.</div>
           ) : (
-            (stats.recentReviews || []).map((r, i) => (
-              <div key={i} style={{ padding: '9px 0', borderBottom: i < (stats.recentReviews || []).length - 1 ? `1px solid ${G.border}` : 'none' }}>
+            (displayStats.recentReviews || []).map((r, i) => (
+              <div key={i} style={{ padding: '9px 0', borderBottom: i < (displayStats.recentReviews || []).length - 1 ? `1px solid ${G.border}` : 'none' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <div style={{ width: 22, height: 22, borderRadius: '50%', background: G.mid, border: `1px solid ${G.border2}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 800, color: G.lime }}>
@@ -506,7 +531,7 @@ export default function AnalyticsSection({ coachId, initialStats, initialWallet 
                   </div>
                 </div>
                 <p style={{ fontSize: 10.5, color: G.text2, lineHeight: 1.55, margin: 0 }}>
-                  "{r.comment || 'No comment yet'}"
+                  “{r.comment || 'No comment yet'}”
                 </p>
               </div>
             ))
@@ -522,9 +547,9 @@ export default function AnalyticsSection({ coachId, initialStats, initialWallet 
         </div>
         <div className="analytics-insights-grid" style={{ display: 'grid', gap: 9 }}>
           {[
-            { icon: '📈', title: 'Revenue Opportunity', body: 'Adding 2 group sessions/week could boost monthly revenue by ~$480 with your current player base.' },
-            { icon: '🎯', title: 'Retention Alert', body: `${stats.totalPlayers - stats.activePlayers} players haven't booked in 30+ days. A follow-up message could recover them.` },
-            { icon: '⏰', title: 'Peak Demand', body: 'Saturday bookings fill 3× faster. Consider adding a morning slot to capture that demand.' },
+            { icon: '📈', title: 'Revenue Opportunity', body: noAnalyticsData ? 'Analytics will appear once coaching activity starts.' : 'Adding 2 group sessions/week could boost monthly revenue by ~$480 with your current player base.' },
+            { icon: '🎯', title: 'Retention Alert', body: noAnalyticsData ? 'Start adding sessions and reviews to begin tracking retention and player activity.' : `${displayStats.totalPlayers - displayStats.activePlayers} players haven't booked in 30+ days. A follow-up message could recover them.` },
+            { icon: '⏰', title: 'Peak Demand', body: noAnalyticsData ? 'Once you have session history, we will surface peak booking windows here.' : 'Saturday bookings fill 3× faster. Consider adding a morning slot to capture that demand.' },
           ].map((ins, i) => (
             <div key={i} style={{ background: G.card2, border: `1px solid ${G.border}`, borderRadius: 9, padding: 11 }}>
               <div style={{ fontSize: 16, marginBottom: 5 }}>{ins.icon}</div>

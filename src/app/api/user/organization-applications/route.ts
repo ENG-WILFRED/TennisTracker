@@ -43,7 +43,11 @@ export async function GET(request: NextRequest) {
       reviewedAt: app.joinDate.toISOString(),
     }));
 
-    return NextResponse.json(result);
+    const uniqueApplications = Array.from(
+      new Map(result.map((app) => [app.id, app])).values()
+    );
+
+    return NextResponse.json(uniqueApplications);
   } catch (error: any) {
     console.error('Failed to fetch organization applications:', error);
     return NextResponse.json(
