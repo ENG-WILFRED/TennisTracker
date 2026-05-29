@@ -133,7 +133,7 @@ export default function OrganizationPlayersSection({ orgId, coachUserId }: Organ
 
     try {
       setRecruiting(playerId);
-      const res = await fetch(`/api/coaches/recruit`, {
+      const res = await fetch(`/api/organization/${orgId}/assign-player`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -145,15 +145,15 @@ export default function OrganizationPlayersSection({ orgId, coachUserId }: Organ
 
       if (!res.ok) {
         const error = await res.json();
-        throw new Error(error.message || 'Failed to recruit player');
+        throw new Error(error.message || 'Failed to request coach assignment');
       }
 
-      toast.success(`${playerName} has been recruited!`);
+      toast.success(`${playerName} has been requested for coach assignment!`);
       // Refresh the players list
       fetchPlayers();
     } catch (error) {
-      console.error('Error recruiting player:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to recruit player');
+      console.error('Error requesting coach assignment:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to request coach assignment');
     } finally {
       setRecruiting(null);
     }
@@ -361,7 +361,7 @@ export default function OrganizationPlayersSection({ orgId, coachUserId }: Organ
             </button>
           )}
 
-          {/* Recruit Button - Show for "All Players" tab when not already managed */}
+          {/* Assign Button - Show for "All Players" tab when not already managed */}
           {!showManageButton && !managedPlayers.some((mp) => mp.id === player.id) && (
             <button
               onClick={() => handleRecruitPlayer(player.id, `${player.firstName} ${player.lastName}`)}
@@ -389,7 +389,7 @@ export default function OrganizationPlayersSection({ orgId, coachUserId }: Organ
                 }
               }}
             >
-              {recruiting === player.id ? '⏳...' : '✚ Recruit'}
+              {recruiting === player.id ? '⏳...' : '✚ Assign'}
             </button>
           )}
         </div>

@@ -69,13 +69,13 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
 Input.displayName = 'Input';
 
 export const colors = {
-  background: '#0f172a',
-  surface: '#111827',
-  surfaceSecondary: '#1f2937',
-  surfaceTertiary: '#374151',
-  border: 'rgba(255,255,255,0.08)',
-  primary: '#7dc142',
-  primaryHover: '#90d95d',
+  background: '#05390e',
+  surface: '#1b791d',
+  surfaceSecondary: '#154816',
+  surfaceTertiary: '#2c6a17',
+  border: 'rgba(53, 190, 23, 0.08)',
+  primary: '#219e2a',
+  primaryHover: '#115e11',
   accent: '#10b981',
   textPrimary: '#e2e8f0',
   textMuted: '#94a3b8',

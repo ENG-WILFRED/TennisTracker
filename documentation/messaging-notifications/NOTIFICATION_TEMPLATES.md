@@ -166,6 +166,144 @@ Each template below must exist in the Kafka consumer. The producer and API code 
 }
 ```
 
+### `player_assignment_request`
+- Purpose: Notify a player that a coach assignment has been requested for them
+- Channel: `email`
+- Required `data` fields:
+  - `playerName`
+  - `coachName`
+  - `organizationName`
+  - `actionUrl`
+- Source: `src/app/api/organization/[orgId]/assign-player/route.ts`
+- Example:
+
+```json
+{
+  "template": "player_assignment_request",
+  "data": {
+    "playerName": "Jane Doe",
+    "coachName": "Coach Kimani",
+    "organizationName": "Ace Tennis Club",
+    "actionUrl": "https://vicotennis.com/dashboard/player/assignments"
+  }
+}
+```
+
+### `coach_assignment_request`
+- Purpose: Notify a coach that a player assignment request has been created
+- Channel: `email`
+- Required `data` fields:
+  - `coachName`
+  - `playerName`
+  - `organizationName`
+  - `actionUrl`
+- Source: `src/app/api/organization/[orgId]/assign-player/route.ts`
+- Example:
+
+```json
+{
+  "template": "coach_assignment_request",
+  "data": {
+    "coachName": "Coach Kimani",
+    "playerName": "Jane Doe",
+    "organizationName": "Ace Tennis Club",
+    "actionUrl": "https://vicotennis.com/dashboard/coach/assignments"
+  }
+}
+```
+
+### `coach_assignment_accepted`
+- Purpose: Notify a coach that a player has accepted the assignment request
+- Channel: `email`
+- Required `data` fields:
+  - `coachName`
+  - `playerName`
+  - `organizationName`
+  - `actionUrl`
+- Source: `src/app/api/coaches/players/[playerId]/accept/route.ts`
+- Example:
+
+```json
+{
+  "template": "coach_assignment_accepted",
+  "data": {
+    "coachName": "Coach Kimani",
+    "playerName": "Jane Doe",
+    "organizationName": "Ace Tennis Club",
+    "actionUrl": "https://vicotennis.com/dashboard/coach/assignments"
+  }
+}
+```
+
+### `player_assignment_accepted`
+- Purpose: Notify a player that their coach assignment request has been accepted
+- Channel: `email`
+- Required `data` fields:
+  - `playerName`
+  - `coachName`
+  - `organizationName`
+  - `actionUrl`
+- Source: `src/app/api/coaches/players/[playerId]/accept/route.ts`
+- Example:
+
+```json
+{
+  "template": "player_assignment_accepted",
+  "data": {
+    "playerName": "Jane Doe",
+    "coachName": "Coach Kimani",
+    "organizationName": "Ace Tennis Club",
+    "actionUrl": "https://vicotennis.com/dashboard/player/assignments"
+  }
+}
+```
+
+### `coach_assignment_accepted_confirmation`
+- Purpose: Confirmation email to the coach after they accept a pending assignment
+- Channel: `email`
+- Required `data` fields:
+  - `coachName`
+  - `playerName`
+  - `organizationName`
+  - `actionUrl`
+- Source: `src/app/api/coaches/players/[playerId]/accept/route.ts`
+- Example:
+
+```json
+{
+  "template": "coach_assignment_accepted_confirmation",
+  "data": {
+    "coachName": "Coach Kimani",
+    "playerName": "Jane Doe",
+    "organizationName": "Ace Tennis Club",
+    "actionUrl": "https://vicotennis.com/dashboard/coach/assignments"
+  }
+}
+```
+
+### `player_assignment_accepted_confirmation`
+- Purpose: Confirmation email to the player after they accept a pending assignment
+- Channel: `email`
+- Required `data` fields:
+  - `playerName`
+  - `coachName`
+  - `organizationName`
+  - `actionUrl`
+- Source: `src/app/api/coaches/players/[playerId]/accept/route.ts`
+- Example:
+
+```json
+{
+  "template": "player_assignment_accepted_confirmation",
+  "data": {
+    "playerName": "Jane Doe",
+    "coachName": "Coach Kimani",
+    "organizationName": "Ace Tennis Club",
+    "actionUrl": "https://vicotennis.com/dashboard/player/assignments"
+  }
+}
+```
+
 ### `developer_login_otp`
 - Purpose: Developer login one-time passcode email
 - Channel: `email`

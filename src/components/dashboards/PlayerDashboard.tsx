@@ -20,6 +20,7 @@ import { FindNearbyCourts } from '@/components/FindNearbyCourts';
 import { PlayerSearchChallenge } from '@/components/PlayerSearchChallenge';
 import { chatUrlForUser, sendChallengeRequest } from '@/lib/nearby';
 import { MembershipSwitcher } from '@/components/MembershipSwitcher';
+import CoachRequestsSection from '@/components/CoachRequestsSection';
 import toast from 'react-hot-toast';
 
 const G = {
@@ -380,6 +381,7 @@ export const PlayerDashboard: React.FC = () => {
           ) : (
             <div className="space-y-4">
               <DashboardHome playerData={playerData} upcomingMatches={upcomingMatches} leaderboard={leaderboard} activityFeed={activityFeed} />
+              {user?.id && <CoachRequestsSection playerId={user.id} />}
             </div>
           )}
         </div>

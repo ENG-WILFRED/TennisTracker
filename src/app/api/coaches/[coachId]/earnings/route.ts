@@ -12,36 +12,37 @@ export async function GET(
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    const completedSessions = await prisma.coachSession.findMany({
+    const thisMonthAggregate = await prisma.coachEarning.aggregate({
       where: {
         coachId,
-        status: 'completed',
-        endTime: {
+        createdAt: {
           gte: startOfMonth,
           lte: now,
         },
       },
-      select: {
-        price: true,
+      _sum: {
+        amount: true,
       },
     });
 
-    const thisMonth = completedSessions.reduce((sum: number, s: typeof completedSessions[number]) => sum + (s.price || 0), 0);
+    const thisMonth = Number(thisMonthAggregate._sum.amount ?? 0);
 
     // Get wallet info
     const wallet = await prisma.coachWallet.findUnique({
       where: { coachId },
     });
 
-    const pending = (wallet?.balance || 0) - (wallet?.totalWithdrawn || 0);
+    const balance = Number(wallet?.balance ?? 0);
+    const totalWithdrawn = Number(wallet?.totalWithdrawn ?? 0);
+    const pending = balance - totalWithdrawn;
     const perSession = 60; // Default rate, can be fetched from coach profile if available
 
     return NextResponse.json({
       thisMonth: Math.round(thisMonth),
       pending: Math.round(Math.max(0, pending)),
-      perSession: perSession,
-      totalEarned: wallet?.totalEarned || 0,
-      balance: wallet?.balance || 0,
+      perSession,
+      totalEarned: Number(wallet?.totalEarned ?? 0),
+      balance,
       currency: wallet?.currency || 'USD',
     });
   } catch (error) {

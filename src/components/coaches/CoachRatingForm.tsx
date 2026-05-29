@@ -3,6 +3,7 @@
 import React, { useState, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import { X, Send, Star } from 'lucide-react';
+import { authenticatedFetch } from '@/lib/authenticatedFetch';
 
 interface CoachRatingFormProps {
   coachId: string;
@@ -76,7 +77,7 @@ export const CoachRatingForm: React.FC<CoachRatingFormProps> = ({
       setSubmitting(true);
 
       try {
-        const response = await fetch('/api/coaches/rate-player', {
+const response = await authenticatedFetch('/api/coaches/rate-player', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

@@ -1,77 +1,90 @@
 # Sample Users Documentation
 
 ## Overview
-This document lists all types of sample users seeded in the TennisTracker database.
+This document lists the simplified seed users for the current minimal TennisTracker fixture.
 
-## User Types
+## Organizations
+- Central Tennis Club
+- Elite Sports Academy
+- Community Tennis Courts
+- Lakeside Tennis Centre
+- Summit Sports Arena
 
-### Players
-#### Independent Players
+## Admin / Organization Owners
+- owner@centraltennis.co.ke — Organization Owner for Central Tennis Club
+- owner@eliteacademy.co.ke — Organization Owner for Elite Sports Academy
+- owner@communitycourts.co.ke — Organization Owner for Community Tennis Courts
+- owner@lakesidetennis.co.ke — Organization Owner for Lakeside Tennis Centre
+- owner@summitsports.co.ke — Organization Owner for Summit Sports Arena
+
+**Password for all admin / organization owner accounts:** `tennis123`
+
+## Players
 - marcus_johnson
 - anna_martinez
 - james_wilson
-
-#### Central Tennis Club Players
 - sophia_chen
 - david_kim
-
-#### Elite Sports Academy Players
 - lucas_santos
-
-#### Community Courts Players
 - emma_turner
+- amina_ali
+- grace_mwangi
+- noah_omondi
+- mia_njoroge
+- ethan_kiprono
+- lina_otieno
+- owen_mwenda
+- leah_kamau
+- aaron_kiprono
+- nadia_wanjiru
+- joel_karani
+- faith_kamau
+- samuel_odhiambo
 
-#### Kenyan Players (250+)
-- coast_player_1 through coast_player_540 (distributed across coast regions)
-- kenya_player_541 through kenya_player_590 (other regions)
-
-### Coaches
+## Coaches
 - coach_robert (Central Tennis Club)
 - coach_elena (Elite Sports Academy)
+- coach_asha (Community Tennis Courts)
+- coach_mateo (Lakeside Tennis Centre)
+- coach_li (Summit Sports Arena)
 
-### Referees
+## Referees
 - referee_john (Central Tennis Club)
 - referee_sarah (Central Tennis Club)
 - referee_michael (Elite Sports Academy)
 - referee_elizabeth (Elite Sports Academy)
+- referee_noah (Lakeside Tennis Centre)
 
-### Staff Members
-#### Coaching Staff
-- Head Coach
-- Assistant Coach
-- Junior Coach
+## Staff Members
+Each organization has 5 staff users:
+- staff11
+- staff12
+- staff13
+- staff14
+- staff15
+- staff21
+- staff22
+- staff23
+- staff24
+- staff25
+- staff31
+- staff32
+- staff33
+- staff34
+- staff35
+- staff41
+- staff42
+- staff43
+- staff44
+- staff45
+- staff51
+- staff52
+- staff53
+- staff54
+- staff55
 
-#### Management Staff
-- Court Manager
-- Event Coordinator
-- Fitness Trainer
-
-#### Administrative Staff
-- System Admin
-- Finance Manager
-- Finance Officer
-- HR Manager
-- HR Officer
-- Receptionist
-- Security Officer
-- Watchman
-- Maintenance Manager
-- Maintenance Staff
-- Inventory Manager
-- Support Manager
-- Support Staff
-- Marketing Manager
-- Operations Manager
-
-### Administrators
-- elite_admin
-
-### Spectators
-- spectator_alice
-
-## Organizations
-Users are distributed across:
-- Central Tennis Club
-- Elite Sports Academy
-- Community Tennis Courts
-- Kenya Tennis Federation
+## Notes
+- This sample fixture is intentionally small and minimally wired for testing.
+- It seeds 20 players, 5 coaches, 5 referees, 25 staff members, and 5 organizations.
+- All five organizations above are confirmed in the Developer Dashboard.
+- Use `npm run seed:minimal` to recreate this simplified dataset.

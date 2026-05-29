@@ -32,11 +32,55 @@ export async function POST(request: Request) {
     }
 
     if (!targetId) {
+      console.error('DM Error: No targetId provided', { targetUserId, targetUserEmail });
       return new Response(JSON.stringify({ error: 'Target user ID or email is required' }), { status: 400 });
     }
 
     if (targetId === auth.userId) {
       return new Response(JSON.stringify({ error: 'Cannot create DM with yourself' }), { status: 400 });
+    }
+
+    // Ensure authenticated user exists before creating any player profile.
+    const currentUser = await prisma.user.findUnique({
+      where: { id: auth.userId },
+    });
+
+    if (!currentUser) {
+      console.error('DM Error: Authenticated user not found', { userId: auth.userId });
+      return new Response(JSON.stringify({ error: 'Authenticated user not found' }), { status: 401 });
+    }
+
+    // Ensure the authenticated user has a player profile for chat participation.
+    let currentUserPlayer = await prisma.player.findUnique({
+      where: { userId: auth.userId },
+    });
+
+    if (!currentUserPlayer) {
+      currentUserPlayer = await prisma.player.create({
+        data: { userId: auth.userId },
+      });
+      console.log('DM Info: Created missing player profile for current user', { userId: auth.userId });
+    }
+
+    // Ensure target user exists and has a player record
+    const targetUser = await prisma.user.findUnique({
+      where: { id: targetId },
+    });
+
+    if (!targetUser) {
+      console.error('DM Error: Target user not found', { targetId });
+      return new Response(JSON.stringify({ error: 'Target user not found' }), { status: 404 });
+    }
+
+    let targetUserPlayer = await prisma.player.findUnique({
+      where: { userId: targetId },
+    });
+
+    if (!targetUserPlayer) {
+      targetUserPlayer = await prisma.player.create({
+        data: { userId: targetId },
+      });
+      console.log('DM Info: Created missing player profile for target user', { targetId });
     }
 
     // Check if a DM room already exists between these two users
@@ -93,20 +137,6 @@ export async function POST(request: Request) {
         }),
         { status: 200, headers: { 'Content-Type': 'application/json' } }
       );
-    }
-
-    // Get target user info for room name
-    const targetUser = await prisma.player.findUnique({
-      where: { userId: targetId },
-      include: {
-        user: {
-          select: { firstName: true, lastName: true }
-        }
-      }
-    });
-
-    if (!targetUser) {
-      return new Response(JSON.stringify({ error: 'Target user not found' }), { status: 404 });
     }
 
     // Create new DM room

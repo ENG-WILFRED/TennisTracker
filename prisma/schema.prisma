@@ -43,6 +43,7 @@ model User {
   resourceRequests   ResourceRequest[]   @relation("ResourceRequests")
   resourceApprovals  ResourceRequest[]   @relation("ResourceApprovals")
   bugReports         BugReport[]
+  authoredComments   PlayerComment[]
   gateScans          GateScanLog[]
   reportedIncidents  SecurityIncident[]
   passwordResetOtps  PasswordResetOtp[]
@@ -137,6 +138,7 @@ model Player {
   chatRooms                  ChatParticipant[]
   clubMembers                ClubMember[]
   commentReactions           CommentReaction[]           @relation("comment_reactions")
+  playerComments             PlayerComment[]
   communityPosts             CommunityPost[]
   inventoryItems             InventoryItem[]
   matchesA                   Match[]                     @relation("PlayerA")
@@ -166,6 +168,7 @@ model Player {
   coachRelationships         CoachPlayerRelationship[]   @relation("CoachPlayers")
   coachSessionReviews        CoachSessionReview[]        @relation("CoachSessionReviews")
   coachPlayerRatings         CoachPlayerRating[]         @relation("PlayerCoachRatings")
+  coachRequests              CoachRequest[]              @relation("CoachRequests")
   playerReports              PlayerReport[]
   invoices                   Invoice[]
   subscriptions              Subscription[]
@@ -173,9 +176,34 @@ model Player {
   invoiceModels              InvoiceModel[]
   ownershipTransfers         OwnershipTransfer[]
   dailyPlayerStats           DailyPlayerStats[]
+  // Ranking system relationships
+  competitiveRankSnapshots   CompetitiveRankSnapshot[]
+  developmentScoreSnapshots  DevelopmentScoreSnapshot[]
+  activityScoreSnapshots     ActivityScoreSnapshot[]
+  overallIndexSnapshots      OverallIndexSnapshot[]
+  rankingHistories           RankingHistory[]
+  rankingEvents              RankingEvent[]
+  leaderboardProjections     LeaderboardProjection[]
 
   @@index([createdAt])
   @@index([organizationId])
+}
+
+model PlayerComment {
+  id         String   @id @default(uuid())
+  playerId   String
+  authorId   String
+  content    String
+  rating     Int?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  player Player @relation(fields: [playerId], references: [userId], onDelete: Cascade)
+  author User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([playerId])
+  @@index([authorId])
+  @@index([createdAt])
 }
 
 model InventoryItem {
@@ -213,61 +241,64 @@ model Referee {
 }
 
 model Staff {
-  role                   String
-  expertise              String?
-  contact                String?
-  employedById           String?
-  createdAt              DateTime                  @default(now())
-  updatedAt              DateTime                  @updatedAt
-  yearsOfExperience      Int?                      @default(0)
-  coachingLevel          String?
-  formerPlayerBackground String?
-  playerAgeGroups        String[]                  @default([])
-  skillLevelsTrained     String[]                  @default([])
-  trainingTypes          String[]                  @default([])
-  languagesSpoken        String[]                  @default([])
-  sessionDurations       Int[]                     @default([30, 60, 90])
-  maxStudentsPerSession  Int?                      @default(1)
-  courtLocations         String[]                  @default([])
-  bio                    String?
-  coachingPhilosophy     String?
-  achievements           String?
-  introVideoUrl          String?
-  studentCount           Int                       @default(0)
-  isVerified             Boolean                   @default(false)
-  isActive               Boolean                   @default(true)
-  isDeleted              Boolean                   @default(false)
-  ownerId                String?
-  organizationId         String?
-  userId                 String                    @id
-  auditLogs              AuditLog[]
-  gateScans              GateScanLog[]
-  availability           Availability[]
-  certifications         Certification[]
-  pricing                CoachPricing?
-  reviews                CoachReview[]
-  playerRatings          CoachPlayerRating[]       @relation("CoachRatings")
-  specializations        Specialization[]
-  employedBy             Player?                   @relation(fields: [employedById], references: [userId])
-  organization           Organization?             @relation(fields: [organizationId], references: [id])
-  user                   User                      @relation(fields: [userId], references: [id])
-  tasks                  EventTask[]
-  sessions               CoachSession[]            @relation("CoachSessions")
-  players                CoachPlayerRelationship[] @relation("CoachPlayers")
-  wallet                 CoachWallet?              @relation("CoachWallet")
-  payouts                CoachPayout[]             @relation("CoachPayouts")
-  stats                  CoachStats?               @relation("CoachStats")
-  dailyStats             CoachDailyStats[]         @relation("CoachDailyStats")
-  sessionReviews         CoachSessionReview[]      @relation("CoachSessionReviews")
-  activities             Activity[]                @relation("Activities")
-  assignedTasks          Task[]                    @relation("TaskAssignmentStaff")
-  progressUpdates        ProgressUpdate[]
-  coachReports           CoachReport[]
-  earnings               CoachEarning[]
-  availabilities         CoachAvailability[]
-  coachSpecificPrices    CoachSpecificPrice[]
-  recurringSessions      RecurringSession[]        @relation("RecurringCoachSessions")
-  coachPerfSummaries     CoachPerformanceSummary[] @relation("CoachPerformanceSummaries")
+  role                     String
+  expertise                String?
+  contact                  String?
+  employedById             String?
+  createdAt                DateTime                       @default(now())
+  updatedAt                DateTime                       @updatedAt
+  yearsOfExperience        Int?                           @default(0)
+  coachingLevel            String?
+  formerPlayerBackground   String?
+  playerAgeGroups          String[]                       @default([])
+  skillLevelsTrained       String[]                       @default([])
+  trainingTypes            String[]                       @default([])
+  languagesSpoken          String[]                       @default([])
+  sessionDurations         Int[]                          @default([30, 60, 90])
+  maxStudentsPerSession    Int?                           @default(1)
+  courtLocations           String[]                       @default([])
+  bio                      String?
+  coachingPhilosophy       String?
+  achievements             String?
+  introVideoUrl            String?
+  studentCount             Int                            @default(0)
+  isVerified               Boolean                        @default(false)
+  isActive                 Boolean                        @default(true)
+  isDeleted                Boolean                        @default(false)
+  ownerId                  String?
+  organizationId           String?
+  userId                   String                         @id
+  auditLogs                AuditLog[]
+  gateScans                GateScanLog[]
+  availability             Availability[]
+  certifications           Certification[]
+  pricing                  CoachPricing?
+  reviews                  CoachReview[]
+  playerRatings            CoachPlayerRating[]            @relation("CoachRatings")
+  specializations          Specialization[]
+  employedBy               Player?                        @relation(fields: [employedById], references: [userId])
+  organization             Organization?                  @relation(fields: [organizationId], references: [id])
+  user                     User                           @relation(fields: [userId], references: [id])
+  tasks                    EventTask[]
+  sessions                 CoachSession[]                 @relation("CoachSessions")
+  players                  CoachPlayerRelationship[]      @relation("CoachPlayers")
+  wallet                   CoachWallet?                   @relation("CoachWallet")
+  payouts                  CoachPayout[]                  @relation("CoachPayouts")
+  stats                    CoachStats?                    @relation("CoachStats")
+  dailyStats               CoachDailyStats[]              @relation("CoachDailyStats")
+  sessionReviews           CoachSessionReview[]           @relation("CoachSessionReviews")
+  activities               Activity[]                     @relation("Activities")
+  assignedTasks            Task[]                         @relation("TaskAssignmentStaff")
+  progressUpdates          ProgressUpdate[]
+  coachReports             CoachReport[]
+  earnings                 CoachEarning[]
+  availabilities           CoachAvailability[]
+  coachSpecificPrices      CoachSpecificPrice[]
+  recurringSessions        RecurringSession[]             @relation("RecurringCoachSessions")
+  coachPerfSummaries       CoachPerformanceSummary[]      @relation("CoachPerformanceSummaries")
+  // Ranking system relationships
+  coachReputationSnapshots CoachReputationScoreSnapshot[]
+  coachRequests            CoachRequest[]                 @relation("CoachRequests")
 
   @@index([organizationId])
   @@index([employedById])
@@ -372,12 +403,21 @@ model Organization {
   dailyPlayerStats          DailyPlayerStats[]
 
   // Coaching Session Payments
-  coachingPricing OrgCoachingPricing? // Organization-level pricing for coaching sessions
-  sessionPayments SessionPayment[] // Payment records for coaching sessions
-  userDebts       UserOrgDebt[] // Track user debts to organization
+  coachingPricing           OrgCoachingPricing? // Organization-level pricing for coaching sessions
+  sessionPayments           SessionPayment[] // Payment records for coaching sessions
+  userDebts                 UserOrgDebt[] // Track user debts to organization
   // Developer onboarding
-  emailLogs       DeveloperEmailLog[]
-  payments        OrganizationPayment[]
+  emailLogs                 DeveloperEmailLog[]
+  payments                  OrganizationPayment[]
+  // Ranking system relationships
+  competitiveRankSnapshots  CompetitiveRankSnapshot[]
+  developmentScoreSnapshots DevelopmentScoreSnapshot[]
+  activityScoreSnapshots    ActivityScoreSnapshot[]
+  coachReputationSnapshots  CoachReputationScoreSnapshot[]
+  overallIndexSnapshots     OverallIndexSnapshot[]
+  rankingHistories          RankingHistory[]
+  rankingEvents             RankingEvent[]
+  leaderboardProjections    LeaderboardProjection[]
 
   @@index([createdAt])
   @@index([slug])
@@ -557,17 +597,17 @@ model GateScanLog {
 }
 
 model SecurityIncident {
-  id             String   @id @default(uuid())
+  id             String    @id @default(uuid())
   summary        String
   location       String
   severity       String
-  status         String   @default("open")
+  status         String    @default("open")
   reportedById   String?
   organizationId String?
-  reportedAt     DateTime @default(now())
+  reportedAt     DateTime  @default(now())
   resolvedAt     DateTime?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   reportedBy   User?         @relation(fields: [reportedById], references: [id], onDelete: SetNull)
   organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
@@ -1539,17 +1579,17 @@ model CoachSession {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  coach           Staff             @relation("CoachSessions", fields: [coachId], references: [userId], onDelete: Cascade)
-  organization    Organization?     @relation("CoachSessions", fields: [organizationId], references: [id], onDelete: SetNull)
-  player          Player?           @relation("CoachSessionsAsPlayer", fields: [playerId], references: [userId], onDelete: SetNull)
-  court           Court?            @relation("CoachSessions", fields: [courtId], references: [id], onDelete: SetNull)
-  recurringSource RecurringSession? @relation("RecurringSource", fields: [recurringSessionId], references: [id], onDelete: SetNull)
+  coach           Staff               @relation("CoachSessions", fields: [coachId], references: [userId], onDelete: Cascade)
+  organization    Organization?       @relation("CoachSessions", fields: [organizationId], references: [id], onDelete: SetNull)
+  player          Player?             @relation("CoachSessionsAsPlayer", fields: [playerId], references: [userId], onDelete: SetNull)
+  court           Court?              @relation("CoachSessions", fields: [courtId], references: [id], onDelete: SetNull)
+  recurringSource RecurringSession?   @relation("RecurringSource", fields: [recurringSessionId], references: [id], onDelete: SetNull)
   bookings        SessionBooking[]
   progressUpdates ProgressUpdate[]
   metricHistories MetricHistory[]
   sessionReport   SessionReport?
   earnings        CoachEarning[]
-  activities      Activity[]        @relation("ActivitySessions")
+  activities      Activity[]          @relation("ActivitySessions")
   sessionPayment  SessionPayment? // Link to payment record
   sessionRatings  CoachPlayerRating[] @relation("SessionRatings")
 
@@ -1871,6 +1911,48 @@ model CoachPlayerNote {
 }
 
 // ────────────────────────────────────────────────────────────────────────────
+// COACH REQUESTS & OUTREACH
+// ────────────────────────────────────────────────────────────────────────────
+
+model CoachRequest {
+  id            String   @id @default(uuid())
+  coachId       String
+  playerId      String
+  status        String   @default("pending") // "pending", "accepted", "declined"
+  requestedAt   DateTime @default(now())
+  respondedAt   DateTime?
+  message       String?  // Initial message from coach
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  coach   Staff                    @relation("CoachRequests", fields: [coachId], references: [userId], onDelete: Cascade)
+  player  Player                   @relation("CoachRequests", fields: [playerId], references: [userId], onDelete: Cascade)
+  history CoachRequestHistory[]
+
+  @@unique([coachId, playerId])
+  @@index([coachId])
+  @@index([playerId])
+  @@index([status])
+  @@index([requestedAt])
+}
+
+model CoachRequestHistory {
+  id                 String   @id @default(uuid())
+  coachRequestId     String
+  action             String   // "request_sent", "request_accepted", "request_declined", "message_sent", "outreach"
+  actionBy           String   // "coach" or "player"
+  message            String?
+  metadata           Json?    // Additional data for the action
+  createdAt          DateTime @default(now())
+
+  coachRequest CoachRequest @relation(fields: [coachRequestId], references: [id], onDelete: Cascade)
+
+  @@index([coachRequestId])
+  @@index([createdAt])
+  @@index([action])
+}
+
+// ────────────────────────────────────────────────────────────────────────────
 // ANALYTICS & STATISTICS
 // ────────────────────────────────────────────────────────────────────────────
 
@@ -1932,23 +2014,23 @@ model CoachSessionReview {
 }
 
 model CoachPlayerRating {
-  id                   String         @id @default(uuid())
-  coachId              String
-  playerId             String
-  sessionId            String?
-  overallRating        Float
-  techniquRating       Float?
-  mentalRating         Float?
-  fitnessRating        Float?
-  teamworkRating       Float?
-  strengths            String?
-  areasForImprovement  String?
-  notes                String?
-  sessionType          String?
-  trainingFocus        String?
-  isConcluded          Boolean        @default(false)
-  createdAt            DateTime       @default(now())
-  updatedAt            DateTime       @updatedAt
+  id                  String   @id @default(uuid())
+  coachId             String
+  playerId            String
+  sessionId           String?
+  overallRating       Float
+  techniquRating      Float?
+  mentalRating        Float?
+  fitnessRating       Float?
+  teamworkRating      Float?
+  strengths           String?
+  areasForImprovement String?
+  notes               String?
+  sessionType         String?
+  trainingFocus       String?
+  isConcluded         Boolean  @default(false)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
   coach   Staff         @relation("CoachRatings", fields: [coachId], references: [userId], onDelete: Cascade)
   player  Player        @relation("PlayerCoachRatings", fields: [playerId], references: [userId], onDelete: Cascade)
@@ -2215,16 +2297,16 @@ model NotificationLog {
 }
 
 model PasswordResetOtp {
-  id           String   @id @default(uuid())
+  id           String    @id @default(uuid())
   userId       String
   email        String
   otp          String
-  status       String   @default("PENDING")
-  attemptCount Int      @default(0)
+  status       String    @default("PENDING")
+  attemptCount Int       @default(0)
   expiresAt    DateTime
   usedAt       DateTime?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -3478,4 +3560,357 @@ model OrganizationPayment {
   @@index([organizationId])
   @@index([createdAt])
   @@index([status])
+}
+
+// ============================================================================
+// MULTI-DIMENSIONAL RANKING SYSTEM
+// ============================================================================
+
+/**
+ * CompetitiveRankSnapshot
+ * Tracks competitive strength based on tournament wins and match results
+ * Primary metric: ELO-like rating reflecting actual competitive ability
+ */
+model CompetitiveRankSnapshot {
+  id                  String       @id @default(uuid())
+  organizationId      String
+  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  playerId            String
+  player              Player       @relation(fields: [playerId], references: [userId], onDelete: Cascade)
+  currentScore        Int          @default(1500) // ELO-like rating
+  previousScore       Int?
+  rank                Int?
+  previousRank        Int?
+  matchesWon          Int          @default(0)
+  matchesLost         Int          @default(0)
+  winRate             Float        @default(0) // 0-100
+  tournamentWins      Int          @default(0)
+  opponentStrengthAvg Float        @default(1500) // Average difficulty
+  
+  // Confidence fields for provisional rankings
+  confidenceScore     Float        @default(0) // 0-100, how confident are we in this ranking
+  isProvisional       Boolean      @default(true) // True if under 10 matches
+  matchesConsidered   Int          @default(0) // How many matches used in calculation
+  
+  lastUpdated         DateTime     @default(now())
+  createdAt           DateTime     @default(now())
+
+  @@unique([organizationId, playerId])
+  @@index([organizationId])
+  @@index([currentScore])
+  @@index([isProvisional])
+  @@index([createdAt])
+}
+
+/**
+ * DevelopmentScoreSnapshot
+ * Tracks player growth measured by coaching attendance and improvement
+ */
+model DevelopmentScoreSnapshot {
+  id                       String       @id @default(uuid())
+  organizationId           String
+  organization             Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  playerId                 String
+  player                   Player       @relation(fields: [playerId], references: [userId], onDelete: Cascade)
+  currentScore             Float        @default(0) // 0-100
+  previousScore            Float?
+  coachingSessionsAttended Int          @default(0)
+  consistencyStreak        Int          @default(0) // Days active in row
+  improvementTrend         Float        @default(0) // % improvement over period
+  coachAssessmentScore     Float        @default(0) // 0-100 from coach ratings
+  practiceParticipation    Float        @default(0) // 0-100
+  lastUpdated              DateTime     @default(now())
+  createdAt                DateTime     @default(now())
+
+  @@unique([organizationId, playerId])
+  @@index([organizationId])
+  @@index([currentScore])
+  @@index([createdAt])
+}
+
+/**
+ * ActivityScoreSnapshot
+ * Tracks engagement through court bookings and match participation
+ */
+model ActivityScoreSnapshot {
+  id                           String       @id @default(uuid())
+  organizationId               String
+  organization                 Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  playerId                     String
+  player                       Player       @relation(fields: [playerId], references: [userId], onDelete: Cascade)
+  currentScore                 Float        @default(0) // 0-100
+  previousScore                Float?
+  bookingsThisMonth            Int          @default(0)
+  courtAppearances             Int          @default(0)
+  matchesPlayed                Int          @default(0)
+  recentParticipationFrequency Float        @default(0) // 0-100
+  consecutiveDaysActive        Int          @default(0)
+  lastUpdated                  DateTime     @default(now())
+  createdAt                    DateTime     @default(now())
+
+  @@unique([organizationId, playerId])
+  @@index([organizationId])
+  @@index([currentScore])
+  @@index([createdAt])
+}
+
+/**
+ * CoachReputationScoreSnapshot
+ * Tracks coach evaluation metrics (for coaches, not players)
+ */
+model CoachReputationScoreSnapshot {
+  id                          String       @id @default(uuid())
+  organizationId              String
+  organization                Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  coachId                     String
+  coach                       Staff        @relation(fields: [coachId], references: [userId], onDelete: Cascade)
+  currentScore                Float        @default(0) // 0-100
+  previousScore               Float?
+  punctualityRating           Float        @default(0) // 0-5
+  disciplineRating            Float        @default(0) // 0-5
+  effortRating                Float        @default(0) // 0-5
+  tacticalUnderstandingRating Float        @default(0) // 0-5
+  consistencyRating           Float        @default(0) // 0-5
+  playerImprovementRate       Float        @default(0) // % of players improving
+  lastUpdated                 DateTime     @default(now())
+  createdAt                   DateTime     @default(now())
+
+  @@unique([organizationId, coachId])
+  @@index([organizationId])
+  @@index([currentScore])
+  @@index([createdAt])
+}
+
+/**
+ * OverallIndexSnapshot
+ * Weighted combination of all ranking dimensions
+ * Weights: 40% competitive, 30% development, 20% activity, 10% coach
+ */
+model OverallIndexSnapshot {
+  id                    String       @id @default(uuid())
+  organizationId        String
+  organization          Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  playerId              String
+  player                Player       @relation(fields: [playerId], references: [userId], onDelete: Cascade)
+  indexScore            Float        @default(0) // Combined score
+  previousIndexScore    Float?
+  competitiveWeight     Float        @default(0.40)
+  developmentWeight     Float        @default(0.30)
+  activityWeight        Float        @default(0.20)
+  coachReputationWeight Float        @default(0.10)
+  trend                 String       @default("stable") // up | down | stable
+  movement              Float        @default(0) // Change from previous
+  lastUpdated           DateTime     @default(now())
+  createdAt             DateTime     @default(now())
+
+  @@unique([organizationId, playerId])
+  @@index([organizationId])
+  @@index([indexScore])
+  @@index([createdAt])
+}
+
+/**
+ * RankingHistory
+ * Immutable record of all ranking changes over time
+ * Enables trend analysis and historical ranking queries
+ */
+model RankingHistory {
+  id             String       @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  playerId       String
+  player         Player       @relation(fields: [playerId], references: [userId], onDelete: Cascade)
+  rankingType    String // COMPETITIVE | DEVELOPMENT | ACTIVITY | COACH_REPUTATION | OVERALL_INDEX
+  score          Float
+  previousScore  Float?
+  movement       Float // Change in score
+  reason         String // Why it changed
+  snapshot       Json // Full snapshot at this time
+  recordedAt     DateTime     @default(now())
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId])
+  @@index([playerId])
+  @@index([rankingType])
+  @@index([createdAt])
+  @@index([recordedAt])
+}
+
+/**
+ * RankingEvent
+ * Connects ranking changes to their source events (matches, sessions, ratings)
+ * Enables full traceability from ranking back to source
+ */
+model RankingEvent {
+  id                 String       @id @default(uuid())
+  organizationId     String
+  organization       Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  playerId           String
+  player             Player       @relation(fields: [playerId], references: [userId], onDelete: Cascade)
+  eventType          String // MATCH_COMPLETED | SESSION_ATTENDED | BOOKING_COMPLETED | COACH_FEEDBACK | etc
+  eventId            String // Reference to match/session/rating/booking
+  impactedDimensions String[]     @default([]) // Which rankings were affected
+  scoreChange        Float // How much the score changed
+  reason             String // Human-readable explanation
+  sourceData         Json // Original event data for context
+  
+  // Formula versioning
+  formulaVersion     String       @default("v1") // Support formula updates and replays
+  
+  // Confidence and verification
+  confidenceLevel    String       @default("UNVERIFIED") // UNVERIFIED | VERIFIED | HIGH_CONFIDENCE
+  verificationSources String[]    @default([]) // Where verification came from
+  
+  // Idempotency protection
+  processedEventId   String?      @unique // Prevent duplicate processing
+  isProcessed        Boolean      @default(false)
+  processedAt        DateTime?
+  
+  // Occurred time (when event actually happened vs when recorded)
+  occurredAt         DateTime     @default(now())
+  
+  // Explanation metadata
+  explanation        String? // Human-readable explanation
+  explanationMetadata Json? // Additional explanation details
+  
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  @@index([organizationId])
+  @@index([playerId])
+  @@index([eventType])
+  @@index([eventId])
+  @@index([formulaVersion])
+  @@index([confidenceLevel])
+  @@index([isProcessed])
+  @@index([createdAt])
+}
+
+/**
+ * IdempotencyLog
+ * Track processed events to prevent double-processing
+ * Critical for event-driven systems that may retry
+ */
+model IdempotencyLog {
+  id              String   @id @default(uuid())
+  eventId         String   @unique
+  organizationId  String
+  playerId        String
+  eventType       String
+  processingState String   @default("PROCESSING") // PROCESSING | COMPLETED | FAILED
+  resultData      Json?
+  errorMessage    String?
+  attempts        Int      @default(1)
+  lastAttemptAt   DateTime @default(now())
+  completedAt     DateTime?
+  createdAt       DateTime @default(now())
+  expiresAt       DateTime // TTL for cleanup (30 days)
+
+  @@index([organizationId])
+  @@index([playerId])
+  @@index([processingState])
+  @@index([createdAt])
+}
+
+/**
+ * RankingCalculationSnapshot
+ * Store calculated values before snapshot persistence
+ * Enables replay capability by storing calculation intermediates
+ */
+model RankingCalculationSnapshot {
+  id                 String   @id @default(uuid())
+  organizationId     String
+  playerId           String
+  formulaVersion     String
+  dimension          String // COMPETITIVE | DEVELOPMENT | ACTIVITY | OVERALL_INDEX
+  rawScore           Float
+  finalScore         Float
+  calculationDetails Json    // All intermediate calculations
+  sourceEvents       String[]  @default([]) // Event IDs used
+  calculatedAt       DateTime @default(now())
+  createdAt          DateTime @default(now())
+
+  @@index([organizationId])
+  @@index([playerId])
+  @@index([formulaVersion])
+  @@index([dimension])
+  @@index([calculatedAt])
+}
+
+/**
+ * AntiAbuseRecord
+ * Track anti-abuse violations and diminishing returns
+ */
+model AntiAbuseRecord {
+  id                 String   @id @default(uuid())
+  organizationId     String
+  playerId           String
+  abuseType          String // SPAM_ACTIVITY | SAME_OPPONENT_REPEAT | UNVERIFIED_BOOKINGS | etc
+  violationCount     Int      @default(1)
+  diminishingFactor  Float    @default(1.0) // 0.5 = 50% score reduction
+  reason             String
+  metadata           Json?
+  flaggedAt          DateTime @default(now())
+  resolvedAt         DateTime?
+  createdAt          DateTime @default(now())
+  expiresAt          DateTime // Auto-clear after period
+
+  @@index([organizationId])
+  @@index([playerId])
+  @@index([abuseType])
+  @@index([flaggedAt])
+}
+
+/**
+ * RankingExplanation
+ * Store detailed explanations for ranking changes
+ * Powers the "why did my score change?" feature
+ */
+model RankingExplanation {
+  id                 String   @id @default(uuid())
+  organizationId     String
+  playerId           String
+  dimension          String // Which ranking changed
+  title              String // User-friendly title
+  description        String // Detailed explanation
+  pointsChange       Float
+  factors            Json    // Array of contributing factors
+  relatedEventId     String? // Link to RankingEvent
+  relatedRankingId   String? // Link to ranking change
+  isNegative         Boolean @default(false)
+  importance         Int     @default(5) // 1-10 scale
+  createdAt          DateTime @default(now())
+  expiresAt          DateTime? // Keep only recent explanations
+
+  @@index([organizationId])
+  @@index([playerId])
+  @@index([dimension])
+  @@index([createdAt])
+}
+
+/**
+ * LeaderboardProjection
+ * Pre-computed optimized leaderboard views
+ * Avoids expensive ranking calculation queries
+ */
+model LeaderboardProjection {
+  id              String       @id @default(uuid())
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  leaderboardType String // GLOBAL | REGIONAL | AGE_GROUP | ORGANIZATION
+  playerId        String
+  player          Player       @relation(fields: [playerId], references: [userId], onDelete: Cascade)
+  rank            Int
+  score           Float
+  displayName     String
+  metadata        Json? // Age, region, organization, trend, etc
+  lastProjectedAt DateTime     @default(now())
+  createdAt       DateTime     @default(now())
+
+  @@unique([organizationId, leaderboardType, playerId])
+  @@index([organizationId])
+  @@index([leaderboardType])
+  @@index([rank])
+  @@index([score])
+  @@index([createdAt])
 }

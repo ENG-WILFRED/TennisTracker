@@ -725,6 +725,7 @@ export async function getOrganizationDashboard(orgManagerId: string, orgId?: str
     eventsData,
     announcementsData,
     financeData,
+    coachingRevenueData,
     courtCount,
     eventsThisMonth,
     taskStats,
@@ -819,6 +820,19 @@ export async function getOrganizationDashboard(orgManagerId: string, orgId?: str
         courtBookingRevenue: true,
       },
       orderBy: [{ year: 'asc' }, { month: 'asc' }],
+    }),
+
+    // Coaching session revenue (OrgRevenue)
+    prisma.orgRevenue.findMany({
+      where: {
+        organizationId: resolvedOrgId,
+        status: { in: ['confirmed', 'reconciled'] },
+      },
+      select: {
+        amount: true,
+        recordedAt: true,
+      },
+      orderBy: { recordedAt: 'asc' },
     }),
 
     // Court count
@@ -970,9 +984,42 @@ export async function getOrganizationDashboard(orgManagerId: string, orgId?: str
 
   // OPTIMIZED: Process finance data
   const sortedFinances = financeData;
-  const revenueTrend = sortedFinances.map((row: any) =>
-    Math.round((row.totalRevenue ?? ((row.membershipRevenue || 0) + (row.courtBookingRevenue || 0))) || 0)
-  );
+  
+  // Build month-year keys map from ClubFinance data
+  const financeByMonth: Record<string, any> = {};
+  sortedFinances.forEach((row: any) => {
+    const key = `${row.year}-${String(row.month).padStart(2, '0')}`;
+    financeByMonth[key] = {
+      membershipRevenue: row.membershipRevenue || 0,
+      courtBookingRevenue: row.courtBookingRevenue || 0,
+      clubFinanceTotal: row.totalRevenue ?? ((row.membershipRevenue || 0) + (row.courtBookingRevenue || 0)),
+    };
+  });
+
+  // Add coaching session revenue from OrgRevenue grouped by month
+  coachingRevenueData.forEach((revenue: any) => {
+    const recordedDate = new Date(revenue.recordedAt);
+    const key = `${recordedDate.getFullYear()}-${String(recordedDate.getMonth() + 1).padStart(2, '0')}`;
+    
+    if (!financeByMonth[key]) {
+      financeByMonth[key] = {
+        membershipRevenue: 0,
+        courtBookingRevenue: 0,
+        clubFinanceTotal: 0,
+        coachingRevenue: 0,
+      };
+    }
+    financeByMonth[key].coachingRevenue = (financeByMonth[key].coachingRevenue || 0) + Number(revenue.amount);
+  });
+
+  // Calculate revenue trend including all sources
+  const revenueTrend = Object.keys(financeByMonth)
+    .sort()
+    .map((key) => {
+      const data = financeByMonth[key];
+      const total = (data.clubFinanceTotal || 0) + (data.coachingRevenue || 0);
+      return Math.round(total);
+    });
 
   const revenueTotal = revenueTrend.length > 0 ? revenueTrend[revenueTrend.length - 1] : 0;
   const revenueChange = revenueTrend.length > 1

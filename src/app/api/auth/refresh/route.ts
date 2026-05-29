@@ -32,11 +32,20 @@ export async function POST(request: Request) {
     }
 
     // Verify the refresh token
-    const payload = verifyToken(refreshToken) as TokenPayload | null;
+    const payload = verifyToken(refreshToken) as any;
 
     if (!payload) {
       return new Response(
         JSON.stringify({ error: 'Invalid or expired refresh token' }),
+        { status: 401, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const userId = payload?.playerId || payload?.userId || payload?.id || payload?.sub;
+    if (!userId) {
+      console.error('Refresh token payload missing user identifier:', payload);
+      return new Response(
+        JSON.stringify({ error: 'Invalid refresh token payload' }),
         { status: 401, headers: { 'Content-Type': 'application/json' } }
       );
     }
@@ -52,7 +61,7 @@ export async function POST(request: Request) {
 
     // Generate new access token
     const newAccessToken = generateAccessToken({
-      playerId: payload.playerId,
+      playerId: userId,
       email: payload.email,
       username: payload.username,
     });

@@ -11,6 +11,7 @@ import { seedMatches } from './seeds/matches.js';
 import { seedCommunity } from './seeds/community.js';
 import { seedTournaments } from './seeds/tournaments.js';
 import { seedStats } from './seeds/stats.js';
+import { seedRankingSystem } from './seeds/ranking-system.js';
 import { seedTournamentComments } from './seeds/tournament-comments.js';
 import { seedStaffForAllOrgs } from './seeds/staff.js';
 import { seedNewStaffSystem } from './seeds/staff-new-system.js';
@@ -21,6 +22,7 @@ import { seedTournamentPlayers } from './seeds/tournament-players-seeding.js';
 import { seedKenyaPlayersAndCourts } from './seeds/kenya-tennis-seed.js';
 import { seedCoachSessions } from './seeds/coach-sessions.js';
 import { seedAdminDashboardData } from './seeds/admin-dashboard-data.js';
+import { seedMinimalOrganizations, seedMinimalUsers } from './seeds/minimal.js';
 import { PrismaClient, User } from '../src/generated/prisma/index.js';
 import {
   initializeSeedCheckpoints,
@@ -32,6 +34,7 @@ import {
 } from './seeds/seed-tracker.js';
 
 const prisma = new PrismaClient();
+const seedProfile = process.env.SEED_PROFILE || 'minimal';
 
 // Helper to wrap seed functions with error handling and tracking
 async function executeSeed<T>(
@@ -65,11 +68,83 @@ async function main() {
     console.log('🌱 TENNIS TRACKER DATABASE SEEDING');
     console.log('═══════════════════════════════════════════════════════════════');
     console.log('📋 With Checkpoint System - Only new/failed seeds will be applied');
-    console.log('   Disabled seeds (large data): tournaments, matches, payments, stats,');
-    console.log('   community, bookings, tournament-players, staff data, etc.');
-    console.log('   👉 See imports at top of file to enable/disable seeds\n');
+    console.log('   Minimal profile seeds only basic organizations and user roles.');
+    console.log('   Use SEED_PROFILE=full to execute the complete seed dataset.\n');
 
     await initializeSeedCheckpoints(prisma);
+
+    if (seedProfile === 'minimal') {
+      console.log('📍 STEP 1: Organizations');
+      console.log('───────────────────────────────────────────────────────────────');
+      const orgResult = await executeSeed('minimal-organizations', () => seedMinimalOrganizations());
+      if (!orgResult.success) throw new Error('Organizations seed must succeed');
+      const organizations = orgResult.result || (await seedMinimalOrganizations());
+
+      console.log('\n📍 STEP 2: Users & Roles');
+      console.log('───────────────────────────────────────────────────────────────');
+      const usersResult = await executeSeed('minimal-users', () => seedMinimalUsers(organizations));
+      const users = (usersResult.result || (await seedMinimalUsers(organizations))) as any[];
+
+      console.log('\n📍 STEP 3: Courts');
+      console.log('───────────────────────────────────────────────────────────────');
+      const courtsResult = await executeSeed('courts', () => seedCourts(organizations));
+      const courts = courtsResult.result || (await seedCourts(organizations));
+
+      console.log('\n📍 STEP 4: Memberships');
+      console.log('───────────────────────────────────────────────────────────────');
+      const membershipsResult = await executeSeed('memberships', () => seedMemberships(organizations, users));
+      const { tiers = [], members = [] } = membershipsResult.result || (await seedMemberships(organizations, users));
+
+      console.log('\n📍 STEP 5: Court Bookings');
+      console.log('───────────────────────────────────────────────────────────────');
+      const bookingsResult = await executeSeed('enhanced-bookings', () =>
+        seedEnhancedBookings(organizations, users, courts),
+      );
+      const enhancedBookings = bookingsResult.result ||
+        (await prisma.courtBooking.findMany({
+          where: { organizationId: { in: organizations.map((org) => org.id) } },
+        }));
+
+      console.log('\n📍 STEP 6: Matches');
+      console.log('───────────────────────────────────────────────────────────────');
+      const referees = users.filter((u) => u.referee);
+      const matchesResult = await executeSeed('matches', () => seedMatches(users, referees));
+      const playerIds = users.filter((u) => u.player).map((u) => u.id);
+      const matches = matchesResult.result ||
+        (await prisma.match.findMany({
+          where: {
+            OR: [
+              { playerAId: { in: playerIds } },
+              { playerBId: { in: playerIds } },
+            ],
+          },
+        }));
+
+      console.log('\n📍 STEP 7: Player Statistics & Rankings');
+      console.log('───────────────────────────────────────────────────────────────');
+      await executeSeed('player-stats', () => seedStats());
+
+      console.log('\n📍 STEP 8: Ranking Events');
+      console.log('───────────────────────────────────────────────────────────────');
+      await executeSeed('ranking-system', () => Promise.all(organizations.map((org) => seedRankingSystem(org.id))));
+
+      console.log('\n═══════════════════════════════════════════════════════════════');
+      console.log('✨ MINIMAL SEEDING SESSION COMPLETED!\n');
+      console.log('📊 SUMMARY:');
+      console.log(`  • Organizations: ${organizations.length}`);
+      console.log(`  • Users: ${users.length}`);
+      console.log(`  • Courts: ${courts.length}`);
+      console.log(`  • Membership Tiers: ${tiers.length}`);
+      console.log(`  • Club Members: ${members.length}`);
+      console.log(`  • Bookings: ${enhancedBookings.length}`);
+      console.log(`  • Matches: ${matches.length}`);
+      console.log('═══════════════════════════════════════════════════════════════\n');
+
+      printSeedStatusReport();
+      console.log('✨ Minimal seed complete.');
+      console.log('═══════════════════════════════════════════════════════════════\n');
+      return;
+    }
 
     // 1. Seed organizations first
     console.log('📍 STEP 1: Organizations');
@@ -140,6 +215,11 @@ async function main() {
     console.log('\n📍 STEP 11: Player Statistics & Rankings');
     console.log('───────────────────────────────────────────────────────────────');
     await executeSeed('player-stats', () => seedStats());
+
+    // 11B. Seed ranking events and leaderboard projections
+    console.log('\n📍 STEP 11B: Ranking Events');
+    console.log('───────────────────────────────────────────────────────────────');
+    await executeSeed('ranking-system', () => Promise.all(organizations.map((org) => seedRankingSystem(org.id))));
 
     // 12. Seed staff members
     console.log('\n📍 STEP 12: Staff Members');

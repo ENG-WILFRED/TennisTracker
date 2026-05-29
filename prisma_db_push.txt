@@ -1,0 +1,13 @@
+warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+For more information, see: https://pris.ly/prisma-config
+
+Environment variables loaded from .env
+Prisma schema loaded from prisma/schema.prisma
+Datasource "db": PostgreSQL database "official_vico_database", schema "public" at "dpg-d7v49v3eo5us73ear5c0-a.oregon-postgres.render.com"
+
+🚀  Your database is now in sync with your Prisma schema. Done in 20.34s
+
+Running generate... (Use --skip-generate to skip the generators)
+[2K[1A[2K[GRunning generate... - Prisma Client
+[2K[1A[2K[G✔ Generated Prisma Client (v6.19.3) to ./src/generated/prisma in 5.37s
+

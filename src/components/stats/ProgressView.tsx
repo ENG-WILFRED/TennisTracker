@@ -1,22 +1,21 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, memo } from 'react';
-import { Card, Button, colors } from '@/lib/vico-design-fallback';
 
 const G = {
-  dark: colors.inverse || colors.background,
-  sidebar: colors.surface,
-  card: colors.surfaceSecondary,
-  cardBorder: colors.border,
-  mid: colors.surfaceTertiary,
-  bright: colors.primaryHover || colors.primary,
-  lime: colors.primary,
-  accent: colors.accent,
-  text: colors.textPrimary,
-  muted: colors.textMuted,
-  yellow: colors.warning,
-  red: colors.danger,
-  blue: colors.info,
+  dark: '#0b180f',
+  sidebar: '#152915',
+  card: '#19331e',
+  cardBorder: '#2f5e33',
+  mid: '#234b28',
+  bright: '#2f6e34',
+  lime: '#7dc142',
+  accent: '#7dc142',
+  text: '#e0f0d8',
+  muted: '#91b174',
+  yellow: '#d1b943',
+  red: '#d84c4c',
+  blue: '#4ab0d0',
 };
 
 // Style constants to avoid recreating on each render
@@ -38,7 +37,7 @@ const ProgressBar = memo<{ value: number; color?: string; height?: number }>(({ 
 ));
 ProgressBar.displayName = 'ProgressBar';
 
-const StatCard = memo<{ title: string; value: string | number; subtitle?: string; color?: string }>(({ title, value, subtitle, color = G.accent }) => (
+const StatCard = memo<{ title: string; value: string | number; subtitle?: string; color?: string }>(({ title, value, subtitle, color = G.lime }) => (
   <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 8, padding: '16px 14px', textAlign: 'center' }}>
     <div style={{ fontSize: 10, color: G.muted, textTransform: 'uppercase', marginBottom: 4 }}>{title}</div>
     <div style={{ fontSize: 24, fontWeight: 900, color, marginBottom: subtitle ? 4 : 0 }}>{value}</div>
@@ -171,7 +170,7 @@ export function ProgressView({ isEmbedded = false, playerId }: ProgressViewProps
         onClick={() => setTimeframe(tf)}
         style={{
           padding: '8px 12px',
-          background: timeframe === tf ? G.lime : G.mid,
+          background: timeframe === tf ? G.lime : G.bright,
           color: timeframe === tf ? '#0f1f0f' : G.text,
           border: 'none',
           borderRadius: 6,
@@ -299,8 +298,8 @@ export function ProgressView({ isEmbedded = false, playerId }: ProgressViewProps
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 24 }}>
         <StatCard title="Matches" value={stats.totalMatches} />
         <StatCard title="Win Rate" value={`${stats.winRate.toFixed(1)}%`} color={G.lime} />
-        <StatCard title={`Rank (${stats.coachRatingsCount || 0} ratings)`} value={`#${stats.currentRank}`} color={G.blue} subtitle={stats.averageCoachRating ? `Avg: ${stats.averageCoachRating}⭐` : undefined} />
-        <StatCard title="Streak" value={stats.streak} color={G.yellow} />
+        <StatCard title={`Rank (${stats.coachRatingsCount || 0} ratings)`} value={`#${stats.currentRank}`} color={G.lime} subtitle={stats.averageCoachRating ? `Avg: ${stats.averageCoachRating}⭐` : undefined} />
+        <StatCard title="Streak" value={stats.streak} color={G.lime} />
       </div>
 
       {/* Performance Overview */}
@@ -311,11 +310,11 @@ export function ProgressView({ isEmbedded = false, playerId }: ProgressViewProps
             🎯 Performance
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <div style={{ background: G.mid, borderRadius: 6, padding: '10px 12px', textAlign: 'center' }}>
-              <div style={{ fontSize: 18, fontWeight: 700, color: G.lime }}>{stats.matchesWon}</div>
+            <div style={{ background: G.bright, borderRadius: 6, padding: '10px 12px', textAlign: 'center' }}>
+              <div style={{ fontSize: 18, fontWeight: 700, color: G.dark }}>{stats.matchesWon}</div>
               <div style={{ fontSize: 10, color: G.muted }}>Wins</div>
             </div>
-            <div style={{ background: G.mid, borderRadius: 6, padding: '10px 12px', textAlign: 'center' }}>
+            <div style={{ background: G.bright, borderRadius: 6, padding: '10px 12px', textAlign: 'center' }}>
               <div style={{ fontSize: 18, fontWeight: 700, color: G.red }}>{stats.matchesLost}</div>
               <div style={{ fontSize: 10, color: G.muted }}>Losses</div>
             </div>
@@ -359,18 +358,18 @@ export function ProgressView({ isEmbedded = false, playerId }: ProgressViewProps
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
           <div>
             <div style={{ fontSize: 12, color: G.muted, marginBottom: 6 }}>Service Accuracy</div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: G.accent, marginBottom: 4 }}>{performance.serviceAccuracy.toFixed(0)}%</div>
-            <ProgressBar value={performance.serviceAccuracy} color={G.accent} />
+            <div style={{ fontSize: 16, fontWeight: 700, color: G.lime, marginBottom: 4 }}>{performance.serviceAccuracy.toFixed(0)}%</div>
+            <ProgressBar value={performance.serviceAccuracy} color={G.lime} />
           </div>
           <div>
             <div style={{ fontSize: 12, color: G.muted, marginBottom: 6 }}>1st Serve Win Rate</div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: G.blue, marginBottom: 4 }}>{performance.firstServeWinRate.toFixed(0)}%</div>
-            <ProgressBar value={performance.firstServeWinRate} color={G.blue} />
+            <div style={{ fontSize: 16, fontWeight: 700, color: G.lime, marginBottom: 4 }}>{performance.firstServeWinRate.toFixed(0)}%</div>
+            <ProgressBar value={performance.firstServeWinRate} color={G.lime} />
           </div>
           <div>
             <div style={{ fontSize: 12, color: G.muted, marginBottom: 6 }}>Break Point Conversion</div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: G.yellow, marginBottom: 4 }}>{performance.breakPointConversion.toFixed(0)}%</div>
-            <ProgressBar value={performance.breakPointConversion} color={G.yellow} />
+            <div style={{ fontSize: 16, fontWeight: 700, color: G.lime, marginBottom: 4 }}>{performance.breakPointConversion.toFixed(0)}%</div>
+            <ProgressBar value={performance.breakPointConversion} color={G.lime} />
           </div>
           <div>
             <div style={{ fontSize: 12, color: G.muted, marginBottom: 6 }}>Aces</div>
@@ -389,14 +388,14 @@ export function ProgressView({ isEmbedded = false, playerId }: ProgressViewProps
             {monthly.map((month, i) => {
               const monthWinRate = month.matches > 0 ? (month.wins / month.matches) * 100 : 0;
               return (
-                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: G.mid, borderRadius: 6, padding: '8px 12px' }}>
-                  <div style={{ fontSize: 12, color: G.text, fontWeight: 600 }}>{month.month}</div>
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: G.bright, borderRadius: 6, padding: '8px 12px' }}>
+                  <div style={{ fontSize: 12, color: G.dark, fontWeight: 600 }}>{month.month}</div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{ fontSize: 10, color: G.muted }}>{month.matches} matches</div>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: monthWinRate >= 50 ? G.lime : G.yellow }}>
+                    <div style={{ fontSize: 10, color: G.dark }}>{month.matches} matches</div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: G.dark }}>
                       {monthWinRate.toFixed(0)}%
                     </div>
-                    <ProgressBar value={monthWinRate} height={4} color={monthWinRate >= 50 ? G.lime : G.yellow} />
+                    <ProgressBar value={monthWinRate} height={4} color={G.lime} />
                   </div>
                 </div>
               );
@@ -420,7 +419,7 @@ export function ProgressView({ isEmbedded = false, playerId }: ProgressViewProps
                 </div>
                 <ProgressBar 
                   value={typeof goal.progress === 'number' ? goal.progress : 0} 
-                  color={typeof goal.progress === 'number' && goal.progress >= 70 ? G.lime : G.accent}
+                  color={G.lime}
                   height={6}
                 />
               </div>
@@ -437,9 +436,9 @@ export function ProgressView({ isEmbedded = false, playerId }: ProgressViewProps
           </div>
           <div style={{ display: 'grid', gap: 8 }}>
             {recentMatches.slice(0, 5).map((match, i) => (
-              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: G.mid, borderRadius: 6, padding: '8px 12px' }}>
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: G.bright, borderRadius: 6, padding: '8px 12px' }}>
                 <div>
-                  <div style={{ fontSize: 12, color: G.text, fontWeight: 600 }}>{match.opponent}</div>
+                  <div style={{ fontSize: 12, color: G.dark, fontWeight: 600 }}>{match.opponent}</div>
                   <div style={{ fontSize: 10, color: G.muted }}>{match.date}</div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -474,7 +473,7 @@ export function ProgressView({ isEmbedded = false, playerId }: ProgressViewProps
               onClick={remindCoach}
               disabled={reminderState === 'sending'}
               style={{
-                background: reminderState === 'sent' ? G.blue : G.lime,
+                background: G.lime,
                 color: G.dark,
                 border: 'none',
                 borderRadius: 6,
@@ -494,10 +493,10 @@ export function ProgressView({ isEmbedded = false, playerId }: ProgressViewProps
           ) : null}
           <div style={{ display: 'grid', gap: 12 }}>
             {analytics.coachRatings.map((rating, i) => (
-              <div key={rating.id} style={{ background: G.mid, borderRadius: 6, padding: '12px' }}>
+              <div key={rating.id} style={{ background: G.bright, borderRadius: 6, padding: '12px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
                   <div>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: G.text }}>{rating.coachName}</div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: G.dark }}>{rating.coachName}</div>
                     <div style={{ fontSize: 9, color: G.muted }}>{new Date(rating.createdAt).toLocaleDateString()}</div>
                   </div>
                   <div style={{ fontSize: 18, fontWeight: 900, color: G.lime }}>{rating.overallRating.toFixed(1)} ⭐</div>
@@ -512,9 +511,9 @@ export function ProgressView({ isEmbedded = false, playerId }: ProgressViewProps
                     { label: 'Teamwork', value: rating.teamworkRating },
                   ].map((metric, idx) => (
                     metric.value && (
-                      <div key={idx} style={{ background: G.dark, borderRadius: 4, padding: '6px 8px', textAlign: 'center' }}>
+                      <div key={idx} style={{ background: G.bright, borderRadius: 4, padding: '6px 8px', textAlign: 'center' }}>
                         <div style={{ fontSize: 8, color: G.muted, marginBottom: 2 }}>{metric.label}</div>
-                        <div style={{ fontSize: 13, fontWeight: 800, color: G.yellow }}>{metric.value}</div>
+                        <div style={{ fontSize: 13, fontWeight: 800, color: G.lime }}>{metric.value}</div>
                       </div>
                     )
                   ))}
@@ -529,13 +528,13 @@ export function ProgressView({ isEmbedded = false, playerId }: ProgressViewProps
                 )}
                 {rating.areasForImprovement && (
                   <div style={{ marginBottom: 8 }}>
-                    <div style={{ fontSize: 9, fontWeight: 700, color: G.yellow, marginBottom: 3 }}>Areas for Improvement:</div>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: G.lime, marginBottom: 3 }}>Areas for Improvement:</div>
                     <div style={{ fontSize: 10, color: G.text, lineHeight: 1.4 }}>{rating.areasForImprovement}</div>
                   </div>
                 )}
                 {rating.notes && (
                   <div>
-                    <div style={{ fontSize: 9, fontWeight: 700, color: G.blue, marginBottom: 3 }}>Notes:</div>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: G.lime, marginBottom: 3 }}>Notes:</div>
                     <div style={{ fontSize: 10, color: G.muted, lineHeight: 1.4, fontStyle: 'italic' }}>{rating.notes}</div>
                   </div>
                 )}
@@ -553,7 +552,7 @@ export function ProgressView({ isEmbedded = false, playerId }: ProgressViewProps
               onClick={remindCoach}
               disabled={reminderState === 'sending'}
               style={{
-                background: reminderState === 'sent' ? G.blue : G.lime,
+                background: G.lime,
                 color: G.dark,
                 border: 'none',
                 borderRadius: 6,

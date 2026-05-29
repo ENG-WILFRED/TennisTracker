@@ -68,7 +68,7 @@ export async function authenticatedFetch(
     // If we got a 401 and haven't already retried, try to refresh the token and retry
     if (response.status === 401 && !skipRetry && requireAuth) {
       console.log(`[authenticatedFetch] Got 401 for ${url}, attempting token refresh and retry...`);
-      
+
       // Check if the response has a specific logout action
       let responseData;
       try {
@@ -76,34 +76,36 @@ export async function authenticatedFetch(
       } catch (e) {
         // Response might not be JSON
       }
-      
+
       if (responseData?.action === 'logout') {
         console.log(`[authenticatedFetch] API requested logout for ${url}`);
         clearTokens();
         if (typeof window !== 'undefined') {
-          // Redirect to login
           window.location.href = '/login';
         }
         throw new Error('Session expired');
       }
-      
+
       const refreshed = await refreshAccessToken();
       if (refreshed) {
-        // Get the new auth header and retry the request
         const newAuthHeader = await getAuthHeader();
+        console.log(`[authenticatedFetch] Token refresh succeeded for ${url}. Retrying with new access token.`);
+
         if (newAuthHeader) {
           const retryHeaders = new Headers(fetchOptions.headers);
           retryHeaders.set('Authorization', newAuthHeader);
-          
-          console.log(`[authenticatedFetch] Token refreshed successfully, retrying ${url}...`);
+
           response = await fetchWithTimeout(url, {
             ...fetchOptions,
             headers: retryHeaders,
             skipRetry: true,
           }, FETCH_TIMEOUT);
+
+          if (response.status === 401) {
+            console.warn(`[authenticatedFetch] Retry after refresh for ${url} still returned 401.`);
+          }
         }
       } else {
-        // Refresh failed, clear tokens and redirect to login
         console.log(`[authenticatedFetch] Token refresh failed for ${url}`);
         clearTokens();
         if (typeof window !== 'undefined' && window.location.pathname !== '/login') {

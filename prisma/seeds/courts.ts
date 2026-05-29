@@ -5,35 +5,30 @@ const prisma = new PrismaClient();
 export async function seedCourts(organizations: any[]) {
   console.log('🏟️ Seeding courts...\n');
 
-  const courtsData = [
-    {
-      organizationId: organizations[0].id,
-      name: 'Central Tennis Club Main Court',
-      courtNumber: 1,
-      surface: 'Hard',
-      indoorOutdoor: 'outdoor',
-      lights: true,
-      status: 'available',
-    },
-    {
-      organizationId: organizations[1].id,
-      name: 'Elite Sports Academy Main Court',
-      courtNumber: 1,
-      surface: 'Hard',
-      indoorOutdoor: 'indoor',
-      lights: true,
-      status: 'available',
-    },
-    {
-      organizationId: organizations[2].id,
-      name: 'Community Tennis Court',
-      courtNumber: 1,
-      surface: 'Hard',
-      indoorOutdoor: 'outdoor',
-      lights: false,
-      status: 'available',
-    },
-  ];
+  const surfaceOptions = ['Hard', 'Clay', 'Grass', 'Synthetic'];
+  const courtsData = organizations.flatMap((org, orgIndex) => {
+    const isIndoor = orgIndex % 2 === 1;
+    return [
+      {
+        organizationId: org.id,
+        name: `${org.name} Main Court`,
+        courtNumber: 1,
+        surface: surfaceOptions[orgIndex % surfaceOptions.length],
+        indoorOutdoor: isIndoor ? 'indoor' : 'outdoor',
+        lights: true,
+        status: 'available',
+      },
+      {
+        organizationId: org.id,
+        name: `${org.name} Practice Court`,
+        courtNumber: 2,
+        surface: surfaceOptions[(orgIndex + 1) % surfaceOptions.length],
+        indoorOutdoor: 'outdoor',
+        lights: orgIndex % 2 === 0,
+        status: 'available',
+      },
+    ];
+  });
 
   const createdCourts = [];
 
