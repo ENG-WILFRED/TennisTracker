@@ -503,6 +503,7 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
         <div className="xl:col-span-7 rounded-xl p-4" style={{ background: G.dark, border: `1px solid ${G.outerBorder}` }}>
           <RecentResults results={recentResults} />
         </div>
+      </div>
       {/* ── Coaches + Achievements + Recent Results ───────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card>

@@ -662,7 +662,7 @@ export function BookingView({ onClose, isEmbedded = false, canBook = true, organ
             {/* 1. Select Organization */}
             {organizations.length > 1 && (
               <Card style={{ background: colors.cardDarkBg, border: `1px solid ${colors.cardBorder}`, boxShadow: `0 0 0 1px ${colors.cardBorder}40, 0 18px 36px rgba(0,0,0,0.08)`, padding: 20, minHeight: 130 }}>
-                <Label style={{ color: colors.cardLabel }}>Select Organization</Label>
+                <div style={{ color: colors.cardLabel }}><Label>Select Organization</Label></div>
                 <div style={{ position: 'relative' }}>
                   <select
                     value={selectedOrgId}
