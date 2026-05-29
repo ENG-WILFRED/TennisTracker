@@ -36,19 +36,19 @@ export function DeveloperOrgList({
     <div className="space-y-4 animate-fadeIn">
       {/* Summary row */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
-        <div className="rounded-2xl border border-slate-800/70 bg-slate-900/60 p-4 text-center">
+        <div className="rounded-2xl border border-slate-800/50 bg-slate-900/60 p-4 text-center">
           <p className="text-xl sm:text-2xl font-bold text-cyan-300">{organizations.length}</p>
           <p className="text-[10px] tracking-widest uppercase text-slate-500 mt-1">Total Organizations</p>
         </div>
-        <div className="rounded-2xl border border-slate-800/70 bg-slate-900/60 p-4 text-center">
+        <div className="rounded-2xl border border-slate-800/50 bg-slate-900/60 p-4 text-center">
           <p className="text-xl sm:text-2xl font-bold text-amber-400">{pendingOrganizations.length}</p>
           <p className="text-[10px] tracking-widest uppercase text-slate-500 mt-1">Pending Approval</p>
         </div>
-        <div className="rounded-2xl border border-slate-800/70 bg-slate-900/60 p-4 text-center">
+        <div className="rounded-2xl border border-slate-800/50 bg-slate-900/60 p-4 text-center">
           <p className="text-xl sm:text-2xl font-bold text-emerald-400">{approvedOrganizations.length}</p>
           <p className="text-[10px] tracking-widest uppercase text-slate-500 mt-1">Approved</p>
         </div>
-        <div className="rounded-2xl border border-slate-800/70 bg-slate-900/60 p-4 text-center">
+        <div className="rounded-2xl border border-slate-800/50 bg-slate-900/60 p-4 text-center">
           <p className="text-xl sm:text-2xl font-bold text-red-400">{suspendedOrganizations.length}</p>
           <p className="text-[10px] tracking-widest uppercase text-slate-500 mt-1">Suspended</p>
         </div>
@@ -56,7 +56,7 @@ export function DeveloperOrgList({
 
       <div className="space-y-4">
         {organizations.length === 0 ? (
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-8 text-center text-slate-500 text-sm">
+          <div className="rounded-2xl border border-slate-800/60 bg-slate-900/50 p-8 text-center text-slate-500 text-sm">
             No organizations registered yet.
           </div>
         ) : (

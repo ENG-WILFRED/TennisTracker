@@ -14,6 +14,7 @@ import { RefereeDashboard } from '@/components/dashboards/referee/RefereeDashboa
 import { OrganizationDashboard } from '@/components/dashboards/OrganizationDashboard';
 import { SpectatorDashboard } from '@/components/dashboards/spectator';
 import { DeveloperDashboard } from '@/components/dashboards/DeveloperDashboard';
+import { colors } from '@vico/design-system';
 
 export default function DashboardPage() {
   const { currentRole, isRoleLoaded } = useRole();
@@ -34,6 +35,8 @@ export default function DashboardPage() {
 
   // Render role-specific dashboard
   return (
+    <div className="min-h-screen bg-vico-surface" style={{ background: colors.surface }}>
+      <div className="max-w-full mx-auto px-0">
     <div className={`min-h-screen py-8 ${currentRole === 'coach' ? 'bg-[#0f1e0f]' : 'bg-gradient-to-br from-green-50 to-green-100'}`}>
       <div className={`${currentRole === 'spectator' ? 'w-full mx-auto px-0' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'}`}>
         {user?.profileComplete === false && (

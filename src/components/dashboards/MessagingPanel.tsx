@@ -549,7 +549,7 @@ export default function MessagingPanel({ userId, userType }: { userId: string; u
                       {isOnline && (
                         <div style={{
                           position: 'absolute', bottom: 1, right: 1,
-                          width: 9, height: 9, background: '#4cd964',
+                          width: 9, height: 9, background: G.lime,
                           borderRadius: '50%', border: `2px solid ${G.sidebar}`,
                         }} />
                       )}
@@ -604,9 +604,9 @@ export default function MessagingPanel({ userId, userType }: { userId: string; u
                 {isConnected ? 'Connected' : 'Reconnecting...'}
               </div>
             </div>
-            <span style={{
+                      <span style={{
               fontSize: 9, fontWeight: 700, padding: '3px 8px', borderRadius: 20,
-              background: 'rgba(76,217,100,.12)', border: '1px solid rgba(76,217,100,.3)', color: '#4cd964',
+              background: `rgba(${hexToRgb(colors.primary)},.12)`, border: `1px solid rgba(${hexToRgb(colors.primary)},.3)`, color: colors.primary,
             }}>
               ● Active
             </span>
@@ -634,17 +634,17 @@ export default function MessagingPanel({ userId, userType }: { userId: string; u
                   }}>
                     {activeChat?.personInitial}
                   </div>
-                  {activeChat && userStatuses.get(activeChat.id) && (
-                    <div style={{
-                      position: 'absolute', bottom: 1, right: 1,
-                      width: 8, height: 8, background: '#4cd964',
-                      borderRadius: '50%', border: `2px solid ${G.sidebar}`,
-                    }} />
-                  )}
+                    {activeChat && userStatuses.get(activeChat.id) && (
+                      <div style={{
+                        position: 'absolute', bottom: 1, right: 1,
+                        width: 8, height: 8, background: G.lime,
+                        borderRadius: '50%', border: `2px solid ${G.sidebar}`,
+                      }} />
+                    )}
                 </div>
                 <div>
                   <div style={{ fontSize: 13, fontWeight: 800, color: G.text }}>{activeChat?.personName}</div>
-                  <div style={{ fontSize: 10, fontWeight: 600, marginTop: 2, color: activeChat && userStatuses.get(activeChat.id) ? '#4cd964' : G.muted }}>
+                  <div style={{ fontSize: 10, fontWeight: 600, marginTop: 2, color: activeChat && userStatuses.get(activeChat.id) ? G.lime : G.muted }}>
                     {activeChat && userStatuses.get(activeChat.id) ? '● Online' : '○ Offline'}
                   </div>
                 </div>

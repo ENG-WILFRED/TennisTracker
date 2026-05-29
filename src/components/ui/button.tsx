@@ -1,16 +1,18 @@
 import React from 'react';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
+  href?: string;
+  variant?: 'default' | 'primary' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
   size?: 'default' | 'sm' | 'lg' | 'icon';
 }
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className = '', variant = 'default', size = 'default', ...props }, ref) => {
+  ({ className = '', href, variant = 'default', size = 'default', ...props }, ref) => {
     const baseClasses = 'inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background';
 
     const variantClasses = {
       default: 'bg-primary text-primary-foreground hover:bg-primary/90',
+      primary: 'bg-primary text-primary-foreground hover:bg-primary/90',
       destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
       outline: 'border border-input hover:bg-accent hover:text-accent-foreground',
       secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
@@ -25,12 +27,18 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       icon: 'h-10 w-10',
     };
 
+    const classNames = `${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${className}`;
+
+    if (href) {
+      return (
+        <a href={href} className={classNames} {...(props as React.AnchorHTMLAttributes<HTMLAnchorElement>)}>
+          {props.children}
+        </a>
+      );
+    }
+
     return (
-      <button
-        className={`${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
-        ref={ref}
-        {...props}
-      />
+      <button className={classNames} ref={ref} {...props} />
     );
   }
 );

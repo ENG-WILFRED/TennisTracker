@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { renderPdfFromHtml } from '@document-kit';
 
 interface Analytics {
   playerId: string;
@@ -437,35 +438,16 @@ export async function POST(
 
     // Try to import puppeteer for server-side PDF generation
     try {
-      const puppeteer = await import('puppeteer');
-      
-      const browser = await puppeteer.launch({
-        headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox'],
-      });
+      const pdfBuffer = await renderPdfFromHtml(htmlContent, { format: 'A4' });
 
-      const page = await browser.newPage();
-      await page.setContent(htmlContent);
-
-      const pdfBuffer = await page.pdf({
-        format: 'A4',
-        margin: { top: 20, right: 20, bottom: 20, left: 20 },
-      });
-
-      await browser.close();
-
-      const buffer = Buffer.from(pdfBuffer as any);
-
-      return new NextResponse(buffer, {
+      return new NextResponse(Buffer.from(pdfBuffer), {
         headers: {
           'Content-Type': 'application/pdf',
           'Content-Disposition': `attachment; filename="player-analytics-${playerId}-${new Date().toISOString().split('T')[0]}.pdf"`,
         },
       });
     } catch (error) {
-      console.log('Puppeteer not available, returning HTML instead:', error);
-      
-      // Fallback: return HTML that can be printed to PDF by the browser
+      console.log('Renderer not available, returning HTML instead:', error);
       return new NextResponse(htmlContent, {
         headers: {
           'Content-Type': 'text/html;charset=utf-8',

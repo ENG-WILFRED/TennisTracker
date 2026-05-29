@@ -659,7 +659,7 @@ export default function CourtDetailPage() {
   // ─── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen bg-court-dark px-4 py-6 sm:px-6 lg:px-8" style={{ background: G.dark, minHeight: '100vh' }}>
+    <div className="min-h-screen bg-vico-dark px-4 py-6 sm:px-6 lg:px-8" style={{ background: G.dark, minHeight: '100vh' }}>
       <div className="mx-auto" style={{ margin: '0 auto' }}>
 
         {/* Toast */}

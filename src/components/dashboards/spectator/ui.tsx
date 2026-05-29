@@ -127,7 +127,7 @@ export function ActionBtn({
     <button
       onClick={onClick}
       disabled={disabled}
-      className={`${fullWidth ? 'w-full' : ''} rounded-xl px-4 py-2.5 text-sm font-bold transition-opacity cursor-pointer ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-90 active:scale-[.98]'} ${className}`}
+      className={`${fullWidth ? 'w-full' : ''} rounded-xl px-4 py-2.5 text-sm font-bold transition-opacity cursor-pointer ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-95 active:scale-[.98]'} ${className}`}
       style={styles[variant]}
     >
       {children}

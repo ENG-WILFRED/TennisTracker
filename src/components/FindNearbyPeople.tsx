@@ -230,10 +230,10 @@ export const FindNearbyPeople: React.FC<FindNearbyPeopleProps> = ({
       {/* Header */}
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-2.5">
-          <MapPin className="w-4 h-4" style={{ color: colors.primary }} />
+          <MapPin className="w-4 h-4 text-vico-primary" />
           <h2 className="text-sm font-semibold tracking-widest uppercase text-white/70">Find Players Near You</h2>
         </div>
-        {loading && <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: colors.primary }} />}
+        {loading && <span className="w-1.5 h-1.5 rounded-full animate-pulse bg-vico-primary" />}
       </div>
 
       {/* Search inputs */}
@@ -273,7 +273,7 @@ export const FindNearbyPeople: React.FC<FindNearbyPeopleProps> = ({
         <Button
           onClick={() => fetchNearbyPeople('radius')} disabled={loading}
           variant="primary" size="md"
-          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}
+          className="flex items-center justify-center gap-2.5"
         >
           <Target className="w-3.5 h-3.5" />
           {loading ? 'Searching…' : `${radiusKm} km`}
@@ -281,7 +281,7 @@ export const FindNearbyPeople: React.FC<FindNearbyPeopleProps> = ({
         <Button
           onClick={() => fetchNearbyPeople('nearest')} disabled={loading}
           variant="secondary" size="md"
-          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}
+          className="flex items-center justify-center gap-2.5"
         >
           <Zap className="w-3.5 h-3.5" />
           Nearest
@@ -289,7 +289,7 @@ export const FindNearbyPeople: React.FC<FindNearbyPeopleProps> = ({
         <Button
           onClick={() => fetchNearbyPeople('location')} disabled={loading}
           variant="secondary" size="md"
-          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}
+          className="flex items-center justify-center gap-2.5"
         >
           <MapPin className="w-3.5 h-3.5" />
           By city

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { Button } from '../../ui/button';
 import toast from 'react-hot-toast';
 
 const G = {
@@ -278,119 +279,45 @@ export default function OrganizationPlayersSection({ orgId, coachUserId }: Organ
         {/* Action Buttons */}
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
           {/* View Profile Button */}
-          <Link
+          <Button
             href={`/players/profile/${player.userId}`}
-            style={{
-              background: G.blue,
-              color: G.text,
-              border: 'none',
-              borderRadius: 6,
-              padding: '8px 12px',
-              fontSize: 11,
-              fontWeight: 600,
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-              transition: 'background 0.2s',
-              textDecoration: 'none',
-              display: 'inline-block',
-            }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLAnchorElement).style.background = '#5ab5d8';
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLAnchorElement).style.background = G.blue;
-            }}
+            variant="secondary"
+            style={{ padding: '8px 12px', fontSize: 11, fontWeight: 600 }}
           >
             👤 Profile
-          </Link>
+          </Button>
 
           {/* Message Button - Always show */}
-          <button
+          <Button
             onClick={() => handleSendMessage(player.id, player.email)}
             disabled={sendingMessage === player.id}
-            style={{
-              background: sendingMessage === player.id ? G.muted : G.bright,
-              color: G.text,
-              border: 'none',
-              borderRadius: 6,
-              padding: '8px 12px',
-              fontSize: 11,
-              fontWeight: 600,
-              cursor: sendingMessage === player.id ? 'not-allowed' : 'pointer',
-              whiteSpace: 'nowrap',
-              transition: 'background 0.2s',
-            }}
-            onMouseEnter={(e) => {
-              if (sendingMessage !== player.id) {
-                (e.target as HTMLButtonElement).style.background = G.lime;
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (sendingMessage !== player.id) {
-                (e.target as HTMLButtonElement).style.background = G.bright;
-              }
-            }}
+            variant="primary"
+            style={{ padding: '8px 12px', fontSize: 11, fontWeight: 600, background: sendingMessage === player.id ? G.muted : undefined }}
           >
             {sendingMessage === player.id ? '⏳...' : '💬 Message'}
-          </button>
+          </Button>
 
           {/* View Analytics Button - Show for managed players */}
           {showManageButton && (
-            <button
+            <Button
               onClick={() => loadAnalytics(player)}
-              style={{
-                background: G.bright,
-                color: G.text,
-                border: 'none',
-                borderRadius: 6,
-                padding: '8px 12px',
-                fontSize: 11,
-                fontWeight: 600,
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                transition: 'background 0.2s',
-              }}
-              onMouseEnter={(e) => {
-                (e.target as HTMLButtonElement).style.background = G.lime;
-              }}
-              onMouseLeave={(e) => {
-                (e.target as HTMLButtonElement).style.background = G.bright;
-              }}
+              variant="primary"
+              style={{ padding: '8px 12px', fontSize: 11, fontWeight: 600, background: G.bright }}
             >
               📊 Analytics
-            </button>
+            </Button>
           )}
 
           {/* Recruit Button - Show for "All Players" tab when not already managed */}
           {!showManageButton && !managedPlayers.some((mp) => mp.id === player.id) && (
-            <button
+            <Button
               onClick={() => handleRecruitPlayer(player.id, `${player.firstName} ${player.lastName}`)}
               disabled={recruiting === player.id}
-              style={{
-                background: recruiting === player.id ? G.muted : '#2d7a32',
-                color: G.text,
-                border: 'none',
-                borderRadius: 6,
-                padding: '8px 12px',
-                fontSize: 11,
-                fontWeight: 600,
-                cursor: recruiting === player.id ? 'not-allowed' : 'pointer',
-                whiteSpace: 'nowrap',
-                transition: 'background 0.2s',
-              }}
-              onMouseEnter={(e) => {
-                if (recruiting !== player.id) {
-                  (e.target as HTMLButtonElement).style.background = '#3a9a42';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (recruiting !== player.id) {
-                  (e.target as HTMLButtonElement).style.background = '#2d7a32';
-                }
-              }}
+              variant="primary"
+              style={{ padding: '8px 12px', fontSize: 11, fontWeight: 600, background: recruiting === player.id ? G.muted : undefined }}
             >
               {recruiting === player.id ? '⏳...' : '✚ Recruit'}
-            </button>
+            </Button>
           )}
         </div>
       </div>

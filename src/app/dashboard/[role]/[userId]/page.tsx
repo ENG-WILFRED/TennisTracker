@@ -12,6 +12,7 @@ import { RefereeDashboard } from '@/components/dashboards/referee/RefereeDashboa
 import { OrganizationDashboard } from '@/components/dashboards/OrganizationDashboard';
 import { SpectatorDashboard } from '@/components/dashboards/spectator';
 import { DeveloperDashboard } from '@/components/dashboards/DeveloperDashboard';
+import { colors } from '@vico/design-system';
 import { MemberDashboard } from '@/components/dashboards/MemberDashboard';
 import { UserRole } from '@/config/roles';
 

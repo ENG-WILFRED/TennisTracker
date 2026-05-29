@@ -6,6 +6,8 @@ import { useAuth } from '@/context/AuthContext';
 import { getAvailableTimeSlots, getPlayerBookings } from '@/actions/bookings';
 import { processMPesaPayment, processPayPalPayment, processStripePayment } from '@/actions/payments';
 import { formatKenyanMobileNumber } from '@/lib/phone';
+import { authenticatedFetch } from '@/lib/authenticatedFetch';
+import { downloadUnifiedPDF } from '@/actions/downloads/downloadPDF';
 
 const G = {
   dark: '#0f1f0f', sidebar: '#152515', card: '#1a3020', cardBorder: '#2d5a35',
@@ -46,6 +48,9 @@ function BookingDetailsContent() {
   const courtId = params.get('court');
   const orgId = params.get('org');
   const matchType = params.get('type') || 'singles';
+  const paymentSuccessParam = params.get('success');
+  const bookingIdParam = params.get('bookingId');
+  const transactionIdParam = params.get('transactionId');
 
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [timeSlots, setTimeSlots] = useState<any[]>([]);
@@ -59,10 +64,36 @@ function BookingDetailsContent() {
   const [processing, setProcessing] = useState(false);
   const [paymentError, setPaymentError] = useState<string>('');
   const [paymentSuccess, setPaymentSuccess] = useState<string>('');
+  const [paymentStatus, setPaymentStatus] = useState<'idle' | 'checking' | 'success' | 'failed'>('idle');
+  const [paymentMetadata, setPaymentMetadata] = useState<any>(null);
+  const [successTransactionId, setSuccessTransactionId] = useState<string | null>(null);
+  const [gatepassDownloading, setGatepassDownloading] = useState(false);
+  const [gatepassError, setGatepassError] = useState<string>('');
+  const [buttonLoading, setButtonLoading] = useState<'none' | 'dashboard' | 'bookNew'>('none');
   const [upcomingBookings, setUpcomingBookings] = useState<any[]>([]);
   const [upcomingLoading, setUpcomingLoading] = useState(false);
   const [summaryOpen, setSummaryOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [bookingConfirmed, setBookingConfirmed] = useState(false);
+  const [confirmedBooking, setConfirmedBooking] = useState<any>(null);
+  const [membershipDiscount, setMembershipDiscount] = useState<number>(0);
+  const [membershipName, setMembershipName] = useState<string>('');
+
+  // Calculate total price based on selected slot price and membership discount
+  const selectedSlotEntry = timeSlots.find(slot => slot.time === selectedSlot);
+  const hourlyRate = selectedSlotEntry?.price ?? 45;
+  const totalPrice = hourlyRate * duration;
+  const discountedPrice = Math.round(totalPrice - (totalPrice * membershipDiscount / 100));
+  const bookingCompleted = paymentStatus === 'success' || bookingConfirmed;
+  const bookingCourtName = paymentMetadata?.court || courtName;
+  const chargedAmount = paymentMetadata?.price != null
+    ? paymentMetadata.price
+    : paymentMetadata?.originalAmount != null && paymentMetadata?.discountAmount != null
+      ? paymentMetadata.originalAmount - paymentMetadata.discountAmount
+      : discountedPrice;
+  const dashboardBase = user ? `/dashboard/player/${user.id}` : '/dashboard/player';
+  const bookNewCourtUrl = `${dashboardBase}?booking=true`;
+  const showSuccessOnly = paymentSuccessParam === 'true';
 
   // Mobile detection
   React.useEffect(() => {
@@ -79,6 +110,28 @@ function BookingDetailsContent() {
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  // Fetch membership discount info
+  useEffect(() => {
+    const fetchMembershipDiscount = async () => {
+      if (!user || !orgId) return;
+      try {
+        const response = await authenticatedFetch(`/api/memberships/discount?org=${orgId}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.discountPercentage) {
+            setMembershipDiscount(data.discountPercentage);
+            setMembershipName(data.membershipName || 'Member');
+          }
+        } else {
+          console.error('Membership discount request failed:', response.status, response.statusText);
+        }
+      } catch (error) {
+        console.error('Failed to fetch membership discount:', error);
+      }
+    };
+    fetchMembershipDiscount();
+  }, [user, orgId]);
 
   // Fetch court details
   useEffect(() => {
@@ -101,6 +154,100 @@ function BookingDetailsContent() {
     };
     fetchCourtName();
   }, [courtId]);
+
+  // Handle Stripe return to booking details page and load payment metadata
+  useEffect(() => {
+    if (paymentSuccessParam !== 'true') {
+      return;
+    }
+
+    if (!transactionIdParam) {
+      setPaymentStatus('failed');
+      setPaymentError('Missing transaction ID for payment confirmation');
+      return;
+    }
+
+    let pollInterval: ReturnType<typeof setInterval> | null = null;
+    let attempts = 0;
+    const maxAttempts = 20;
+
+    const loadPaymentStatus = async () => {
+      try {
+        setPaymentStatus('checking');
+        setPaymentError('');
+        setSuccessTransactionId(transactionIdParam);
+
+        const result = await getPaymentStatus(transactionIdParam);
+
+        if (!result.success) {
+          setPaymentStatus('failed');
+          setPaymentError(result.error || 'Could not verify payment status');
+          return true;
+        }
+
+        if (!result.isCompleted) {
+          attempts += 1;
+          if (attempts >= maxAttempts) {
+            setPaymentStatus('failed');
+            setPaymentError('Payment confirmation timed out. Please check your booking dashboard.');
+            return true;
+          }
+          return false;
+        }
+
+        const metadata = result.metadata || {};
+        setPaymentMetadata(metadata);
+        setPaymentStatus('success');
+
+        const start = metadata.startTime ? new Date(metadata.startTime) : null;
+        const end = metadata.endTime ? new Date(metadata.endTime) : null;
+        const dateString = start ? start.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) : new Date(selectedDate).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+
+        setConfirmedBooking({
+          court: courtName,
+          date: dateString,
+          startTime: start ? `${String(start.getHours()).padStart(2, '0')}:${String(start.getMinutes()).padStart(2, '0')}` : selectedSlot,
+          endTime: end ? `${String(end.getHours()).padStart(2, '0')}:${String(end.getMinutes()).padStart(2, '0')}` : undefined,
+          duration: metadata.duration || duration,
+          originalPrice: metadata.originalAmount ?? totalPrice,
+          price: metadata.discountAmount != null ? metadata.originalAmount - metadata.discountAmount : discountedPrice,
+          discount: metadata.discountPercentage || 0,
+          discountAmount: metadata.discountAmount || 0,
+          membershipName: metadata.membershipName || membershipName,
+          paymentMethod: 'Card',
+          status: 'confirmed',
+          matchType: metadata.matchType || matchType,
+        });
+        setBookingConfirmed(true);
+        return true;
+      } catch (error: any) {
+        setPaymentStatus('failed');
+        setPaymentError(error?.message || 'Failed to verify payment status');
+        return true;
+      }
+    };
+
+    const checkStatus = async () => {
+      const done = await loadPaymentStatus();
+      if (!done) {
+        pollInterval = setInterval(async () => {
+          const finished = await loadPaymentStatus();
+          if (finished && pollInterval) {
+            clearInterval(pollInterval);
+            pollInterval = null;
+          }
+        }, 2000);
+      }
+    };
+
+    checkStatus();
+
+    return () => {
+      if (pollInterval) {
+        clearInterval(pollInterval);
+      }
+    };
+  }, [paymentSuccessParam, transactionIdParam, courtName, duration, discountedPrice, matchType, membershipName, selectedDate, selectedSlot, totalPrice]);
 
   // Fetch time slots
   useEffect(() => {
@@ -180,12 +327,16 @@ function BookingDetailsContent() {
         matchType,
         notes,
         duration,
+        originalAmount: totalPrice,
+        discountPercentage: membershipDiscount,
+        discountAmount: totalPrice - discountedPrice,
+        membershipName,
       };
 
       if (paymentMethod === 'mpesa') {
         paymentResult = await processMPesaPayment(
           mobileNumber,
-          totalPrice,
+          discountedPrice,
           `BOOKING-${courtId.slice(0, 8)}`,
           'Court Booking Payment',
           user.id,
@@ -195,7 +346,7 @@ function BookingDetailsContent() {
         );
       } else if (paymentMethod === 'paypal') {
         paymentResult = await processPayPalPayment(
-          totalPrice,
+          discountedPrice,
           'usd',
           user.id,
           courtId,
@@ -204,16 +355,14 @@ function BookingDetailsContent() {
         );
       } else if (paymentMethod === 'stripe') {
         paymentResult = await processStripePayment(
-          totalPrice,
+          discountedPrice,
           'usd',
           user.id,
           courtId,
           'court_booking',
           bookingMetadata,
-          window.location.href,
-          window.location.href,
-          undefined,
-          window.location.href
+          typeof window !== 'undefined' ? window.location.href : undefined,
+          typeof window !== 'undefined' ? window.location.href : undefined
         );
       }
 
@@ -225,9 +374,32 @@ function BookingDetailsContent() {
 
       if (paymentMethod === 'mpesa') {
         setPaymentSuccess('📱 STK push sent! Enter your PIN on your phone');
+        // Store booking confirmation data
+        const [hours, minutes] = selectedSlot.split(':').map(Number);
+        const startTime = new Date(selectedDate);
+        startTime.setHours(hours, minutes, 0, 0);
+        const endTime = new Date(startTime);
+        endTime.setHours(endTime.getHours() + duration);
+        setConfirmedBooking({
+          court: courtName,
+          date: new Date(selectedDate).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }),
+          startTime: selectedSlot,
+          endTime: `${String(endTime.getHours()).padStart(2, '0')}:${String(endTime.getMinutes()).padStart(2, '0')}`,
+          duration,
+          originalPrice: totalPrice,
+          price: discountedPrice,
+          discount: membershipDiscount,
+          discountAmount: totalPrice - discountedPrice,
+          membershipName,
+          paymentMethod: 'M-Pesa',
+          status: 'confirmed',
+          matchType
+        });
+        setBookingConfirmed(true);
         setTimeout(() => {
+          // After showing confirmation, redirect to bookings
           router.push(`/dashboard/player/${user.id}?tab=myBookings`);
-        }, 2000);
+        }, 5000);
         return;
       } 
       
@@ -262,8 +434,14 @@ function BookingDetailsContent() {
           setProcessing(false);
           return;
         }
-        
-        setPaymentSuccess('Stripe checkout initiated. Redirecting to secure payment page...');
+
+        // Show retry feedback if retries were attempted
+        if (paymentResult.retriesAttempted && paymentResult.retriesAttempted > 0) {
+          setPaymentSuccess(`⚠️ Payment gateway was slow, retried ${paymentResult.retriesAttempted} time(s). Redirecting to secure payment page...`);
+        } else {
+          setPaymentSuccess('Stripe checkout initiated. Redirecting to secure payment page...');
+        }
+
         setProcessing(false);
         setTimeout(() => {
           window.location.href = paymentResult.checkoutUrl;
@@ -278,10 +456,107 @@ function BookingDetailsContent() {
     }
   };
 
-  const totalPrice = 45 * duration;
+  if (showSuccessOnly) {
+    return (
+      <div className="w-full min-h-screen p-6 bg-[#0f1f0f] flex items-center justify-center">
+        <div className="w-full max-w-3xl rounded-[32px] border border-[#2d5a35] bg-[#101e14] p-8 text-[#e8f5e0] shadow-2xl">
+          <div className="mb-6 inline-flex h-16 w-16 items-center justify-center rounded-full bg-[#152515]">
+            <span className="text-3xl" style={{ color: G.lime }}>✓</span>
+          </div>
+          <p className="text-xs uppercase tracking-[0.35em] text-[#7aaa6a] mb-4">Booking Confirmation</p>
+          <h1 className="text-4xl font-black leading-tight mb-4" style={{ color: G.lime }}>Your court booking is confirmed</h1>
+          <p className="text-sm text-[#c9dfb8] mb-8">
+            Your booking for <span className="font-semibold text-[#e8f5e0]">{bookingCourtName}</span> is confirmed. You paid <span className="font-semibold text-[#e8f5e0]">${chargedAmount}</span> after discount.
+          </p>
+
+          <div className="grid gap-4 md:grid-cols-3 mb-8">
+            <div className="rounded-3xl border border-[#2d5a35] bg-[#152515] p-5">
+              <p className="text-[11px] uppercase tracking-[0.25em] text-[#7aaa6a] mb-2">Court</p>
+              <p className="font-semibold text-sm text-[#e8f5e0]">{bookingCourtName}</p>
+            </div>
+            <div className="rounded-3xl border border-[#2d5a35] bg-[#152515] p-5">
+              <p className="text-[11px] uppercase tracking-[0.25em] text-[#7aaa6a] mb-2">Amount</p>
+              <p className="font-semibold text-sm text-[#e8f5e0]">${chargedAmount}</p>
+            </div>
+            <div className="rounded-3xl border border-[#2d5a35] bg-[#152515] p-5">
+              <p className="text-[11px] uppercase tracking-[0.25em] text-[#7aaa6a] mb-2">Status</p>
+              <p className="font-semibold text-sm text-[#7dc142]">Confirmed by staff</p>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
+            <button
+              onClick={() => {
+                setButtonLoading('bookNew');
+                router.push(bookNewCourtUrl);
+              }}
+              disabled={buttonLoading !== 'none'}
+              className="rounded-full bg-[#7dc142] px-6 py-3 text-sm font-black text-[#081a08] transition-all flex-1 min-w-[140px] disabled:opacity-60"
+            >
+              {buttonLoading === 'bookNew' ? 'Loading…' : 'Book a new court'}
+            </button>
+            <button
+              onClick={() => {
+                setButtonLoading('dashboard');
+                router.push(dashboardBase);
+              }}
+              disabled={buttonLoading !== 'none'}
+              className="rounded-full border border-[#7dc142] px-6 py-3 text-sm font-black text-[#7dc142] transition-all flex-1 min-w-[140px] disabled:opacity-60"
+            >
+              {buttonLoading === 'dashboard' ? 'Loading…' : 'Back to dashboard'}
+            </button>
+            <button
+              onClick={async () => {
+                if (!paymentMetadata?.bookingId) return;
+                setGatepassDownloading(true);
+                setGatepassError('');
+                try {
+                  await downloadUnifiedPDF({
+                    kind: 'bookingGatepass',
+                    bookingId: paymentMetadata.bookingId,
+                    filename: `VicoTennis_Gatepass_${paymentMetadata.bookingId}.pdf`,
+                  });
+                } catch (downloadError: any) {
+                  console.error('Gatepass download error:', downloadError);
+                  setGatepassError(downloadError?.message || 'Could not download gatepass');
+                } finally {
+                  setGatepassDownloading(false);
+                }
+              }}
+              disabled={!paymentMetadata?.bookingId || gatepassDownloading}
+              className="rounded-full bg-[#152515] border border-[#7dc142] px-6 py-3 text-sm font-black text-[#7dc142] transition-all flex-1 min-w-[140px] disabled:opacity-50"
+            >
+              {gatepassDownloading ? 'Downloading…' : 'Download gatepass'}
+            </button>
+          </div>
+
+          {gatepassError && (
+            <p className="text-sm text-[#f2b8b8] mb-4">{gatepassError}</p>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="w-full min-h-screen p-4 md:p-6 relative" style={{ backgroundColor: G.dark, color: G.text }}>
+    <>
+      {confirmedBooking && (
+        <div className="bg-[#152515] rounded-lg p-6 mb-6 space-y-2 text-left">
+          <div className="flex justify-between items-center pb-2" style={{ borderBottomColor: G.cardBorder, borderBottomWidth: '1px' }}>
+            <span style={{ color: G.muted }}>Base Price</span>
+            <span className="font-bold">${confirmedBooking.originalPrice}</span>
+          </div>
+          {confirmedBooking.discount > 0 && (
+            <div className="flex justify-between items-center pb-2" style={{ borderBottomColor: `${G.lime}40`, borderBottomWidth: '1px' }}>
+              <span style={{ color: G.lime }}>{confirmedBooking.membershipName} Discount ({confirmedBooking.discount}%)</span>
+              <span className="font-bold" style={{ color: G.lime }}>-${confirmedBooking.discountAmount}</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Price */}
+      <div className="w-full min-h-screen p-4 md:p-6 relative" style={{ backgroundColor: G.dark, color: G.text }}>
       {/* Mobile Summary Overlay */}
       {isMobile && summaryOpen && (
         <div 
@@ -295,11 +570,11 @@ function BookingDetailsContent() {
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-4">
             <button
-              onClick={() => router.back()}
-              className="text-lg transition-colors hover:opacity-80"
+              onClick={() => router.push('/app/courts')}
+              className="text-lg transition-colors hover:opacity-95"
               style={{ color: G.lime }}
             >
-              ← Back
+              ← Back to Courts
             </button>
             {/* Mobile Summary Toggle Button */}
             {isMobile && selectedSlot && (
@@ -561,11 +836,29 @@ function BookingDetailsContent() {
                 </div>
 
                 {/* Total Price */}
-                <div className="flex justify-between items-center py-4 px-3 rounded-lg mb-5" style={{ backgroundColor: G.sidebar, borderColor: G.cardBorder, borderWidth: '1px' }}>
-                  <span className="text-xs font-bold" style={{ color: G.muted }}>TOTAL PRICE</span>
-                  <span className="text-2xl font-black" style={{ color: G.lime }}>
-                    ${totalPrice}
-                  </span>
+                <div className="space-y-3 mb-5">
+                  {membershipDiscount > 0 && (
+                    <div className="flex justify-between items-center py-2 px-3 rounded-lg" style={{ backgroundColor: `${G.lime}20`, borderColor: G.lime, borderWidth: '1px' }}>
+                      <span className="text-xs font-bold" style={{ color: G.lime }}>Base Price</span>
+                      <span className="text-sm font-semibold" style={{ color: G.lime }}>
+                        ${totalPrice}
+                      </span>
+                    </div>
+                  )}
+                  {membershipDiscount > 0 && (
+                    <div className="flex justify-between items-center py-2 px-3 rounded-lg" style={{ backgroundColor: `${G.lime}10`, borderColor: G.lime, borderWidth: '1px' }}>
+                      <span className="text-xs font-bold" style={{ color: G.lime }}>{membershipName} Discount ({membershipDiscount}%)</span>
+                      <span className="text-sm font-semibold" style={{ color: G.lime }}>
+                        -${totalPrice - discountedPrice}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex justify-between items-center py-4 px-3 rounded-lg" style={{ backgroundColor: G.sidebar, borderColor: G.cardBorder, borderWidth: '1px' }}>
+                    <span className="text-xs font-bold" style={{ color: G.muted }}>{membershipDiscount > 0 ? 'FINAL PRICE' : 'TOTAL PRICE'}</span>
+                    <span className="text-2xl font-black" style={{ color: G.lime }}>
+                      ${discountedPrice}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Payment Method Selection */}
@@ -646,19 +939,26 @@ function BookingDetailsContent() {
                 {/* CTA Button */}
                 <button
                   disabled={
-                  !selectedSlot ||
-                  !paymentMethod ||
-                  processing ||
-                  (paymentMethod === 'mpesa' && !formatKenyanMobileNumber(mobileNumber).normalized)
-                }
+                    bookingCompleted ||
+                    !selectedSlot ||
+                    !paymentMethod ||
+                    processing ||
+                    (paymentMethod === 'mpesa' && !formatKenyanMobileNumber(mobileNumber).normalized)
+                  }
                   onClick={handlePayment}
                   className="w-full py-4 rounded-lg font-black text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{
-                    backgroundColor: selectedSlot && paymentMethod ? G.lime : G.mid,
-                    color: selectedSlot && paymentMethod ? G.dark : G.muted,
+                    backgroundColor: bookingCompleted ? G.mid : selectedSlot && paymentMethod ? G.lime : G.mid,
+                    color: bookingCompleted ? G.muted : selectedSlot && paymentMethod ? G.dark : G.muted,
                   }}
                 >
-                  {processing ? '⏳ Processing...' : selectedSlot && paymentMethod ? `✓ Pay $${totalPrice} via ${paymentMethod.toUpperCase()}` : 'Select time & payment method'}
+                  {processing
+                    ? '⏳ Processing...'
+                    : bookingCompleted
+                      ? 'Booking confirmed'
+                      : selectedSlot && paymentMethod
+                        ? `✓ Pay $${discountedPrice} via ${paymentMethod.toUpperCase()}`
+                        : 'Select time & payment method'}
                 </button>
 
                 {selectedSlot && (
@@ -730,8 +1030,114 @@ function BookingDetailsContent() {
             </div>
           </div>
         </div>
+
+        {(paymentStatus !== 'idle' || bookingConfirmed) && (
+          <div className="mt-8 lg:mt-10">
+            <Card className="border border-[#7dc142] bg-[#11220f]">
+              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.3em] text-[#7aaa6a]">Booking Confirmation</p>
+                  <h2 className="text-2xl font-black mt-2" style={{ color: G.lime }}>Your court booking is confirmed</h2>
+                  <p className="mt-2 text-sm" style={{ color: G.muted }}>
+                    You paid ${chargedAmount} after discount. Your slot is now confirmed and ready.
+                  </p>
+                </div>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                  <button
+                    onClick={async () => {
+                      if (!paymentMetadata?.bookingId) return;
+                      setGatepassDownloading(true);
+                      setGatepassError('');
+                      try {
+                        await downloadUnifiedPDF({
+                          kind: 'bookingGatepass',
+                          bookingId: paymentMetadata.bookingId,
+                          filename: `VicoTennis_Gatepass_${paymentMetadata.bookingId}.pdf`,
+                        });
+                      } catch (downloadError: any) {
+                        console.error('Gatepass download error:', downloadError);
+                        setGatepassError(downloadError?.message || 'Could not download gatepass');
+                      } finally {
+                        setGatepassDownloading(false);
+                      }
+                    }}
+                    disabled={!paymentMetadata?.bookingId || gatepassDownloading}
+                    className="rounded-full px-5 py-3 text-sm font-black transition-all"
+                    style={{ backgroundColor: paymentMetadata?.bookingId ? G.lime : G.sidebar, color: paymentMetadata?.bookingId ? G.dark : G.muted }}
+                  >
+                    {gatepassDownloading ? 'Downloading PDF…' : 'Download Gatepass'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      const bookingId = paymentMetadata?.bookingId;
+                      if (bookingId) {
+                        router.push(`/player/booking/${bookingId}`);
+                      } else if (user) {
+                        router.push(`/dashboard/player/${user.id}?tab=myBookings`);
+                      }
+                    }}
+                    className="rounded-full border border-[#7dc142] px-5 py-3 text-sm font-black transition-all"
+                    style={{ color: G.lime }}
+                  >
+                    View Booking Details
+                  </button>
+                </div>
+              </div>
+
+              <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+                <button
+                  onClick={() => router.push('/courts')}
+                  className="rounded-full bg-[#7dc142] px-5 py-3 text-sm font-black text-[#081a08] transition-all"
+                >
+                  Book another session
+                </button>
+                <div className="text-sm text-[#c9dfb8]">
+                  Booking staff: <span className="font-semibold text-[#e8f5e0]">{paymentMetadata?.staffName || 'Vico Court Booking Team'}</span>
+                </div>
+              </div>
+
+              <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <div className="rounded-3xl border border-[#2d5a35] bg-[#152515] p-5">
+                  <p className="text-[11px] uppercase tracking-[0.25em] text-[#7aaa6a] mb-3">Amount</p>
+                  <p className="font-semibold text-sm text-[#e8f5e0]">${chargedAmount}</p>
+                </div>
+                <div className="rounded-3xl border border-[#2d5a35] bg-[#152515] p-5">
+                  <p className="text-[11px] uppercase tracking-[0.25em] text-[#7aaa6a] mb-3">Court</p>
+                  <p className="font-semibold text-sm text-[#e8f5e0]">{bookingCourtName || 'Court details'}</p>
+                </div>
+                <div className="rounded-3xl border border-[#2d5a35] bg-[#152515] p-5">
+                  <p className="text-[11px] uppercase tracking-[0.25em] text-[#7aaa6a] mb-3">Date</p>
+                  <p className="font-semibold text-sm text-[#e8f5e0]">{paymentMetadata?.startTime ? new Date(paymentMetadata.startTime).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : new Date(selectedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</p>
+                </div>
+                <div className="rounded-3xl border border-[#2d5a35] bg-[#152515] p-5">
+                  <p className="text-[11px] uppercase tracking-[0.25em] text-[#7aaa6a] mb-3">Time</p>
+                  <p className="font-semibold text-sm text-[#e8f5e0]">{paymentMetadata?.startTime ? new Date(paymentMetadata.startTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : selectedSlot || '—'}</p>
+                </div>
+                <div className="rounded-3xl border border-[#2d5a35] bg-[#152515] p-5">
+                  <p className="text-[11px] uppercase tracking-[0.25em] text-[#7aaa6a] mb-3">Duration</p>
+                  <p className="font-semibold text-sm text-[#e8f5e0]">{paymentMetadata?.duration ? `${paymentMetadata.duration}h` : `${duration}h`}</p>
+                </div>
+                <div className="rounded-3xl border border-[#2d5a35] bg-[#152515] p-5">
+                  <p className="text-[11px] uppercase tracking-[0.25em] text-[#7aaa6a] mb-3">Booking ID</p>
+                  <p className="font-semibold text-sm text-[#e8f5e0]">{paymentMetadata?.bookingId || bookingIdParam || 'Pending'}</p>
+                </div>
+                <div className="rounded-3xl border border-[#2d5a35] bg-[#152515] p-5">
+                  <p className="text-[11px] uppercase tracking-[0.25em] text-[#7aaa6a] mb-3">Status</p>
+                  <p className="font-semibold text-sm text-[#7dc142]">{paymentStatus === 'success' || bookingConfirmed ? 'Confirmed by staff' : paymentStatus === 'checking' ? 'Verifying…' : 'Pending'}</p>
+                </div>
+              </div>
+
+              {gatepassError && (
+                <div className="mt-4 rounded-3xl border border-[#c94d4d] bg-[#2b1215] p-4 text-sm text-[#f2b8b8]">
+                  {gatepassError}
+                </div>
+              )}
+            </Card>
+          </div>
+        )}
       </div>
     </div>
+  </>
   );
 }
 

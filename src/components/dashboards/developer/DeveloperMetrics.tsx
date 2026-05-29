@@ -30,7 +30,7 @@ export function DeveloperMetrics({ metrics }: DeveloperMetricsProps) {
         ].map(s => (
           <div
             key={s.label}
-            className="rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur p-4 hover:border-slate-700/80 transition-colors"
+            className="rounded-2xl border border-slate-800/60 bg-slate-900/60 backdrop-blur p-4 hover:border-slate-700/80 transition-colors"
           >
             <p className={`text-[10px] tracking-widest uppercase mb-2 ${
               s.color === 'cyan' ? 'text-cyan-500' :
@@ -55,7 +55,7 @@ export function DeveloperMetrics({ metrics }: DeveloperMetricsProps) {
           return (
             <div
               key={m.key}
-              className="rounded-2xl border border-slate-800/70 bg-slate-900/60 backdrop-blur p-5 space-y-4 hover:border-slate-700 transition-colors"
+              className="rounded-2xl border border-slate-800/50 bg-slate-900/60 backdrop-blur p-5 space-y-4 hover:border-slate-700 transition-colors"
               style={{ '--accent': m.color } as React.CSSProperties}
             >
               <div className="flex items-center justify-between">
@@ -98,7 +98,7 @@ export function DeveloperMetrics({ metrics }: DeveloperMetricsProps) {
           { label: 'Total Bookings', value: metrics?.bookings.total ?? 0, sub: `${metrics?.bookings.recent ?? 0} recent` },
           { label: 'Conversion Rate', value: `${metrics?.bookings.conversionRate ?? 0}%`, sub: `${metrics?.users.growth ?? 0}% user growth` },
         ].map(s => (
-          <div key={s.label} className="rounded-2xl border border-slate-800/70 bg-slate-900/60 p-4">
+          <div key={s.label} className="rounded-2xl border border-slate-800/50 bg-slate-900/60 p-4">
             <p className="text-[10px] tracking-widest uppercase text-slate-500 mb-2">{s.label}</p>
             <p className="text-2xl font-bold text-white">{s.value}</p>
             <p className="text-xs text-slate-500 mt-1">{s.sub}</p>

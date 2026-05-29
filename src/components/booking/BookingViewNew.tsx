@@ -7,7 +7,8 @@ import { getAvailableCourts, getPlayerBookings, getAllAvailableOrganizations } f
 import { BookingItem } from './BookingItem';
 import { CourtDetailModal } from './CourtDetailModal';
 import { Label } from '@/components/ui/label';
-import { Card, Button, colors } from '@/lib/vico-design-fallback';
+
+import { Card, Button, colors } from '@vico/design-system';
 
 
 interface BookingViewProps {
@@ -172,11 +173,23 @@ export function BookingView({ organizationId, onClose, isEmbedded, canBook }: Bo
           { icon: '⏰', label: 'Upcoming', value: upcomingCount },
           { icon: '💰', label: 'Avg. Price', value: '$45/hr' },
         ].map(s => (
-          <Card key={s.label} className="flex items-center gap-3 py-3">
+          <Card
+            key={s.label}
+            variant="elevated"
+            className="flex items-center gap-3"
+            style={{
+              padding: 16,
+              background: colors.cardDarkBg,
+              border: `1px solid ${colors.cardBorder}`,
+              borderRadius: 16,
+              minHeight: 96,
+              boxShadow: `0 12px 34px ${colors.cardShadow}`,
+            }}
+          >
             <span className="text-xl">{s.icon}</span>
             <div>
-              <div className="text-[9px] font-medium" style={{ color: colors.textMuted }}>{s.label}</div>
-              <div className="text-lg font-black" style={{ color: colors.accent }}>{s.value}</div>
+              <div className="text-[9px] font-medium" style={{ color: colors.cardLabel }}>{s.label}</div>
+              <div className="text-lg font-black" style={{ color: colors.cardAccent }}>{s.value}</div>
             </div>
           </Card>
         ))}
@@ -257,12 +270,17 @@ export function BookingView({ organizationId, onClose, isEmbedded, canBook }: Bo
         <div className="space-y-6">
           {/* Select Organization */}
           {organizations.length > 1 && (
-            <Card>
-              <Label>Select Organization</Label>
+            <Card style={{ background: colors.cardDarkBg, border: `1px solid ${colors.cardBorder}`, boxShadow: `0 0 0 1px ${colors.cardBorder}40, 0 18px 36px rgba(0,0,0,0.08)`, padding: 20, minHeight: 130 }}>
+              <Label style={{ color: colors.cardLabel }}>Select Organization</Label>
               <select
                 value={selectedOrgId}
                 onChange={(e) => setSelectedOrgId(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border border-[#2d5a35] bg-[#152515] text-[#e8f5e0] text-sm focus:outline-none focus:border-[#7dc142]"
+                className="w-full px-4 py-3 rounded-xl text-[#e8f5e0] text-sm focus:outline-none focus:ring-2"
+                style={{
+                  background: colors.cardDarkBg,
+                  border: `1px solid ${colors.cardBorder}`,
+                  focusRingColor: colors.cardBorder,
+                }}
               >
                 {organizations.map(org => (
                   <option key={org.id} value={org.id}>{org.name}</option>
@@ -272,18 +290,21 @@ export function BookingView({ organizationId, onClose, isEmbedded, canBook }: Bo
           )}
 
           {/* Match Type */}
-          <Card>
-            <Label>Match Type</Label>
+          <Card style={{ background: colors.cardDarkBg, border: `1px solid ${colors.cardBorder}` }}>
+            <Label style={{ color: colors.cardLabel }}>Match Type</Label>
             <div className="flex gap-2">
               {(['singles', 'doubles', 'practice'] as const).map(t => (
                 <button
                   key={t}
                   onClick={() => setMatchType(t)}
-                  className={`flex-1 py-3 rounded-lg border text-xs font-bold capitalize transition-all ${
+                  className={`flex-1 py-3 rounded-lg text-xs font-bold capitalize transition-all ${
                     matchType === t
-                      ? 'bg-[#7dc142] border-[#7dc142] text-[#0f1f0f]'
-                      : 'bg-[#152515] border-[#2d5a35] text-[#7aaa6a] hover:border-[#7dc142]/60'
+                      ? `text-[#0f1f0f]`
+                      : `text-[#7aaa6a] hover:bg-[#17331f]`
                   }`}
+                  style={{
+                    background: matchType === t ? colors.primary : 'transparent',
+                  }}
                 >
                   {t === 'singles' ? '🎾' : t === 'doubles' ? '👥' : '🏋️'} {t.charAt(0).toUpperCase() + t.slice(1)}
                 </button>
@@ -292,23 +313,23 @@ export function BookingView({ organizationId, onClose, isEmbedded, canBook }: Bo
           </Card>
 
           {/* Court Selection - Scrollable */}
-          <Card>
-            <Label>Select Court</Label>
-            <div style={{ maxHeight: 'calc(100vh - 400px)', overflowY: 'auto', scrollbarWidth: 'thin', scrollbarColor: '#7dc142 #152515' }}>
+          <Card style={{ background: colors.cardDarkBg, border: `1px solid ${colors.cardBorder}` }}>
+            <Label style={{ color: colors.cardLabel }}>Select Court</Label>
+            <div style={{ maxHeight: 'calc(100vh - 400px)', overflowY: 'auto', scrollbarWidth: 'thin' }}>
               <style>{`
                 div[style*="calc(100vh - 400px)"]::-webkit-scrollbar {
                   width: 8px;
                 }
                 div[style*="calc(100vh - 400px)"]::-webkit-scrollbar-track {
-                  background: #152515;
+                  background: ${colors.surfaceSecondary};
                   border-radius: 10px;
                 }
                 div[style*="calc(100vh - 400px)"]::-webkit-scrollbar-thumb {
-                  background: #7dc142;
+                  background: ${colors.primary};
                   border-radius: 10px;
                 }
                 div[style*="calc(100vh - 400px)"]::-webkit-scrollbar-thumb:hover {
-                  background: #a8d84e;
+                  background: ${colors.primaryHover};
                 }
               `}</style>
               {courts.length === 0 ? (
@@ -322,7 +343,7 @@ export function BookingView({ organizationId, onClose, isEmbedded, canBook }: Bo
                     <button
                       key={court.id}
                       onClick={() => handleCourtSelect(court)}
-                      className="text-left p-4 rounded-xl border-2 border-[#2d5a35] bg-[#152515] hover:border-[#7dc142]/50 hover:bg-[#2d5a27]/30 transition-all"
+                      className="text-left p-4 rounded-xl bg-[#122b1a] hover:bg-[#17331f] transition-all"
                     >
                       <div className="flex items-start justify-between mb-2">
                         <div>
@@ -370,7 +391,7 @@ export function BookingView({ organizationId, onClose, isEmbedded, canBook }: Bo
                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                       filterStatus === status
                         ? 'bg-[#7dc142] text-[#0f1f0f]'
-                        : 'bg-[#152515] text-[#7aaa6a] border border-[#2d5a35] hover:border-[#7dc142]'
+                        : 'bg-[#122b1a] text-[#7aaa6a] hover:bg-[#17331f]'
                     }`}
                   >
                     {status.charAt(0).toUpperCase() + status.slice(1)}
@@ -387,7 +408,7 @@ export function BookingView({ organizationId, onClose, isEmbedded, canBook }: Bo
                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                       filterTime === time
                         ? 'bg-[#7dc142] text-[#0f1f0f]'
-                        : 'bg-[#152515] text-[#7aaa6a] border border-[#2d5a35] hover:border-[#7dc142]'
+                        : 'bg-[#122b1a] text-[#7aaa6a] hover:bg-[#17331f]'
                     }`}
                   >
                     {time === 'all' ? 'All Time' : time.charAt(0).toUpperCase() + time.slice(1)}
@@ -454,7 +475,7 @@ export function BookingView({ organizationId, onClose, isEmbedded, canBook }: Bo
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                     filterStatus === status
                       ? 'bg-[#7dc142] text-[#0f1f0f]'
-                      : 'bg-[#152515] text-[#7aaa6a] border border-[#2d5a35] hover:border-[#7dc142]'
+                      : 'bg-[#122b1a] text-[#7aaa6a] hover:bg-[#17331f]'
                   }`}
                 >
                   {status.charAt(0).toUpperCase() + status.slice(1)}

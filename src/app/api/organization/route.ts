@@ -1,6 +1,5 @@
 import prisma from '@/lib/prisma';
 import { verifyApiAuth } from '@/lib/authMiddleware';
-import { Prisma } from '@prisma/client';
 
 export async function GET(request: Request) {
   try {

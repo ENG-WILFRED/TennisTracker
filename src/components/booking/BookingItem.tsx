@@ -33,7 +33,7 @@ export function BookingItem({ booking, canView = false }: BookingItemProps) {
   };
 
   return (
-    <div className={`p-4 rounded-xl border transition-all ${['cancelled', 'rejected'].includes(booking.status) ? 'border-red-900/40 opacity-60' : 'border-[#2d5a35] hover:border-[#7dc142]/40'} bg-[#152515]`}>
+    <div className="p-4 rounded-xl bg-[#152515] transition-all hover:bg-[#17331f]">
       <div className="flex items-start justify-between mb-3">
         <div>
           <div className="text-sm font-bold text-[#e8f5e0]">🎾 {booking.court?.name || 'Court Booking'}</div>
