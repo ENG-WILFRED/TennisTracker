@@ -398,6 +398,7 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
                 </div>
               </div>
             )}
+          </Card>
         </div>
 
         <div className="xl:col-span-5 flex flex-col rounded-xl p-4" style={{ background: G.dark, border: `1px solid ${G.outerBorder}` }}>

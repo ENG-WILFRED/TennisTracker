@@ -18,6 +18,7 @@ import MessagingPanel from '@/components/dashboards/MessagingPanel';
 import { FindNearbyPeople } from '@/components/FindNearbyPeople';
 import { FindNearbyCourts } from '@/components/FindNearbyCourts';
 import { PlayerSearchChallenge } from '@/components/PlayerSearchChallenge';
+import { CoachRequestsSection } from '@/components/CoachRequestsSection';
 import { chatUrlForUser, sendChallengeRequest } from '@/lib/nearby';
 import { toast } from '@vico/design-system';
 import { Button, Card, DashboardMain, DashboardPanel, DashboardShell, DashboardSidebar, colors, radii, shadows, spacing, sizing, toastOptions, typography } from '@vico/design-system';
@@ -462,13 +463,16 @@ export const PlayerDashboard: React.FC = () => {
         ) : showSettings ? (
           <DashboardPanel style={{ marginBottom: spacing['2xl'] }}>
             <SettingsView isEmbedded={true} />
-          ) : (
+          </DashboardPanel>
+        ) : (
+          <DashboardPanel style={{ marginBottom: spacing.lg }}>
             <div className="space-y-4">
               <DashboardHome playerData={playerData} upcomingMatches={upcomingMatches} leaderboard={leaderboard} activityFeed={activityFeed} />
               {user?.id && <CoachRequestsSection playerId={user.id} />}
             </div>
-          )
           </DashboardPanel>
-    </div>
+        )}
+      </DashboardMain>
+    </DashboardShell>
   );
 };
