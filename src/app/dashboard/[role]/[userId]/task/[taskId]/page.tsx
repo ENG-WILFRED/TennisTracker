@@ -413,7 +413,7 @@ function PlayerTaskPage() {
         </div>
 
         <div className="mt-6 rounded-[2rem] border border-[#243e24] bg-[#101f10] p-6 shadow-[0_40px_80px_rgba(0,0,0,0.35)]">
-          <div className="grid gap-6 lg:grid-cols-[1.4fr_0.95fr]">
+          <div className="grid gap-6">
             <div className="space-y-6">
               <div className="space-y-3">
                 <div className="flex flex-wrap items-center gap-3">
@@ -431,7 +431,7 @@ function PlayerTaskPage() {
                 </div>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 md:grid-cols-2">
                 <div className="rounded-3xl border border-[#243e24] bg-[#162616] p-5">
                   <p className="text-xs uppercase text-[#8db157]">Coach</p>
                   <p className="mt-2 text-lg font-semibold text-white">{task.assignedToUser?.firstName || 'Coach'} {task.assignedToUser?.lastName || ''}</p>
@@ -444,7 +444,7 @@ function PlayerTaskPage() {
                 </div>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 md:grid-cols-2">
                 <div className="rounded-3xl border border-[#243e24] bg-[#162616] p-5">
                   <p className="text-xs uppercase text-[#8db157]">Status</p>
                   <p className="mt-2 text-lg font-semibold text-white">{statusLabels[task.status] || task.status}</p>
@@ -470,10 +470,18 @@ function PlayerTaskPage() {
               {task.context && Object.keys(task.context).length > 0 && (
                 <section className="rounded-3xl border border-[#243e24] bg-[#182818] p-5">
                   <p className="text-xs uppercase tracking-[0.2em] text-[#8db157]">Context</p>
-                  <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                  <div className="mt-4 grid gap-4 md:grid-cols-2">
                     {Object.entries(task.context)
-                      .filter(([key]) => key !== 'selectedPlayerNames' && key !== 'playerRequest' && key !== 'coachRequest')
-                      .filter(([key]) => !(key === 'courtName' && task.context?.courtId))
+                      .filter(([key]) => ![
+                        'selectedPlayerNames',
+                        'selectedPlayerIds',
+                        'courtId',
+                        'courtName',
+                        'trainingType',
+                        'sessionDuration',
+                        'playerRequest',
+                        'coachRequest',
+                      ].includes(key))
                       .map(([key, value]) => (
                         <div key={key}>
                           <p className="text-[11px] uppercase tracking-[0.18em] text-[#7aaa6a]">{formatContextKey(key)}</p>
@@ -486,7 +494,7 @@ function PlayerTaskPage() {
 
               <section className="rounded-3xl border border-[#243e24] bg-[#182818] p-5">
                 <p className="text-xs uppercase tracking-[0.2em] text-[#8db157]">Task details</p>
-                <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                <div className="mt-4 grid gap-4 md:grid-cols-2">
                   {task.context?.selectedPlayerIds && (
                     <div>
                       <p className="text-[11px] uppercase tracking-[0.18em] text-[#7aaa6a]">Players</p>
@@ -583,7 +591,7 @@ function PlayerTaskPage() {
                 </div>
 
                 <div className="mt-6 space-y-4">
-                  <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="grid gap-3 md:grid-cols-2">
                     <ValidationTooltip show={!!validationMessage} message={validationMessage || ''}>
                       <button
                         type="button"
@@ -627,7 +635,7 @@ function PlayerTaskPage() {
                       </div>
                     ) : (
                       <div className="mt-4 space-y-3">
-                        <div className="grid gap-3 sm:grid-cols-2">
+                        <div className="grid gap-3 md:grid-cols-2">
                           <button
                             type="button"
                             onClick={() => setRequestType('postpone')}
