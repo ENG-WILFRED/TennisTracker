@@ -36,39 +36,34 @@ export async function GET(req: NextRequest) {
     }
 
     // Get eligible players:
-    // 1. Players with direct coach-player relationships
-    const directPlayerRelationships = await prisma.coachPlayerRelationship.findMany({
-      where: {
-        coachId,
-        status: 'active',
-      },
-      select: { playerId: true },
+    // 1. Players with direct coach-player relationships (active or pending)
+    const coachRelationships = await prisma.coachPlayerRelationship.findMany({
+      where: { coachId },
+      select: { playerId: true, status: true },
     });
 
-    const directPlayerIds = directPlayerRelationships.map(r => r.playerId);
+    const relationshipMap = coachRelationships.reduce<Record<string, 'active' | 'pending'>>((acc, rel) => {
+      acc[rel.playerId] = rel.status === 'pending' ? 'pending' : 'active';
+      return acc;
+    }, {});
 
-    // 2. Players in same organizations as coach, or all players if the coach has no orgs
-    let organizationPlayerIds: string[] = [];
-    if (orgIds.length > 0) {
-      const orgPlayers = await prisma.player.findMany({
-        where: {
-          organizationId: { in: orgIds },
-        },
-        select: { userId: true },
-      });
-      organizationPlayerIds = orgPlayers.map(p => p.userId);
-    }
+    const directPlayerIds = coachRelationships.map(r => r.playerId);
 
-    // Combine and deduplicate player IDs. If the coach has no org association, fall back to all platform players.
-    const allPlayerIds = orgIds.length > 0
-      ? Array.from(new Set([...directPlayerIds, ...organizationPlayerIds]))
-      : undefined;
+    // 2. Players in the coach's organizations
+    const organizationPlayerIds: string[] = orgIds.length > 0
+      ? (await prisma.player.findMany({
+          where: {
+            organizationId: { in: orgIds },
+          },
+          select: { userId: true },
+        })).map(p => p.userId)
+      : [];
 
-    // Fetch detailed player information
+    // Fetch all registered players for coaches to browse platform-wide
     const players = await prisma.player.findMany({
-      where: allPlayerIds ? { userId: { in: allPlayerIds } } : {},
       select: {
         userId: true,
+        organizationId: true,
         user: {
           select: {
             firstName: true,
@@ -78,7 +73,6 @@ export async function GET(req: NextRequest) {
             phone: true,
           },
         },
-        organizationId: true,
       },
       orderBy: {
         user: {
@@ -89,7 +83,15 @@ export async function GET(req: NextRequest) {
 
     // Add relationship status for each player
     const enrichedPlayers = players.map(player => {
-      const isDirect = directPlayerIds.includes(player.userId);
+      const relationshipStatus = relationshipMap[player.userId];
+      const relationshipType = relationshipStatus === 'active'
+        ? 'direct'
+        : relationshipStatus === 'pending'
+          ? 'pending'
+          : organizationPlayerIds.includes(player.userId)
+            ? 'organization'
+            : 'platform';
+
       return {
         userId: player.userId,
         firstName: player.user.firstName,
@@ -98,7 +100,7 @@ export async function GET(req: NextRequest) {
         email: player.user.email,
         phone: player.user.phone,
         organizationId: player.organizationId,
-        relationshipType: isDirect ? 'direct' : 'organization',
+        relationshipType,
       };
     });
 

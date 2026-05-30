@@ -196,6 +196,7 @@ interface DashboardHomeProps {
   upcomingMatches: any[];
   leaderboard: any[];
   activityFeed: any[];
+  pendingCoachRequests?: any[];
   recentResults?: any[];
   sessions?: any[];
 }
@@ -205,6 +206,7 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
   upcomingMatches,
   leaderboard,
   activityFeed,
+  pendingCoachRequests = [],
   recentResults = [],
   sessions = [],
 }) => {
@@ -282,9 +284,43 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
         ))}
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-4">
-        <div className="xl:col-span-7 rounded-xl p-3" style={{ background: G.dark, border: `1px solid ${G.outerBorder}` }}>
-          <SectionLabel>🎾 Next Match</SectionLabel>
+      {pendingCoachRequests.length > 0 && (
+        <div className="grid grid-cols-1 gap-4">
+          <Card variant="elevated" className="bg-vico-surface border-vico-border">
+            <SectionLabel>🤝 Pending coach requests</SectionLabel>
+            <div className="space-y-3">
+              {pendingCoachRequests.map((request, index) => (
+                <div
+                  key={request.id || index}
+                  className="rounded-2xl border border-vico-border bg-vico-background p-4"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="text-sm font-black text-vico-text-primary">
+                        {request.coach.firstName} {request.coach.lastName}
+                      </div>
+                      <div className="text-[10px] text-vico-text-muted mt-1">
+                        {request.coach.organization?.name ? `${request.coach.organization.name} coach` : 'Independent coach'}
+                      </div>
+                    </div>
+                    <span className="text-[9px] uppercase tracking-[0.2em] text-vico-primary font-black">
+                      Pending
+                    </span>
+                  </div>
+                  <div className="mt-3 text-[11px] text-vico-text-muted">
+                    {request.note || 'No additional request details were provided.'}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-2">
+          <Card variant="glow" className="h-full bg-gradient-to-br from-vico-surfaceSecondary to-vico-background border-vico-border">
+            <SectionLabel>🎾 Next Match</SectionLabel>
 
           {nextMatch ? (
             <>

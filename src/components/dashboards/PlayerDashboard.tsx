@@ -462,13 +462,13 @@ export const PlayerDashboard: React.FC = () => {
         ) : showSettings ? (
           <DashboardPanel style={{ marginBottom: spacing['2xl'] }}>
             <SettingsView isEmbedded={true} />
+          ) : (
+            <div className="space-y-4">
+              <DashboardHome playerData={playerData} upcomingMatches={upcomingMatches} leaderboard={leaderboard} activityFeed={activityFeed} />
+              {user?.id && <CoachRequestsSection playerId={user.id} />}
+            </div>
+          )
           </DashboardPanel>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['2xl'] }}>
-            <DashboardHome playerData={playerData} upcomingMatches={upcomingMatches} leaderboard={leaderboard} activityFeed={activityFeed} />
-          </div>
-        )}
-      </DashboardMain>
-    </DashboardShell>
+    </div>
   );
 };

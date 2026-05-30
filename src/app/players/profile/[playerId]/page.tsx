@@ -3,7 +3,12 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { toast } from '@vico/design-system';
-import { toastOptions } from '@vico/design-system';
+import { useSearchParams } from 'next/navigation';
+import { ProgressView } from '@/components/stats/ProgressView';
+import { CoachRequestsComponent } from '@/components/player/CoachRequestsComponent';
+import { useAuth } from '@/context/AuthContext';
+import { getAuthHeader } from '@/lib/tokenManager';
+import { authenticatedFetch } from '@/lib/authenticatedFetch';
 
 const G = {
   dark: '#0f1f0f',
@@ -109,43 +114,53 @@ export default function PlayerProfilePage() {
 
   const [player, setPlayer] = useState<Player | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'comments' | 'sessions' | 'partners' | 'challenges'>('overview');
-  const [showAnalytics, setShowAnalytics] = useState(false);
-  
+  const [activeTab, setActiveTab] = useState<'overview' | 'analytics' | 'comments' | 'sessions' | 'partners' | 'challenges' | 'coach-requests'>('overview');
+
   // Comments state
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
   const [commentsLoading, setCommentsLoading] = useState(false);
+  const [commentSubmitting, setCommentSubmitting] = useState(false);
   const [rating, setRating] = useState(5);
+  const [previousRating, setPreviousRating] = useState(5);
   
   // Sessions state
   const [sessions, setSessions] = useState<Session[]>([]);
-  const [showSessionForm, setShowSessionForm] = useState(false);
-  const [sessionForm, setSessionForm] = useState({ title: '', type: 'training' as 'training' | 'match' | 'practice', date: '', time: '', duration: 1, court: '' });
   
   // Partners state
   const [suggestedPartners, setSuggestedPartners] = useState<Partner[]>([]);
   const [partnersLoading, setPartnersLoading] = useState(false);
   
+  // Auth and recruit state
+  const { user } = useAuth();
+  const coachUserId = user?.id;
+  const searchParams = useSearchParams();
+  const isCoach = Boolean(user?.role?.toLowerCase() === 'coach' || (user as any)?.isCoach === true);
+  const isCoachView = Boolean(searchParams?.get('view') === 'coach');
+  const showRecruitButton = isCoach && isCoachView;
+  const showCoachActions = isCoach && isCoachView;
+  const [recruitOpen, setRecruitOpen] = useState(false);
+  const [recruiting, setRecruiting] = useState(false);
+  const [recruitIntro, setRecruitIntro] = useState('');
+  const [recruitReason, setRecruitReason] = useState('Tournament preparation');
+  const [recruitOfferMode, setRecruitOfferMode] = useState('Online');
+  const [recruitSessionFormat, setRecruitSessionFormat] = useState('One-on-one');
+  const [recruitPaymentType, setRecruitPaymentType] = useState('Paid');
+  const [recruitWeeklySessions, setRecruitWeeklySessions] = useState('2');
+  const [recruitAnalysis, setRecruitAnalysis] = useState('');
+  const [coachRelationship, setCoachRelationship] = useState<any | null>(null);
+  const [relationshipLoading, setRelationshipLoading] = useState(false);
+  const [remindSending, setRemindSending] = useState(false);
+  const [coachPlayers, setCoachPlayers] = useState<Player[]>([]);
+  const [orgPlayers, setOrgPlayers] = useState<Player[]>([]);
+  const [availableChallengePlayers, setAvailableChallengePlayers] = useState<Player[]>([]);
+  const [coachPlayersLoading, setCoachPlayersLoading] = useState(false);
+  const [challengeSourcesLoading, setChallengeSourcesLoading] = useState(false);
+  const [selectedCoachPlayerId, setSelectedCoachPlayerId] = useState<string>('');
+  const [challengeSending, setChallengeSending] = useState(false);
+  
   // Other states
-  const [messaging, setMessaging] = useState(false);
   const [removing, setRemoving] = useState(false);
-
-  // Analytics states
-  const [matches, setMatches] = useState<Match[]>([]);
-  const [stats, setStats] = useState<PlayerStats | null>(null);
-  const [statsLoading, setStatsLoading] = useState(false);
-  
-  // Filter states
-  const [dateFrom, setDateFrom] = useState(new Date(new Date().setMonth(new Date().getMonth() - 3)).toISOString().split('T')[0]);
-  const [dateTo, setDateTo] = useState(new Date().toISOString().split('T')[0]);
-  const [matchTypeFilter, setMatchTypeFilter] = useState<'all' | 'training' | 'match' | 'practice'>('all');
-  const [opponentFilter, setOpponentFilter] = useState('');
-  const [comparisonPlayerId, setComparisonPlayerId] = useState('');
-  const [comparisonStats, setComparisonStats] = useState<PlayerStats | null>(null);
-  
-  // Export states
-  const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
     if (playerId) {
@@ -156,10 +171,103 @@ export default function PlayerProfilePage() {
   }, [playerId]);
 
   useEffect(() => {
-    if (showAnalytics && playerId) {
-      loadAnalyticsData();
+    if (!isCoachView || !coachUserId || !playerId) {
+      setCoachRelationship(null);
+      return;
     }
-  }, [showAnalytics, playerId]);
+
+    async function loadCoachRelationship() {
+      setRelationshipLoading(true);
+      try {
+        const encodedCoachId = encodeURIComponent(coachUserId as string);
+        const res = await authenticatedFetch(
+          `/api/coaches/players?coachId=${encodedCoachId}&playerId=${encodeURIComponent(playerId)}&status=all`
+        );
+
+        if (!res.ok) {
+          throw new Error('Failed to load coach relationship');
+        }
+
+        const data = await res.json();
+        const relationship = Array.isArray(data) ? data[0] : null;
+        setCoachRelationship(relationship || null);
+      } catch (error) {
+        console.error('Error loading coach relationship:', error);
+        setCoachRelationship(null);
+      } finally {
+        setRelationshipLoading(false);
+      }
+    }
+
+    loadCoachRelationship();
+  }, [isCoachView, coachUserId, playerId]);
+
+  useEffect(() => {
+    if (!isCoach || !user?.id) {
+      setCoachPlayers([]);
+      setOrgPlayers([]);
+      setAvailableChallengePlayers([]);
+      return;
+    }
+
+    const coachId = user.id;
+    const orgId = (user as any)?.organization?.id || (user as any)?.organizationId;
+
+    async function loadCoachPlayers() {
+      setCoachPlayersLoading(true);
+      setChallengeSourcesLoading(true);
+      try {
+        const coachRequest = fetch(`/api/coaches/players?coachId=${encodeURIComponent(coachId)}&status=active`);
+        const orgRequest = orgId
+          ? fetch(`/api/organization/${orgId}/players?type=all`)
+          : Promise.resolve(null);
+
+        const [coachRes, orgRes] = await Promise.all([coachRequest, orgRequest]);
+
+        let coachData: any[] = [];
+        let orgData: any[] = [];
+
+        if (coachRes?.ok) {
+          const data = await coachRes.json();
+          coachData = Array.isArray(data) ? data : [];
+        } else {
+          console.error('Unable to load coached players');
+        }
+
+        if (orgRes) {
+          if (orgRes.ok) {
+            const data = await orgRes.json();
+            orgData = Array.isArray(data) ? data : [];
+          } else {
+            console.error('Unable to load org players');
+          }
+        }
+
+        setCoachPlayers(coachData);
+        setOrgPlayers(orgData);
+
+        const unique = new Map<string, Player>();
+        [...coachData, ...orgData].forEach((item) => {
+          if (item?.userId && !unique.has(item.userId) && item.userId !== player?.userId) {
+            unique.set(item.userId, item);
+          }
+        });
+
+        setAvailableChallengePlayers(Array.from(unique.values()));
+      } catch (error) {
+        console.error('Error loading coach or org players:', error);
+        setCoachPlayers([]);
+        setOrgPlayers([]);
+        setAvailableChallengePlayers([]);
+      } finally {
+        setCoachPlayersLoading(false);
+        setChallengeSourcesLoading(false);
+      }
+    }
+
+    loadCoachPlayers();
+  }, [isCoach, user?.id, player?.userId]);
+
 
   async function loadPlayerData() {
     try {
@@ -199,21 +307,31 @@ export default function PlayerProfilePage() {
     }
 
     try {
-      const res = await fetch(`/api/players/${playerId}/comments`, {
+      setCommentSubmitting(true);
+      const res = await authenticatedFetch(`/api/players/${playerId}/comments`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({ text: newComment, rating }),
       });
 
-      if (!res.ok) throw new Error('Failed to add comment');
-      
       const data = await res.json();
+      if (!res.ok) {
+        setRating(previousRating);
+        throw new Error(data?.error || 'Failed to add comment');
+      }
+
       setComments([data.comment, ...comments]);
       setNewComment('');
+      setPreviousRating(rating);
       toast.success('Comment added!');
     } catch (error) {
+      setRating(previousRating);
       console.error('Error adding comment:', error);
       toast.error('Failed to add comment');
+    } finally {
+      setCommentSubmitting(false);
     }
   }
 
@@ -226,41 +344,6 @@ export default function PlayerProfilePage() {
       setSessions(data.sessions || []);
     } catch (error) {
       console.error('Error loading sessions:', error);
-    }
-  }
-
-  async function createSession() {
-    if (!sessionForm.title || !sessionForm.date || !sessionForm.time) {
-      toast.error('Please fill all required fields');
-      return;
-    }
-
-    try {
-      const startTime = new Date(`${sessionForm.date}T${sessionForm.time}`);
-      const endTime = new Date(startTime.getTime() + sessionForm.duration * 60 * 60 * 1000);
-
-      const res = await fetch(`/api/players/${playerId}/sessions`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: sessionForm.title,
-          type: sessionForm.type,
-          startTime: startTime.toISOString(),
-          endTime: endTime.toISOString(),
-          court: sessionForm.court,
-        }),
-      });
-
-      if (!res.ok) throw new Error('Failed to create session');
-      
-      const data = await res.json();
-      setSessions([data.session, ...sessions]);
-      setShowSessionForm(false);
-      setSessionForm({ title: '', type: 'training', date: '', time: '', duration: 1, court: '' });
-      toast.success('Session created!');
-    } catch (error) {
-      console.error('Error creating session:', error);
-      toast.error('Failed to create session');
     }
   }
 
@@ -280,26 +363,164 @@ export default function PlayerProfilePage() {
     }
   }
 
-  async function sendMessage() {
-    if (!player) return;
+  
+
+  async function sendChallenge() {
+    if (!showCoachActions) {
+      toast.error('Challenges are only available from the coach dashboard.');
+      return;
+    }
+
+    if (!selectedCoachPlayerId) {
+      toast.error('Select one of your coached players first.');
+      return;
+    }
+
+    if (!player?.userId) {
+      toast.error('Player not loaded.');
+      return;
+    }
 
     try {
-      setMessaging(true);
-      const res = await fetch('/api/chat/dm', {
+      setChallengeSending(true);
+      const res = await fetch('/api/challenges', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ targetUserEmail: player.email }),
+        body: JSON.stringify({
+          challengerUserId: selectedCoachPlayerId,
+          opponentUserId: player.userId,
+          isFormal: false,
+        }),
       });
 
-      if (!res.ok) throw new Error('Failed to create message');
-      
-      toast.success('Opening chat...');
-      // TODO: Redirect to chat or open modal
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || 'Failed to send challenge');
+      }
+
+      toast.success('Challenge request sent successfully.');
     } catch (error) {
-      console.error('Error sending message:', error);
-      toast.error('Failed to send message');
+      console.error('Error sending challenge:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to send challenge');
     } finally {
-      setMessaging(false);
+      setChallengeSending(false);
+    }
+  }
+
+  async function recruitPlayer() {
+    const coachId = user?.id;
+    const orgId =
+      (user as any)?.organization?.id ||
+      (user as any)?.organizationId;
+
+    if (!coachId || !player?.userId || !orgId) {
+      toast.error('Unable to send recruitment request: missing information');
+      return;
+    }
+
+    if (coachId === player.userId) {
+      toast.error('You cannot recruit yourself.');
+      return;
+    }
+
+    if (!recruitIntro.trim()) {
+      toast.error('Please add a short introduction message for the player');
+      return;
+    }
+
+    try {
+      setRecruiting(true);
+      const res = await authenticatedFetch('/api/coaches/recruit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          coachId,
+          playerId: player.userId,
+          orgId,
+          introMessage: recruitIntro.trim(),
+          reason: recruitReason,
+          offerMode: recruitOfferMode,
+          sessionFormat: recruitSessionFormat,
+          paymentType: recruitPaymentType,
+          weeklySessions: recruitWeeklySessions,
+          personalAnalysis: recruitAnalysis.trim(),
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || 'Failed to send recruitment request');
+      }
+
+      setRecruitOpen(false);
+      setRecruitIntro('');
+      setRecruitReason('Tournament preparation');
+      setRecruitOfferMode('Online');
+      setRecruitSessionFormat('One-on-one');
+      setRecruitPaymentType('Paid');
+      setRecruitWeeklySessions('2');
+      setRecruitAnalysis('');
+
+      toast.success(data?.message || 'Recruitment request sent successfully');
+      await refreshCoachRelationship();
+    } catch (error) {
+      console.error('Recruitment error:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to send recruitment request');
+    } finally {
+      setRecruiting(false);
+    }
+  }
+
+  async function refreshCoachRelationship() {
+    if (!isCoachView || !coachUserId || !playerId) {
+      return;
+    }
+
+    try {
+      const res = await authenticatedFetch(
+        `/api/coaches/players?coachId=${encodeURIComponent(coachUserId)}&playerId=${encodeURIComponent(playerId)}&status=all`
+      );
+
+      if (!res.ok) {
+        throw new Error('Failed to refresh coach relationship');
+      }
+
+      const data = await res.json();
+      const relationship = Array.isArray(data) ? data[0] : null;
+      setCoachRelationship(relationship || null);
+    } catch (error) {
+      console.error('Error refreshing coach relationship:', error);
+    }
+  }
+
+  async function sendRecruitReminder() {
+    if (!coachRelationship?.id || !coachUserId || !playerId) {
+      toast.error('Unable to send reminder');
+      return;
+    }
+
+    try {
+      setRemindSending(true);
+      const res = await authenticatedFetch('/api/coaches/recruit/remind', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          coachId: coachUserId,
+          playerId,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || 'Failed to send reminder');
+      }
+
+      toast.success(data?.message || 'Reminder sent successfully');
+    } catch (error) {
+      console.error('Error sending reminder:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to send reminder');
+    } finally {
+      setRemindSending(false);
     }
   }
 
@@ -319,141 +540,6 @@ export default function PlayerProfilePage() {
       toast.error('Failed to remove player');
     } finally {
       setRemoving(false);
-    }
-  }
-
-  async function loadAnalyticsData() {
-    try {
-      setStatsLoading(true);
-      const res = await fetch(`/api/players/${playerId}/analytics`);
-      if (!res.ok) throw new Error('Failed to load analytics');
-      
-      const data = await res.json();
-      setStats(data.stats);
-      setMatches(data.matches || []);
-    } catch (error) {
-      console.error('Error loading analytics:', error);
-      // Set mock data if API fails
-      setStats({
-        totalMatches: player?.matchesPlayed || 0,
-        matchesWon: player?.matchesWon || 0,
-        matchesLost: player?.matchesLost || 0,
-        winRate: player?.matchesPlayed ? Math.round((player.matchesWon / player.matchesPlayed) * 100) : 0,
-        averageServeAccuracy: 65 + Math.random() * 20,
-        averageRallyWinRate: 55 + Math.random() * 25,
-        totalAces: Math.floor(Math.random() * 100),
-        totalDoubleFaults: Math.floor(Math.random() * 50),
-        skillProgression: generateSkillProgression(),
-        monthlyStats: generateMonthlyStats(player?.matchesPlayed || 0, player?.matchesWon || 0),
-      });
-    } finally {
-      setStatsLoading(false);
-    }
-  }
-
-  function generateSkillProgression() {
-    const now = new Date();
-    return Array.from({ length: 6 }, (_, i) => {
-      const date = new Date(now);
-      date.setMonth(date.getMonth() - (5 - i));
-      return {
-        date: date.toLocaleDateString(),
-        level: 60 + i * 5 + Math.random() * 10,
-      };
-    });
-  }
-
-  function generateMonthlyStats(total: number, wins: number) {
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
-    return months.map((month, i) => ({
-      month,
-      wins: Math.floor(wins / 6),
-      losses: Math.floor((total - wins) / 6),
-    }));
-  }
-
-  function getFilteredMatches() {
-    return matches.filter(match => {
-      const matchDate = new Date(match.date);
-      const from = new Date(dateFrom);
-      const to = new Date(dateTo);
-      
-      if (matchDate < from || matchDate > to) return false;
-      if (matchTypeFilter !== 'all' && match.matchType !== matchTypeFilter) return false;
-      if (opponentFilter && !match.opponent.toLowerCase().includes(opponentFilter.toLowerCase())) return false;
-      
-      return true;
-    });
-  }
-
-  async function exportToCSV() {
-    try {
-      setIsExporting(true);
-      const filtered = getFilteredMatches();
-      
-      if (!filtered.length) {
-        toast.error('No matches to export');
-        return;
-      }
-
-      const headers = ['Date', 'Opponent', 'Type', 'Result', 'Score', 'Serve Accuracy', 'Rally Win Rate', 'Aces', 'Double Faults'];
-      const rows = filtered.map(m => [
-        new Date(m.date).toLocaleDateString(),
-        m.opponent,
-        m.matchType,
-        m.result,
-        m.score,
-        `${m.serveAccuracy || 0}%`,
-        `${m.rallyWinRate || 0}%`,
-        m.acesHit || 0,
-        m.doubleFaults || 0,
-      ]);
-
-      const csv = [headers, ...rows].map(row => row.join(',')).join('\n');
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${player?.firstName}_${player?.lastName}_analytics.csv`;
-      a.click();
-      
-      toast.success('Analytics exported as CSV!');
-    } catch (error) {
-      console.error('Error exporting CSV:', error);
-      toast.error('Failed to export CSV');
-    } finally {
-      setIsExporting(false);
-    }
-  }
-
-  async function exportToPDF() {
-    try {
-      setIsExporting(true);
-      const element = document.getElementById('analytics-pdf-content');
-      
-      if (!element) {
-        toast.error('Analytics content not found');
-        return;
-      }
-
-      // Dynamically import html2pdf
-      const html2pdf = (await import('html2pdf.js')).default;
-
-      const opt = {
-        margin: 10,
-        filename: `${player?.firstName}_${player?.lastName}_analytics.pdf`,
-        image: { type: 'jpeg' as const, quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true },
-        jsPDF: { orientation: 'portrait' as const, unit: 'mm', format: 'a4' },
-      };
-
-      await html2pdf().set(opt).from(element).save();
-      toast.success('Analytics exported as PDF!');
-    } catch (error) {
-      console.error('Error exporting PDF:', error);
-      toast.error('Failed to export PDF');
-    } finally {
-      setIsExporting(false);
     }
   }
 
@@ -479,7 +565,7 @@ export default function PlayerProfilePage() {
 
   return (
     <div style={{ minHeight: '100vh', background: G.dark, color: G.text, padding: '20px' }}>
-      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+      <div style={{ maxWidth: 'auto', margin: '0 auto' }}>
         {/* Back Button */}
         <button
           onClick={() => router.back()}
@@ -499,7 +585,68 @@ export default function PlayerProfilePage() {
         </button>
 
         {/* Header Section */}
-        <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 12, padding: 24, marginBottom: 24 }}>
+        <div style={{ position: 'relative', background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 12, padding: 24, marginBottom: 24 }}>
+          {showRecruitButton && (
+            <div style={{ position: 'absolute', top: 24, right: 24, textAlign: 'right' }}>
+              <button
+                onClick={async () => {
+                  if (coachRelationship?.status === 'pending') {
+                    await sendRecruitReminder();
+                    return;
+                  }
+
+                  if (coachRelationship?.status) {
+                    return;
+                  }
+
+                  setRecruitOpen(true);
+                }}
+                disabled={relationshipLoading || remindSending || coachRelationship?.status === 'active' || coachRelationship?.status === 'declined' || coachRelationship?.status === 'inactive'}
+                style={{
+                  background: G.lime,
+                  color: G.dark,
+                  border: 'none',
+                  borderRadius: 6,
+                  padding: '10px 16px',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: relationshipLoading || remindSending || coachRelationship?.status === 'active' || coachRelationship?.status === 'declined' || coachRelationship?.status === 'inactive' ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {relationshipLoading
+                  ? 'Loading…'
+                  : coachRelationship?.status === 'pending'
+                  ? remindSending
+                    ? 'Sending reminder…'
+                    : 'Remind'
+                  : coachRelationship?.status === 'active'
+                  ? 'Accepted'
+                  : coachRelationship?.status === 'declined' || coachRelationship?.status === 'inactive'
+                  ? 'Declined'
+                  : 'Recruit Player'}
+              </button>
+              {!relationshipLoading && coachRelationship?.status && (
+                <div
+                  style={{
+                    marginTop: 8,
+                    fontSize: 12,
+                    color:
+                      coachRelationship.status === 'active'
+                        ? G.lime
+                        : coachRelationship.status === 'pending'
+                        ? G.yellow
+                        : G.red,
+                  }}
+                >
+                  {coachRelationship.status === 'active'
+                    ? 'Recruitment accepted'
+                    : coachRelationship.status === 'pending'
+                    ? 'Request pending'
+                    : 'Recruitment declined'}
+                </div>
+              )}
+            </div>
+          )}
           <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start', flexWrap: 'wrap' }}>
             {/* Avatar */}
             <div
@@ -525,8 +672,15 @@ export default function PlayerProfilePage() {
 
             {/* Player Info */}
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 28, fontWeight: 900, marginBottom: 4, color: G.accent }}>
-                {player.firstName} {player.lastName}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 4 }}>
+                <div style={{ fontSize: 28, fontWeight: 900, color: G.accent }}>
+                  {player.firstName} {player.lastName}
+                </div>
+                {isCoachView && (
+                  <div style={{ background: G.lime, color: G.dark, borderRadius: 999, padding: '4px 10px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase' }}>
+                    Coach view
+                  </div>
+                )}
               </div>
               <div style={{ fontSize: 14, color: G.muted, marginBottom: 12 }}>
                 @{player.username} • {player.email}
@@ -560,26 +714,9 @@ export default function PlayerProfilePage() {
               </div>
 
               {/* Action Buttons */}
-              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'nowrap', alignItems: 'center', overflow: 'auto' }}>
                 <button
-                  onClick={sendMessage}
-                  disabled={messaging}
-                  style={{
-                    background: G.bright,
-                    color: G.text,
-                    border: 'none',
-                    borderRadius: 6,
-                    padding: '10px 16px',
-                    fontSize: 12,
-                    fontWeight: 600,
-                    cursor: messaging ? 'not-allowed' : 'pointer',
-                    opacity: messaging ? 0.6 : 1,
-                  }}
-                >
-                  {messaging ? '⏳ Sending...' : '💬 Message'}
-                </button>
-                <button
-                  onClick={() => router.push(`/players/analytics/${playerId}`)}
+                  onClick={() => setActiveTab('analytics')}
                   style={{
                     background: G.yellow,
                     color: G.dark,
@@ -589,6 +726,7 @@ export default function PlayerProfilePage() {
                     fontSize: 12,
                     fontWeight: 600,
                     cursor: 'pointer',
+                    display: isCoachView ? 'none' : 'inline-block',
                   }}
                 >
                   📊 View Analytics
@@ -604,9 +742,10 @@ export default function PlayerProfilePage() {
                     fontSize: 12,
                     fontWeight: 600,
                     cursor: 'pointer',
+                    display: isCoachView ? 'none' : 'inline-block',
                   }}
                 >
-                  📅 Create Session
+                  📅 Sessions
                 </button>
                 <button
                   onClick={() => setActiveTab('challenges')}
@@ -619,6 +758,7 @@ export default function PlayerProfilePage() {
                     fontSize: 12,
                     fontWeight: 600,
                     cursor: 'pointer',
+                    display: isCoachView ? 'none' : 'inline-block',
                   }}
                 >
                   ⚡ Find Challenge
@@ -634,35 +774,38 @@ export default function PlayerProfilePage() {
                     fontSize: 12,
                     fontWeight: 600,
                     cursor: 'pointer',
+                    display: isCoachView ? 'none' : 'inline-block',
                   }}
                 >
-                  🤝 Find Partner
+                  {isCoachView ? '🤝 Similar Players' : '🤝 Find Partner'}
                 </button>
-                <button
-                  onClick={removePlayer}
-                  disabled={removing}
-                  style={{
-                    background: G.red,
-                    color: G.text,
-                    border: 'none',
-                    borderRadius: 6,
-                    padding: '10px 16px',
-                    fontSize: 12,
-                    fontWeight: 600,
-                    cursor: removing ? 'not-allowed' : 'pointer',
-                    opacity: removing ? 0.6 : 1,
-                  }}
-                >
-                  {removing ? '⏳ Removing...' : '🗑️ Remove'}
-                </button>
+                {!isCoachView && (
+                  <button
+                    onClick={removePlayer}
+                    disabled={removing}
+                    style={{
+                      background: G.red,
+                      color: G.text,
+                      border: 'none',
+                      borderRadius: 6,
+                      padding: '10px 16px',
+                      fontSize: 12,
+                      fontWeight: 600,
+                      cursor: removing ? 'not-allowed' : 'pointer',
+                      opacity: removing ? 0.6 : 1,
+                    }}
+                  >
+                    {removing ? '⏳ Removing...' : '🗑️ Remove'}
+                  </button>
+                )}
               </div>
             </div>
           </div>
-        </div>
+
 
         {/* Tab Navigation */}
         <div style={{ display: 'flex', gap: 10, marginBottom: 20, borderBottom: `1px solid ${G.cardBorder}`, paddingBottom: 12 }}>
-          {['overview', 'comments', 'sessions', 'partners', 'challenges'].map((tab) => (
+          {['overview', 'analytics', 'comments', 'sessions', 'partners', 'challenges', 'coach-requests'].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab as any)}
@@ -679,7 +822,7 @@ export default function PlayerProfilePage() {
                 textTransform: 'capitalize',
               }}
             >
-              {tab === 'overview' && '📊'} {tab === 'comments' && '💬'} {tab === 'sessions' && '📅'} {tab === 'partners' && '🤝'} {tab === 'challenges' && '⚡'} {tab}
+              {tab === 'overview' && '📊'} {tab === 'analytics' && '📈'} {tab === 'comments' && '💬'} {tab === 'sessions' && '📅'} {tab === 'partners' && '🤝'} {tab === 'challenges' && '⚡'} {tab === 'coach-requests' && '👨‍🏫'} {tab === 'partners' ? 'Similar Players' : tab === 'coach-requests' ? 'Coach Requests' : tab}
             </button>
           ))}
         </div>
@@ -721,6 +864,13 @@ export default function PlayerProfilePage() {
             </div>
           )}
 
+          {/* Analytics Tab */}
+          {activeTab === 'analytics' && (
+            <div>
+              <ProgressView playerId={playerId} />
+            </div>
+          )}
+
           {/* Comments Tab */}
           {activeTab === 'comments' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -735,7 +885,10 @@ export default function PlayerProfilePage() {
                     {[1, 2, 3, 4, 5].map((r) => (
                       <button
                         key={r}
-                        onClick={() => setRating(r)}
+                        onClick={() => {
+                          setPreviousRating(rating);
+                          setRating(r);
+                        }}
                         style={{
                           background: r <= rating ? G.yellow : G.dark,
                           border: `1px solid ${G.cardBorder}`,
@@ -775,6 +928,7 @@ export default function PlayerProfilePage() {
 
                 <button
                   onClick={addComment}
+                  disabled={commentSubmitting}
                   style={{
                     background: G.lime,
                     color: G.dark,
@@ -783,11 +937,12 @@ export default function PlayerProfilePage() {
                     padding: '10px 16px',
                     fontSize: 12,
                     fontWeight: 600,
-                    cursor: 'pointer',
+                    cursor: commentSubmitting ? 'not-allowed' : 'pointer',
+                    opacity: commentSubmitting ? 0.75 : 1,
                     width: '100%',
                   }}
                 >
-                  Post Comment
+                  {commentSubmitting ? 'Posting...' : 'Post Comment'}
                 </button>
               </div>
 
@@ -826,160 +981,6 @@ export default function PlayerProfilePage() {
           {/* Sessions Tab */}
           {activeTab === 'sessions' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              {/* New Session Form */}
-              {showSessionForm ? (
-                <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 12, padding: 16 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: G.lime, marginBottom: 12 }}>📅 Create New Session</div>
-                  
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 12 }}>
-                    <input
-                      type="text"
-                      placeholder="Session Title"
-                      value={sessionForm.title}
-                      onChange={(e) => setSessionForm({ ...sessionForm, title: e.target.value })}
-                      style={{
-                        background: G.dark,
-                        border: `1px solid ${G.cardBorder}`,
-                        borderRadius: 6,
-                        padding: '10px',
-                        color: G.text,
-                        fontSize: 12,
-                      }}
-                    />
-                    <select
-                      value={sessionForm.type}
-                      onChange={(e) => setSessionForm({ ...sessionForm, type: e.target.value as any })}
-                      style={{
-                        background: G.dark,
-                        border: `1px solid ${G.cardBorder}`,
-                        borderRadius: 6,
-                        padding: '10px',
-                        color: G.text,
-                        fontSize: 12,
-                      }}
-                    >
-                      <option value="training">🏆 Training</option>
-                      <option value="match">⚡ Match</option>
-                      <option value="practice">🎾 Practice</option>
-                    </select>
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 12 }}>
-                    <input
-                      type="date"
-                      value={sessionForm.date}
-                      onChange={(e) => setSessionForm({ ...sessionForm, date: e.target.value })}
-                      style={{
-                        background: G.dark,
-                        border: `1px solid ${G.cardBorder}`,
-                        borderRadius: 6,
-                        padding: '10px',
-                        color: G.text,
-                        fontSize: 12,
-                      }}
-                    />
-                    <input
-                      type="time"
-                      value={sessionForm.time}
-                      onChange={(e) => setSessionForm({ ...sessionForm, time: e.target.value })}
-                      style={{
-                        background: G.dark,
-                        border: `1px solid ${G.cardBorder}`,
-                        borderRadius: 6,
-                        padding: '10px',
-                        color: G.text,
-                        fontSize: 12,
-                      }}
-                    />
-                    <select
-                      value={sessionForm.duration}
-                      onChange={(e) => setSessionForm({ ...sessionForm, duration: Number(e.target.value) })}
-                      style={{
-                        background: G.dark,
-                        border: `1px solid ${G.cardBorder}`,
-                        borderRadius: 6,
-                        padding: '10px',
-                        color: G.text,
-                        fontSize: 12,
-                      }}
-                    >
-                      {[0.5, 1, 1.5, 2, 3].map((d) => (
-                        <option key={d} value={d}>{d}h Duration</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <input
-                    type="text"
-                    placeholder="Court (optional)"
-                    value={sessionForm.court}
-                    onChange={(e) => setSessionForm({ ...sessionForm, court: e.target.value })}
-                    style={{
-                      width: '100%',
-                      background: G.dark,
-                      border: `1px solid ${G.cardBorder}`,
-                      borderRadius: 6,
-                      padding: '10px',
-                      color: G.text,
-                      fontSize: 12,
-                      marginBottom: 12,
-                    }}
-                  />
-
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <button
-                      onClick={createSession}
-                      style={{
-                        flex: 1,
-                        background: G.lime,
-                        color: G.dark,
-                        border: 'none',
-                        borderRadius: 6,
-                        padding: '10px 16px',
-                        fontSize: 12,
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      Create Session
-                    </button>
-                    <button
-                      onClick={() => setShowSessionForm(false)}
-                      style={{
-                        flex: 1,
-                        background: G.mid,
-                        color: G.text,
-                        border: 'none',
-                        borderRadius: 6,
-                        padding: '10px 16px',
-                        fontSize: 12,
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <button
-                  onClick={() => setShowSessionForm(true)}
-                  style={{
-                    width: '100%',
-                    background: G.bright,
-                    color: G.text,
-                    border: 'none',
-                    borderRadius: 6,
-                    padding: '12px 16px',
-                    fontSize: 12,
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                  }}
-                >
-                  + Create New Session
-                </button>
-              )}
-
               {/* Sessions List */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {sessions.length === 0 ? (
@@ -1027,13 +1028,13 @@ export default function PlayerProfilePage() {
                   opacity: partnersLoading ? 0.6 : 1,
                 }}
               >
-                {partnersLoading ? '⏳ Finding partners...' : '🤝 Find Perfect Partner Match'}
+                {partnersLoading ? '⏳ Finding partners...' : isCoachView ? '🔎 Find Similar Players' : '🤝 Find Perfect Partner Match'}
               </button>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 12 }}>
                 {suggestedPartners.length === 0 ? (
                   <div style={{ color: G.muted, textAlign: 'center', padding: '20px', background: G.card, borderRadius: 12, gridColumn: '1/-1' }}>
-                    {partnersLoading ? 'Loading...' : 'Click "Find Partner" to see suggestions'}
+                    {partnersLoading ? 'Loading...' : isCoachView ? 'Click "Find Similar Players" to browse suggested profiles' : 'Click "Find Partner" to see suggestions'}
                   </div>
                 ) : (
                   suggestedPartners.map((partner) => (
@@ -1052,10 +1053,17 @@ export default function PlayerProfilePage() {
                         </div>
                       </div>
                       <button
+                        onClick={() => {
+                          if (isCoachView) {
+                            router.push(`/players/profile/${partner.id}?view=coach`);
+                          } else {
+                            toast('Match proposals are not available here yet.');
+                          }
+                        }}
                         style={{
                           width: '100%',
-                          background: G.lime,
-                          color: G.dark,
+                          background: isCoachView ? G.lime : G.bright,
+                          color: isCoachView ? G.dark : G.text,
                           border: 'none',
                           borderRadius: 6,
                           padding: '6px',
@@ -1064,7 +1072,7 @@ export default function PlayerProfilePage() {
                           cursor: 'pointer',
                         }}
                       >
-                        Propose Match
+                        {isCoachView ? 'View Profile' : 'Propose Match'}
                       </button>
                     </div>
                   ))
@@ -1076,22 +1084,68 @@ export default function PlayerProfilePage() {
           {/* Challenges Tab */}
           {activeTab === 'challenges' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <button
-                onClick={() => toast.error('Challenge feature coming soon!')}
-                style={{
-                  width: '100%',
-                  background: G.yellow,
-                  color: G.dark,
-                  border: 'none',
-                  borderRadius: 6,
-                  padding: '12px 16px',
-                  fontSize: 12,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
-                ⚡ Send Challenge to Player
-              </button>
+              {showCoachActions ? (
+                <>
+                  <div style={{ display: 'grid', gap: 10 }}>
+                    <div style={{ fontSize: 12, color: G.muted }}>
+                      Select the coached or organization player who will issue this challenge.
+                    </div>
+                    <select
+                      value={selectedCoachPlayerId}
+                      onChange={(e) => setSelectedCoachPlayerId(e.target.value)}
+                      style={{
+                        width: '100%',
+                        background: G.card,
+                        border: `1px solid ${G.cardBorder}`,
+                        borderRadius: 6,
+                        color: G.text,
+                        padding: '12px 14px',
+                        fontSize: 12,
+                        appearance: 'none',
+                      }}
+                    >
+                      <option value="">Choose your player</option>
+                      {availableChallengePlayers.map((coachPlayer) => (
+                        <option key={coachPlayer.userId} value={coachPlayer.userId}>
+                          {coachPlayer.firstName} {coachPlayer.lastName}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <button
+                    onClick={sendChallenge}
+                    disabled={challengeSending || challengeSourcesLoading || !selectedCoachPlayerId}
+                    style={{
+                      width: '100%',
+                      background: challengeSending || !selectedCoachPlayerId ? G.dark : G.yellow,
+                      color: G.dark,
+                      border: 'none',
+                      borderRadius: 6,
+                      padding: '12px 16px',
+                      fontSize: 12,
+                      fontWeight: 600,
+                      cursor: challengeSending || !selectedCoachPlayerId ? 'not-allowed' : 'pointer',
+                      opacity: challengeSourcesLoading ? 0.7 : 1,
+                    }}
+                  >
+                    {challengeSending ? 'Sending challenge…' : '⚡ Send Challenge from selected player'}
+                  </button>
+
+                  {challengeSourcesLoading && (
+                    <div style={{ color: G.muted, fontSize: 12 }}>Loading your players…</div>
+                  )}
+                  {!challengeSourcesLoading && availableChallengePlayers.length === 0 && (
+                    <div style={{ color: G.muted, fontSize: 12 }}>
+                      You need at least one coached player or organization player to send a challenge from the coach dashboard.
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div style={{ color: G.muted, textAlign: 'center', padding: '20px', background: G.card, borderRadius: 12 }}>
+                  Challenge creation is only available when a coach views this profile from their dashboard.
+                </div>
+              )}
 
               <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 12, padding: 16 }}>
                 <div style={{ fontSize: 13, fontWeight: 600, color: G.lime, marginBottom: 12 }}>🏆 Recent Challenges</div>
@@ -1101,8 +1155,130 @@ export default function PlayerProfilePage() {
               </div>
             </div>
           )}
+
+          {/* Coach Requests Tab */}
+          {activeTab === 'coach-requests' && (
+            <div>
+              <CoachRequestsComponent playerId={playerId} />
+            </div>
+          )}
         </div>
       </div>
+      {recruitOpen && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ background: G.card, border: `1px solid ${G.cardBorder}`, borderRadius: 14, width: 'min(620px,100%)', maxHeight: '90vh', overflowY: 'auto', padding: 24 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18, gap: 16, flexWrap: 'wrap' }}>
+              <div>
+                <div style={{ fontSize: 18, fontWeight: 800, color: G.text }}>🧲 Recruit player</div>
+                <div style={{ fontSize: 12, color: G.muted }}>Send a trust-first coaching invitation with context, credibility, and intent.</div>
+              </div>
+              <button onClick={() => setRecruitOpen(false)} style={{ background: 'transparent', border: 'none', color: G.muted, fontSize: 18, cursor: 'pointer' }}>×</button>
+            </div>
+
+            <div style={{ display: 'grid', gap: 18 }}>
+              <div style={{ display: 'grid', gap: 10 }}>
+                <div style={{ fontSize: 12, color: G.text }}>This is a recruitment request, not a direct hire action. Give the player enough detail so they can answer “Why should I trust this coach with my growth?”</div>
+                <div style={{ display: 'grid', gap: 10 }}>
+                  <div style={{ fontSize: 12, color: G.muted, fontWeight: 700 }}>Coach snapshot</div>
+                  <div style={{ background: G.sidebar, border: `1px solid ${G.cardBorder}`, borderRadius: 10, padding: 12, display: 'grid', gap: 6, fontSize: 12, color: G.text }}>
+                    <div style={{ fontWeight: 700 }}>{user?.firstName || 'Coach'} {user?.lastName || ''}</div>
+                    <div>{user?.role ? user.role : 'Coach'}</div>
+                    <div>{(user as any)?.organization?.name || 'Independent coach'}</div>
+                    <div>{user?.email}</div>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gap: 14 }}>
+                <label style={{ fontSize: 12, color: G.muted, fontWeight: 700 }}>Short introduction message</label>
+                <textarea
+                  value={recruitIntro}
+                  onChange={(event) => setRecruitIntro(event.target.value)}
+                  placeholder="Hi Brian, I’ve been following your tournament results and believe your defense is strong. I can help you improve attacking transitions and tournament preparation."
+                  style={{ width: '100%', minHeight: 120, borderRadius: 12, border: `1px solid ${G.cardBorder}`, background: G.card, color: G.text, padding: 12, fontSize: 13, resize: 'vertical' }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gap: 14 }}>
+                <div style={{ display: 'grid', gap: 10 }}>
+                  <label style={{ fontSize: 12, color: G.muted, fontWeight: 700 }}>Reason for recruitment</label>
+                  <select
+                    value={recruitReason}
+                    onChange={(event) => setRecruitReason(event.target.value)}
+                    style={{ width: '100%', borderRadius: 10, border: `1px solid ${G.cardBorder}`, background: G.card, color: G.text, padding: '10px 12px', fontSize: 13 }}
+                  >
+                    <option value="Tournament preparation">Tournament preparation</option>
+                    <option value="Beginner development">Beginner development</option>
+                    <option value="Professional pathway">Professional pathway</option>
+                    <option value="Fitness & conditioning">Fitness & conditioning</option>
+                    <option value="Technique improvement">Technique improvement</option>
+                    <option value="Junior coaching">Junior coaching</option>
+                    <option value="Elite competition training">Elite competition training</option>
+                  </select>
+                </div>
+
+                <div style={{ display: 'grid', gap: 10 }}>
+                  <label style={{ fontSize: 12, color: G.muted, fontWeight: 700 }}>Coaching offer</label>
+                  <div style={{ display: 'grid', gap: 10 }}>
+                    <select
+                      value={recruitOfferMode}
+                      onChange={(event) => setRecruitOfferMode(event.target.value)}
+                      style={{ width: '100%', borderRadius: 10, border: `1px solid ${G.cardBorder}`, background: G.card, color: G.text, padding: '10px 12px', fontSize: 13 }}
+                    >
+                      <option value="Online">Online coaching</option>
+                      <option value="Physical">Physical coaching</option>
+                      <option value="Hybrid">Hybrid coaching</option>
+                    </select>
+                    <select
+                      value={recruitSessionFormat}
+                      onChange={(event) => setRecruitSessionFormat(event.target.value)}
+                      style={{ width: '100%', borderRadius: 10, border: `1px solid ${G.cardBorder}`, background: G.card, color: G.text, padding: '10px 12px', fontSize: 13 }}
+                    >
+                      <option value="One-on-one">One-on-one</option>
+                      <option value="Group">Group</option>
+                    </select>
+                    <select
+                      value={recruitPaymentType}
+                      onChange={(event) => setRecruitPaymentType(event.target.value)}
+                      style={{ width: '100%', borderRadius: 10, border: `1px solid ${G.cardBorder}`, background: G.card, color: G.text, padding: '10px 12px', fontSize: 13 }}
+                    >
+                      <option value="Paid">Paid</option>
+                      <option value="Free trial">Free trial</option>
+                      <option value="Custom">Custom</option>
+                    </select>
+                    <input
+                      type="number"
+                      value={recruitWeeklySessions}
+                      onChange={(event) => setRecruitWeeklySessions(event.target.value)}
+                      min={1}
+                      max={7}
+                      placeholder="Weekly sessions"
+                      style={{ width: '100%', borderRadius: 10, border: `1px solid ${G.cardBorder}`, background: G.card, color: G.text, padding: '10px 12px', fontSize: 13 }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gap: 10 }}>
+                  <label style={{ fontSize: 12, color: G.muted, fontWeight: 700 }}>Optional personalized analysis</label>
+                  <textarea
+                    value={recruitAnalysis}
+                    onChange={(event) => setRecruitAnalysis(event.target.value)}
+                    placeholder="Your backhand placement is strong, but footwork recovery after wide forehand shots needs improvement."
+                    style={{ width: '100%', minHeight: 100, borderRadius: 12, border: `1px solid ${G.cardBorder}`, background: G.card, color: G.text, padding: 12, fontSize: 13, resize: 'vertical' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: 10, marginTop: 10, flexWrap: 'wrap' }}>
+                <button onClick={() => setRecruitOpen(false)} style={{ flex: 1, background: G.mid, color: G.text, border: 'none', borderRadius: 8, padding: '12px 16px', fontSize: 12, cursor: 'pointer' }}>Cancel</button>
+                <button onClick={recruitPlayer} disabled={recruiting} style={{ flex: 1, background: G.lime, color: G.dark, border: 'none', borderRadius: 8, padding: '12px 16px', fontSize: 12, fontWeight: 700, cursor: recruiting ? 'not-allowed' : 'pointer', opacity: recruiting ? 0.7 : 1 }}>{recruiting ? 'Sending request…' : 'Send recruitment request'}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
     </div>
   );
+
 }

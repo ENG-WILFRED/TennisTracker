@@ -6,6 +6,7 @@ export async function GET(req: NextRequest) {
     const url = new URL(req.url);
     const coachId = url.searchParams.get('coachId');
     const status = url.searchParams.get('status');
+    const playerId = url.searchParams.get('playerId');
 
     if (!coachId) {
       return NextResponse.json({ error: 'coachId required' }, { status: 400 });
@@ -14,7 +15,8 @@ export async function GET(req: NextRequest) {
     const relationships = await prisma.coachPlayerRelationship.findMany({
       where: {
         coachId,
-        ...(status && { status }),
+        ...(status && status !== 'all' ? { status } : {}),
+        ...(playerId ? { playerId } : {}),
       },
       include: {
         player: {

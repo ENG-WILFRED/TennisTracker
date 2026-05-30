@@ -83,14 +83,58 @@ export async function handleSessionCompletedPayment(event: DomainEvent): Promise
 
   const { sessionId, playerId, organizationId, price } = event.payload;
 
-  console.log(`[Handler] SessionCompleted → Recording revenue (${price} USD)`);
+  // Ensure we have a price: prefer event payload, then session.price, then org pricing, then default $45/hr
+  let finalPrice: number | null = price ? parseFloat(price) : null;
+
+  let session = await prisma.coachSession.findUnique({ where: { id: sessionId } });
+
+  if (!finalPrice) {
+    if (session?.price) {
+      finalPrice = session.price;
+    } else {
+      const orgPricing = await prisma.orgCoachingPricing.findUnique({ where: { organizationId } });
+      const start = session?.startTime ? new Date(session.startTime).getTime() : null;
+      const end = session?.endTime ? new Date(session.endTime).getTime() : null;
+      let durationHours = 1; // default 1 hour
+      const roundingType = orgPricing?.roundingType || 'up';
+
+      if (start && end) {
+        const durationMinutes = Math.ceil((end - start) / (1000 * 60));
+        const rawHours = durationMinutes / 60;
+        switch (roundingType) {
+          case 'down':
+            durationHours = Math.floor(rawHours * 4) / 4;
+            break;
+          case 'nearest':
+            durationHours = Math.round(rawHours * 4) / 4;
+            break;
+          case 'up':
+          default:
+            durationHours = Math.ceil(rawHours * 4) / 4;
+            break;
+        }
+      }
+
+      const pricePerHour = orgPricing?.pricePerHour ?? 45;
+      finalPrice = parseFloat((durationHours * pricePerHour).toFixed(2));
+    }
+  }
+
+  if (session && !session.price) {
+    await prisma.coachSession.update({
+      where: { id: sessionId },
+      data: { price: finalPrice },
+    });
+  }
+
+  console.log(`[Handler] SessionCompleted → Recording revenue (${finalPrice} USD)`);
 
   // Record revenue
   const revenue = await prisma.orgRevenue.create({
     data: {
       organizationId,
       sessionIds: [sessionId],
-      amount: parseFloat(price),
+      amount: finalPrice,
       paymentType: 'per_session',
       fromPlayerId: playerId,
       status: 'confirmed',
@@ -107,14 +151,14 @@ export async function handleSessionCompletedPayment(event: DomainEvent): Promise
       invoiceNumber: `INV-${Date.now()}`,
       issueDate: new Date(),
       dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14 days
-      totalAmount: parseFloat(price),
+      totalAmount: finalPrice,
       paidAmount: 0,
       status: 'issued',
       lineItems: JSON.parse(JSON.stringify([
         {
           description: 'Coaching Session',
           sessionId,
-          amount: parseFloat(price),
+          amount: finalPrice,
           date: new Date().toISOString(),
         },
       ])),
@@ -134,9 +178,44 @@ export async function handleSessionCompletedEarnings(event: DomainEvent): Promis
 
   const { sessionId, coachId, price } = event.payload;
 
+  // Ensure we have a price to calculate earnings (fallbacks like payment handler)
+  let finalPrice: number | null = price ? parseFloat(price) : null;
+  if (!finalPrice) {
+    const session = await prisma.coachSession.findUnique({ where: { id: sessionId } });
+    if (session?.price) {
+      finalPrice = session.price;
+    } else {
+      const orgPricing = await prisma.orgCoachingPricing.findUnique({ where: { organizationId: event.organizationId } });
+      const start = session?.startTime ? new Date(session.startTime).getTime() : null;
+      const end = session?.endTime ? new Date(session.endTime).getTime() : null;
+      let durationHours = 1;
+      const roundingType = orgPricing?.roundingType || 'up';
+
+      if (start && end) {
+        const durationMinutes = Math.ceil((end - start) / (1000 * 60));
+        const rawHours = durationMinutes / 60;
+        switch (roundingType) {
+          case 'down':
+            durationHours = Math.floor(rawHours * 4) / 4;
+            break;
+          case 'nearest':
+            durationHours = Math.round(rawHours * 4) / 4;
+            break;
+          case 'up':
+          default:
+            durationHours = Math.ceil(rawHours * 4) / 4;
+            break;
+        }
+      }
+
+      const pricePerHour = orgPricing?.pricePerHour ?? 45;
+      finalPrice = parseFloat((durationHours * pricePerHour).toFixed(2));
+    }
+  }
+
   console.log(`[Handler] SessionCompleted → Calculating coach earnings`);
 
-  const coachEarning = parseFloat(price) * 0.6; // 60% to coach
+  const coachEarning = finalPrice * 0.6; // 60% to coach
 
   // Record earning
   await prisma.coachEarning.create({
@@ -144,9 +223,43 @@ export async function handleSessionCompletedEarnings(event: DomainEvent): Promis
       coachId,
       organizationId: event.organizationId,
       sessionId,
-      sessionPrice: parseFloat(price),
+      sessionPrice: finalPrice,
       amount: coachEarning,
       status: 'pending',
+    },
+  });
+
+  const existingWallet = await prisma.coachWallet.findUnique({
+    where: { coachId },
+  });
+
+  const previousBalance = existingWallet?.balance ?? 0;
+
+  const wallet = await prisma.coachWallet.upsert({
+    where: { coachId },
+    create: {
+      coachId,
+      balance: coachEarning,
+      totalEarned: coachEarning,
+      pendingBalance: coachEarning,
+    },
+    update: {
+      balance: { increment: coachEarning },
+      totalEarned: { increment: coachEarning },
+      pendingBalance: { increment: coachEarning },
+    },
+  });
+
+  await prisma.walletTransaction.create({
+    data: {
+      walletId: wallet.id,
+      type: 'credit',
+      amount: coachEarning,
+      description: `Earnings credit for session ${sessionId}`,
+      reference: sessionId,
+      balanceBefore: previousBalance,
+      balanceAfter: previousBalance + coachEarning,
+      platformFee: 0,
     },
   });
 

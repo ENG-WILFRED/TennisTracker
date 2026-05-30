@@ -23,6 +23,12 @@ export async function GET(
             bio: true,
           },
         },
+        organization: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
       },
     });
 
@@ -44,6 +50,7 @@ export async function GET(
         matchesLost: player.matchesLost || 0,
         winRate: player.matchesPlayed ? ((player.matchesWon || 0) / player.matchesPlayed * 100).toFixed(1) : 0,
         joinedAt: player.createdAt,
+        organization: player.organization ? { id: player.organization.id, name: player.organization.name } : null,
       },
     });
   } catch (error) {

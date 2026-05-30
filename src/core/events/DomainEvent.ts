@@ -40,7 +40,8 @@ export type DomainEventType =
   // Notification Events
   | 'NOTIFICATION_TRIGGERED'
   | 'NOTIFICATION_SENT'
-  | 'NOTIFICATION_FAILED';
+  | 'NOTIFICATION_FAILED'
+  | 'RANKING_EVENT_OCCURRED';
 
 export interface DomainEventPayload {
   [key: string]: any;

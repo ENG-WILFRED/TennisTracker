@@ -100,8 +100,14 @@ export class CoachingSessionPaymentService {
       where: { organizationId },
     });
 
+    // If org-level pricing isn't configured, fall back to a sensible default
+    // per the product decision: $45/hr
     if (!orgPricing) {
-      throw new Error(`Coaching pricing not configured for organization ${organizationId}`);
+      return {
+        pricePerHour: 45,
+        ruleType: 'base',
+        source: 'Default fallback rate ($45/hr)',
+      };
     }
 
     const playerTier = await this.getPlayerTier(playerId, organizationId);
@@ -199,7 +205,13 @@ export class CoachingSessionPaymentService {
         where: { organizationId },
       });
 
-      if (!orgPricing) throw new Error(`Coaching pricing not configured for organization ${organizationId}`);
+      // Use defaults when organization pricing is not configured
+      const effectiveOrgPricing = orgPricing ?? {
+        pricePerHour: 45,
+        currency: 'USD',
+        minSessionDurationMinutes: 30,
+        roundingType: 'up',
+      } as any;
 
       const primaryBooking = session.bookings[0];
       if (!primaryBooking) throw new Error('Session must have at least one player booking');
@@ -208,7 +220,7 @@ export class CoachingSessionPaymentService {
       const pricingRule = await this.determinePricingRule(coachId, primaryBooking.playerId, organizationId);
 
       const durationMinutes = Math.ceil((session.endTime.getTime() - session.startTime.getTime()) / (1000 * 60));
-      const durationHours = this.calculateDurationHours(session.startTime, session.endTime, orgPricing.roundingType);
+      const durationHours = this.calculateDurationHours(session.startTime, session.endTime, effectiveOrgPricing.roundingType);
       const amountDecimal = durationHours.mul(new Decimal(pricingRule.pricePerHour));
 
       const coachPricing = await tx.coachPricing.findUnique({

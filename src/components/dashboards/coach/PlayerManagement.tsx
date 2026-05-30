@@ -1,9 +1,11 @@
 'use client';
 
 import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { LoadingState } from '@/components/LoadingState';
 import { useToast } from '@/components/ui/ToastContext';
 import { usePDFDownload } from '@/hooks/usePDFDownload';
+import { authenticatedFetch } from '@/lib/authenticatedFetch';
 
 const G = {
   dark: '#0a180a', sidebar: '#0f1e0f', card: '#162616', card2: '#1b2f1b', card3: '#203520',
@@ -26,7 +28,7 @@ export default function PlayerManagement({ coachId }: { coachId: string }) {
     phone?: string;
     photo?: string | null;
     organizationId?: string | null;
-    relationshipType: 'direct' | 'organization';
+    relationshipType: 'direct' | 'organization' | 'pending' | 'platform';
   };
 
   type PlayerDetails = EligiblePlayer & {
@@ -49,7 +51,7 @@ export default function PlayerManagement({ coachId }: { coachId: string }) {
   const [notes, setNotes] = useState<any[]>([]);
   const [loadingProgress, setLoadingProgress] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState<'all' | 'our' | 'org'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'our' | 'org' | 'pending'>('all');
   const [noteForm, setNoteForm] = useState({ title: '', content: '', category: 'general' });
   const [ratingForm, setRatingForm] = useState({
     overallRating: 5,
@@ -64,9 +66,11 @@ export default function PlayerManagement({ coachId }: { coachId: string }) {
   const [submittingRating, setSubmittingRating] = useState(false);
   const [ratingSuccess, setRatingSuccess] = useState(false);
   const [requestingPlayerId, setRequestingPlayerId] = useState<string | null>(null);
+  const [viewingProfilePlayerId, setViewingProfilePlayerId] = useState<string | null>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [savingNote, setSavingNote] = useState(false);
   const profileRef = useRef<HTMLDivElement | null>(null);
+  const router = useRouter();
   const { addToast } = useToast();
   const { downloadPDF, isDownloading } = usePDFDownload();
 
@@ -104,7 +108,8 @@ export default function PlayerManagement({ coachId }: { coachId: string }) {
   }, [coachId, addToast]);
 
   const totalDirect = useMemo(() => players.filter(player => player.status === 'active').length, [players]);
-  const totalOrg = useMemo(() => players.filter(player => player.status !== 'active').length, [players]);
+  const totalOrg = useMemo(() => players.filter(player => player.relationshipType === 'organization').length, [players]);
+  const totalPending = useMemo(() => players.filter(player => player.relationshipType === 'pending').length, [players]);
 
   const fetchPlayerDetails = useCallback(async (player: PlayerDetails) => {
     setSelectedPlayer(player);
@@ -152,6 +157,13 @@ export default function PlayerManagement({ coachId }: { coachId: string }) {
     }
   }, [coachId, addToast]);
 
+  const handleViewProfile = useCallback((player: PlayerDetails) => {
+    if (viewingProfilePlayerId) return;
+    setViewingProfilePlayerId(player.userId);
+    addToast(`Opening ${player.firstName} ${player.lastName}'s profile...`, 'info');
+    router.push(`/players/profile/${player.userId}?view=coach`);
+  }, [addToast, router, viewingProfilePlayerId]);
+
   const handleRequestPlayer = useCallback(async (player: PlayerDetails) => {
     setRequestingPlayerId(player.userId);
     try {
@@ -166,14 +178,41 @@ export default function PlayerManagement({ coachId }: { coachId: string }) {
         throw new Error(payload?.error || 'Failed to request player');
       }
 
-      setPlayers(prev => prev.map(p => p.userId === player.userId ? { ...p, status: 'active' } : p));
+      setPlayers(prev => prev.map(p => p.userId === player.userId ? { ...p, status: 'active', relationshipType: 'direct' } : p));
       if (selectedPlayer?.userId === player.userId) {
-        setSelectedPlayer(prev => prev ? { ...prev, status: 'active' } : prev);
+        setSelectedPlayer(prev => prev ? { ...prev, status: 'active', relationshipType: 'direct' } : prev);
       }
       addToast(`${player.firstName} ${player.lastName} has been added to your roster`, 'success');
     } catch (error) {
       console.error(error);
       addToast('Unable to request player', 'error');
+    } finally {
+      setRequestingPlayerId(null);
+    }
+  }, [coachId, selectedPlayer, addToast]);
+
+  const handleAcceptPlayer = useCallback(async (player: PlayerDetails) => {
+    setRequestingPlayerId(player.userId);
+    try {
+      const res = await fetch(`/api/coaches/players/${player.userId}/accept`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ coachId }),
+      });
+
+      if (!res.ok) {
+        const payload = await res.json();
+        throw new Error(payload?.error || 'Failed to accept assignment');
+      }
+
+      setPlayers(prev => prev.map(p => p.userId === player.userId ? { ...p, status: 'active', relationshipType: 'direct' } : p));
+      if (selectedPlayer?.userId === player.userId) {
+        setSelectedPlayer(prev => prev ? { ...prev, status: 'active', relationshipType: 'direct' } : prev);
+      }
+      addToast(`${player.firstName} ${player.lastName} has been accepted for coaching`, 'success');
+    } catch (error) {
+      console.error(error);
+      addToast('Unable to accept assignment', 'error');
     } finally {
       setRequestingPlayerId(null);
     }
@@ -219,7 +258,7 @@ export default function PlayerManagement({ coachId }: { coachId: string }) {
 
     setSubmittingRating(true);
     try {
-      const res = await fetch('/api/coaches/rate-player', {
+      const res = await authenticatedFetch('/api/coaches/rate-player', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -284,12 +323,13 @@ export default function PlayerManagement({ coachId }: { coachId: string }) {
       const matchesTab =
         activeTab === 'all' ||
         (activeTab === 'our' && player.status === 'active') ||
-        (activeTab === 'org' && player.status !== 'active');
+        (activeTab === 'org' && player.relationshipType !== 'pending') ||
+        (activeTab === 'pending' && player.relationshipType === 'pending');
       return matchesSearch && matchesTab;
     });
   }, [players, searchQuery, activeTab]);
 
-  const playerCountLabel = `${totalDirect} roster player${totalDirect === 1 ? '' : 's'} · ${totalOrg} org player${totalOrg === 1 ? '' : 's'}`;
+  const playerCountLabel = `${totalDirect} roster player${totalDirect === 1 ? '' : 's'} · ${totalOrg} org player${totalOrg === 1 ? '' : 's'} · ${totalPending} requested`;
   const selectedIsDirect = selectedPlayer?.status === 'active';
 
   if (loading) {
@@ -322,7 +362,7 @@ export default function PlayerManagement({ coachId }: { coachId: string }) {
               />
             </div>
             <div style={{ display: 'flex', gap: 6, background: G.card, border: `1px solid ${G.border}`, borderRadius: 10, padding: 4 }}>
-              {(['all', 'our', 'org'] as const).map(tab => (
+              {(['all', 'our', 'org', 'pending'] as const).map(tab => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
@@ -331,7 +371,7 @@ export default function PlayerManagement({ coachId }: { coachId: string }) {
                     background: activeTab === tab ? G.lime : 'transparent', color: activeTab === tab ? '#0a180a' : G.muted,
                   }}
                 >
-                  {tab === 'all' ? 'All players' : tab === 'our' ? 'Your players' : 'Org players'}
+                  {tab === 'all' ? 'All players' : tab === 'our' ? 'Your players' : tab === 'org' ? 'Org players' : 'Requested'}
                 </button>
               ))}
             </div>
@@ -364,28 +404,56 @@ export default function PlayerManagement({ coachId }: { coachId: string }) {
                           </div>
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
-                          <Tag color={isRoster ? G.lime : G.blue}>{isRoster ? 'Your player' : 'Org player'}</Tag>
-                          {player.organizationId && <Tag color={G.yellow}>Org member</Tag>}
+                          <Tag color={isRoster ? G.lime : player.relationshipType === 'pending' ? G.yellow : player.relationshipType === 'organization' ? G.blue : G.yellow}>
+                            {isRoster ? 'Your player' : player.relationshipType === 'pending' ? 'Requested' : player.relationshipType === 'organization' ? 'Org player' : 'Platform player'}
+                          </Tag>
+                          {player.organizationId && player.relationshipType !== 'platform' && <Tag color={G.yellow}>Org member</Tag>}
                         </div>
                       </div>
                       <p style={{ color: G.muted2, fontSize: 10.5, lineHeight: 1.6, minHeight: 42 }}>
                         {isRoster
                           ? 'Coached directly by you with roster tools and progress detail.'
-                          : 'Available inside your organization. Request this player to recruit them.'}
+                          : player.relationshipType === 'pending'
+                        ? 'An assignment request for this player is pending. Accept it to confirm the relationship.'
+                        : player.relationshipType === 'organization'
+                          ? 'Available inside your organization. Request this player to recruit them.'
+                          : 'Available across the platform. Request this player to recruit them.'}
                       </p>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginTop: 14 }}>
                       <div style={{ fontSize: 10, color: G.muted2 }}>{player.organizationId ? 'In org directory' : 'No org'} </div>
-                      {!isRoster && (
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                         <button
                           type="button"
-                          onClick={e => { e.stopPropagation(); handleRequestPlayer(player); }}
-                          disabled={requestingPlayerId === player.userId}
-                          style={{ background: G.lime, color: '#0a180a', border: 'none', borderRadius: 9, padding: '9px 12px', fontSize: 10, fontWeight: 700, cursor: 'pointer' }}
+                          onClick={e => { e.stopPropagation(); handleViewProfile(player); }}
+                          disabled={Boolean(viewingProfilePlayerId)}
+                          style={{
+                            background: viewingProfilePlayerId === player.userId ? G.muted : G.dark,
+                            color: G.text,
+                            border: `1px solid ${G.border}`,
+                            borderRadius: 9,
+                            padding: '9px 12px',
+                            fontSize: 10,
+                            fontWeight: 700,
+                            cursor: viewingProfilePlayerId === player.userId ? 'not-allowed' : 'pointer',
+                            opacity: viewingProfilePlayerId === player.userId ? 0.7 : 1,
+                          }}
                         >
-                          {requestingPlayerId === player.userId ? 'Requesting…' : 'Request'}
+                          {viewingProfilePlayerId === player.userId ? 'Loading…' : 'View profile'}
                         </button>
-                      )}
+                        {!isRoster && (
+                          <button
+                            type="button"
+                            onClick={e => { e.stopPropagation(); player.relationshipType === 'pending' ? handleAcceptPlayer(player) : handleRequestPlayer(player); }}
+                            disabled={requestingPlayerId === player.userId}
+                            style={{ background: player.relationshipType === 'pending' ? G.yellow : G.lime, color: '#0a180a', border: 'none', borderRadius: 9, padding: '9px 12px', fontSize: 10, fontWeight: 700, cursor: 'pointer' }}
+                          >
+                            {requestingPlayerId === player.userId
+                              ? player.relationshipType === 'pending' ? 'Accepting…' : 'Requesting…'
+                              : player.relationshipType === 'pending' ? 'Accept assignment' : 'Request'}
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );
@@ -425,6 +493,13 @@ export default function PlayerManagement({ coachId }: { coachId: string }) {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'flex-end' }}>
                   <button
                     type="button"
+                    onClick={() => router.push(`/players/profile/${selectedPlayer?.userId}?view=coach`)}
+                    style={{ background: G.dark, color: G.text, border: `1px solid ${G.border}`, borderRadius: 10, padding: '11px 14px', fontWeight: 700, cursor: 'pointer', fontSize: 11 }}
+                  >
+                    View full profile
+                  </button>
+                  <button
+                    type="button"
                     onClick={exportPlayerPDF}
                     disabled={pdfLoading || isDownloading}
                     style={{ background: G.blue, color: '#fff', border: 'none', borderRadius: 10, padding: '11px 14px', fontWeight: 700, cursor: 'pointer', fontSize: 11 }}
@@ -434,11 +509,13 @@ export default function PlayerManagement({ coachId }: { coachId: string }) {
                   {!selectedIsDirect && (
                     <button
                       type="button"
-                      onClick={() => handleRequestPlayer(selectedPlayer)}
+                      onClick={() => selectedPlayer.relationshipType === 'pending' ? handleAcceptPlayer(selectedPlayer) : handleRequestPlayer(selectedPlayer)}
                       disabled={requestingPlayerId === selectedPlayer.userId}
-                      style={{ background: G.lime, color: '#0a180a', border: 'none', borderRadius: 10, padding: '11px 14px', fontWeight: 700, cursor: 'pointer', fontSize: 11 }}
+                      style={{ background: selectedPlayer.relationshipType === 'pending' ? G.yellow : G.lime, color: '#0a180a', border: 'none', borderRadius: 10, padding: '11px 14px', fontWeight: 700, cursor: 'pointer', fontSize: 11 }}
                     >
-                      {requestingPlayerId === selectedPlayer.userId ? 'Requesting…' : 'Request to coach'}
+                      {requestingPlayerId === selectedPlayer.userId
+                        ? selectedPlayer.relationshipType === 'pending' ? 'Accepting…' : 'Requesting…'
+                        : selectedPlayer.relationshipType === 'pending' ? 'Accept assignment' : 'Request to coach'}
                     </button>
                   )}
                 </div>

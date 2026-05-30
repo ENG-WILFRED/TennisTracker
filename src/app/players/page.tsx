@@ -4,12 +4,15 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import PageHeader from "@/components/PageHeader";
 import { getAllPlayers } from "@/actions/matches";
+import { ProfileModal } from "@/components/ProfileModal";
 
 export default function PlayersPage() {
   const router = useRouter();
   const [players, setPlayers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [contactLoadingId, setContactLoadingId] = useState<string | null>(null);
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
 
   useEffect(() => {
     getAllPlayers().then(data => {
@@ -134,12 +137,15 @@ export default function PlayersPage() {
 
                 {/* Action Buttons */}
                 <div className="mt-5 flex gap-2">
-                  <Link 
-                    href={`/players/profile/${p.userId}`}
+                  <button 
+                    onClick={() => {
+                      setSelectedPlayerId(p.userId);
+                      setProfileModalOpen(true);
+                    }}
                     className="flex-1 text-center px-4 py-2.5 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 transition-all shadow-sm font-medium text-sm"
                   >
                     View Profile
-                  </Link>
+                  </button>
                   <button 
                     onClick={() => handleContactClick(p)}
                     disabled={contactLoadingId === p.userId}
@@ -184,6 +190,18 @@ export default function PlayersPage() {
           )}
         </div>
       </div>
+
+      {/* Profile Modal */}
+      {selectedPlayerId && (
+        <ProfileModal
+          isOpen={profileModalOpen}
+          onClose={() => {
+            setProfileModalOpen(false);
+            setSelectedPlayerId(null);
+          }}
+          userId={selectedPlayerId}
+        />
+      )}
     </main>
   );
 }

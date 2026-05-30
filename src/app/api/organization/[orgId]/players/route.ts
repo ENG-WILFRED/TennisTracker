@@ -13,9 +13,14 @@ export async function GET(request: Request, { params }: { params: Promise<{ orgI
 
     // If filtering by coach's managed players
     if (filterType === 'managed' && coachId) {
-      // Get players this coach is managing
+      // Get players this coach is managing inside the organization
       const relationships = await prisma.coachPlayerRelationship.findMany({
-        where: { coachId },
+        where: {
+          coachId,
+          player: {
+            organizationId: orgId,
+          },
+        },
         include: {
           player: {
             include: {

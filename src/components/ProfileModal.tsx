@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Trophy, MapPin, Calendar, Mail, Phone, Users, X } from 'lucide-react';
+import { Trophy, MapPin, Calendar, Mail, Phone, Users, X, ArrowRight } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { authenticatedFetch } from '@/lib/authenticatedFetch';
 
 interface UserProfile {
@@ -37,6 +38,7 @@ interface ProfileModalProps {
 }
 
 export function ProfileModal({ isOpen, onClose, userId }: ProfileModalProps) {
+  const router = useRouter();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -247,6 +249,20 @@ export function ProfileModal({ isOpen, onClose, userId }: ProfileModalProps) {
                   <div className="text-sm">{formatDate(profile.createdAt)}</div>
                 </div>
               </div>
+            </div>
+            
+            {/* Action Buttons */}
+            <div className="flex gap-3 pt-6 border-t border-gray-200 dark:border-slate-700">
+              <button
+                onClick={() => {
+                  router.push(`/players/profile/${userId}`);
+                  onClose();
+                }}
+                className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-green-600 to-green-700 text-white hover:from-green-700 hover:to-green-800 transition-all font-medium py-2.5 rounded-lg shadow-sm"
+              >
+                View Full Profile
+                <ArrowRight className="h-4 w-4" />
+              </button>
             </div>
             </div>
           ) : (

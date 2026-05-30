@@ -141,6 +141,40 @@ export async function getPlayerDashboard(playerId: string) {
     organization: c.organization || null,
   }));
 
+  // Get pending coach requests for the player
+  const pendingCoachRequestsRaw = await prisma.coachPlayerRelationship.findMany({
+    where: { playerId, status: 'pending' },
+    include: {
+      coach: {
+        include: {
+          user: { select: { firstName: true, lastName: true, email: true, photo: true, bio: true } },
+          organization: { select: { id: true, name: true, slug: true, logo: true } },
+        },
+      },
+      notes: {
+        orderBy: { createdAt: 'desc' },
+        take: 1,
+      },
+    },
+  });
+
+  const pendingCoachRequests = pendingCoachRequestsRaw.map((request) => ({
+    id: request.id,
+    status: request.status,
+    requestedAt: request.joinedAt.toISOString(),
+    coach: {
+      id: request.coach.userId,
+      firstName: request.coach.user.firstName,
+      lastName: request.coach.user.lastName,
+      email: request.coach.user.email,
+      photo: request.coach.user.photo,
+      bio: request.coach.user.bio,
+      organization: request.coach.organization || null,
+    },
+    note: request.notes?.[0]?.content || null,
+    noteTitle: request.notes?.[0]?.title || 'Recruitment request',
+  }));
+
   // Get attendance records for the player
   const attendanceRaw = await prisma.attendance.findMany({
     where: { playerId },
@@ -208,6 +242,7 @@ export async function getPlayerDashboard(playerId: string) {
     badges,
     upcomingMatches,
     coaches,
+    pendingCoachRequests,
     attendance,
     inventory,
   };
